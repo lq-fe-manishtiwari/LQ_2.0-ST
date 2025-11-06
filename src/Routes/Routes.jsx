@@ -4,6 +4,7 @@ import Login from '../Teacher/screens/Login/Dashboard/Login.jsx';
 import Dashboard from '../Teacher/screens/Dashboard/Dashboard.jsx';
 import Homepage from '../Teacher/screens/Homepage/Homepage.jsx';
 import ClassRoutes from "../Teacher/screens/Pages/Class/Routes/ClassRoutes.jsx";
+import AssessmentRoutes from "../Teacher/screens/Pages/Assessment/Routes/AssessmentRoutes.jsx";
 
 const ProtectedRoute = ({ children }) => {
   const isLoggedIn = !!localStorage.getItem('refreshToken');
@@ -55,6 +56,16 @@ function App() {
      
               <Homepage>
                 <ClassRoutes />
+              </Homepage>
+          
+          }
+        />
+        <Route
+          path="/teacher-assessments/*"
+          element={
+     
+              <Homepage>
+                <AssessmentRoutes />
               </Homepage>
           
           }
