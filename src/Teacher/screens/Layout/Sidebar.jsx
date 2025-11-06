@@ -71,7 +71,7 @@ const Sidebar = ({ isOpen, toggle }) => {
   const menuItems = useMemo(
     () => [
       {
-        to: "/teacher-dashboard",
+        to: "/dashboard",
         label: "My Teaching",
         iconActive: dashboardActive,
         iconInactive: dashboardInactive,

@@ -3,17 +3,8 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Login from '../Teacher/screens/Login/Dashboard/Login.jsx';
 import Dashboard from '../Teacher/screens/Dashboard/Dashboard.jsx';
 import Homepage from '../Teacher/screens/Homepage/Homepage.jsx';
-// import AcademicsRoutes from "../screens/pages/Academics/Routes/AcademicsRoutes.jsx";
-// import TeacherRoutes from "../screens/pages/Teacher/Routes/TeacherRoutes.jsx";
-// import StudentRoutes from "../screens/pages/Student/Routes/StudentRoutes.jsx";
-// import OtherStaffRoutes from "../screens/pages/OtherStaff/Routes/OtherStaffRoutes.jsx";
-// import AssessmentRoutes from "../screens/pages/Assessment/Routes/AssessmentRoutes.jsx";
-// import ReceivableRoutes from "../screens/pages/Receivable/Routes/ReceivableRoutes.jsx";
-// import AdvanceFeesRoutes from "../screens/pages/AdvanceFees/Routes/AdvanceFeesRoutes.jsx";
+import ClassRoutes from "../Teacher/screens/Pages/Class/Routes/ClassRoutes.jsx";
 
-// import ExcessFeesRoutes from "../screens/pages/ExcessFees/Routes/ExcessFeesRoutes.jsx";
-
-// import AdminForgotPassword  from '../screens/Login/ForgotPassword.jsx';
 const ProtectedRoute = ({ children }) => {
   const isLoggedIn = !!localStorage.getItem('refreshToken');
   if (!isLoggedIn) {
@@ -51,23 +42,23 @@ function App() {
         <Route
           path="/dashboard"
           element={
-            <ProtectedRoute>
+            // <ProtectedRoute>
               <Homepage>
                 <Dashboard />
               </Homepage>
-            </ProtectedRoute>
+            // </ProtectedRoute>
           }
         />
-        {/* <Route
-          path="/academics/*"
+        <Route
+          path="/teacher-class/*"
           element={
-            <ProtectedRoute>
+     
               <Homepage>
-                <AcademicsRoutes />
+                <ClassRoutes />
               </Homepage>
-            </ProtectedRoute>
+          
           }
-        /> */}
+        />
         {/* Teacher 
         <Route
           path="/teacher-list/*"
