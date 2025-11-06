@@ -1,32 +1,46 @@
+// src/Route.Routes.jsx
 import React from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import Login from '../Teacher/screens/Login/Dashboard/Login.jsx';
-import Dashboard from '../Teacher/screens/Dashboard/Dashboard.jsx';
-import Homepage from '../Teacher/screens/Homepage/Homepage.jsx';
-import ClassRoutes from "../Teacher/screens/Pages/Class/Routes/ClassRoutes.jsx";
-import FeedbackRoutes from '../Teacher/screens/Pages/Feedback/Routes/FeedbackRoutes.jsx';
-import AssessmentRoutes from "../Teacher/screens/Pages/Assessment/Routes/AssessmentRoutes.jsx";
+import {
+  BrowserRouter,
+  Routes,
+  Route,
+  Navigate,
+} from 'react-router-dom';
 
+// ────── Shared Login (handles both roles) ──────
+import Login from '../Login/Login.jsx';
+
+// ────── Layouts (different homepage for each role) ──────
+import TeacherHomepage from '../Teacher/screens/Homepage/Homepage.jsx';
+import StudentHomepage from '../Student/screens/Homepage/StudentHomepage.jsx';
+
+// ────── Nested route groups ──────
+import TeacherRoutes from '../Teacher/screens/Routes/TeacherRoutes.jsx';
+import StudentRoutes from '../Student/screens/Routes/StudentRoutes.jsx';
+
+// ────── Route guards ──────
 const ProtectedRoute = ({ children }) => {
   const isLoggedIn = !!localStorage.getItem('refreshToken');
-  if (!isLoggedIn) {
-    return <Navigate to="/" replace />;
-  }
-  return children;
+  return isLoggedIn ? children : <Navigate to="/" replace />;
 };
 
 const PublicRoute = ({ children }) => {
   const isLoggedIn = !!localStorage.getItem('refreshToken');
-  if (isLoggedIn) {
-    return <Navigate to="/dashboard" replace />;
-  }
-  return children;
+  return isLoggedIn ? <Navigate to={getDefaultRedirect()} replace /> : children;
+};
+
+// ────── Redirect after login based on role ──────
+const getDefaultRedirect = () => {
+  const user = JSON.parse(localStorage.getItem('currentUser') || '{}');
+  return user.iss === 'STUDENT' ? '/student-dashboard' : '/dashboard';
 };
 
 function App() {
   return (
     <BrowserRouter>
       <Routes>
+
+        {/* ────── PUBLIC ────── */}
         <Route
           path="/"
           element={
@@ -35,132 +49,43 @@ function App() {
             </PublicRoute>
           }
         />
-        {/* <Route path="/admin-forgot-password" element={
-          <PublicRoute>
-            <AdminForgotPassword />
-          </PublicRoute>
-        } /> */}
 
+        {/* ────── TEACHER ────── */}
+        <Route path="/dashboard" element={<TeacherHomepage><TeacherRoutes /></TeacherHomepage>} />
+     {/* TEACHER – Class area (exact + any sub-page) */}
+    <Route
+      path="/teacher/*"
+      element={
+        <TeacherHomepage>
+          <TeacherRoutes />
+        </TeacherHomepage>
+      }
+    />
+
+        {/* ────── STUDENT ────── */}
         <Route
-          path="/dashboard"
+          path="/student-dashboard"
           element={
             // <ProtectedRoute>
-            <Homepage>
-              <Dashboard />
-            </Homepage>
+              <StudentHomepage>
+                <StudentRoutes />
+              </StudentHomepage>
             // </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/teacher-class/*"
-          element={
-
-            <Homepage>
-              <ClassRoutes />
-            </Homepage>
-
-          }
-        />
-        <Route
-          path="/teacher-feedback/*"
-          element={
-
-            <Homepage>
-              <FeedbackRoutes />
-            </Homepage>
-          }
-        />
-        <Route
-          path="/teacher-assessments/*"
-          element={
-
-            <Homepage>
-              <AssessmentRoutes />
-            </Homepage>
-
-          }
-        />
-        {/* Teacher 
-        <Route
-          path="/teacher-list/*"
-          element={
-            <ProtectedRoute>
-              <Homepage>
-                <TeacherRoutes />
-              </Homepage>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/teacher-list"
-          element={
-            <ProtectedRoute>
-              <Homepage>
-                <TeacherRoutes />
-              </Homepage>
-            </ProtectedRoute>
           }
         />
         <Route
           path="/student/*"
           element={
-            <ProtectedRoute>
-              <Homepage>
+            // <ProtectedRoute>
+              <StudentHomepage>
                 <StudentRoutes />
-              </Homepage>
-            </ProtectedRoute>
+              </StudentHomepage>
+            // </ProtectedRoute>
           }
         />
-        <Route
-          path="/other-staff/*"
-          element={
-            <ProtectedRoute>
-              <Homepage>
-                <OtherStaffRoutes />
-              </Homepage>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/admin-assessment/*"
-          element={
-            <ProtectedRoute>
-              <Homepage>
-                <AssessmentRoutes />
-              </Homepage>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/admin-receivable/*"
-          element={
-            <ProtectedRoute>
-              <Homepage>
-                <ReceivableRoutes />
-              </Homepage>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/admin-AdvanceFees/*"
-          element={
-            <ProtectedRoute>
-              <Homepage>
-                <AdvanceFeesRoutes />
-              </Homepage>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/admin-ExcessFees/*"
-          element={
-            <ProtectedRoute>
-              <Homepage>
-                <ExcessFeesRoutes />
-              </Homepage>
-            </ProtectedRoute>
-          }
-        /> */}
+
+        {/* ────── FALLBACK ────── */}
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>
   );
