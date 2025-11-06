@@ -6,7 +6,7 @@ import SubmittedFeedback from "../Dashboard/SubmittedFeedback";
 export default function FeedbackRoutes() {
   return (
     <Routes>
-      <Route index element={<Navigate to="pending-feedback" replace />} />
+      <Route path="/" element={<Navigate to="pending-feedback" replace />} />
 
       <Route element={<FeedbackLayout />}>
         <Route path="pending-feedback" element={<PendingFeedback />} />
