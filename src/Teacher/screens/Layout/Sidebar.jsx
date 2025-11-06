@@ -12,6 +12,7 @@ import dashboardInactive from "@/_assets/images_new_design/icons/Dashboard.svg";
 import classActive from "@/_assets/images_new_design/icons/class_active.svg";
 import classInactive from "@/_assets/images_new_design/icons/class.svg";
 
+
 import contentActive from "@/_assets/images_new_design/icons/curriculum_active.svg";
 import contentInactive from "@/_assets/images_new_design/icons/curriculum.svg";
 
@@ -88,6 +89,8 @@ const Sidebar = ({ isOpen, toggle }) => {
           "/timetable-edit",
         ],
       },
+
+
       {
         to: "/teacher-content",
         label: "Content",

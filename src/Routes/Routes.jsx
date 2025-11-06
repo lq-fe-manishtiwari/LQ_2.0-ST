@@ -4,6 +4,7 @@ import Login from '../Teacher/screens/Login/Dashboard/Login.jsx';
 import Dashboard from '../Teacher/screens/Dashboard/Dashboard.jsx';
 import Homepage from '../Teacher/screens/Homepage/Homepage.jsx';
 import ClassRoutes from "../Teacher/screens/Pages/Class/Routes/ClassRoutes.jsx";
+import FeedbackRoutes from '../Teacher/screens/Pages/Feedback/Routes/FeedbackRoutes.jsx';
 import AssessmentRoutes from "../Teacher/screens/Pages/Assessment/Routes/AssessmentRoutes.jsx";
 
 const ProtectedRoute = ({ children }) => {
@@ -44,30 +45,39 @@ function App() {
           path="/dashboard"
           element={
             // <ProtectedRoute>
-              <Homepage>
-                <Dashboard />
-              </Homepage>
+            <Homepage>
+              <Dashboard />
+            </Homepage>
             // </ProtectedRoute>
           }
         />
         <Route
           path="/teacher-class/*"
           element={
-     
-              <Homepage>
-                <ClassRoutes />
-              </Homepage>
-          
+
+            <Homepage>
+              <ClassRoutes />
+            </Homepage>
+
+          }
+        />
+        <Route
+          path="/teacher-feedback/*"
+          element={
+
+            <Homepage>
+              <FeedbackRoutes />
+            </Homepage>
           }
         />
         <Route
           path="/teacher-assessments/*"
           element={
-     
-              <Homepage>
-                <AssessmentRoutes />
-              </Homepage>
-          
+
+            <Homepage>
+              <AssessmentRoutes />
+            </Homepage>
+
           }
         />
         {/* Teacher 
