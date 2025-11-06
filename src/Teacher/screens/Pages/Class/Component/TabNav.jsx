@@ -1,28 +1,80 @@
+import React from "react";
 import { NavLink } from "react-router-dom";
-import { Table, Calendar } from "lucide-react";
+import { Table, Calendar, CheckSquare } from "lucide-react";
+
+const tabs = [
+  {
+    label: (
+      <>
+        <Table className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
+        Tabular View
+      </>
+    ),
+    to: "/teacher-class/Tabular-view",
+    rightAlign: false,
+  },
+  {
+    label: (
+      <>
+        <Calendar className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
+        Monthly View
+      </>
+    ),
+    to: "/teacher-class/Monthly-view",
+    rightAlign: false,
+  },
+  {
+    label: (
+      <>
+        <CheckSquare className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
+        Attendance
+      </>
+    ),
+    to: "/teacher-class/Attendance",
+    rightAlign: true,
+  },
+];
 
 export default function TabsNav() {
   return (
-    <div className="flex gap-2 mb-4">
-      <NavLink
-        to="Tabular-view"
-        className={({ isActive }) =>
-          `px-3 py-2 rounded-md ${isActive ? "bg-blue-600 text-white" : "bg-gray-200"}`
-        }
-      >
-        <Table className="inline w-4 h-4 mr-1" />
-        Tabular View
-      </NavLink>
+    <div className="flex justify-between w-full">
+      {/* Left Side Tabs */}
+      <div className="flex gap-2 md:gap-4">
+        {tabs
+          .filter((t) => !t.rightAlign)
+          .map((t) => (
+            <NavLink
+              key={t.to}
+              to={t.to}
+              className={({ isActive }) =>
+                `tab-link flex items-center whitespace-nowrap px-3 py-2 ${
+                  isActive ? "tab-active" : "tab-inactive"
+                }`
+              }
+            >
+              {t.label}
+            </NavLink>
+          ))}
+      </div>
 
-      <NavLink
-        to="Month-view"
-        className={({ isActive }) =>
-          `px-3 py-2 rounded-md ${isActive ? "bg-blue-600 text-white" : "bg-gray-200"}`
-        }
-      >
-        <Calendar className="inline w-4 h-4 mr-1" />
-        Month View
-      </NavLink>
+      {/* Right Side Tab */}
+      <div className="flex gap-2 md:gap-4">
+        {tabs
+          .filter((t) => t.rightAlign)
+          .map((t) => (
+            <NavLink
+              key={t.to}
+              to={t.to}
+              className={({ isActive }) =>
+                `tab-link flex items-center whitespace-nowrap px-3 py-2 ${
+                  isActive ? "tab-active" : "tab-inactive"
+                }`
+              }
+            >
+              {t.label}
+            </NavLink>
+          ))}
+      </div>
     </div>
   );
 }
