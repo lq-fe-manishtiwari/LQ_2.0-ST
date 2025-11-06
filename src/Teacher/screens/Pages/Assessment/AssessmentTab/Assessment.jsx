@@ -379,7 +379,7 @@ const Assessment = () => {
       {/* Add New */}
       <div className="bg-white rounded-lg p-4 mb-6 shadow-sm">
         <button
-          onClick={() => navigate('/admin-assessment/admin-add-new-assessment')}
+          onClick={() => navigate('/teacher-assessments/teacher-add-new-assessment')}
           className="flex items-center gap-3"
           style={{ color: customBlue }}
         >

@@ -19,7 +19,7 @@ export default function AddNewAssessment() {
     externalAssessmentViewBtn: 'tab-inactive',
     selectedClass: location?.state?.selectedClass || '',
     selectedClassName: location?.state?.selectedClassName || '',
-    previous_page_url: location.state?.previous_path || '/admin-assessment',
+    previous_page_url: location.state?.previous_path || '/teacher-assessments',
     selected_test_type: location.state?.selected_test_type || 'ALL',
     selected_subject_props: location.state?.selected_subject || '',
     curr_date_ori: location.state?.curr_date_ori || new Date(),
