@@ -5,23 +5,23 @@ const tabs = [
   {
     label: "Academic",
     children: [
-      { label: "Assessment", to: "/teacher-assessments/assessment" },
-      { label: "Questions", to: "/teacher-assessments/questions" },
+      { label: "Assessment", to: "/teacher/assessments/assessment" },
+      { label: "Questions", to: "/teacher/assessments/questions" },
     ],
   },
-  { label: "Vertical 1 & 4(Major)", to: "/teacher-assessments/vertical1_4" },
-  { label: "Vertical 2(Minor)", to: "/teacher-assessments/vertical2" },
-  { label: "Vertical 3(OE)", to: "/teacher-assessments/vertical3" },
-  { label: "Vertical 5(AEC/VEC/IKS)", to: "/teacher-assessments/vertical5" },
-  { label: "Vertical 6(Other's)", to: "/teacher-assessments/vertical6" },
+  { label: "Vertical 1 & 4(Major)", to: "/teacher/assessments/vertical1_4" },
+  { label: "Vertical 2(Minor)", to: "/teacher/assessments/vertical2" },
+  { label: "Vertical 3(OE)", to: "/teacher/assessments/vertical3" },
+  { label: "Vertical 5(AEC/VEC/IKS)", to: "/teacher/assessments/vertical5" },
+  { label: "Vertical 6(Other's)", to: "/teacher/assessments/vertical6" },
 ];
 
 export default function TabsNav() {
   const { pathname } = useLocation();
 
   const isAcademicRoute =
-    pathname.startsWith("/teacher-assessments/assessment") ||
-    pathname.startsWith("/teacher-assessments/questions");
+    pathname.startsWith("/teacher/assessments/assessment") ||
+    pathname.startsWith("/teacher/assessments/questions");
 
   return (
     <>

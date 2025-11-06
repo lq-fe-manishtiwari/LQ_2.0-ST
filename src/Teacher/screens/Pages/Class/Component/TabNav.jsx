@@ -10,7 +10,7 @@ const tabs = [
         Tabular View
       </>
     ),
-    to: "/teacher-class/Tabular-view",
+    to: "/teacher/class/Tabular-view",
     rightAlign: false,
   },
   {
@@ -20,7 +20,7 @@ const tabs = [
         Monthly View
       </>
     ),
-    to: "/teacher-class/Monthly-view",
+    to: "/teacher/class/Monthly-view",
     rightAlign: false,
   },
   {
@@ -30,7 +30,7 @@ const tabs = [
         Attendance
       </>
     ),
-    to: "/teacher-class/Attendance",
+    to: "/teacher/class/Attendance",
     rightAlign: true,
   },
 ];

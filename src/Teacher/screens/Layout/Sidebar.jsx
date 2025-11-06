@@ -108,12 +108,12 @@ const Sidebar = ({ isOpen, toggle }) => {
         ],
       },
       {
-        to: "/teacher-assessments",
+        to: "/teacher/assessments",
         label: "Assessment",
         iconActive: assessmentActive,
         iconInactive: assessmentInactive,
         match: [
-          "/teacher-assessments",
+          "/teacher/assessments",
           "/teacher-add-assessment",
           "/teacher-view-assessments",
           "/teacher-view-st-test-result",
