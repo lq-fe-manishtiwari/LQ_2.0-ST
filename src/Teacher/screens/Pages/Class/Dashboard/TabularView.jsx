@@ -1,313 +1,233 @@
-import React, { useState } from "react";
-import {
-  Eye,
-  Edit,
-  Trash2,
-  User,
-  Mail,
-  Phone,
-  ToggleLeft,
-  ToggleRight,
-  ChevronLeft,
-  ChevronRight,
-} from "lucide-react";
+import React, { useState } from 'react';
+import { ChevronLeft, ChevronRight, Calendar, BarChart3 } from 'lucide-react';
 
 const MonthlyView = () => {
-  const [selectedStudent, setSelectedStudent] = useState(null);
-  const [currentPage, setCurrentPage] = useState(1);
-  const entriesPerPage = 10;
+  const [currentDate, setCurrentDate] = useState(new Date());
+  const [selectedDate, setSelectedDate] = useState(new Date().getDate());
 
-  // Student attendance data
-  const students = [
-    {
-      id: 1,
-      name: "John Smith",
-      email: "john.smith@school.com",
-      mobile: "9876543210",
-      rollNo: "001",
-      grade: "8th",
-      division: "A",
-      gender: "MALE",
-      status: "present",
-      avatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=40&h=40&fit=crop&crop=face"
-    },
-    {
-      id: 2,
-      name: "Emma Johnson",
-      email: "emma.johnson@school.com",
-      mobile: "9823412312",
-      rollNo: "002",
-      grade: "8th",
-      division: "A",
-      gender: "FEMALE",
-      status: "present",
-      avatar: "https://images.unsplash.com/photo-1494790108755-2616b612b786?w=40&h=40&fit=crop&crop=face"
-    },
-    {
-      id: 3,
-      name: "Michael Brown",
-      email: "michael.brown@school.com",
-      mobile: "9765432198",
-      rollNo: "003",
-      grade: "8th",
-      division: "A",
-      gender: "MALE",
-      status: "absent",
-      avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=40&h=40&fit=crop&crop=face"
-    },
-    {
-      id: 4,
-      name: "Sarah Davis",
-      email: "sarah.davis@school.com",
-      mobile: "9988776655",
-      rollNo: "004",
-      grade: "8th",
-      division: "A",
-      gender: "FEMALE",
-      status: "present",
-      avatar: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=40&h=40&fit=crop&crop=face"
-    },
-    {
-      id: 5,
-      name: "David Wilson",
-      email: "david.wilson@school.com",
-      mobile: "9123456789",
-      rollNo: "005",
-      grade: "8th",
-      division: "A",
-      gender: "MALE",
-      status: "present",
-      avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=40&h=40&fit=crop&crop=face"
-    }
+  const monthNames = [
+    "January", "February", "March", "April", "May", "June",
+    "July", "August", "September", "October", "November", "December"
   ];
 
-  const totalEntries = students.length;
-  const totalPages = Math.ceil(totalEntries / entriesPerPage);
-  const indexOfLast = currentPage * entriesPerPage;
-  const indexOfFirst = indexOfLast - entriesPerPage;
-  const currentEntries = students.slice(indexOfFirst, indexOfLast);
+  const dayNames = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+  const fullDayNames = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 
-  const handlePrev = () => currentPage > 1 && setCurrentPage(currentPage - 1);
-  const handleNext = () => currentPage < totalPages && setCurrentPage(currentPage + 1);
-
-  const toggleStudentStatus = (studentId) => {
-    console.log('Toggle status for student:', studentId);
+  // Monthly report data
+  const monthlyData = {
+    totalStudents: 45,
+    avgAttendance: 84.2,
+    topPerformers: 12,
+    needsAttention: 5,
+    students: [
+      { id: 1, name: "John Smith", avatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=40&h=40&fit=crop&crop=face", attendance: 95, grade: "A+" },
+      { id: 2, name: "Emma Johnson", avatar: "https://images.unsplash.com/photo-1494790108755-2616b612b786?w=40&h=40&fit=crop&crop=face", attendance: 88, grade: "A" },
+      { id: 3, name: "Michael Brown", avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=40&h=40&fit=crop&crop=face", attendance: 76, grade: "B+" },
+      { id: 4, name: "Sarah Davis", avatar: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=40&h=40&fit=crop&crop=face", attendance: 92, grade: "A" },
+      { id: 5, name: "David Wilson", avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=40&h=40&fit=crop&crop=face", attendance: 68, grade: "C+" }
+    ]
   };
 
-  const handleStudentSelect = (studentId) => {
-    setSelectedStudent(selectedStudent === studentId ? null : studentId);
+  const getSelectedDayName = () => {
+    const selectedDateObj = new Date(currentDate.getFullYear(), currentDate.getMonth(), selectedDate);
+    return fullDayNames[selectedDateObj.getDay()];
   };
+
+  const getDaysInMonth = (date) => {
+    const year = date.getFullYear();
+    const month = date.getMonth();
+    const firstDay = new Date(year, month, 1);
+    const lastDay = new Date(year, month + 1, 0);
+    const daysInMonth = lastDay.getDate();
+    const startingDayOfWeek = (firstDay.getDay() + 6) % 7; // Monday = 0
+
+    const days = [];
+    
+    // Previous month days
+    const prevMonth = new Date(year, month - 1, 0);
+    for (let i = startingDayOfWeek - 1; i >= 0; i--) {
+      days.push({
+        day: prevMonth.getDate() - i,
+        isCurrentMonth: false
+      });
+    }
+
+    // Current month days
+    for (let day = 1; day <= daysInMonth; day++) {
+      days.push({
+        day,
+        isCurrentMonth: true
+      });
+    }
+
+    // Next month days
+    const remainingDays = 42 - days.length;
+    for (let day = 1; day <= remainingDays; day++) {
+      days.push({
+        day,
+        isCurrentMonth: false
+      });
+    }
+
+    return days;
+  };
+
+  const navigateMonth = (direction) => {
+    setCurrentDate(prev => {
+      const newDate = new Date(prev);
+      newDate.setMonth(prev.getMonth() + direction);
+      return newDate;
+    });
+  };
+
+  const days = getDaysInMonth(currentDate);
 
   return (
     <div className="p-4 lg:p-6 bg-gray-50 min-h-screen">
-      {/* Desktop Table */}
-      <div className="hidden lg:block bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[900px]">
-            <thead className="bg-gray-100">
-              <tr>
-                <th className="p-4 w-12"></th>
-                <th className="p-4 text-left text-sm font-semibold text-gray-700">Student</th>
-                <th className="p-4 text-left text-sm font-semibold text-gray-700">Contact</th>
-                <th className="p-4 text-left text-sm font-semibold text-gray-700">Roll No</th>
-                <th className="p-4 text-center text-sm font-semibold text-gray-700">Status</th>
-                <th className="p-4 text-center text-sm font-semibold text-gray-700">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200">
-              {currentEntries.map((student) => (
-                <tr key={student.id} className="hover:bg-gray-50 transition-colors">
-                  <td className="px-6 py-4">
-                    <input
-                      type="checkbox"
-                      checked={selectedStudent === student.id}
-                      onChange={() => handleStudentSelect(student.id)}
-                      className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                    />
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="flex items-center">
-                      <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
-                        {student.gender === 'FEMALE' ? (
-                          <svg className="w-6 h-6 text-pink-600" fill="currentColor" viewBox="0 0 20 20">
-                            <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
-                          </svg>
-                        ) : (
-                          <User className="w-6 h-6 text-blue-600" />
-                        )}
-                      </div>
-                      <div className="ml-3">
-                        <p className="font-semibold text-gray-900">{student.name}</p>
-                        <p className="text-xs text-gray-500">
-                          {student.grade} Division {student.division}
-                        </p>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="space-y-1 text-sm">
-                      <div className="flex items-center text-gray-700">
-                        <Mail className="w-4 h-4 mr-2 text-gray-400" />
-                        {student.email}
-                      </div>
-                      <div className="flex items-center text-gray-700">
-                        <Phone className="w-4 h-4 mr-2 text-gray-400" />
-                        {student.mobile}
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 text-sm text-gray-700">{student.rollNo}</td>
-                  <td className="px-6 py-4 text-center">
-                    <button
-                      onClick={() => toggleStudentStatus(student.id)}
-                      className={`inline-flex items-center px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
-                        student.status === 'present'
-                          ? 'bg-green-100 text-green-800 hover:bg-green-200'
-                          : 'bg-red-100 text-red-800 hover:bg-red-200'
-                      }`}
-                    >
-                      {student.status === 'present' ? (
-                        <ToggleRight className="w-4 h-4 mr-1" />
-                      ) : (
-                        <ToggleLeft className="w-4 h-4 mr-1" />
-                      )}
-                      {student.status === 'present' ? 'Present' : 'Absent'}
-                    </button>
-                  </td>
-                  <td className="px-6 py-4 text-center">
-                    <div className="flex items-center justify-center gap-2">
-                      <button className="p-2 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition">
-                        <Eye className="w-4 h-4" />
-                      </button>
-                      <button className="p-2 rounded-lg bg-yellow-50 text-yellow-600 hover:bg-yellow-100 transition">
-                        <Edit className="w-4 h-4" />
-                      </button>
-                      <button className="p-2 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition">
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-
-        {/* Pagination */}
-        <div className="flex flex-col sm:flex-row justify-between items-center px-6 py-4 border-t border-gray-200 gap-4">
-          <div className="text-sm text-gray-600">
-            Showing {indexOfFirst + 1}–{Math.min(indexOfLast, totalEntries)} of {totalEntries} entries
-          </div>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={handlePrev}
-              disabled={currentPage === 1}
-              className={`flex items-center gap-1 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
-                currentPage === 1
-                  ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                  : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-300'
-              }`}
-            >
-              <ChevronLeft className="w-4 h-4" />
-              Previous
-            </button>
-            <div className="flex items-center gap-1">
-              {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-                <button
-                  key={page}
-                  onClick={() => setCurrentPage(page)}
-                  className={`w-8 h-8 rounded-lg text-sm font-medium transition-all ${
-                    currentPage === page
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-300'
-                  }`}
-                >
-                  {page}
-                </button>
-              ))}
-            </div>
-            <button
-              onClick={handleNext}
-              disabled={currentPage === totalPages}
-              className={`flex items-center gap-1 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
-                currentPage === totalPages
-                  ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                  : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-300'
-              }`}
-            >
-              Next
-              <ChevronRight className="w-4 h-4" />
-            </button>
-          </div>
-        </div>
+      {/* Header */}
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold text-gray-800 mb-2">Monthly Report</h1>
+        <p className="text-gray-600">Class 8A Performance Summary - {monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}</p>
       </div>
 
-      {/* Mobile Cards */}
-      <div className="lg:hidden space-y-4">
-        {currentEntries.map((student) => (
-          <div key={student.id} className="bg-white rounded-xl shadow-md border border-gray-200 p-5 hover:shadow-lg transition-all">
-            <div className="flex justify-between items-start mb-3">
-              <div className="flex items-center">
-                <input
-                  type="checkbox"
-                  checked={selectedStudent === student.id}
-                  onChange={() => handleStudentSelect(student.id)}
-                  className="w-4 h-4 mr-3 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                />
-                <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center">
-                  {student.gender === 'FEMALE' ? (
-                    <svg className="w-7 h-7 text-pink-600" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
-                    </svg>
-                  ) : (
-                    <User className="w-7 h-7 text-blue-600" />
-                  )}
-                </div>
-                <div className="ml-3">
-                  <p className="font-semibold text-gray-900">{student.name}</p>
-                  <p className="text-sm text-gray-600">{student.grade} Division {student.division}</p>
-                </div>
-              </div>
-              <button
-                onClick={() => toggleStudentStatus(student.id)}
-                className={`flex items-center px-2.5 py-1.5 rounded-full text-xs font-medium transition-all ${
-                  student.status === 'present'
-                    ? 'bg-green-100 text-green-800'
-                    : 'bg-red-100 text-red-800'
-                }`}
-              >
-                {student.status === 'present' ? (
-                  <ToggleRight className="w-3.5 h-3.5 mr-1" />
-                ) : (
-                  <ToggleLeft className="w-3.5 h-3.5 mr-1" />
-                )}
-                {student.status === 'present' ? 'Present' : 'Absent'}
-              </button>
-            </div>
-            <div className="space-y-2 text-sm text-gray-700 mb-4">
-              <div className="flex items-center">
-                <Mail className="w-4 h-4 mr-2 text-gray-400" />
-                {student.email}
-              </div>
-              <div className="flex items-center">
-                <Phone className="w-4 h-4 mr-2 text-gray-400" />
-                {student.mobile}
-              </div>
-              <div className="text-gray-600">Roll No: {student.rollNo}</div>
+      <div className="flex flex-col lg:flex-row gap-6">
+        {/* Calendar Section */}
+        <div className="flex-1 bg-white rounded-lg shadow-lg p-4 lg:p-6">
+          {/* Header */}
+          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-6 gap-4">
+            <div className="flex items-center gap-3">
+              <Calendar className="w-6 h-6 text-blue-600" />
+              <h2 className="text-lg sm:text-xl font-semibold text-gray-800">
+                {monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}
+              </h2>
             </div>
             <div className="flex items-center gap-2">
-              <button className="p-2.5 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition">
-                <Eye className="w-4 h-4" />
+              <button 
+                onClick={() => navigateMonth(-1)}
+                className="p-2 hover:bg-gray-100 rounded-lg"
+              >
+                <ChevronLeft className="w-5 h-5 text-gray-600" />
               </button>
-              <button className="p-2.5 rounded-lg bg-yellow-50 text-yellow-600 hover:bg-yellow-100 transition">
-                <Edit className="w-4 h-4" />
-              </button>
-              <button className="p-2.5 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition">
-                <Trash2 className="w-4 h-4" />
+              <button 
+                onClick={() => navigateMonth(1)}
+                className="p-2 hover:bg-gray-100 rounded-lg"
+              >
+                <ChevronRight className="w-5 h-5 text-gray-600" />
               </button>
             </div>
           </div>
-        ))}
+
+          {/* Calendar Grid */}
+          <div className="grid grid-cols-7 gap-1 sm:gap-2 lg:gap-3">
+            {/* Day Headers */}
+            {dayNames.map(day => (
+              <div key={day} className="p-2 lg:p-3 text-center font-medium text-xs sm:text-sm" style={{ color: 'rgb(33, 98, 193)' }}>
+                {day}
+              </div>
+            ))}
+
+            {/* Calendar Days */}
+            {days.map((dateObj, index) => (
+              <div
+                key={index}
+                onClick={() => dateObj.isCurrentMonth && setSelectedDate(dateObj.day)}
+                className={`
+                  h-10 sm:h-12 lg:h-16 rounded-lg flex items-center justify-center cursor-pointer transition-all duration-200 shadow-sm hover:shadow-md text-sm lg:text-base
+                  ${dateObj.isCurrentMonth ? 'bg-white hover:bg-gray-50' : 'bg-gray-100'}
+                  ${selectedDate === dateObj.day && dateObj.isCurrentMonth 
+                    ? 'text-white shadow-lg' 
+                    : dateObj.isCurrentMonth 
+                      ? 'text-gray-800' 
+                      : 'text-gray-400'
+                  }
+                `}
+                style={selectedDate === dateObj.day && dateObj.isCurrentMonth 
+                  ? { backgroundColor: 'rgb(33, 98, 193)' } 
+                  : {}
+                }
+              >
+                {dateObj.day}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Monthly Report Panel */}
+        <div className="w-full lg:w-96 space-y-6">
+          {/* Date & Stats Card */}
+          <div className="bg-white rounded-lg shadow-lg p-4 lg:p-6">
+            <div className="mb-4">
+              <div className="text-base lg:text-lg font-medium" style={{ color: 'rgb(33, 98, 193)' }}>
+                {getSelectedDayName()}, {String(selectedDate).padStart(2, '0')} {monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}
+              </div>
+            </div>
+
+            {/* Monthly Summary */}
+            <div className="grid grid-cols-2 gap-3 mb-4">
+              <div className="bg-green-50 p-3 rounded-lg text-center">
+                <div className="text-lg font-bold text-green-600">{monthlyData.avgAttendance}%</div>
+                <div className="text-xs text-green-700">Avg Attendance</div>
+              </div>
+              <div className="bg-yellow-50 p-3 rounded-lg text-center">
+                <div className="text-lg font-bold text-yellow-600">{monthlyData.topPerformers}</div>
+                <div className="text-xs text-yellow-700">Top Performers</div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3 mb-4">
+              <div className="bg-red-50 p-3 rounded-lg text-center">
+                <div className="text-lg font-bold text-red-600">{monthlyData.needsAttention}</div>
+                <div className="text-xs text-red-700">Needs Attention</div>
+              </div>
+              <div className="bg-blue-50 p-3 rounded-lg text-center">
+                <div className="text-lg font-bold text-blue-600">{monthlyData.totalStudents}</div>
+                <div className="text-xs text-blue-700">Total Students</div>
+              </div>
+            </div>
+          </div>
+
+          {/* Student Performance List */}
+          <div className="bg-white rounded-lg shadow-lg p-4 lg:p-6">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <BarChart3 className="w-5 h-5 text-blue-600" />
+                <h3 className="text-base lg:text-lg font-semibold text-gray-800">Student Performance</h3>
+              </div>
+            </div>
+            
+            <div className="space-y-3 max-h-96 overflow-y-auto">
+              {monthlyData.students.map((student) => {
+                const getAttendanceColor = (attendance) => {
+                  if (attendance >= 90) return 'text-green-600 bg-green-50';
+                  if (attendance >= 75) return 'text-yellow-600 bg-yellow-50';
+                  return 'text-red-600 bg-red-50';
+                };
+                
+                return (
+                  <div key={student.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-xl">
+                    <div className="flex items-center gap-3">
+                      <img
+                        src={student.avatar}
+                        alt={student.name}
+                        className="w-10 h-10 rounded-full object-cover"
+                      />
+                      <div>
+                        <div className="font-medium text-gray-900">{student.name}</div>
+                        <div className="text-sm text-gray-500">Grade: {student.grade}</div>
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-center gap-2">
+                      <div className={`px-2 py-1 rounded-lg text-xs font-medium ${getAttendanceColor(student.attendance)}`}>
+                        {student.attendance}%
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );
