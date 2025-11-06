@@ -1,5 +1,4 @@
 import { NavLink } from "react-router-dom";
-import { Table, Calendar } from "lucide-react";
 
 export default function TabsNav() {
   return (
@@ -10,7 +9,6 @@ export default function TabsNav() {
           `px-3 py-2 rounded-md ${isActive ? "bg-blue-600 text-white" : "bg-gray-200"}`
         }
       >
-        <Table className="inline w-4 h-4 mr-1" />
         Pending Feedback Forms
       </NavLink>
 
