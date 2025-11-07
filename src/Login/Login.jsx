@@ -5,7 +5,7 @@ import * as Yup from "yup";
 import { useNavigate } from "react-router-dom";
 import { Mail, Lock, Eye, EyeOff } from "lucide-react";
 import SweetAlert from "react-bootstrap-sweetalert";
-import { Offline } from "react-detect-offline";
+// import { Offline } from "react-detect-offline";
 
 import { authenticationService } from "@/_services/api";
 import loginImg from "./loginImg.mp4"; 

@@ -86,24 +86,33 @@ export default function AddNewAssessment() {
   return (
     <>
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 p-4 md:p-6 lg:p-8">
-        <div className="max-w-7xl mx-auto">
+        <div className="max-w-7xl mx-auto h-full">
 
-          {/* Header */}
-          <div className="bg-white rounded-xl shadow-md p-6 mb-6 border border-gray-200">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          {/* Main Container */}
+          <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-200 h-full flex flex-col">
+            {/* Header */}
+            <div className="flex items-center justify-between mb-6">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
                   <img src={assesment_logo} alt="Assessment" className="w-8 h-8" />
                 </div>
+<<<<<<< HEAD
                 <h1 className="text-xl sm:text-2xl font-semibold text-blue-700">
                   Add New Assessment
                 </h1>
+=======
+                <h1 className="text-xl sm:text-2xl font-semibold" style={{ color: "rgb(33 98 193 / var(--tw-bg-opacity, 1))" }}>Add New Assessment</h1>
+>>>>>>> prajwal_st
               </div>
 
               {/* Right Circular Close Button */}
               <button
                 onClick={goBack}
+<<<<<<< HEAD
                 className="w-10 h-10 mt-3 sm:mt-0 flex items-center justify-center rounded-full text-white transition-all shadow-sm hover:shadow-md"
+=======
+                className="w-10 h-10 flex items-center justify-center rounded-full text-white transition-all hover:opacity-90 shadow-md"
+>>>>>>> prajwal_st
                 style={{ backgroundColor: "rgb(33 98 193 / var(--tw-bg-opacity, 1))" }}
               >
                 <X className="w-5 h-5" />
@@ -111,12 +120,17 @@ export default function AddNewAssessment() {
             </div>
 
             {/* Tabs: Online / Offline */}
-            <div className="flex gap-3 mt-6 border-b border-gray-200">
+            <div className="flex gap-3 mb-6">
               <button
                 type="button"
                 onClick={() => handleTabView('Internal')}
+<<<<<<< HEAD
                 className={`flex items-center gap-2 px-6 py-3 font-medium text-sm rounded-t-lg transition-all
                   ${state.internalAssessmentViewBtn === 'tab-active'
+=======
+                className={`flex items-center gap-2 px-6 py-3 font-medium text-sm rounded-lg transition-all shadow-sm ${
+                  state.internalAssessmentViewBtn === 'tab-active'
+>>>>>>> prajwal_st
                     ? 'bg-blue-600 text-white shadow-md'
                     : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                   }`}
@@ -127,8 +141,13 @@ export default function AddNewAssessment() {
               <button
                 type="button"
                 onClick={() => handleTabView('External')}
+<<<<<<< HEAD
                 className={`flex items-center gap-2 px-6 py-3 font-medium text-sm rounded-t-lg transition-all
                   ${state.externalAssessmentViewBtn === 'tab-active'
+=======
+                className={`flex items-center gap-2 px-6 py-3 font-medium text-sm rounded-lg transition-all shadow-sm ${
+                  state.externalAssessmentViewBtn === 'tab-active'
+>>>>>>> prajwal_st
                     ? 'bg-blue-600 text-white shadow-md'
                     : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                   }`}
@@ -137,45 +156,47 @@ export default function AddNewAssessment() {
                 Offline
               </button>
             </div>
-          </div>
 
-          {/* Content Area */}
-          <div className="bg-white rounded-xl shadow-md p-6 border border-gray-200">
-            {state.loading ? (
-              <div className="flex justify-center items-center h-64">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-              </div>
-            ) : (
-              <>
-                {offline_assessment_enabled ? (
-                  int_ext_type === 'Internal' ? (
-                    <AddInternalAssessment
-                      showWarningModal={openWarningModal}
-                      showImageModal={openImagePreview}
-                      showSuccessModal={openSuccessModal}
-                      selectedClass={state.selectedClass}
-                      selectedClassName={state.selectedClassName}
-                    />
-                  ) : (
-                    <AddExternalAssessment
-                      showWarningModal={openWarningModal}
-                      showImageModal={openImagePreview}
-                      showSuccessModal={openSuccessModal}
-                      selectedClass={state.selectedClass}
-                      selectedClassName={state.selectedClassName}
-                    />
-                  )
+            {/* Content Area */}
+            <div className="flex-1">
+              <div className="bg-white rounded-lg shadow-md p-6 border border-gray-100 h-full">
+                {state.loading ? (
+                  <div className="flex justify-center items-center h-64">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+                  </div>
                 ) : (
-                  <AddInternalAssessment
-                    showWarningModal={openWarningModal}
-                    showImageModal={openImagePreview}
-                    showSuccessModal={openSuccessModal}
-                    selectedClass={state.selectedClass}
-                    selectedClassName={state.selectedClassName}
-                  />
+                  <>
+                    {offline_assessment_enabled ? (
+                      int_ext_type === 'Internal' ? (
+                        <AddInternalAssessment
+                          showWarningModal={openWarningModal}
+                          showImageModal={openImagePreview}
+                          showSuccessModal={openSuccessModal}
+                          selectedClass={state.selectedClass}
+                          selectedClassName={state.selectedClassName}
+                        />
+                      ) : (
+                        <AddExternalAssessment
+                          showWarningModal={openWarningModal}
+                          showImageModal={openImagePreview}
+                          showSuccessModal={openSuccessModal}
+                          selectedClass={state.selectedClass}
+                          selectedClassName={state.selectedClassName}
+                        />
+                      )
+                    ) : (
+                      <AddInternalAssessment
+                        showWarningModal={openWarningModal}
+                        showImageModal={openImagePreview}
+                        showSuccessModal={openSuccessModal}
+                        selectedClass={state.selectedClass}
+                        selectedClassName={state.selectedClassName}
+                      />
+                    )}
+                  </>
                 )}
-              </>
-            )}
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -183,7 +204,7 @@ export default function AddNewAssessment() {
       {/* Success Modal */}
       {showSuccessModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
+          <div className="bg-white rounded-xl max-w-md w-full p-6">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-lg font-semibold text-green-600">{modalHeading}</h3>
               <button onClick={() => setShowSuccessModal(false)} className="text-gray-400 hover:text-gray-600">
@@ -206,7 +227,7 @@ export default function AddNewAssessment() {
       {/* Warning Modal */}
       {showWarningModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
+          <div className="bg-white rounded-xl max-w-md w-full p-6">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-lg font-semibold text-amber-600">{modalHeading}</h3>
               <button onClick={() => setShowWarningModal(false)} className="text-gray-400 hover:text-gray-600">
@@ -235,7 +256,7 @@ export default function AddNewAssessment() {
       {/* Image Preview Modal */}
       {showImageModal && (
         <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
-          <div className="relative bg-white rounded-xl shadow-xl max-w-3xl w-full p-4">
+          <div className="relative bg-white rounded-xl max-w-3xl w-full p-4">
             <button
               onClick={() => setShowImageModal(false)}
               className="absolute top-4 right-4 text-white bg-black bg-opacity-50 rounded-full p-2 hover:bg-opacity-70 transition"
