@@ -1,638 +1,570 @@
 'use client';
-import React, { useState, useEffect, useRef } from 'react';
-import { Formik, Field, Form } from 'formik';
-import * as Yup from 'yup';
-import DatePicker from 'react-datepicker';
+
+import React, { useState, useEffect } from "react";
+import { Formik, Field, Form } from "formik";
+import * as Yup from "yup";
+import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import moment from "moment";
-import { Search, Calendar, Clock, CheckCircle, Loader2, ChevronDown, Image, FileText, Plus } from 'lucide-react';
-import assesment_logo from '@/_assets/images_new_design/Assessment_logo.svg';
-import SearchImg from '@/_assets/images/Search.svg';
+import { Search, Calendar, Clock, CheckCircle, ChevronDown } from "lucide-react";
+import assesment_logo from "@/_assets/images_new_design/Assessment_logo.svg";
 
-// Mock services (replace with actual imports)
-const gradeService = {
-  getAll: () => Promise.resolve([{ grade_id: '1', name: 'MBA' }, { grade_id: '2', name: 'BCA' }]),
-  getGradeDivision: () => Promise.resolve([
-    { grade_division_id: '1', grade: { name: 'MBA' }, division: { name: 'A' }, active: true },
-    { grade_division_id: '2', grade: { name: 'MBA' }, division: { name: 'B' }, active: true }
-  ])
-};
-const classService = {
-  getClassDetailsByGradeId: () => Promise.resolve([
-    { class_data: { class_data_id: 'FY', name_data: 'FY' } },
-    { class_data: { class_data_id: 'SY', name_data: 'SY' } }
-  ])
-};
-const gradeSubjectService = {
-  getGradeSubjects: () => Promise.resolve([
-    { subject: { subject_id: '1', name: 'Mathematics' } },
-    { subject: { subject_id: '2', name: 'Science' } }
-  ])
-};
-const chapterService = {
-  getChapterBySubjectIDGradeID: () => Promise.resolve([
-    { chapter_id: '1', label: 'Chapter 1' },
-    { chapter_id: '2', label: 'Chapter 2' }
-  ])
-};
-const topicService = {
-  getTopicBySubjectAndChapter: () => Promise.resolve([
-    { topic_id: '1', label: 'Topic 1' },
-    { topic_id: '2', label: 'Topic 2' }
-  ])
-};
-const questionService = {
-  getQuestionBySunjectIdWithFlagV3Paging: () => Promise.resolve([
-    {
-      question: { question_id: '1', question: 'What is 2+2?', option1: '4', option2: '5', option3: '6', option4: '7', question_level: { question_level_type: 'EASY' }, objective_subjective_type: 'Objective', default_weight_age: 2 },
-      assigned: false
-    }
-  ])
+// Mock Data
+const mockGrades = [
+  { grade_id: "1", name: "Grade 1" },
+  { grade_id: "2", name: "Grade 2" },
+];
+const mockDivisions = [
+  { grade_division_id: "d1", division: { name: "A" } },
+  { grade_division_id: "d2", division: { name: "B" } },
+];
+const mockSubjects = [
+  { subject_id: "s1", name: "Maths" },
+  { subject_id: "s2", name: "Science" },
+];
+const mockChapters = [
+  { chapter_id: "c1", label: "Chapter 1" },
+  { chapter_id: "c2", label: "Chapter 2" },
+];
+const mockTopics = [
+  { topic_id: "t1", label: "Topic 1" },
+  { topic_id: "t2", label: "Topic 2" },
+];
+const mockQuestionLevels = [
+  { question_level_id: "easy", question_level_type: "EASY" },
+  { question_level_id: "medium", question_level_type: "MEDIUM" },
+  { question_level_id: "hard", question_level_type: "HARD" },
+];
+const mockQuestions = [
+  {
+    question_id: "q1",
+    question: "<p>What is 2 + 2?</p>",
+    question_level: { question_level_type: "EASY" },
+    objective_subjective_type: "Objective",
+    option1: "3", option2: "4", option3: "5", option4: "6",
+    chapter: { label: "Chapter 1" },
+    topic: { label: "Topic 1" },
+    default_weight_age: 1,
+    question_images: [],
+  },
+  {
+    question_id: "q2",
+    question: "<p>Define photosynthesis.</p>",
+    question_level: { question_level_type: "MEDIUM" },
+    objective_subjective_type: "Subjective",
+    option1: null, option2: null, option3: null, option4: null,
+    chapter: { label: "Chapter 1" },
+    topic: { label: "Topic 2" },
+    default_weight_age: 3,
+    question_images: [],
+  },
+];
+
+// Color Mapping (Pure JS)
+const levelColors = {
+  EASY: "bg-green-500",
+  MEDIUM: "bg-amber-500",
+  HARD: "bg-red-500",
 };
 
-const AddInternalAssessment = ({ grade, nba, currentUser, showSuccessModal, showWarningModal, userRole }) => {
-  const [state, setState] = useState({
-    grades: [],
-    classes: [],
-    divisions: [],
-    subjects: [],
-    chapters: [],
-    topics: [],
-    questions: [],
-    filteredQuestions: [],
-    selectedGrade: '',
-    selectedClass: '',
-    selectedDivision: '',
-    selectedSubject: '',
-    selectedChapter: '',
-    selectedTopic: '',
-    selectedTestCategory: 'Objective',
-    testDate: moment().add(2, 'minutes').toDate(),
-    testLastDate: moment().add(1, 'day').add(2, 'minutes').toDate(),
-    timeLimit: '',
-    selectedQuestions: [],
-    noOfQuestions: 0,
-    noOfEasy: 0,
-    noOfMedium: 0,
-    noOfHard: 0,
-    loadingQuestions: false,
-    loadMore: false,
-    currentPage: 0,
-    bulkUploadType: 'Regular Assessment',
-    isNBA: false,
-  });
-
-  // dropdown control for custom dropdowns (matches ObjectiveQuestion)
+export default function AddInternalAssessment() {
+  // All States
+  const [selectedGradeId, setSelectedGradeId] = useState("");
+  const [selectedDivisionId, setSelectedDivisionId] = useState("");
+  const [selectedSubject, setSelectedSubject] = useState("");
+  const [selectedChapter, setSelectedChapter] = useState("");
+  const [selectedTopic, setSelectedTopic] = useState("");
+  const [selectedTestCategory, setSelectedTestCategory] = useState("Objective");
+  const [selectedQuestionLevelId, setSelectedQuestionLevelId] = useState("");
+  const [selectedQuestionFilterId, setSelectedQuestionFilterId] = useState("");
+  const [testDate, setTestDate] = useState(moment().add(2, "m").toDate());
+  const [testLastDate, setTestLastDate] = useState(moment().add(1, "d").add(2, "m").toDate());
+  const [timeLimit, setTimeLimit] = useState("");
+  const [proctoring, setProctoring] = useState(false);
+  const [filteredQuestions, setFilteredQuestions] = useState([]);
+  const [selectedQuestions, setSelectedQuestions] = useState([]);
+  const [noofQuestionSelected, setNoofQuestionSelected] = useState(0);
+  const [noofEasyQuestionSelected, setNoofEasyQuestionSelected] = useState(0);
+  const [noofMediumQuestionSelected, setNoofMediumQuestionSelected] = useState(0);
+  const [noofHardQuestionSelected, setNoofHardQuestionSelected] = useState(0);
+  const [selectAll, setSelectAll] = useState(false);
+  const [classViewActive, setClassViewActive] = useState(true);
   const [openDropdown, setOpenDropdown] = useState(null);
-  const dropdownRefs = useRef({});
 
-  useEffect(() => {
-    const loadInitialData = async () => {
-      try {
-        const grades = await gradeService.getAll();
-        setState(prev => ({ ...prev, grades }));
-      } catch (error) {
-        console.error("Error loading grades:", error);
-      }
-    };
-    loadInitialData();
-  }, []);
+  // Custom Dropdown Component
+  const CustomDropdown = ({
+    label,
+    value,
+    options,
+    placeholder,
+    required = false,
+    onChange,
+    fieldName,
+  }) => (
+    <div className="relative">
+      <label className="block text-sm font-medium text-gray-700 mb-1">
+        {label} {required && <span className="text-red-500">*</span>}
+      </label>
+      <div
+        className={`w-full px-4 py-2.5 border rounded-lg bg-white flex justify-between items-center cursor-pointer transition-all hover:border-blue-400 focus-within:ring-2 focus-within:ring-blue-400 ${
+          openDropdown === fieldName ? "ring-2 ring-blue-400 border-blue-400" : "border-gray-300"
+        }`}
+        onClick={() => setOpenDropdown(openDropdown === fieldName ? null : fieldName)}
+      >
+        <span className={value ? "text-gray-900" : "text-gray-400"}>
+          {value || placeholder}
+        </span>
+        <ChevronDown className={`w-4 h-4 text-gray-500 transition-transform ${openDropdown === fieldName ? "rotate-180" : ""}`} />
+      </div>
+      {openDropdown === fieldName && (
+        <div className="absolute z-20 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+          {options.map((opt) => {
+            const val = opt.grade_division_id || opt.subject_id || opt.chapter_id || opt.topic_id || opt.question_level_id || opt;
+            const label = opt.division?.name || opt.name || opt.label || opt.question_level_type || opt;
+            return (
+              <div
+                key={val}
+                className="px-4 py-2 text-sm hover:bg-blue-50 cursor-pointer"
+                onClick={() => {
+                  onChange(val);
+                  setOpenDropdown(null);
+                }}
+              >
+                {label}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
 
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (!Object.values(dropdownRefs.current).some(ref => ref?.contains && ref.contains(event.target))) {
-        setOpenDropdown(null);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+  // Filter Questions
+  const applyFilters = () => {
+    let list = [...mockQuestions];
 
-  const handleGradeChange = async (gradeId, setFieldValue) => {
-    setState(prev => ({ ...prev, selectedGrade: gradeId, classes: [], divisions: [], subjects: [] }));
-    setFieldValue('grade_id', gradeId);
-    if (gradeId) {
-      const classes = await classService.getClassDetailsByGradeId(gradeId);
-      const classOptions = classes.map(cls => ({
-        class_id: cls.class_data.class_data_id,
-        name: cls.class_data.name_data,
-      }));
-      setState(prev => ({ ...prev, classes: classOptions }));
+    if (selectedChapter) {
+      list = list.filter(q => q.chapter.label === mockChapters.find(c => c.chapter_id === selectedChapter)?.label);
     }
+    if (selectedTopic) {
+      list = list.filter(q => q.topic.label === mockTopics.find(t => t.topic_id === selectedTopic)?.label);
+    }
+    if (selectedTestCategory && selectedTestCategory !== "Mixed") {
+      list = list.filter(q => q.objective_subjective_type === selectedTestCategory);
+    }
+    if (selectedQuestionLevelId) {
+      const level = mockQuestionLevels.find(l => l.question_level_id === selectedQuestionLevelId)?.question_level_type;
+      list = list.filter(q => q.question_level.question_level_type === level);
+    }
+
+    setFilteredQuestions(list.map(q => ({
+      ...q,
+      checked: selectedQuestions.some(s => s.question_id === q.question_id && s.selected)
+    })));
   };
 
-  const handleClassChange = async (classId, setFieldValue) => {
-    setState(prev => ({ ...prev, selectedClass: classId, divisions: [] }));
-    setFieldValue('class_id', classId);
-    if (state.selectedGrade && classId) {
-      const divisions = await gradeService.getGradeDivision(state.selectedGrade, classId);
-      const formatted = divisions
-        .filter(d => d.active)
-        .map(d => ({
-          grade_division_id: d.grade_division_id,
-          grade_division_obj_str: JSON.stringify({
-            grade_division_id: d.grade_division_id,
-            grade_id: d.grade.grade_id,
-          }),
-          division: d.division
-        }));
-      setState(prev => ({ ...prev, divisions: formatted }));
-    }
+  useEffect(() => {
+    applyFilters();
+  }, [selectedChapter, selectedTopic, selectedTestCategory, selectedQuestionLevelId, selectedQuestions]);
+
+  // Handlers
+  const handleGradeChange = (val) => {
+    setSelectedGradeId(val);
+    setSelectedDivisionId("");
+    setSelectedSubject("");
+    resetFilters();
   };
 
-  const handleDivisionChange = async (divisionObjStr, setFieldValue) => {
-    if (!divisionObjStr) {
-      setState(prev => ({ ...prev, subjects: [] }));
-      setFieldValue('grade_division', '');
-      return;
-    }
-    if (divisionObjStr === 'All') {
-      const subjects = await gradeSubjectService.getGradeSubjects(state.selectedGrade, state.selectedClass, false);
-      setState(prev => ({ ...prev, subjects: subjects.map(s => s.subject) }));
-      setFieldValue('grade_division', 'All');
+  const handleDivisionChange = (val) => {
+    setSelectedDivisionId(val);
+    setSelectedSubject("");
+    resetFilters();
+  };
+
+  const handleSubjectChange = (val) => {
+    setSelectedSubject(val);
+    setSelectedChapter("");
+    setSelectedTopic("");
+    setFilteredQuestions(mockQuestions);
+    setSelectedQuestions([]);
+    resetCounts();
+  };
+
+  const resetFilters = () => {
+    setSelectedChapter("");
+    setSelectedTopic("");
+    setFilteredQuestions([]);
+    setSelectedQuestions([]);
+    resetCounts();
+  };
+
+  const resetCounts = () => {
+    setNoofQuestionSelected(0);
+    setNoofEasyQuestionSelected(0);
+    setNoofMediumQuestionSelected(0);
+    setNoofHardQuestionSelected(0);
+    setSelectAll(false);
+  };
+
+  const toggleSelectAll = (checked) => {
+    setSelectAll(checked);
+    const updated = filteredQuestions.map(q => ({ question_id: q.question_id, selected: checked }));
+    setSelectedQuestions(updated);
+
+    if (checked) {
+      const easy = filteredQuestions.filter(q => q.question_level.question_level_type === "EASY").length;
+      const med = filteredQuestions.filter(q => q.question_level.question_level_type === "MEDIUM").length;
+      const hard = filteredQuestions.filter(q => q.question_level.question_level_type === "HARD").length;
+      setNoofQuestionSelected(filteredQuestions.length);
+      setNoofEasyQuestionSelected(easy);
+      setNoofMediumQuestionSelected(med);
+      setNoofHardQuestionSelected(hard);
     } else {
-      const obj = JSON.parse(divisionObjStr);
-      setState(prev => ({ ...prev, selectedDivision: obj.grade_division_id }));
-      const subjects = await gradeSubjectService.getGradeSubjects(state.selectedGrade, state.selectedClass, false);
-      setState(prev => ({ ...prev, subjects: subjects.map(s => s.subject) }));
-      setFieldValue('grade_division', divisionObjStr);
+      resetCounts();
     }
   };
 
-  const handleSubjectChange = async (subjectId, setFieldValue) => {
-    setState(prev => ({ ...prev, selectedSubject: subjectId, chapters: [] }));
-    setFieldValue('subject_id', subjectId);
-    if (subjectId) {
-      const chapters = await chapterService.getChapterBySubjectIDGradeID(subjectId, state.selectedGrade);
-      setState(prev => ({ ...prev, chapters }));
-    }
+  const toggleQuestion = (q, checked) => {
+    const updated = selectedQuestions.filter(s => s.question_id !== q.question_id);
+    if (checked) updated.push({ question_id: q.question_id, selected: true });
+
+    setSelectedQuestions(updated);
+    setNoofQuestionSelected(prev => checked ? prev + 1 : prev - 1);
+    if (q.question_level.question_level_type === "EASY") setNoofEasyQuestionSelected(prev => checked ? prev + 1 : prev - 1);
+    if (q.question_level.question_level_type === "MEDIUM") setNoofMediumQuestionSelected(prev => checked ? prev + 1 : prev - 1);
+    if (q.question_level.question_level_type === "HARD") setNoofHardQuestionSelected(prev => checked ? prev + 1 : prev - 1);
   };
 
-  const handleChapterChange = async (chapterId, setFieldValue) => {
-    setState(prev => ({ ...prev, selectedChapter: chapterId, topics: [] }));
-    setFieldValue('chapter_id', chapterId);
-    if (chapterId) {
-      const topics = await topicService.getTopicBySubjectAndChapter(state.selectedSubject, chapterId);
-      setState(prev => ({ ...prev, topics }));
-    }
-    loadQuestions(setFieldValue);
-  };
-
-  const handleTopicChange = (topicId, setFieldValue) => {
-    setState(prev => ({ ...prev, selectedTopic: topicId }));
-    setFieldValue('topic_id', topicId);
-    loadQuestions(setFieldValue);
-  };
-
-  const handleCategoryChange = (category, setFieldValue) => {
-    setState(prev => ({ ...prev, selectedTestCategory: category }));
-    setFieldValue('test_category', category);
-    loadQuestions(setFieldValue);
-  };
-
-  const loadQuestions = async (setFieldValue) => {
-    if (!state.selectedSubject) return;
-    setState(prev => ({ ...prev, loadingQuestions: true }));
-    try {
-      const questions = await questionService.getQuestionBySunjectIdWithFlagV3Paging(
-        state.selectedSubject, state.selectedGrade, 0, 10, state.selectedTestCategory,
-        state.selectedChapter, state.selectedTopic
-      );
-      const formatted = questions.map(q => ({
-        ...q.question,
-        assigned: q.assigned,
-        question_id: q.question.question_id,
-        question: q.question.question.replace(/<p[^>]*>/g, "").replace(/<\/p>/g, ""),
-        color_code: q.question.question_level.question_level_type === 'EASY' ? '#10b981' :
-                   q.question.question_level.question_level_type === 'MEDIUM' ? '#f59e0b' : '#ef4444',
-        isChecked: false
-      }));
-      setState(prev => ({ ...prev, questions: formatted, filteredQuestions: formatted, loadingQuestions: false }));
-    } catch (error) {
-      setState(prev => ({ ...prev, loadingQuestions: false }));
-    }
-  };
-
-  const handleSelectAll = (checked) => {
-    const updated = state.filteredQuestions.map(q => ({ ...q, isChecked: checked }));
-    const counts = updated.reduce((acc, q) => {
-      if (q.isChecked) {
-        acc.total++;
-        if (q.question_level.question_level_type === 'EASY') acc.easy++;
-        else if (q.question_level.question_level_type === 'MEDIUM') acc.medium++;
-        else if (q.question_level.question_level_type === 'HARD') acc.hard++;
-      }
-      return acc;
-    }, { total: 0, easy: 0, medium: 0, hard: 0 });
-    setState(prev => ({
-      ...prev,
-      filteredQuestions: updated,
-      noOfQuestions: counts.total,
-      noOfEasy: counts.easy,
-      noOfMedium: counts.medium,
-      noOfHard: counts.hard
-    }));
-  };
-
-  const handleQuestionSelect = (questionId, checked) => {
-    const updated = state.filteredQuestions.map(q => 
-      q.question_id === questionId ? { ...q, isChecked: checked } : q
-    );
-    const counts = updated.reduce((acc, q) => {
-      if (q.isChecked) {
-        acc.total++;
-        if (q.question_level.question_level_type === 'EASY') acc.easy++;
-        else if (q.question_level.question_level_type === 'MEDIUM') acc.medium++;
-        else if (q.question_level.question_level_type === 'HARD') acc.hard++;
-      }
-      return acc;
-    }, { total: 0, easy: 0, medium: 0, hard: 0 });
-    setState(prev => ({
-      ...prev,
-      filteredQuestions: updated,
-      noOfQuestions: counts.total,
-      noOfEasy: counts.easy,
-      noOfMedium: counts.medium,
-      noOfHard: counts.hard
-    }));
-  };
-
-  const validationSchema = Yup.object().shape({
-    title: Yup.string().trim().required('Please enter the Assessment Title'),
-    grade_id: Yup.string().trim().required('Please select the Program'),
-    class_id: Yup.string().trim().required('Please select the Class'),
-    grade_division: Yup.string().trim().required('Please select the Division'),
-    subject_id: Yup.string().trim().required('Please select the Subject'),
-    test_category: Yup.string().trim().required('Please select the Category'),
-    test_date: Yup.date().required('Please select test date'),
-    test_last_date: Yup.date().required('Please select test end date'),
-    time_limit: Yup.number().required('Please enter time limit').min(1),
-  });
-
-  const formatDateForInput = (date) => {
-    if (!(date instanceof Date) || isNaN(date)) return '';
-    return date.toISOString().slice(0, 16);
-  };
-
-  const getMinDate = () => {
-    const tomorrow = new Date();
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    return formatDateForInput(tomorrow);
+  const changeTimeLimit = (mins) => {
+    setTimeLimit(mins);
+    const end = moment(testDate).add(parseInt(mins || "0"), "m").toDate();
+    setTestLastDate(end);
   };
 
   return (
-    
-      
-        <Formik
-          initialValues={{
-            title: '',
-            grade_id: state.selectedGrade,
-            class_id: state.selectedClass,
-            grade_division: '',
-            subject_id: '',
-            chapter_id: '',
-            topic_id: '',
-            test_category: state.selectedTestCategory,
-            test_date: formatDateForInput(state.testDate),
-            test_last_date: formatDateForInput(state.testLastDate),
-            time_limit: state.timeLimit,
-            int_ext_type: 'Internal',
-          }}
-          validationSchema={validationSchema}
-          enableReinitialize
-          onSubmit={(values, { setSubmitting, resetForm }) => {
-            values.test_date = Math.floor(new Date(values.test_date).getTime() / 1000);
-            values.test_last_date = Math.floor(new Date(values.test_last_date).getTime() / 1000);
-            console.log('Submitting:', values);
-            setTimeout(() => {
-              showSuccessModal && showSuccessModal(true, 'Assessment added successfully!');
-              resetForm();
-              setSubmitting(false);
-            }, 1000);
-          }}
-        >
-          {({ values, errors, touched, handleChange, handleSubmit, isSubmitting, setFieldValue }) => {
-            // CustomDropdown defined here so it can use setFieldValue, errors, touched
-            const CustomDropdown = ({ fieldName, label, value, options, placeholder = '', required = false, onChangeCallback }) => (
-              <div ref={el => dropdownRefs.current[fieldName] = el} className="relative">
-                <label className="block font-medium mb-1 text-gray-700">
-                  {label}{required && <span className="text-red-500">*</span>}
-                </label>
-                <div
-                  className={`w-full px-3 py-2.5 border bg-white cursor-pointer rounded-md min-h-[40px] flex items-center justify-between transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-blue-400 hover:border-blue-400 ${
-                    errors[fieldName] && touched[fieldName] ? 'border-red-500' : 'border-gray-300'
-                  }`}
-                  onClick={() => setOpenDropdown(openDropdown === fieldName ? null : fieldName)}
-                >
-                  <span className={value ? 'text-gray-900' : 'text-gray-400'}>
-                    {value || placeholder}
-                  </span>
-                  <ChevronDown
-                    className={`w-4 h-4 text-gray-400 transition-transform ${openDropdown === fieldName ? 'rotate-180' : 'rotate-0'}`}
-                  />
-                </div>
-                {openDropdown === fieldName && (
-                  <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto">
-                    <div
-                      className="px-4 py-2 text-sm text-gray-700 cursor-pointer hover:bg-blue-50 transition-colors"
-                      onClick={() => {
-                        if (onChangeCallback) onChangeCallback('');
-                        setOpenDropdown(null);
-                      }}
-                    >
-                      {placeholder}
-                    </div>
-                    {options.map((option) => {
-                      // option can be object or string
-                      const optValue = typeof option === 'string' ? option : (option.value ?? option.grade_division_obj_str ?? option.subject_id ?? option.chapter_id ?? option.topic_id ?? option.class_id);
-                      const optLabel = typeof option === 'string' ? option : (option.label ?? option.name ?? option.division?.name ?? option.name);
-                      return (
-                        <div
-                          key={optValue}
-                          className="px-4 py-2 text-sm text-gray-700 cursor-pointer hover:bg-blue-50 transition-colors"
-                          onClick={() => {
-                            if (onChangeCallback) onChangeCallback(optValue);
-                            setOpenDropdown(null);
-                          }}
-                        >
-                          {optLabel}
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-                {errors[fieldName] && touched[fieldName] && (
-                  <p className="mt-1 text-sm text-red-600">{errors[fieldName]}</p>
-                )}
+    <div className="max-w-5xl mx-auto p-6 bg-white rounded-xl shadow-lg">
+      <Formik
+        initialValues={{
+          title: "",
+          grade: "",
+          grade_division_id: "",
+          subject_id: "",
+          chapter_id: "",
+          topic_id: "",
+          test_category: "Objective",
+          test_duration: "",
+        }}
+        validationSchema={Yup.object({
+          title: Yup.string().required("Assessment title is required"),
+          grade: Yup.string().required("Select a program"),
+          grade_division_id: Yup.string().required("Select a division"),
+          subject_id: Yup.string().required("Select a subject"),
+          test_duration: Yup.string().required("Enter duration"),
+        })}
+        onSubmit={(values, { setSubmitting }) => {
+          alert("Assessment Created (Demo Mode)");
+          setSubmitting(false);
+        }}
+      >
+        {({ values, errors, touched, setFieldValue, isSubmitting }) => (
+          <Form className="space-y-8">
+            {/* Header */}
+            <div className="flex items-center gap-4 border-b pb-6">
+              <div className="w-16 h-16 bg-blue-100 rounded-xl flex items-center justify-center p-2">
+                <img src={assesment_logo} alt="Assessment" className="w-full h-full object-contain" />
               </div>
-            );
+              <div className="flex-1">
+                <Field
+                  name="title"
+                  placeholder="Enter Assessment Title"
+                  className="w-full text-2xl font-bold text-gray-800 placeholder-gray-400 border-0 focus:outline-none"
+                />
+                {errors.title && touched.title && <p className="text-red-600 text-sm mt-1">{errors.title}</p>}
+              </div>
+              <div className="relative">
+                <input
+                  type="text"
+                  placeholder="Search questions"
+                  className="pl-10 pr-4 py-2.5 border rounded-lg text-sm w-64"
+                />
+                <Search className="absolute left-3 top-3 w-5 h-5 text-gray-500" />
+              </div>
+            </div>
 
-            return (
-              <Form onSubmit={handleSubmit} className="space-y-8">
-                {/* Header with Logo & Title */}
-                <div className="flex items-center space-x-4 border-b border-gray-200 pb-6">
-                  <div className="w-16 h-16 bg-blue-100 rounded-xl flex items-center justify-center p-3">
-                    <img src={assesment_logo} alt="Assessment" className="w-full h-full object-contain" />
-                  </div>
-                  <div className="flex-1">
-                    <Field
-                      name="title"
-                      placeholder="Enter Assessment Title"
-                      className={`w-full text-xl font-semibold text-gray-800 placeholder-gray-400 border-0 focus:outline-none focus:ring-0 ${
-                        errors.title && touched.title ? 'text-red-600' : ''
-                      }`}
+            {/* Tabs */}
+            <div className="flex gap-3 border-b pb-4">
+              <button
+                type="button"
+                onClick={() => setClassViewActive(true)}
+                className={`px-6 py-2 rounded-lg font-medium transition-all ${classViewActive ? "bg-blue-600 text-white" : "bg-gray-100 text-gray-600"}`}
+              >
+                Class
+              </button>
+              <button
+                type="button"
+                onClick={() => setClassViewActive(false)}
+                className={`px-6 py-2 rounded-lg font-medium transition-all ${!classViewActive ? "bg-blue-600 text-white" : "bg-gray-100 text-gray-600"}`}
+              >
+                Home
+              </button>
+            </div>
+
+            {/* Filters Row 1 */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <CustomDropdown
+                label="Program"
+                value={mockGrades.find(g => g.grade_id === selectedGradeId)?.name || ""}
+                options={mockGrades}
+                placeholder="Select Program"
+                required
+                fieldName="grade"
+                onChange={(val) => {
+                  setFieldValue("grade", val);
+                  handleGradeChange(val);
+                }}
+              />
+              <CustomDropdown
+                label="Division"
+                value={mockDivisions.find(d => d.grade_division_id === selectedDivisionId)?.division.name || ""}
+                options={[{ grade_division_id: "All", division: { name: "All" } }, ...mockDivisions]}
+                placeholder="Select Division"
+                required
+                fieldName="division"
+                onChange={(val) => {
+                  setFieldValue("grade_division_id", val);
+                  handleDivisionChange(val);
+                }}
+              />
+              <CustomDropdown
+                label="Paper"
+                value={mockSubjects.find(s => s.subject_id === selectedSubject)?.name || ""}
+                options={mockSubjects}
+                placeholder="Select Paper"
+                required
+                fieldName="subject"
+                onChange={(val) => {
+                  setFieldValue("subject_id", val);
+                  handleSubjectChange(val);
+                }}
+              />
+              <CustomDropdown
+                label="Category"
+                value={selectedTestCategory}
+                options={["Objective", "Subjective", "Coding", "Mixed"]}
+                placeholder="Select Category"
+                fieldName="category"
+                onChange={(val) => {
+                  setFieldValue("test_category", val);
+                  setSelectedTestCategory(val);
+                }}
+              />
+            </div>
+
+            {/* Filters Row 2 */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <CustomDropdown
+                label="Module"
+                value={mockChapters.find(c => c.chapter_id === selectedChapter)?.label || ""}
+                options={mockChapters}
+                placeholder="All Modules"
+                fieldName="chapter"
+                onChange={(val) => {
+                  setSelectedChapter(val);
+                  setFieldValue("chapter_id", val);
+                }}
+              />
+              <CustomDropdown
+                label="Unit"
+                value={mockTopics.find(t => t.topic_id === selectedTopic)?.label || ""}
+                options={mockTopics}
+                placeholder="All Units"
+                fieldName="topic"
+                onChange={(val) => {
+                  setSelectedTopic(val);
+                  setFieldValue("topic_id", val);
+                }}
+              />
+              <CustomDropdown
+                label="Level"
+                value={mockQuestionLevels.find(l => l.question_level_id === selectedQuestionLevelId)?.question_level_type || ""}
+                options={mockQuestionLevels}
+                placeholder="All Levels"
+                fieldName="level"
+                onChange={setSelectedQuestionLevelId}
+              />
+              <CustomDropdown
+                label="Filter"
+                value={selectedQuestionFilterId}
+                options={["All", "Used", "Unused"]}
+                placeholder="All"
+                fieldName="filter"
+                onChange={setSelectedQuestionFilterId}
+              />
+            </div>
+
+            {/* Duration & Dates */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Duration (mins) *</label>
+                <div className="relative">
+                  <Field
+                    name="test_duration"
+                    type="number"
+                    min="1"
+                    max="999"
+                    placeholder="Enter duration"
+                    className="w-full pl-10 pr-4 py-2.5 border rounded-lg focus:ring-2 focus:ring-blue-400"
+                    onChange={(e) => {
+                      setFieldValue("test_duration", e.target.value);
+                      changeTimeLimit(e.target.value);
+                    }}
+                  />
+                  <Clock className="absolute left-3 top-3 w-5 h-5 text-gray-400" />
+                </div>
+                {errors.test_duration && touched.test_duration && <p className="text-red-600 text-sm mt-1">{errors.test_duration}</p>}
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Start Time *</label>
+                <div className="relative">
+                  <DatePicker
+                    selected={testDate}
+                    onChange={(date) => setTestDate(moment(date).add(2, "m").toDate())}
+                    showTimeSelect
+                    dateFormat="Pp"
+                    minDate={new Date()}
+                    className="w-full pl-10 pr-4 py-2.5 border rounded-lg focus:ring-2 focus:ring-blue-400"
+                  />
+                  <Calendar className="absolute left-3 top-3 w-5 h-5 text-gray-400 pointer-events-none" />
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">End Time *</label>
+                <div className="relative">
+                  <DatePicker
+                    selected={testLastDate}
+                    onChange={(date) => setTestLastDate(date)}
+                    showTimeSelect
+                    dateFormat="Pp"
+                    minDate={new Date()}
+                    className="w-full pl-10 pr-4 py-2.5 border rounded-lg focus:ring-2 focus:ring-blue-400"
+                  />
+                  <Calendar className="absolute left-3 top-3 w-5 h-5 text-gray-400 pointer-events-none" />
+                </div>
+              </div>
+            </div>
+
+            {/* Proctoring & Stats */}
+            <div className="flex items-center justify-between bg-gray-50 p-4 rounded-lg">
+              <label className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={proctoring}
+                  onChange={(e) => setProctoring(e.target.checked)}
+                  className="rounded"
+                />
+                <span className="font-medium">Proctoring</span>
+              </label>
+              <div className="text-sm font-medium">
+                {noofQuestionSelected} selected |{" "}
+                <span className="text-green-600">{noofEasyQuestionSelected} Easy</span> |{" "}
+                <span className="text-amber-600">{noofMediumQuestionSelected} Medium</span> |{" "}
+                <span className="text-red-600">{noofHardQuestionSelected} Hard</span>
+              </div>
+            </div>
+
+            {/* Questions List */}
+            {filteredQuestions.length > 0 && (
+              <div className="border-t pt-6">
+                <div className="flex items-center justify-between mb-4">
+                  <label className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={selectAll}
+                      onChange={(e) => toggleSelectAll(e.target.checked)}
+                      disabled={selectedTestCategory === "Coding"}
+                      className="rounded"
                     />
-                    {errors.title && touched.title && (
-                      <p className="mt-1 text-sm text-red-600">{errors.title}</p>
-                    )}
-                  </div>
+                    <span className="font-medium">Select all questions</span>
+                  </label>
                 </div>
 
-                {/* Program, Class, Division (using CustomDropdown) */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-                  <CustomDropdown
-                    fieldName="grade_id"
-                    label="Program"
-                    value={values.grade_id}
-                    options={state.grades.map(g => ({ value: g.grade_id, name: g.name }))}
-                    placeholder="Select Program"
-                    required
-                    onChangeCallback={(val) => {
-                      handleGradeChange(val, setFieldValue);
-                    }}
-                  />
+                <div className="space-y-4 max-h-96 overflow-y-auto">
+                  {filteredQuestions.map((q, idx) => {
+                    const isChecked = selectedQuestions.some(s => s.question_id === q.question_id && s.selected);
+                    const colorClass = levelColors[q.question_level.question_level_type] || "bg-gray-500";
 
-                  <CustomDropdown
-                    fieldName="class_id"
-                    label="Class"
-                    value={values.class_id}
-                    options={state.classes.map(c => ({ value: c.class_id, name: c.name }))}
-                    placeholder="Select Class"
-                    required
-                    onChangeCallback={(val) => {
-                      handleClassChange(val, setFieldValue);
-                    }}
-                  />
-
-                  <CustomDropdown
-                    fieldName="grade_division"
-                    label="Division"
-                    value={values.grade_division}
-                    options={[ 'All', ...state.divisions.map(d => ({ grade_division_obj_str: d.grade_division_obj_str, division: d.division }))]}
-                    placeholder="Select Division"
-                    required
-                    onChangeCallback={(val) => {
-                      handleDivisionChange(val, setFieldValue);
-                    }}
-                  />
-                </div>
-
-                {/* Subject & Category */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                  <CustomDropdown
-                    fieldName="subject_id"
-                    label={userRole?.userRole === 'ADMIN' ? 'Paper' : 'Subject'}
-                    value={values.subject_id}
-                    options={state.subjects.map(s => ({ subject_id: s.subject_id, name: s.name }))}
-                    placeholder={userRole?.userRole === 'ADMIN' ? 'Select Paper' : 'Select Subject'}
-                    required
-                    onChangeCallback={(val) => {
-                      handleSubjectChange(val, setFieldValue);
-                    }}
-                  />
-
-                  <CustomDropdown
-                    fieldName="test_category"
-                    label="Category"
-                    value={values.test_category}
-                    options={['Objective','Subjective','Coding','Mixed']}
-                    placeholder="Select Category"
-                    required
-                    onChangeCallback={(val) => {
-                      handleCategoryChange(val, setFieldValue);
-                    }}
-                  />
-                </div>
-
-                {/* Chapter & Topic (Additional for Internal) */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                  <CustomDropdown
-                    fieldName="chapter_id"
-                    label="Chapter"
-                    value={values.chapter_id}
-                    options={state.chapters.map(c => ({ chapter_id: c.chapter_id, label: c.label }))}
-                    placeholder="Select Chapter"
-                    onChangeCallback={(val) => {
-                      handleChapterChange(val, setFieldValue);
-                    }}
-                  />
-
-                  <CustomDropdown
-                    fieldName="topic_id"
-                    label="Topic"
-                    value={values.topic_id}
-                    options={state.topics.map(t => ({ topic_id: t.topic_id, label: t.label }))}
-                    placeholder="Select Topic"
-                    onChangeCallback={(val) => {
-                      handleTopicChange(val, setFieldValue);
-                    }}
-                  />
-                </div>
-
-                {/* Test Dates & Time Limit */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-                  <div>
-                    <label className="block font-medium mb-1 text-gray-700">
-                      Test Start Date <span className="text-red-500">*</span>
-                    </label>
-                    <div className="relative">
-                      <Field
-                        name="test_date"
-                        type="datetime-local"
-                        min={getMinDate()}
-                        className={`w-full border rounded-md px-3 py-2.5 pl-10 min-h-[40px] focus:outline-none focus:ring-2 focus:ring-blue-400 transition-all duration-150 hover:border-blue-400 ${
-                          errors.test_date && touched.test_date
-                            ? 'border-red-500'
-                            : 'border-gray-300'
-                        }`}
-                      />
-                      <Calendar className="absolute left-3 top-3 h-5 w-5 text-gray-400 pointer-events-none" />
-                    </div>
-                    {errors.test_date && touched.test_date && (
-                      <p className="mt-1 text-sm text-red-600">{errors.test_date}</p>
-                    )}
-                  </div>
-
-                  <div>
-                    <label className="block font-medium mb-1 text-gray-700">
-                      Test End Date <span className="text-red-500">*</span>
-                    </label>
-                    <div className="relative">
-                      <Field
-                        name="test_last_date"
-                        type="datetime-local"
-                        min={getMinDate()}
-                        className={`w-full border rounded-md px-3 py-2.5 pl-10 min-h-[40px] focus:outline-none focus:ring-2 focus:ring-blue-400 transition-all duration-150 hover:border-blue-400 ${
-                          errors.test_last_date && touched.test_last_date
-                            ? 'border-red-500'
-                            : 'border-gray-300'
-                        }`}
-                      />
-                      <Calendar className="absolute left-3 top-3 h-5 w-5 text-gray-400 pointer-events-none" />
-                    </div>
-                    {errors.test_last_date && touched.test_last_date && (
-                      <p className="mt-1 text-sm text-red-600">{errors.test_last_date}</p>
-                    )}
-                  </div>
-
-                  <div>
-                    <label className="block font-medium mb-1 text-gray-700">
-                      Time Limit (minutes) <span className="text-red-500">*</span>
-                    </label>
-                    <div className="relative">
-                      <Field
-                        name="time_limit"
-                        type="number"
-                        placeholder="Enter time limit"
-                        min="1"
-                        max="999"
-                        className={`w-full border rounded-md px-3 py-2.5 pl-10 min-h-[40px] focus:outline-none focus:ring-2 focus:ring-blue-400 transition-all duration-150 hover:border-blue-400 ${
-                          errors.time_limit && touched.time_limit
-                            ? 'border-red-500'
-                            : 'border-gray-300'
-                        }`}
-                      />
-                      <Clock className="absolute left-3 top-3 h-5 w-5 text-gray-400 pointer-events-none" />
-                    </div>
-                    {errors.time_limit && touched.time_limit && (
-                      <p className="mt-1 text-sm text-red-600">{errors.time_limit}</p>
-                    )}
-                  </div>
-                </div>
-
-                {/* Questions Section */}
-                {state.questions.length > 0 && (
-                  <div className="border-t border-gray-200 pt-6">
-                    <h3 className="text-lg font-semibold text-gray-800 mb-4">Select Questions</h3>
-                    <div className="space-y-3 max-h-96 overflow-y-auto">
-                      <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                        <label className="flex items-center space-x-2">
+                    return (
+                      <div key={q.question_id} className="border rounded-lg p-4 hover:shadow-md transition-shadow">
+                        <div className="flex items-start gap-3">
                           <input
                             type="checkbox"
-                            onChange={(e) => handleSelectAll(e.target.checked)}
-                            className="rounded border-gray-300"
-                          />
-                          <span className="font-medium">Select All Questions</span>
-                        </label>
-                        <div className="text-sm text-gray-600">
-                          Selected: {state.noOfQuestions} | Easy: {state.noOfEasy} | Medium: {state.noOfMedium} | Hard: {state.noOfHard}
-                        </div>
-                      </div>
-                      {state.filteredQuestions.map((question) => (
-                        <div key={question.question_id} className="flex items-start space-x-3 p-3 border border-gray-200 rounded-lg">
-                          <input
-                            type="checkbox"
-                            checked={question.isChecked}
-                            onChange={(e) => handleQuestionSelect(question.question_id, e.target.checked)}
-                            className="mt-1 rounded border-gray-300"
+                            checked={isChecked}
+                            onChange={(e) => toggleQuestion(q, e.target.checked)}
+                            className="mt-1 rounded"
                           />
                           <div className="flex-1">
-                            <div className="flex items-center space-x-2 mb-2">
-                              <span
-                                className="px-2 py-1 text-xs font-medium text-white rounded"
-                                style={{ backgroundColor: question.color_code }}
-                              >
-                                {question.question_level.question_level_type}
+                            <div className="flex items-center gap-2 mb-2">
+                              <span className={`px-2 py-1 text-xs font-bold text-white rounded ${colorClass}`}>
+                                {q.question_level.question_level_type}
                               </span>
-                              <span className="text-sm text-gray-500">Weight: {question.default_weight_age}</span>
+                              <input
+                                type="number"
+                                defaultValue={q.default_weight_age}
+                                min="1"
+                                max="99"
+                                className="w-16 px-2 py-1 text-sm border rounded text-center"
+                              />
+                              <span className="text-sm text-gray-600">marks</span>
                             </div>
-                            <p className="text-sm text-gray-800">{question.question}</p>
-                            {question.objective_subjective_type === 'Objective' && (
-                              <div className="mt-2 grid grid-cols-2 gap-2 text-xs text-gray-600">
-                                <div>A) {question.option1}</div>
-                                <div>B) {question.option2}</div>
-                                <div>C) {question.option3}</div>
-                                <div>D) {question.option4}</div>
+                            <p
+                              className="text-sm text-gray-800 mb-2"
+                              dangerouslySetInnerHTML={{ __html: `${idx + 1}. ${q.question}` }}
+                            />
+                            {q.objective_subjective_type === "Objective" && (
+                              <div className="grid grid-cols-2 gap-2 text-xs text-gray-600">
+                                {q.option1 && <div>A) {q.option1}</div>}
+                                {q.option2 && <div>B) {q.option2}</div>}
+                                {q.option3 && <div>C) {q.option3}</div>}
+                                {q.option4 && <div>D) {q.option4}</div>}
                               </div>
                             )}
+                            <div className="text-xs text-gray-500 mt-2">
+                              Chapter: {q.chapter.label} | Topic: {q.topic.label}
+                            </div>
                           </div>
                         </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Submit Button */}
-                <div className="flex justify-center pt-6 border-t border-gray-200">
-                  <button
-                    type="submit"
-                    disabled={isSubmitting}
-                    className={`flex items-center space-x-2 px-8 py-3 rounded-lg font-medium text-white transition-all ${
-                      isSubmitting
-                        ? 'bg-blue-400 cursor-not-allowed'
-                        : 'bg-blue-600 hover:bg-blue-700 shadow-md hover:shadow-lg'
-                    }`}
-                  >
-                    {isSubmitting ? (
-                      <>
-                        <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                        <span>Submitting...</span>
-                      </>
-                    ) : (
-                      <>
-                        <CheckCircle className="h-5 w-5" />
-                        <span>Submit Assessment</span>
-                      </>
-                    )}
-                  </button>
+                      </div>
+                    );
+                  })}
                 </div>
-              </Form>
-            );
-          }}
-        </Formik>
-      
-  
-  );
-};
+              </div>
+            )}
 
-export default AddInternalAssessment;
+            {/* Submit */}
+            <div className="flex justify-center pt-6 border-t">
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className={`flex items-center gap-2 px-8 py-3 rounded-lg font-medium text-white transition-all ${
+                  isSubmitting ? "bg-blue-400" : "bg-blue-600 hover:bg-blue-700 shadow-md"
+                }`}
+              >
+                {isSubmitting ? (
+                  <>
+                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    Creating...
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle className="w-5 h-5" />
+                    Create Assessment
+                  </>
+                )}
+              </button>
+            </div>
+          </Form>
+        )}
+      </Formik>
+    </div>
+  );
+}
