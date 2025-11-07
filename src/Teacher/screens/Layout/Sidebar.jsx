@@ -92,12 +92,12 @@ const Sidebar = ({ isOpen, toggle }) => {
 
 
       {
-        to: "/teacher-content",
+        to: "/teacher/content",
         label: "Content",
         iconActive: contentActive,
         iconInactive: contentInactive,
         match: [
-          "/teacher-content",
+          "/teacher/content",
           "/teacher-view-content",
           "/teacher-content-manage",
           "/teacher-edit-content",
@@ -123,10 +123,13 @@ const Sidebar = ({ isOpen, toggle }) => {
         ],
       },
       {
-        to: "/teacher-feedback",
+        to: "/teacher/feedback",
         label: "Feedback",
         iconActive: assessmentActive,
         iconInactive: assessmentInactive,
+        match: [
+          "/teacher/feedback",
+        ],
       },
       {
         to: "/teacher-analytics",

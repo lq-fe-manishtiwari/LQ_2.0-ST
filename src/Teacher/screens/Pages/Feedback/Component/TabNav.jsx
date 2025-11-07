@@ -6,7 +6,7 @@ export default function TabsNav() {
   return (
     <div className="flex gap-2 mb-4 flex-wrap">
       <NavLink
-        to="pending-feedback"
+        to="/teacher/feedback/pending-feedback"
         className={({ isActive }) =>
           `px-4 py-2 rounded-md text-white font-medium transition-colors ${
             isActive ? "bg-blue-700" : "bg-blue-500 hover:bg-blue-600"
@@ -18,7 +18,7 @@ export default function TabsNav() {
       </NavLink>
 
       <NavLink
-        to="submitted-feedback"
+        to="/teacher/feedback/submitted-feedback"
         className={({ isActive }) =>
           `px-4 py-2 rounded-md text-white font-medium transition-colors ${
             isActive ? "bg-blue-700" : "bg-blue-500 hover:bg-blue-600"
