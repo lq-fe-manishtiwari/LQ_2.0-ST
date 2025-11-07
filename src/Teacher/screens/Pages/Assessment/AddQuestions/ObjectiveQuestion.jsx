@@ -1,5 +1,5 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { ChevronDown, Upload, Filter, X } from 'lucide-react';
+import React, { useState, useRef, useEffect } from "react";
+import { ChevronDown, Upload, Filter, X } from "lucide-react";
 
 const ObjectiveQuestion = ({ formData, handleChange, errors, touched }) => {
   const [openDropdown, setOpenDropdown] = useState(null);
@@ -7,25 +7,35 @@ const ObjectiveQuestion = ({ formData, handleChange, errors, touched }) => {
     program: [],
     classDataId: [],
     gradeDivisionId: [],
-    activeInactiveStatus: "all",
+    paperId: [],
+    moduleId: [],
+    unitId: [],
     filterOpen: false,
   });
   const [numOptions, setNumOptions] = useState(4);
   const dropdownRefs = useRef({});
 
+  // Options
   const programOptions = ["MCA-BTech-Graduation", "BCA", "BBA", "M.Tech"];
   const classOptions = ["Class 7A", "Class 8B", "Class 9B", "Class 10A"];
   const divisionOptions = ["A", "B", "C"];
+  const paperOptions = ["Paper 1", "Paper 2", "Paper 3"];
+  const moduleOptions = ["Module 1", "Module 2", "Module 3"];
+  const unitOptions = ["Unit 1", "Unit 2", "Unit 3", "Unit 4"];
 
-  const handleSelect = (fieldName, value) => {
-    handleChange({ target: { name: fieldName, value } });
-    setOpenDropdown(null);
-  };
-
+  // Program selection
   const handleProgramChange = (e) => {
     const value = e.target.value;
     if (value && !filters.program.includes(value)) {
-      setFilters((prev) => ({ ...prev, program: [...prev.program, value] }));
+      setFilters({
+        program: [value],
+        classDataId: [],
+        gradeDivisionId: [],
+        paperId: [],
+        moduleId: [],
+        unitId: [],
+        filterOpen: filters.filterOpen,
+      });
     }
   };
 
@@ -38,14 +48,15 @@ const ObjectiveQuestion = ({ formData, handleChange, errors, touched }) => {
 
   useEffect(() => {
     const handleClickOutside = (event) => {
-      if (!Object.values(dropdownRefs.current).some(ref => ref?.contains(event.target))) {
+      if (!Object.values(dropdownRefs.current).some((ref) => ref?.contains(event.target))) {
         setOpenDropdown(null);
       }
     };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  // ───────────────────── Custom Select ─────────────────────
   const CustomSelect = ({ label, value, onChange, options, placeholder, disabled = false }) => {
     const [isOpen, setIsOpen] = useState(false);
     const dropdownRef = useRef(null);
@@ -111,6 +122,7 @@ const ObjectiveQuestion = ({ formData, handleChange, errors, touched }) => {
     );
   };
 
+  // ───────────────────── MultiSelect Program ─────────────────────
   const MultiSelectProgram = ({ label, selectedPrograms, programOptions, onProgramChange, onProgramRemove }) => {
     const [isOpen, setIsOpen] = useState(false);
     const dropdownRef = useRef(null);
@@ -187,10 +199,11 @@ const ObjectiveQuestion = ({ formData, handleChange, errors, touched }) => {
     );
   };
 
+  // ───────────────────── UI Layout ─────────────────────
   return (
     <div className="space-y-6 md:space-y-8 p-4 md:p-0">
 
-      {/* Filter Section (Top Side) */}
+      {/* Filter Section */}
       <div className="mb-6">
         <button
           onClick={() => setFilters((prev) => ({ ...prev, filterOpen: !prev.filterOpen }))}
@@ -207,7 +220,7 @@ const ObjectiveQuestion = ({ formData, handleChange, errors, touched }) => {
 
         {filters.filterOpen && (
           <div className="bg-white rounded-xl shadow-md p-5 border border-gray-200 mt-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               <MultiSelectProgram
                 label="Program"
                 selectedPrograms={filters.program}
@@ -224,6 +237,9 @@ const ObjectiveQuestion = ({ formData, handleChange, errors, touched }) => {
                     ...prev,
                     classDataId: e.target.value ? [e.target.value] : [],
                     gradeDivisionId: [],
+                    paperId: [],
+                    moduleId: [],
+                    unitId: [],
                   }))
                 }
                 options={classOptions}
@@ -238,6 +254,9 @@ const ObjectiveQuestion = ({ formData, handleChange, errors, touched }) => {
                   setFilters((prev) => ({
                     ...prev,
                     gradeDivisionId: e.target.value ? [e.target.value] : [],
+                    paperId: [],
+                    moduleId: [],
+                    unitId: [],
                   }))
                 }
                 options={divisionOptions}
@@ -246,19 +265,48 @@ const ObjectiveQuestion = ({ formData, handleChange, errors, touched }) => {
               />
 
               <CustomSelect
-                label="Status"
-                value={
-                  filters.activeInactiveStatus.charAt(0).toUpperCase() +
-                    filters.activeInactiveStatus.slice(1) || "All"
-                }
+                label="Select Paper"
+                value={filters.paperId[0] || ""}
                 onChange={(e) =>
                   setFilters((prev) => ({
                     ...prev,
-                    activeInactiveStatus: e.target.value.toLowerCase(),
+                    paperId: e.target.value ? [e.target.value] : [],
+                    moduleId: [],
+                    unitId: [],
                   }))
                 }
-                options={["All", "Active", "Inactive"]}
-                placeholder="Select Status"
+                options={paperOptions}
+                placeholder="Select Paper"
+                disabled={!filters.gradeDivisionId.length}
+              />
+
+              <CustomSelect
+                label="Module"
+                value={filters.moduleId[0] || ""}
+                onChange={(e) =>
+                  setFilters((prev) => ({
+                    ...prev,
+                    moduleId: e.target.value ? [e.target.value] : [],
+                    unitId: [],
+                  }))
+                }
+                options={moduleOptions}
+                placeholder="Select Module"
+                disabled={!filters.paperId.length}
+              />
+
+              <CustomSelect
+                label="Unit"
+                value={filters.unitId[0] || ""}
+                onChange={(e) =>
+                  setFilters((prev) => ({
+                    ...prev,
+                    unitId: e.target.value ? [e.target.value] : [],
+                  }))
+                }
+                options={unitOptions}
+                placeholder="Select Unit"
+                disabled={!filters.moduleId.length}
               />
             </div>
           </div>
@@ -267,7 +315,6 @@ const ObjectiveQuestion = ({ formData, handleChange, errors, touched }) => {
 
       {/* Question Type & Level Section */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6 items-end">
-
         {/* Difficulty Level */}
         <div>
           <label className="block font-medium mb-1 text-gray-700 text-sm md:text-base">
@@ -305,7 +352,9 @@ const ObjectiveQuestion = ({ formData, handleChange, errors, touched }) => {
           <CustomSelect
             label="Question Type"
             value={formData.questionType}
-            onChange={(e) => handleChange({ target: { name: 'questionType', value: e.target.value } })}
+            onChange={(e) =>
+              handleChange({ target: { name: "questionType", value: e.target.value } })
+            }
             options={["General", "Surprise", "Learning Plan", "Practice"]}
             placeholder="Select Question Type"
           />
@@ -335,24 +384,34 @@ const ObjectiveQuestion = ({ formData, handleChange, errors, touched }) => {
           rows="4"
           placeholder="Enter your question here..."
           className={`w-full border rounded-md px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-400 hover:border-blue-400 text-sm md:text-base ${
-            errors.question && touched.question ? 'border-red-500' : 'border-gray-300'
+            errors.question && touched.question ? "border-red-500" : "border-gray-300"
           }`}
         />
-        {errors.question && touched.question && <p className="mt-1 text-sm text-red-600">{errors.question}</p>}
+        {errors.question && touched.question && (
+          <p className="mt-1 text-sm text-red-600">{errors.question}</p>
+        )}
       </div>
 
       {/* Question Images */}
       <div>
-        <label className="block font-medium mb-1 text-gray-700 text-sm md:text-base">Question Images</label>
+        <label className="block font-medium mb-1 text-gray-700 text-sm md:text-base">
+          Question Images
+        </label>
         <div className="relative">
           <input
             type="text"
-            value={formData.questionImages || ''}
+            value={formData.questionImages || ""}
             readOnly
             placeholder="No file chosen"
-            className="w-full border rounded-md px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-400 bg-gray-50 border-gray-300 text-sm md:text-base"
+            className="w-full border rounded-md px-3 py-2.5 bg-gray-50 border-gray-300 text-sm md:text-base"
           />
-          <input type="file" accept="image/jpeg,image/png,image/jpg,application/pdf" className="hidden" id="questionImages" multiple />
+          <input
+            type="file"
+            accept="image/jpeg,image/png,image/jpg,application/pdf"
+            className="hidden"
+            id="questionImages"
+            multiple
+          />
           <label
             htmlFor="questionImages"
             className="absolute right-3 top-1/2 -translate-y-1/2 cursor-pointer flex items-center space-x-1 text-blue-600 hover:text-blue-800 font-medium text-sm md:text-base"
@@ -361,7 +420,9 @@ const ObjectiveQuestion = ({ formData, handleChange, errors, touched }) => {
             <span className="hidden xs:inline">Choose file</span>
           </label>
         </div>
-        <p className="mt-1 text-xs text-gray-500">Supported formats: jpeg, png, jpg, pdf (Max 150MB)</p>
+        <p className="mt-1 text-xs text-gray-500">
+          Supported formats: jpeg, png, jpg, pdf (Max 150MB)
+        </p>
       </div>
 
       {/* Options */}
@@ -375,15 +436,17 @@ const ObjectiveQuestion = ({ formData, handleChange, errors, touched }) => {
               </label>
               <textarea
                 name={optName}
-                value={formData[optName] || ''}
+                value={formData[optName] || ""}
                 onChange={handleChange}
                 rows="3"
                 placeholder={`Enter Option ${i + 1}`}
                 className={`w-full border rounded-md px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-400 hover:border-blue-400 text-sm md:text-base ${
-                  errors[optName] && touched[optName] ? 'border-red-500' : 'border-gray-300'
+                  errors[optName] && touched[optName] ? "border-red-500" : "border-gray-300"
                 }`}
               />
-              {errors[optName] && touched[optName] && <p className="mt-1 text-sm text-red-600">{errors[optName]}</p>}
+              {errors[optName] && touched[optName] && (
+                <p className="mt-1 text-sm text-red-600">{errors[optName]}</p>
+              )}
             </div>
           );
         })}
@@ -429,10 +492,14 @@ const ObjectiveQuestion = ({ formData, handleChange, errors, touched }) => {
             min="1"
             max="100"
             className={`w-full border rounded-md px-3 py-2.5 min-h-[42px] focus:outline-none focus:ring-2 focus:ring-blue-400 hover:border-blue-400 text-sm md:text-base ${
-              errors.defaultMarks && touched.defaultMarks ? 'border-red-500' : 'border-gray-300'
+              errors.defaultMarks && touched.defaultMarks
+                ? "border-red-500"
+                : "border-gray-300"
             }`}
           />
-          {errors.defaultMarks && touched.defaultMarks && <p className="mt-1 text-sm text-red-600">{errors.defaultMarks}</p>}
+          {errors.defaultMarks && touched.defaultMarks && (
+            <p className="mt-1 text-sm text-red-600">{errors.defaultMarks}</p>
+          )}
         </div>
       </div>
     </div>
