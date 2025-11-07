@@ -32,7 +32,9 @@ const Assessment = () => {
     selectedGrade: [],
     classDataId: [],
     gradeDivisionId: [],
-    activeInactiveStatus: 'all',
+    paper: '',
+    module: '',
+    unit: '',
   });
 
   const customBlue = 'rgb(33 98 193 / var(--tw-bg-opacity, 1))';
@@ -333,9 +335,9 @@ const Assessment = () => {
                 onProgramRemove={removeProgram}
             />
 
-            {/* 2. Class (Custom Select Component) */}
+            {/* 2. Select Class */}
             <CustomSelect
-                label="Class"
+                label="Select Class"
                 value={filters.classDataId[0] || ''}
                 onChange={(e) => setFilters(prev => ({
                   ...prev,
@@ -343,11 +345,11 @@ const Assessment = () => {
                   gradeDivisionId: []
                 }))}
                 options={classOptions}
-                placeholder="Select Classes"
+                placeholder="Select Class"
                 disabled={filters.program.length === 0}
             />
 
-            {/* 3. Division (Custom Select Component) */}
+            {/* 3. Division */}
             <CustomSelect
                 label="Division"
                 value={filters.gradeDivisionId[0] || ''}
@@ -356,20 +358,47 @@ const Assessment = () => {
                   gradeDivisionId: e.target.value ? [e.target.value] : []
                 }))}
                 options={divisionOptions}
-                placeholder="Select Divisions"
+                placeholder="Select Division"
                 disabled={!filters.classDataId.length}
             />
 
-            {/* 4. Status (Custom Select Component) */}
+            {/* 4. Select Paper */}
             <CustomSelect
-                label="Status"
-                value={filters.activeInactiveStatus.charAt(0).toUpperCase() + filters.activeInactiveStatus.slice(1) || 'All'}
+                label="Select Paper"
+                value={filters.paper || ''}
                 onChange={(e) => setFilters(prev => ({
                     ...prev,
-                    activeInactiveStatus: e.target.value.toLowerCase()
+                    paper: e.target.value || ''
                 }))}
-                options={['All', 'Active', 'Inactive']}
-                placeholder="Select Status"
+                options={['Mathematics', 'Science', 'English', 'History']}
+                placeholder="Select Paper"
+                disabled={!filters.gradeDivisionId.length}
+            />
+
+            {/* 5. Module */}
+            <CustomSelect
+                label="Module"
+                value={filters.module || ''}
+                onChange={(e) => setFilters(prev => ({
+                    ...prev,
+                    module: e.target.value || ''
+                }))}
+                options={['Module 1', 'Module 2', 'Module 3']}
+                placeholder="Select Module"
+                disabled={!filters.paper}
+            />
+
+            {/* 6. Unit */}
+            <CustomSelect
+                label="Unit"
+                value={filters.unit || ''}
+                onChange={(e) => setFilters(prev => ({
+                    ...prev,
+                    unit: e.target.value || ''
+                }))}
+                options={['Unit 1', 'Unit 2', 'Unit 3', 'Unit 4']}
+                placeholder="Select Unit"
+                disabled={!filters.module}
             />
 
           </div>

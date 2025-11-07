@@ -1,7 +1,7 @@
 'use client';
 import React, { useState, useRef, useEffect } from 'react';
 import BulkUploadAssessmentModal from '../Components/BulkUploadAssessmentModal';
-import { Plus, Filter, ChevronDown, X, Upload, Edit, Trash2 } from 'lucide-react';
+import { Plus, Filter, ChevronDown, ChevronLeft, ChevronRight, X, Upload, Edit, Trash2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 const Questions = () => {
@@ -11,15 +11,29 @@ const Questions = () => {
     program: [],
     classDataId: [],
     gradeDivisionId: [],
-    activeInactiveStatus: 'all',
+    paper: '',
+    module: '',
+    unit: '',
   });
 
   const [showBulkUpload, setShowBulkUpload] = useState(false);
+  const [currentMonth, setCurrentMonth] = useState(new Date().getMonth());
+  const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
 
-  const programOptions = ['MBA Grade Testing', 'BCA', 'MCA'];
-  const classOptions = ['Class A', 'Class B', 'Class C'];
-  const divisionOptions = ['Div 1', 'Div 2', 'Div 3'];
+  const customBlue = 'rgb(33 98 193 / var(--tw-bg-opacity, 1))';
+
+  const months = [
+    'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December'
+  ];
+
+  // Mock filter options
+  const programOptions = ['MCA-BTech-Graduation', 'BCA', 'BBA', 'M.Tech'];
+  const classOptions = ['Class 7A', 'Class 7C', 'Class 8A', 'Class 8B', 'Class 9B', 'Class 10A'];
+  const divisionOptions = ['A', 'B', 'C'];
+  const paperOptions = ['Mathematics', 'Science', 'English', 'History'];
   const moduleOptions = ['Module 1', 'Module 2', 'Module 3'];
+  const unitOptions = ['Unit 1', 'Unit 2', 'Unit 3', 'Unit 4'];
 
   // Handle Program Selection (Multi)
   const handleProgramChange = (e) => {
@@ -36,175 +50,185 @@ const Questions = () => {
     }));
   };
 
-  // 🔹 Custom Select Component
-  const CustomSelect = ({
-    label,
-    value,
-    onChange,
-    options,
-    placeholder,
-    disabled = false,
-  }) => {
+  const handlePrevMonth = () => {
+    if (currentMonth === 0) {
+      setCurrentMonth(11);
+      setCurrentYear(currentYear - 1);
+    } else {
+      setCurrentMonth(currentMonth - 1);
+    }
+  };
+
+  const handleNextMonth = () => {
+    const today = new Date();
+    const nextMonth = currentMonth === 11 ? 0 : currentMonth + 1;
+    const nextYear = currentMonth === 11 ? currentYear + 1 : currentYear;
+    if (nextYear < today.getFullYear() || (nextYear === today.getFullYear() && nextMonth <= today.getMonth())) {
+      setCurrentMonth(nextMonth);
+      setCurrentYear(nextYear);
+    }
+  };
+
+  const isNextDisabled = () => {
+    const today = new Date();
+    const nextMonth = currentMonth === 11 ? 0 : currentMonth + 1;
+    const nextYear = currentMonth === 11 ? currentYear + 1 : currentYear;
+    return nextYear > today.getFullYear() || (nextYear === today.getFullYear() && nextMonth > today.getMonth());
+  };
+
+  // Custom Select Component from TeacherList
+  const CustomSelect = ({ label, value, onChange, options, placeholder, disabled = false }) => {
     const [isOpen, setIsOpen] = useState(false);
     const dropdownRef = useRef(null);
-
+    
     const handleSelect = (option) => {
-      onChange({ target: { value: option } });
-      setIsOpen(false);
+        onChange({ target: { value: option } });
+        setIsOpen(false);
     };
 
     useEffect(() => {
-      const handleClickOutside = (event) => {
-        if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
-          setIsOpen(false);
-        }
-      };
-      document.addEventListener('mousedown', handleClickOutside);
-      return () => document.removeEventListener('mousedown', handleClickOutside);
+        const handleClickOutside = (event) => {
+            if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+                setIsOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
     return (
-      <div ref={dropdownRef}>
-        <label className="block text-sm font-semibold text-gray-700 mb-2">
-          {label}
-        </label>
-        <div className="relative">
-          <div
-            className={`w-full px-3 py-2 border ${
-              disabled
-                ? 'bg-gray-100 text-gray-500 border-gray-200 cursor-not-allowed'
-                : 'bg-white border-gray-300 cursor-pointer hover:border-[rgb(33,98,193)]'
-            } rounded-lg min-h-[44px] flex items-center justify-between transition-all duration-150`}
-            onClick={() => !disabled && setIsOpen(!isOpen)}
-          >
-            <span className={value ? 'text-gray-900' : 'text-gray-400'}>
-              {value || placeholder}
-            </span>
-            <ChevronDown
-              className={`w-4 h-4 text-gray-400 transition-transform ${
-                isOpen ? 'rotate-180' : 'rotate-0'
-              }`}
-            />
-          </div>
-
-          {isOpen && !disabled && (
-            <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
-              <div
-                className="px-4 py-2 text-sm text-gray-700 cursor-pointer hover:bg-blue-50 transition-colors"
-                onClick={() => handleSelect('')}
-              >
-                {placeholder}
-              </div>
-              {options.map((option) => (
+        <div ref={dropdownRef}>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">{label}</label>
+            <div className="relative">
                 <div
-                  key={option}
-                  className="px-4 py-2 text-sm text-gray-700 cursor-pointer hover:bg-blue-50 transition-colors"
-                  onClick={() => handleSelect(option)}
+                    className={`w-full px-3 py-2 border ${disabled ? 'bg-gray-100 text-gray-500 border-gray-200 cursor-not-allowed' : 'bg-white border-gray-300 cursor-pointer hover:border-blue-400'} rounded-lg min-h-[44px] flex items-center justify-between transition-all duration-150`}
+                    onClick={() => !disabled && setIsOpen(!isOpen)}
                 >
-                  {option}
+                    <span className={value ? 'text-gray-900' : 'text-gray-400'}>
+                        {value || placeholder}
+                    </span>
+                    <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${isOpen ? 'rotate-180' : 'rotate-0'}`} />
                 </div>
-              ))}
+                
+                {isOpen && !disabled && (
+                    <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                        <div
+                            className="px-4 py-2 text-sm text-gray-700 cursor-pointer hover:bg-blue-50 transition-colors"
+                            onClick={() => handleSelect('')}
+                        >
+                            {placeholder}
+                        </div>
+                        {options.map(option => (
+                            <div
+                                key={option}
+                                className="px-4 py-2 text-sm text-gray-700 cursor-pointer hover:bg-blue-50 transition-colors"
+                                onClick={() => handleSelect(option)}
+                            >
+                                {option}
+                            </div>
+                        ))}
+                    </div>
+                )}
             </div>
-          )}
         </div>
-      </div>
     );
   };
 
-  // 🔹 Multi Select Program Component
-  const MultiSelectProgram = ({
-    label,
-    selectedPrograms,
-    programOptions,
-    onProgramChange,
-    onProgramRemove,
-  }) => {
+  // Multi Select Program Component from TeacherList
+  const MultiSelectProgram = ({ label, selectedPrograms, programOptions, onProgramChange, onProgramRemove }) => {
     const [isOpen, setIsOpen] = useState(false);
     const dropdownRef = useRef(null);
-    const availableOptions = programOptions.filter(
-      (p) => !selectedPrograms.includes(p)
-    );
+    const availableOptions = programOptions.filter(p => !selectedPrograms.includes(p));
 
     const handleSelect = (program) => {
-      onProgramChange({ target: { value: program } });
+        onProgramChange({ target: { value: program } });
     };
 
     useEffect(() => {
-      const handleClickOutside = (event) => {
-        if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
-          setIsOpen(false);
-        }
-      };
-      document.addEventListener('mousedown', handleClickOutside);
-      return () =>
-        document.removeEventListener('mousedown', handleClickOutside);
+        const handleClickOutside = (event) => {
+            if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+                setIsOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
     return (
-      <div ref={dropdownRef}>
-        <label className="block text-sm font-semibold text-gray-700 mb-2">
-          {label}
-        </label>
-        <div className="relative">
-          <div
-            className="flex flex-wrap items-center gap-1 p-2 border border-gray-300 rounded-lg min-h-[44px] bg-white cursor-pointer hover:border-[rgb(33,98,193)] transition-all duration-150"
-            onClick={() => setIsOpen(!isOpen)}
-          >
-            {selectedPrograms.length > 0 ? (
-              selectedPrograms.map((prog) => (
-                <span
-                  key={prog}
-                  className="inline-flex items-center gap-1 bg-[rgb(33,98,193,0.1)] text-[rgb(33,98,193)] px-2 py-1 rounded-full text-xs font-medium"
-                  onClick={(e) => e.stopPropagation()}
+        <div ref={dropdownRef}>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">{label}</label>
+            <div className="relative">
+                <div
+                    className="flex flex-wrap items-center gap-1 p-2 border border-gray-300 rounded-lg min-h-[44px] bg-white cursor-pointer hover:border-blue-400 transition-all duration-150"
+                    onClick={() => setIsOpen(!isOpen)}
                 >
-                  {prog}
-                  <button
-                    onClick={() => onProgramRemove(prog)}
-                    className="hover:bg-blue-100 rounded-full p-0.5 ml-0.5 transition-colors"
-                    title="Remove Program"
-                  >
-                    <X className="w-3 h-3" />
-                  </button>
-                </span>
-              ))
-            ) : (
-              <span className="text-gray-400 text-sm ml-1">
-                Select Program(s)
-              </span>
-            )}
-            <ChevronDown
-              className={`w-4 h-4 text-gray-400 absolute right-3 top-1/2 -translate-y-1/2 transition-transform ${
-                isOpen ? 'rotate-180' : 'rotate-0'
-              }`}
-            />
-          </div>
-
-          {isOpen && (
-            <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
-              {availableOptions.length > 0 ? (
-                availableOptions.map((prog) => (
-                  <div
-                    key={prog}
-                    className="px-4 py-2 text-sm text-gray-700 cursor-pointer hover:bg-blue-50 transition-colors"
-                    onClick={() => handleSelect(prog)}
-                  >
-                    {prog}
-                  </div>
-                ))
-              ) : (
-                <div className="px-4 py-3 text-sm text-gray-500">
-                  All programs selected.
+                    {selectedPrograms.length > 0 ? (
+                        selectedPrograms.map(prog => (
+                            <span
+                                key={prog}
+                                className="inline-flex items-center gap-1 bg-blue-100 text-blue-700 px-2 py-1 rounded-full text-xs font-medium"
+                                onClick={(e) => e.stopPropagation()}
+                            >
+                                {prog}
+                                <button
+                                    onClick={() => onProgramRemove(prog)}
+                                    className="hover:bg-blue-200 rounded-full p-0.5 ml-0.5 transition-colors"
+                                    title="Remove Program"
+                                >
+                                    <X className="w-3 h-3" />
+                                </button>
+                            </span>
+                        ))
+                    ) : (
+                        <span className="text-gray-400 text-sm ml-1">Select Program(s)</span>
+                    )}
+                    <ChevronDown className={`w-4 h-4 text-gray-400 absolute right-3 top-1/2 -translate-y-1/2 transition-transform ${isOpen ? 'rotate-180' : 'rotate-0'}`} />
                 </div>
-              )}
+                
+                {isOpen && (
+                    <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                        {availableOptions.length > 0 ? (
+                            availableOptions.map(prog => (
+                                <div
+                                    key={prog}
+                                    className="px-4 py-2 text-sm text-gray-700 cursor-pointer hover:bg-blue-50 transition-colors"
+                                    onClick={() => handleSelect(prog)}
+                                >
+                                    {prog}
+                                </div>
+                            ))
+                        ) : (
+                            <div className="px-4 py-3 text-sm text-gray-500">All programs selected.</div>
+                        )}
+                    </div>
+                )}
             </div>
-          )}
         </div>
-      </div>
     );
   };
 
   return (
     <div className="p-4 sm:p-6 bg-gray-50 min-h-screen">
+      {/* Month Navigation */}
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center gap-2">
+          <span className="text-lg font-medium" style={{ color: customBlue }}>
+            {months[currentMonth]} / {currentYear}
+          </span>
+          <button onClick={handlePrevMonth} className="p-2" style={{ color: customBlue }}>
+            <ChevronLeft className="h-5 w-5" />
+          </button>
+          <button
+            onClick={handleNextMonth}
+            className="p-2 disabled:opacity-50"
+            style={{ color: customBlue }}
+            disabled={isNextDisabled()}
+          >
+            <ChevronRight className="h-5 w-5" />
+          </button>
+        </div>
+      </div>
+
       {/* 🔹 Header Section */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
         {/* Left: Filter Button */}
@@ -243,74 +267,93 @@ const Questions = () => {
         </div>
       </div>
 
-      {/* 🔹 Filter Panel */}
+      {/* Filter Panel */}
       {filters.filterOpen && (
         <div className="bg-white rounded-xl shadow-md p-5 mb-6 border border-gray-200">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-            {/* 1. Program */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+
+            {/* 1. Program - Multi Select with Chips (Custom Component) */}
             <MultiSelectProgram
-              label="Program"
-              selectedPrograms={filters.program}
-              programOptions={programOptions}
-              onProgramChange={handleProgramChange}
-              onProgramRemove={removeProgram}
+                label="Program"
+                selectedPrograms={filters.program}
+                programOptions={programOptions}
+                onProgramChange={handleProgramChange}
+                onProgramRemove={removeProgram}
             />
 
-            {/* 2. Class */}
+            {/* 2. Select Class */}
             <CustomSelect
-              label="Class"
-              value={filters.classDataId[0] || ''}
-              onChange={(e) =>
-                setFilters((prev) => ({
+                label="Select Class"
+                value={filters.classDataId[0] || ''}
+                onChange={(e) => setFilters(prev => ({
                   ...prev,
                   classDataId: e.target.value ? [e.target.value] : [],
-                  gradeDivisionId: [],
-                }))
-              }
-              options={classOptions}
-              placeholder="Select Classes"
-              disabled={filters.program.length === 0}
+                  gradeDivisionId: []
+                }))}
+                options={classOptions}
+                placeholder="Select Class"
+                disabled={filters.program.length === 0}
             />
 
-            {/* 3. Paper */}
+            {/* 3. Division */}
             <CustomSelect
-              label="Paper"
-              value={filters.gradeDivisionId[0] || ''}
-              onChange={(e) =>
-                setFilters((prev) => ({
+                label="Division"
+                value={filters.gradeDivisionId[0] || ''}
+                onChange={(e) => setFilters(prev => ({
                   ...prev,
-                  gradeDivisionId: e.target.value ? [e.target.value] : [],
-                }))
-              }
-              options={divisionOptions}
-              placeholder="Select Paper"
-              disabled={!filters.classDataId.length}
+                  gradeDivisionId: e.target.value ? [e.target.value] : []
+                }))}
+                options={divisionOptions}
+                placeholder="Select Division"
+                disabled={!filters.classDataId.length}
             />
 
-            {/* 4. Module */}
+            {/* 4. Select Paper */}
             <CustomSelect
-              label="Module"
-              value={
-                filters.activeInactiveStatus === 'all'
-                  ? ''
-                  : filters.activeInactiveStatus
-              }
-              onChange={(e) =>
-                setFilters((prev) => ({
-                  ...prev,
-                  activeInactiveStatus: e.target.value || 'all',
-                }))
-              }
-              options={moduleOptions}
-              placeholder="All Module"
+                label="Select Paper"
+                value={filters.paper || ''}
+                onChange={(e) => setFilters(prev => ({
+                    ...prev,
+                    paper: e.target.value || ''
+                }))}
+                options={paperOptions}
+                placeholder="Select Paper"
+                disabled={!filters.gradeDivisionId.length}
             />
 
-            {/* 5. Get Questions Button */}
-            <div className="flex items-end">
-              <button className="bg-[rgb(33,98,193)] hover:bg-[rgb(28,78,153)] text-white font-semibold px-4 py-3 rounded-lg text-sm transition w-full min-h-[44px]">
-                Get Q's
-              </button>
-            </div>
+            {/* 5. Module */}
+            <CustomSelect
+                label="Module"
+                value={filters.module || ''}
+                onChange={(e) => setFilters(prev => ({
+                    ...prev,
+                    module: e.target.value || ''
+                }))}
+                options={moduleOptions}
+                placeholder="Select Module"
+                disabled={!filters.paper}
+            />
+
+            {/* 6. Unit */}
+            <CustomSelect
+                label="Unit"
+                value={filters.unit || ''}
+                onChange={(e) => setFilters(prev => ({
+                    ...prev,
+                    unit: e.target.value || ''
+                }))}
+                options={unitOptions}
+                placeholder="Select Unit"
+                disabled={!filters.module}
+            />
+
+          </div>
+
+          {/* Get Questions Button */}
+          <div className="mt-4 flex justify-end">
+            <button className="bg-[rgb(33,98,193)] hover:bg-[rgb(28,78,153)] text-white font-semibold px-6 py-3 rounded-lg text-sm transition">
+              Get Q's
+            </button>
           </div>
         </div>
       )}
