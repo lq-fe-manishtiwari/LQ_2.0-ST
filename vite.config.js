@@ -6,7 +6,12 @@ export default defineConfig({
   plugins: [react()],
   resolve: {
     alias: {
-      "@": path.resolve(__dirname, "./src"),
+      '@': path.resolve(__dirname, './src'),
+      '@/_services': path.resolve(__dirname, './src/_services'),
+      '@/_helpers': path.resolve(__dirname, './src/_helpers'),
+      '@/_assets': path.resolve(__dirname, './src/_assets'),
+      // Add this line:
+      '@/Redux': path.resolve(__dirname, './src/Redux'),
     },
   },
   optimizeDeps: {

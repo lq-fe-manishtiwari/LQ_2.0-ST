@@ -1,8 +1,8 @@
-// src/components/Sidebar.jsx
+// src/Student/components/Sidebar.jsx
 import React, { useMemo, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import classNames from "classnames";
-// import { authenticationService } from "@/_services/admin";
+
 import "@/_assets/customStyle.css";
 
 /* ──────────────────────── ICONS ──────────────────────── */
@@ -11,7 +11,6 @@ import dashboardInactive from "@/_assets/images_new_design/icons/Dashboard.svg";
 
 import classActive from "@/_assets/images_new_design/icons/class_active.svg";
 import classInactive from "@/_assets/images_new_design/icons/class.svg";
-
 
 import contentActive from "@/_assets/images_new_design/icons/curriculum_active.svg";
 import contentInactive from "@/_assets/images_new_design/icons/curriculum.svg";
@@ -28,34 +27,28 @@ import codingInactive from "@/_assets/images_new_design/icons/coding.svg";
 import quicknotesActive from "@/_assets/images_new_design/icons/quick_notesactive.svg";
 import quicknotesInactive from "@/_assets/images_new_design/icons/quick_notes.svg";
 
-import syllabusActive from "@/_assets/images_new_design/icons/learning_plan.svg";
-import syllabusInactive from "@/_assets/images_new_design/icons/learning_plan.svg";
+import studyplanActive from "@/_assets/images_new_design/icons/learning_plan.svg";
+import studyplanInactive from "@/_assets/images_new_design/icons/learning_plan.svg";
 
 import logoutIcon from "@/_assets/images_new_design/icons/Logout.svg";
-import toggleIcon from "@/_assets/images/toggle-icon.svg"; // or use closebtn
+import toggleIcon from "@/_assets/images/toggle-icon.svg";
 import closebtn from "@/_assets/images/Close.svg";
 
 /* ──────────────────────── COMPONENT ──────────────────────── */
-const Sidebar = ({ isOpen, toggle }) => {
+const StudentSidebar = ({ isOpen, toggle }) => {
   const location = useLocation();
   const navigate = useNavigate();
 
   // Mobile state
   const [isMobileOpen, setIsMobileOpen] = useState(false);
 
-  // Logo & Feature Flags
+  // Logo
   const [logoURL] = useState(() => localStorage.getItem("logoURL") ?? "");
-  const [chapterTopicAccess] = useState(() =>
-    localStorage.getItem("chapter_topic_access")
-  );
-  const [reportAccess] = useState(() => localStorage.getItem("report_access"));
 
   // Logout
   const logout = () => {
-    const username = localStorage.getItem("username");
-    // authenticationService.logout(username, "teacher");
     localStorage.clear();
-    navigate("/login", { replace: true });
+    navigate("/", { replace: true });
   };
 
   // Active state helper
@@ -68,169 +61,134 @@ const Sidebar = ({ isOpen, toggle }) => {
     return pathname.startsWith(item.to);
   };
 
-  // Menu Items
+  // Menu Items (Student-only)
   const menuItems = useMemo(
     () => [
       {
-        to: "/dashboard",
-        label: "My Teaching",
+        to: "/student-dashboard",
+        label: "My Learning",
         iconActive: dashboardActive,
         iconInactive: dashboardInactive,
       },
       {
-        to: "/teacher/class",
+        to: "/student-class",
         label: "Class",
         iconActive: classActive,
         iconInactive: classInactive,
-        match: [
-          "/teacher/class",
-          "/timetable-list",
-          "/timetable-view",
-          "/timetable-edit",
-        ],
+        match: ["/student-class", "/student-timetable"],
       },
-
-
       {
-        to: "/teacher-content",
+        to: "/curriculum",
         label: "Content",
         iconActive: contentActive,
         iconInactive: contentInactive,
         match: [
-          "/teacher-content",
-          "/teacher-view-content",
-          "/teacher-content-manage",
-          "/teacher-edit-content",
-          "/add-content-teacher",
-          "/student-content",
-          "/teacher-edit-project",
-          "/student-view-project",
+          "/curriculum",
+          "/list-content-student",
+          "/add-content-student",
+          "/view-project",
+          "/student-view-content",
         ],
       },
       {
-        to: "/teacher/assessments",
+        to: "/my-assessment",
         label: "Assessment",
         iconActive: assessmentActive,
         iconInactive: assessmentInactive,
+        match: ["/my-assessment", "/st-view-test-details", "/st-retest"],
+      },
+      {
+        to: "/student-learning-plan",
+        label: "Learning Plan",
+        iconActive: studyplanActive,
+        iconInactive: studyplanInactive,
         match: [
-          "/teacher/assessments",
-          "/teacher-add-assessment",
-          "/teacher-view-assessments",
-          "/teacher-view-st-test-result",
-          "/teacher-view-assessments-details",
-          "/teacher-add-question",
-          "/teacher-edit-question",
+          "/student-learning-plan",
+          "/student-lp-view-curriculum",
+          "/student-lp-start-quiz",
         ],
       },
       {
-        to: "/teacher-feedback",
-        label: "Feedback",
-        iconActive: assessmentActive,
-        iconInactive: assessmentInactive,
-      },
-      {
-        to: "/teacher-analytics",
+        to: "/student-analytics",
         label: "Insights",
         iconActive: analyticsActive,
         iconInactive: analyticsInactive,
       },
       {
-        to: "/teacher-coding",
+        to: "/student-coding",
         label: "Coding",
         iconActive: codingActive,
         iconInactive: codingInactive,
       },
       {
-        to: "/teacher-quickNotesList",
+        to: "/student-quickNotesList",
         label: "Quick Notes",
         iconActive: quicknotesActive,
         iconInactive: quicknotesInactive,
-        match: ["/teacher-quickNotesList", "/teacher-view-note"],
+        match: ["/student-quickNotesList", "/student-view-note"],
       },
       {
-        to: "/teacher-engage",
-        label: "Engage",
-        iconActive: contentActive,
-        iconInactive: contentInactive,
-      },
-      {
-        to: "/teacher-syllabus",
-        label: "Academics",
-        iconActive: syllabusActive,
-        iconInactive: syllabusInactive,
-        show: chapterTopicAccess === "true" || chapterTopicAccess === true,
-      },
-      {
-        to: "/AcademicCalender",
-        label: "Academic Calender",
-        iconActive: classActive,
-        iconInactive: classInactive,
-      },
-      {
-        to: "/teacher-leaves",
+        to: "/student-leave",
         label: "Leaves",
         iconActive: classActive,
         iconInactive: classInactive,
       },
       {
-        to: "/teacher-library",
+        to: "/student-engage",
+        label: "Engage",
+        iconActive: classActive,
+        iconInactive: classInactive,
+      },
+      {
+        to: "/AcademicCalender-student",
+        label: "Academic Calender",
+        iconActive: classActive,
+        iconInactive: classInactive,
+      },
+      {
+        to: "/my-library",
         label: "My Library",
         iconActive: classActive,
         iconInactive: classInactive,
       },
       {
-        to: "/pms",
-        label: "TMS",
+        to: "/student-placement",
+        label: "Placement",
         iconActive: classActive,
         iconInactive: classInactive,
       },
       {
-        to: "/teacher-certificate",
+        to: "/student-feedback",
+        label: "Feedback",
+        iconActive: assessmentActive,
+        iconInactive: assessmentInactive,
+      },
+      {
+        to: "/certificate",
         label: "Certificate",
         iconActive: classActive,
         iconInactive: classInactive,
       },
       {
-        to: "/reports",
-        label: "Reports",
-        iconActive: classActive,
-        iconInactive: classInactive,
-        show: reportAccess === "true" || reportAccess === true,
-      },
-      {
-        to: "/teacher-exam",
-        label: "Exam Management",
+        to: "/Documents",
+        label: "My Documents",
         iconActive: classActive,
         iconInactive: classInactive,
       },
       {
-        to: "/obe-setting",
-        label: "OBE Setting",
-        iconActive: classActive,
-        iconInactive: classInactive,
-      },
-      {
-        to: "/Document-Generation-dashbaord",
-        label: "Document",
-        iconActive: classActive,
-        iconInactive: classInactive,
-      },
-      {
-        to: "/Purchase",
-        label: "Purchase",
+        to: "/Examination",
+        label: "Examination",
         iconActive: classActive,
         iconInactive: classInactive,
       },
     ],
-    [chapterTopicAccess, reportAccess]
+    []
   );
 
   const handleMobileToggle = () => setIsMobileOpen((prev) => !prev);
 
   const renderMenu = (closeOnClick = false) => {
     return menuItems.map((item, i) => {
-      if (item.show === false) return null;
-
       const active = isActive(item, location.pathname);
 
       return (
@@ -269,7 +227,7 @@ const Sidebar = ({ isOpen, toggle }) => {
         {/* Logo + Toggle */}
         <div className="flex items-center justify-between py-6 px-4 relative">
           {isOpen && (
-            <Link to="/teacher-dashboard">
+            <Link to="/student-dashboard">
               {logoURL ? (
                 <img
                   src={logoURL}
@@ -371,4 +329,4 @@ const Sidebar = ({ isOpen, toggle }) => {
   );
 };
 
-export default Sidebar;
+export default StudentSidebar;
