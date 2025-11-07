@@ -37,6 +37,10 @@ const Assessment = () => {
     unit: '',
   });
 
+  // ---------- NEW STATE FOR "Get Q's" ----------
+  const [loadQuestion, setLoadQuestion] = useState(true); // disabled until all required fields are filled
+  const [questions, setQuestions] = useState([]);        // will hold fetched questions (mock for now)
+
   const customBlue = 'rgb(33 98 193 / var(--tw-bg-opacity, 1))';
 
   const months = [
@@ -44,7 +48,7 @@ const Assessment = () => {
     'July', 'August', 'September', 'October', 'November', 'December'
   ];
 
-  // Mock filter options
+  // Mock filter options (same as before)
   const programOptions = ['MCA-BTech-Graduation', 'BCA', 'BBA', 'M.Tech'];
   const classOptions = ['Class 7A', 'Class 7C', 'Class 8A', 'Class 8B', 'Class 9B', 'Class 10A'];
   const divisionOptions = ['A', 'B', 'C'];
@@ -156,7 +160,24 @@ const Assessment = () => {
     return nextYear > today.getFullYear() || (nextYear === today.getFullYear() && nextMonth > today.getMonth());
   };
 
-  // Custom Select Component from TeacherList
+  // ---------- "Get Q's" LOGIC ----------
+  const handleGetQuestions = () => {
+    // Simulate API call (replace with real `questionService.getQuestionBySunjectIdWithFlagV2Paging` later)
+    const mockQuestions = [
+      { id: 1, question: 'What is 2 + 2?', level: 'EASY' },
+      { id: 2, question: 'Solve x² = 16', level: 'MEDIUM' },
+    ];
+    setQuestions(mockQuestions);
+    setLoadQuestion(false);
+  };
+
+  // Enable "Get Q's" only when required filters are selected
+  useEffect(() => {
+    const required = filters.classDataId.length > 0 && filters.gradeDivisionId.length > 0 && filters.paper;
+    setLoadQuestion(!required);
+  }, [filters.classDataId, filters.gradeDivisionId, filters.paper]);
+
+  // Custom Select Component
   const CustomSelect = ({ label, value, onChange, options, placeholder, disabled = false }) => {
     const [isOpen, setIsOpen] = useState(false);
     const dropdownRef = useRef(null);
@@ -214,7 +235,7 @@ const Assessment = () => {
     );
   };
 
-  // Multi Select Program Component from TeacherList
+  // Multi Select Program Component
   const MultiSelectProgram = ({ label, selectedPrograms, programOptions, onProgramChange, onProgramRemove }) => {
     const [isOpen, setIsOpen] = useState(false);
     const dropdownRef = useRef(null);
@@ -321,12 +342,12 @@ const Assessment = () => {
         </button>
       </div>
 
-      {/* Filter Panel (Updated UI) */}
+      {/* Filter Panel (Updated with "Get Q's") */}
       {filterOpen && (
         <div className="bg-white rounded-xl shadow-md p-5 mb-6 border border-gray-200">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
 
-            {/* 1. Program - Multi Select with Chips (Custom Component) */}
+            {/* 1. Program - Multi Select */}
             <MultiSelectProgram
                 label="Program"
                 selectedPrograms={filters.program}
@@ -401,7 +422,36 @@ const Assessment = () => {
                 disabled={!filters.module}
             />
 
+            {/* 7. Get Q's Button */}
+            <div className="flex items-end">
+              <button
+                onClick={handleGetQuestions}
+                disabled={loadQuestion}
+                className={`px-4 py-2 rounded-lg font-medium transition-all ${
+                  loadQuestion
+                    ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                    : 'bg-blue-600 text-white hover:bg-blue-700'
+                }`}
+              >
+                Get Q's
+              </button>
+            </div>
+
           </div>
+
+          {/* Optional: Show fetched questions below */}
+          {questions.length > 0 && (
+            <div className="mt-6 p-4 bg-gray-50 rounded-lg">
+              <h4 className="font-semibold mb-2">Fetched Questions:</h4>
+              <ul className="space-y-2">
+                {questions.map(q => (
+                  <li key={q.id} className="text-sm">
+                    <span className="font-medium">{q.level}:</span> {q.question}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
         </div>
       )}
 
