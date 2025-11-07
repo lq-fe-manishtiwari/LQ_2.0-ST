@@ -5,6 +5,7 @@ import { Routes, Route } from "react-router-dom";
 import Dashboard from "../Dashboard/Dashboard.jsx";
 import ClassRoutes from "../Pages/Class/Routes/ClassRoutes.jsx";
 import AssessmentRoutes from "../Pages/Assessment/Routes/AssessmentRoutes.jsx";
+// import FeedbackRoutes from "../Pages/Feedback/Routes/FeedbackRoutes.jsx";
 
 export default function TeacherRoutes() {
   return (
@@ -15,6 +16,7 @@ export default function TeacherRoutes() {
       {/* Class Area */}
       <Route path="class/*" element={<ClassRoutes />} />
       <Route path="assessments/*" element={<AssessmentRoutes />} />
+      {/* <Route path="teacher-feedback/*" element={<FeedbackRoutes />} /> */}
     </Routes>
   );
 }
