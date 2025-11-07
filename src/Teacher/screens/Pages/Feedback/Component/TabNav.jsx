@@ -8,25 +8,46 @@ const tabs = [
 
 export default function TabsNav() {
   return (
-    <div className="p-2 md:p-2">
-      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
-        {/* Tabs Section */}
-        <div className="flex flex-wrap gap-1 sm:gap-2">
-          {tabs.map((t) => (
+    <div className="flex justify-between w-full">
+      {/* Left Side Tabs */}
+      <div className="flex gap-2 md:gap-4">
+        {tabs
+          .filter((t) => !t.rightAlign)
+          .map((t) => (
             <NavLink
-            style={{width:"200px"}}
               key={t.to}
               to={t.to}
               className={({ isActive }) =>
-                `tab-link text-center flex-1 sm:flex-none px-3 py-2 text-xs sm:text-sm font-medium rounded-md transition-all duration-200 ${
-                  isActive? "bg-blue-700 text-white " : "bg-gray-200 text-gray-700"
+                `tab-link flex items-center whitespace-nowrap px-3 py-2 ${
+                  isActive ? "tab-active" : "tab-inactive"
                 }`
               }
+              style={{ minWidth: "180px" }}
             >
               {t.label}
             </NavLink>
           ))}
-        </div>
+      </div>
+
+      {/* Right Side Tab */}
+      <div className="flex gap-2 md:gap-4">
+        {tabs
+          .filter((t) => t.rightAlign)
+          .map((t) => (
+            <NavLink
+              key={t.to}
+              to={t.to}
+              className={({ isActive }) =>
+                `tab-link flex items-center whitespace-nowrap px-3 py-2 ${
+                  isActive ? "tab-active" : "tab-inactive"
+                }`
+              }
+              
+            >
+              {t.label}
+              
+            </NavLink>
+          ))}
       </div>
     </div>
   );
