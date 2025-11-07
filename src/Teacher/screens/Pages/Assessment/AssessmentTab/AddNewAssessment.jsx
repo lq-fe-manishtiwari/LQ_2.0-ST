@@ -96,23 +96,13 @@ export default function AddNewAssessment() {
                 <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
                   <img src={assesment_logo} alt="Assessment" className="w-8 h-8" />
                 </div>
-<<<<<<< HEAD
-                <h1 className="text-xl sm:text-2xl font-semibold text-blue-700">
-                  Add New Assessment
-                </h1>
-=======
                 <h1 className="text-xl sm:text-2xl font-semibold" style={{ color: "rgb(33 98 193 / var(--tw-bg-opacity, 1))" }}>Add New Assessment</h1>
->>>>>>> prajwal_st
               </div>
 
               {/* Right Circular Close Button */}
               <button
                 onClick={goBack}
-<<<<<<< HEAD
-                className="w-10 h-10 mt-3 sm:mt-0 flex items-center justify-center rounded-full text-white transition-all shadow-sm hover:shadow-md"
-=======
                 className="w-10 h-10 flex items-center justify-center rounded-full text-white transition-all hover:opacity-90 shadow-md"
->>>>>>> prajwal_st
                 style={{ backgroundColor: "rgb(33 98 193 / var(--tw-bg-opacity, 1))" }}
               >
                 <X className="w-5 h-5" />
@@ -124,13 +114,8 @@ export default function AddNewAssessment() {
               <button
                 type="button"
                 onClick={() => handleTabView('Internal')}
-<<<<<<< HEAD
-                className={`flex items-center gap-2 px-6 py-3 font-medium text-sm rounded-t-lg transition-all
-                  ${state.internalAssessmentViewBtn === 'tab-active'
-=======
                 className={`flex items-center gap-2 px-6 py-3 font-medium text-sm rounded-lg transition-all shadow-sm ${
                   state.internalAssessmentViewBtn === 'tab-active'
->>>>>>> prajwal_st
                     ? 'bg-blue-600 text-white shadow-md'
                     : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                   }`}
@@ -141,13 +126,8 @@ export default function AddNewAssessment() {
               <button
                 type="button"
                 onClick={() => handleTabView('External')}
-<<<<<<< HEAD
-                className={`flex items-center gap-2 px-6 py-3 font-medium text-sm rounded-t-lg transition-all
-                  ${state.externalAssessmentViewBtn === 'tab-active'
-=======
                 className={`flex items-center gap-2 px-6 py-3 font-medium text-sm rounded-lg transition-all shadow-sm ${
                   state.externalAssessmentViewBtn === 'tab-active'
->>>>>>> prajwal_st
                     ? 'bg-blue-600 text-white shadow-md'
                     : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                   }`}
