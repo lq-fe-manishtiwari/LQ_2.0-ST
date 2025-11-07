@@ -1,12 +1,13 @@
 import React from "react";
 import { NavLink, useLocation } from "react-router-dom";
+import { FileText, HelpCircle } from "lucide-react";
 
 const tabs = [
   {
     label: "Academic",
     children: [
-      { label: "Assessment", to: "/teacher/assessments/assessment" },
-      { label: "Questions", to: "/teacher/assessments/questions" },
+      { label: "Assessment", to: "/teacher/assessments/assessment", icon: FileText },
+      { label: "Questions", to: "/teacher/assessments/questions", icon: HelpCircle },
     ],
   },
   { label: "Vertical 1 & 4(Major)", to: "/teacher/assessments/vertical1_4" },
@@ -26,15 +27,15 @@ export default function TabsNav() {
   return (
     <>
       {/* MAIN TABS */}
-      <div className="flex gap-3 flex-wrap mb-3">
+      <div className="flex flex-wrap gap-2 md:gap-4 mb-3 mx-2 sm:mx-4">
         {tabs.map((t) => {
           if (t.children) {
             const active = isAcademicRoute; // only active if subroute active
             return (
               <div
                 key={t.label}
-                className={`px-4 py-2 rounded-lg cursor-default ${
-                  active ? "bg-blue-600 text-white font-semibold" : "bg-gray-200 text-gray-700"
+                className={`tab-link whitespace-nowrap w-auto flex-shrink-0 cursor-default px-4 py-2 text-sm ${
+                  active ? "tab-active" : "tab-inactive"
                 }`}
               >
                 {t.label}
@@ -47,8 +48,8 @@ export default function TabsNav() {
               key={t.to}
               to={t.to}
               className={({ isActive }) =>
-                `px-4 py-2 rounded-lg ${
-                  isActive ? "bg-blue-600 text-white font-semibold" : "bg-gray-200 text-gray-700"
+                `tab-link whitespace-nowrap w-auto flex-shrink-0 px-4 py-2 text-sm ${
+                  isActive ? "tab-active" : "tab-inactive"
                 }`
               }
             >
@@ -60,22 +61,24 @@ export default function TabsNav() {
 
       {/* SUB TABS for Academic only */}
       {isAcademicRoute && (
-        <div className="flex gap-3 mb-3">
-          {tabs[0].children.map((c) => (
-            <NavLink
-              key={c.to}
-              to={c.to}
-              className={({ isActive }) =>
-                `px-3 py-1 rounded border ${
-                  isActive
-                    ? "border-blue-600 text-blue-600 font-semibold"
-                    : "border-gray-300 text-gray-600"
-                }`
-              }
-            >
-              {c.label}
-            </NavLink>
-          ))}
+        <div className="flex flex-wrap gap-2 md:gap-4 mb-3 mx-2 sm:mx-4">
+          {tabs[0].children.map((c) => {
+            const Icon = c.icon;
+            return (
+              <NavLink
+                key={c.to}
+                to={c.to}
+                className={({ isActive }) =>
+                  `tab-link whitespace-nowrap w-auto flex-shrink-0 px-4 py-2 text-sm flex items-center gap-2 ${
+                    isActive ? "tab-active" : "tab-inactive"
+                  }`
+                }
+              >
+                <Icon size={16} />
+                {c.label}
+              </NavLink>
+            );
+          })}
         </div>
       )}
     </>
