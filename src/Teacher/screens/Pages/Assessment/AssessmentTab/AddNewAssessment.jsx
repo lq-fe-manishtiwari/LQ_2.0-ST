@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { ArrowLeft, Building, Home, X } from 'lucide-react';
+import { Building, Home, X } from 'lucide-react';
 import AddInternalAssessment from './AddInternalAssessment';
 import AddExternalAssessment from './AddExternalAssessment';
 import assesment_logo from '@/_assets/images_new_design/Assessment_logo.svg';
@@ -95,39 +95,43 @@ export default function AddNewAssessment() {
                 <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
                   <img src={assesment_logo} alt="Assessment" className="w-8 h-8" />
                 </div>
-                <h1 className="text-2xl font-bold text-gray-900">Add New Assessment</h1>
+                <h1 className="text-xl sm:text-2xl font-semibold text-blue-700">
+                  Add New Assessment
+                </h1>
               </div>
 
               {/* Right Circular Close Button */}
-            <button
-              onClick={goBack}
-              className="w-10 h-10 mt-3 sm:mt-0 flex items-center justify-center rounded-full text-white transition-all shadow-sm hover:shadow-md"
-              style={{ backgroundColor: "rgb(33 98 193 / var(--tw-bg-opacity, 1))" }}
-            >
-              <X className="w-5 h-5" />
-            </button>
+              <button
+                onClick={goBack}
+                className="w-10 h-10 mt-3 sm:mt-0 flex items-center justify-center rounded-full text-white transition-all shadow-sm hover:shadow-md"
+                style={{ backgroundColor: "rgb(33 98 193 / var(--tw-bg-opacity, 1))" }}
+              >
+                <X className="w-5 h-5" />
+              </button>
             </div>
 
             {/* Tabs: Online / Offline */}
             <div className="flex gap-3 mt-6 border-b border-gray-200">
               <button
+                type="button"
                 onClick={() => handleTabView('Internal')}
-                className={`flex items-center gap-2 px-6 py-3 font-medium text-sm rounded-t-lg transition-all ${
-                  state.internalAssessmentViewBtn === 'tab-active'
+                className={`flex items-center gap-2 px-6 py-3 font-medium text-sm rounded-t-lg transition-all
+                  ${state.internalAssessmentViewBtn === 'tab-active'
                     ? 'bg-blue-600 text-white shadow-md'
                     : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                }`}
+                  }`}
               >
                 <Building className="w-4 h-4" />
                 Online
               </button>
               <button
+                type="button"
                 onClick={() => handleTabView('External')}
-                className={`flex items-center gap-2 px-6 py-3 font-medium text-sm rounded-t-lg transition-all ${
-                  state.externalAssessmentViewBtn === 'tab-active'
+                className={`flex items-center gap-2 px-6 py-3 font-medium text-sm rounded-t-lg transition-all
+                  ${state.externalAssessmentViewBtn === 'tab-active'
                     ? 'bg-blue-600 text-white shadow-md'
                     : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                }`}
+                  }`}
               >
                 <Home className="w-4 h-4" />
                 Offline
