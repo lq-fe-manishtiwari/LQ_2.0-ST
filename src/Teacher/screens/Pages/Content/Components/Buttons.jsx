@@ -22,14 +22,14 @@ export default function Buttons() {
 
         {/* Right: Action Buttons */}
         <div className="flex gap-2">
-          <Link to="/content/add-content">
+          <Link to="/teacher/content/add-content">
             <button className="flex items-center justify-center gap-1 bg-blue-600 hover:bg-blue-700 text-white font-medium px-3 py-2 rounded-md shadow-md transition-all hover:shadow-lg">
               <Plus className="w-4 h-4" />
               My Content
             </button>
           </Link>
           
-          <Link to="/content/student-project">
+          <Link to="/teacher/content/student-project">
           <button className="flex items-center justify-center gap-1 bg-blue-600 hover:bg-blue-700 text-white font-medium px-3 py-2 rounded-md shadow-md transition-all hover:shadow-lg">
             {/* <Upload className="w-4 h-4" /> */}
             Student Project

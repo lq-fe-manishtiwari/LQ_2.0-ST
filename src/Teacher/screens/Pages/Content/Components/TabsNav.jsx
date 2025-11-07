@@ -4,13 +4,13 @@ import { Plus, Upload } from "lucide-react";
 import Buttons from "./Buttons";
 
 const tabs = [
-  { label: "Academic", to: "/content/Academic" },
-  { label: "Sport", to: "/content/Sport" },
-  { label: "Vertical1_4 (Major)", to: "/content/Vertical1_4" },
-  { label: "Vertical2 (Minor)", to: "/content/Vertical2" },
-  { label: "Vertical3 (OE)", to: "/content/Vertical3" },
-  { label: "Vertical5 (AEC/VEC/IKS)", to: "/content/Vertical5" },
-  { label: "Vertical6 (Other's)", to: "/content/Vertical6" },
+  { label: "Academic", to: "/teacher/content/Academic" },
+  { label: "Sport", to: "/teacher/content/Sport" },
+  { label: "Vertical1_4 (Major)", to: "/teacher/content/Vertical1_4" },
+  { label: "Vertical2 (Minor)", to: "/teacher/content/Vertical2" },
+  { label: "Vertical3 (OE)", to: "/teacher/content/Vertical3" },
+  { label: "Vertical5 (AEC/VEC/IKS)", to: "/teacher/content/Vertical5" },
+  { label: "Vertical6 (Other's)", to: "/teacher/content/Vertical6" },
 ];
 
 export default function TabsNav() {

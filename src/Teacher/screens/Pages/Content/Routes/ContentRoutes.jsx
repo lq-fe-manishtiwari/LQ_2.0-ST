@@ -32,11 +32,7 @@ export default function ContentRoutes() {
       <Route path="/add-content" element={<Add_Content />} />
        
       <Route path="/student-project" element={<StudentProject />} />
-
-      {/* ✅ Edit student route */}
-       {/* <Route path="/edit-student/:id" element={<AddStudentForm />} /> */}
-       {/* ✅ View student route */}
-       {/* <Route path="/view-student/:id" element={<StudentViewDetails />} /> */}
+      
     </Routes>
   );
 }
