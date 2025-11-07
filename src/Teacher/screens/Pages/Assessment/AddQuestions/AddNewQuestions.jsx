@@ -57,7 +57,7 @@ const AddNewQuestion = () => {
 
   // Navigate Back
   const goBack = () => {
-    navigate("/teacher-assessments/questions");
+    navigate("/teacher/assessments/questions");
   };
 
   // Modal Helpers

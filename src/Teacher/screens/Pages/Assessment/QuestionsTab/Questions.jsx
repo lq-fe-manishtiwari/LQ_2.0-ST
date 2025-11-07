@@ -226,7 +226,7 @@ const Questions = () => {
         {/* Right: Buttons */}
         <div className="flex flex-col sm:flex-row gap-3">
           <button
-            onClick={() => navigate('/teacher-assessments/add-question')}
+            onClick={() => navigate('/teacher/assessments/add-question')}
             className="flex items-center justify-center gap-2 bg-[rgb(33,98,193)] hover:bg-[rgb(28,78,153)] text-white font-medium px-4 py-3 rounded-lg shadow-md transition-all hover:shadow-lg"
           >
             <Plus className="w-5 h-5" />
