@@ -95,15 +95,15 @@ const Login = () => {
     <div className="h-screen w-full grid grid-cols-1 md:grid-cols-2 gap-0 overflow-hidden">
       {alert}
 
-      <Offline>
-        <div className="fixed inset-0 bg-black bg-opacity-70 z-50 flex items-center justify-center">
+      {/* <Offline> */}
+        {/* <div className="fixed inset-0 bg-black bg-opacity-70 z-50 flex items-center justify-center">
           <div className="bg-white p-8 rounded-2xl shadow-2xl text-center">
             <span className="text-2xl font-bold text-red-600">
               You're offline. Check your connection.
             </span>
           </div>
-        </div>
-      </Offline>
+        </div> */}
+      {/* </Offline> */}
 
       {/* Left Side - Video */}
       <div className="hidden md:flex items-center justify-center bg-gradient-to-br from-primary-700 to-primary-900 rounded-l-4xl overflow-hidden">
