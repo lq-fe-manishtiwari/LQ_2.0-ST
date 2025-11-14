@@ -18,6 +18,7 @@ import StudentHomepage from '../Student/screens/Homepage/StudentHomepage.jsx';
 // ────── Nested route groups ──────
 import TeacherRoutes from '../Teacher/screens/Routes/TeacherRoutes.jsx';
 import StudentRoutes from '../Student/screens/Routes/StudentRoutes.jsx';
+import ProfileRoutes from '../Student/screens/Pages/Profile/Routes/ProfileRoutes.jsx';
 
 // ────── Route guards ──────
 const ProtectedRoute = ({ children }) => {
@@ -93,10 +94,21 @@ function App() {
             </ProtectedRoute>
           }
         />
+        <Route
+          path="/my-profile/*"
+          element={
+            <ProtectedRoute>
+              <StudentHomepage>
+                <ProfileRoutes/>
+              </StudentHomepage>
+            </ProtectedRoute>
+          }
+        />
+
 
         {/* ────── FALLBACK ────── */}
         <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
+      </Routes>``
     </BrowserRouter>
   );
 }
