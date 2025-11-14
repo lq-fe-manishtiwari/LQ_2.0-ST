@@ -24,15 +24,16 @@ const ProtectedRoute = ({ children }) => {
   return isLoggedIn ? children : <Navigate to="/" replace />;
 };
 
-const PublicRoute = ({ children }) => {
-  const isLoggedIn = !!localStorage.getItem('refreshToken');
-  return isLoggedIn ? <Navigate to={getDefaultRedirect()} replace /> : children;
+// GET DEFAULT REDIRECT
+const getDefaultRedirect = () => {
+  const user = JSON.parse(localStorage.getItem("currentUser") || "{}");
+  return user?.iss === "STUDENT" ? "/student-dashboard" : "/dashboard";
 };
 
-// ────── Redirect after login based on role ──────
-const getDefaultRedirect = () => {
-  const user = JSON.parse(localStorage.getItem('currentUser') || '{}');
-  return user.iss === 'STUDENT' ? '/student-dashboard' : '/dashboard';
+// PUBLIC ROUTE (redirect if logged-in)
+const PublicRoute = ({ children }) => {
+  const isLoggedIn = !!localStorage.getItem("refreshToken");
+  return isLoggedIn ? <Navigate to={getDefaultRedirect()} replace /> : children;
 };
 
 function App() {
@@ -53,34 +54,36 @@ function App() {
         {/* ────── TEACHER ────── */}
         <Route path="/dashboard" element={<TeacherHomepage><TeacherRoutes /></TeacherHomepage>} />
      {/* TEACHER – Class area (exact + any sub-page) */}
-    <Route
-      path="/teacher/*"
-      element={
-        <TeacherHomepage>
-          <TeacherRoutes />
-        </TeacherHomepage>
-      }
-    />
+        <Route
+          path="/teacher/*"
+          element={
+            <ProtectedRoute>
+              <TeacherHomepage>
+                <TeacherRoutes />
+              </TeacherHomepage>
+            </ProtectedRoute>
+          }
+        />
 
         {/* ────── STUDENT ────── */}
         <Route
           path="/student-dashboard"
           element={
-            // <ProtectedRoute>
+            <ProtectedRoute>
               <StudentHomepage>
                 <StudentRoutes />
               </StudentHomepage>
-            // </ProtectedRoute>
+            </ProtectedRoute>
           }
         />
         <Route
           path="/student/*"
           element={
-            // <ProtectedRoute>
+            <ProtectedRoute>
               <StudentHomepage>
                 <StudentRoutes />
               </StudentHomepage>
-            // </ProtectedRoute>
+            </ProtectedRoute>
           }
         />
 
