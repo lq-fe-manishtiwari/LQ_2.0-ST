@@ -9,6 +9,7 @@ import {
 
 // ────── Shared Login (handles both roles) ──────
 import Login from '../Login/Login.jsx';
+import AdminForgotPassword from '../Login/AdminForgotPassword.jsx';
 
 // ────── Layouts (different homepage for each role) ──────
 import TeacherHomepage from '../Teacher/screens/Homepage/Homepage.jsx';
@@ -50,8 +51,14 @@ function App() {
           }
         />
 
+          <Route path="/admin-forgot-password" element={
+          <PublicRoute>
+            <AdminForgotPassword />
+          </PublicRoute>
+        } />
+
         {/* ────── TEACHER ────── */}
-        <Route path="/dashboard" element={<TeacherHomepage><TeacherRoutes /></TeacherHomepage>} />
+        <Route path="/dashboard" element={<ProtectedRoute><TeacherHomepage><TeacherRoutes /></TeacherHomepage></ProtectedRoute>} />
      {/* TEACHER – Class area (exact + any sub-page) */}
     <Route
       path="/teacher/*"
