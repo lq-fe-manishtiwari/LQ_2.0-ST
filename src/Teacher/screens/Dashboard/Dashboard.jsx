@@ -1,4 +1,6 @@
 import React, { useEffect, useState } from 'react';
+import { Link } from "react-router-dom"
+
 import {
   BarChart3,
   Users,
@@ -60,6 +62,7 @@ const Dashboard = () => {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-8">
 
         {/* ---------- Welcome Card ---------- */}
+        <Link to="/teacher-profile">
         <section className="bg-white bg-primary-600 rounded-2xl shadow-lg p-6 border border-gray-200" style={{backgroundColor:"#2162C1"}}>
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
@@ -73,7 +76,7 @@ const Dashboard = () => {
             <BarChart3 className="w-12 h-12 text-primary-50 sm:w-16 sm:h-16 text-blue-600" />
           </div>
         </section>
-
+</Link>
         {/* ---------- Stats Grid (2 on mobile, 4 on lg) ---------- */}
         <section className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {stats.map((stat, idx) => {

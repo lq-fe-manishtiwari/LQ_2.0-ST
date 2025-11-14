@@ -76,7 +76,12 @@ const Sidebar = ({ isOpen, toggle }) => {
         label: "My Teaching",
         iconActive: dashboardActive,
         iconInactive: dashboardInactive,
+         match: [
+          "/teacher-profile",
+          
+        ],
       },
+
       {
         to: "/teacher/class",
         label: "Class",

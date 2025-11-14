@@ -18,6 +18,7 @@ import StudentHomepage from '../Student/screens/Homepage/StudentHomepage.jsx';
 // ────── Nested route groups ──────
 import TeacherRoutes from '../Teacher/screens/Routes/TeacherRoutes.jsx';
 import StudentRoutes from '../Student/screens/Routes/StudentRoutes.jsx';
+import TeacherProfile from '../Teacher/screens/Dashboard/TeacherProfile.jsx';
 
 // ────── Route guards ──────
 const ProtectedRoute = ({ children }) => {
@@ -60,6 +61,7 @@ function App() {
 
         {/* ────── TEACHER ────── */}
         <Route path="/dashboard" element={<ProtectedRoute><TeacherHomepage><TeacherRoutes /></TeacherHomepage></ProtectedRoute>} />
+        <Route path="/teacher-profile" element={<ProtectedRoute><TeacherHomepage><TeacherProfile></TeacherProfile> </TeacherHomepage></ProtectedRoute>} />
      {/* TEACHER – Class area (exact + any sub-page) */}
         <Route
           path="/teacher/*"
