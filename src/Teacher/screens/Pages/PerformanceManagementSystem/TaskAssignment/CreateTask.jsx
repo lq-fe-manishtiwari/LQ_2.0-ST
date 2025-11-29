@@ -407,7 +407,7 @@ export default function TaskForm() {
   // View roles and responsibility
   const handleViewRoles = (employee) => {
     setSelectedEmployee(employee);
-    // setShowRoleModal(true);
+    setShowRoleModal(true);
   };
 
   return (

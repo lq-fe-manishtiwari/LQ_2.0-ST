@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Eye, X } from "lucide-react";
-// import RoleModal from '../Components/RoleModal';
+import RoleModal from '../Components/RoleModal';
 
 export default function ViewMyTasks({ task }) {
   // Modal state
@@ -41,7 +41,7 @@ export default function ViewMyTasks({ task }) {
   // View roles and responsibility
   const handleViewRoles = (employee) => {
     setSelectedEmployee(employee);
-    // setShowRoleModal(true);
+    setShowRoleModal(true);
   };
 
   // Example fallback data
@@ -93,39 +93,35 @@ export default function ViewMyTasks({ task }) {
       <div className="bg-white rounded-2xl p-6 sm:p-8 shadow-sm border w-full">
         
         {/* Two Column Layout as per screenshot */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
 
           {/* LEFT COLUMN */}
-          <div className="space-y-6">
+          <div className="space-y-4 lg:space-y-6">
             
-            {/* Title */}
-            <div>
-              <span className="font-semibold text-gray-700 text-lg">Title : </span>
-              <span className="text-gray-900 text-lg">{data.title}</span>
+            <div className="break-words">
+              <span className="font-semibold text-gray-700">Title:</span>
+              <p className="text-gray-900 mt-1">{data.title}</p>
             </div>
 
-            {/* Assigned Date & Time */}
             <div>
-              <span className="font-semibold text-gray-700 text-lg">Assigned Date & Time : </span>
-              <span className="text-gray-900 text-lg">{data.assignedDate}</span>
+              <span className="font-semibold text-gray-700">Assigned Date & Time:</span>
+              <p className="text-gray-900 mt-1">{data.assignedDate}</p>
             </div>
 
-            {/* Assigned By */}
             <div>
-              <span className="font-semibold text-gray-700 text-lg">Assigned By : </span>
-              <span className="text-gray-900 text-lg">{data.assignedBy}</span>
+              <span className="font-semibold text-gray-700">Assigned By:</span>
+              <p className="text-gray-900 mt-1">{data.assignedBy}</p>
             </div>
 
-            {/* Priority */}
-            <div className="flex items-center gap-3">
-              <span className="font-semibold text-gray-700 text-lg">Priority : </span>
+            <div>
+              <span className="font-semibold text-gray-700 block mb-2">Priority:</span>
               <span
-                className={`inline-block px-4 py-2 rounded-full text-sm font-medium ${
+                className={`inline-block px-3 py-1.5 rounded-full text-sm font-medium ${
                   data.priority === "High"
-                    ? "bg-green-100 text-green-800"
+                    ? "bg-red-100 text-red-800"
                     : data.priority === "Medium"
                     ? "bg-yellow-100 text-yellow-800"
-                    : "bg-red-100 text-red-800"
+                    : "bg-green-100 text-green-800"
                 }`}
               >
                 {data.priority}
@@ -135,41 +131,35 @@ export default function ViewMyTasks({ task }) {
           </div>
 
           {/* RIGHT COLUMN */}
-          <div className="space-y-6">
+          <div className="space-y-4 lg:space-y-6">
             
-            {/* Description */}
-            <div>
-              <span className="font-semibold text-gray-700 text-lg">Description : </span>
-              <span className="text-gray-900 text-lg">{data.description}</span>
+            <div className="break-words">
+              <span className="font-semibold text-gray-700">Description:</span>
+              <p className="text-gray-900 mt-1">{data.description}</p>
             </div>
 
-            {/* Due Date & Time */}
             <div>
-              <span className="font-semibold text-gray-700 text-lg">Due Date & Time : </span>
-              <span className={`text-lg font-medium ${
+              <span className="font-semibold text-gray-700">Due Date & Time:</span>
+              <p className={`mt-1 font-medium ${
                 isTaskOverdue(data) ? 'text-red-600' : 'text-gray-900'
               }`}>
                 {data.dueDate}
-              </span>
+              </p>
               {isTaskOverdue(data) && (
-                <div className="mt-2">
-                  <span className="inline-block px-4 py-2 rounded-full bg-red-500 text-white text-sm font-medium">
-                    Overdue by {data.overdue}
-                  </span>
-                </div>
+                <span className="inline-block mt-2 px-3 py-1 rounded-full bg-red-500 text-white text-xs font-medium">
+                  Overdue by: {data.overdue}
+                </span>
               )}
             </div>
 
-            {/* Task Type */}
             <div>
-              <span className="font-semibold text-gray-700 text-lg">Task Type : </span>
-              <span className="text-gray-900 text-lg">{data.taskType}</span>
+              <span className="font-semibold text-gray-700">Task Type:</span>
+              <p className="text-gray-900 mt-1">{data.taskType}</p>
             </div>
 
-            {/* Status */}
-            <div className="flex items-center gap-3">
-              <span className="font-semibold text-gray-700 text-lg">Status : </span>
-              <span className={`inline-block px-4 py-2 rounded-full text-sm font-medium ${
+            <div>
+              <span className="font-semibold text-gray-700 block mb-2">Status:</span>
+              <span className={`inline-block px-3 py-1.5 rounded-full text-sm font-medium ${
                 data.status === 'Complete' || data.status === 'Completed'
                   ? 'bg-green-100 text-green-800'
                   : data.status === 'In-Progress' || data.status === 'Active'
@@ -189,13 +179,14 @@ export default function ViewMyTasks({ task }) {
       {/* ⭐ TASK ASSIGNMENTS TABLE - Desktop */}
       <div className="hidden lg:block bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full table-fixed">
+          <table className="w-full min-w-[900px]">
             <thead className="table-header">
               <tr>
                 <th className="table-th text-center">Name</th>
-                <th className="table-th text-center" >Designation</th>
+                <th className="table-th text-center">Designation</th>
                 <th className="table-th text-center">Role</th>
                 <th className="table-th text-center">Department</th>
+                {/* <th className="table-th text-center">Roles & Responsibility</th> */}
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
@@ -205,10 +196,42 @@ export default function ViewMyTasks({ task }) {
                   <td className="px-6 py-4 text-sm text-gray-700 text-center">{employee.designation}</td>
                   <td className="px-6 py-4 text-sm text-gray-700 text-center">{employee.role}</td>
                   <td className="px-6 py-4 text-sm text-gray-700 text-center">{employee.department}</td>
+                  {/* <td className="px-6 py-4 text-center">
+                    <button 
+                      onClick={() => handleViewRoles(employee)}
+                      className="p-2 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition"
+                    >
+                      <Eye className="w-4 h-4" />
+                    </button>
+                  </td> */}
                 </tr>
               ))}
             </tbody>
           </table>
+        </div>
+
+        {/* ────────────────────── Pagination ────────────────────── */}
+        <div className="flex justify-between items-center px-6 py-4 border-t border-gray-200 bg-white">
+          {/* Previous Button */}
+          <button
+            disabled={true}
+            className="flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-white transition-all bg-blue-200 text-gray-400 cursor-not-allowed"
+          >
+            Previous
+          </button>
+
+          {/* Showing X-Y of Z */}
+          <span className="text-sm font-medium text-gray-700">
+            Showing <strong>1</strong>–<strong>3</strong> of <strong>3</strong> entries
+          </span>
+
+          {/* Next Button */}
+          <button
+            disabled={true}
+            className="flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-white transition-all bg-blue-200 text-gray-400 cursor-not-allowed"
+          >
+            Next
+          </button>
         </div>
       </div>
 

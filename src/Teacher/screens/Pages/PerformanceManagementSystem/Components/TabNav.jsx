@@ -4,8 +4,8 @@ import { Plus, Upload } from "lucide-react";
 // import Buttons from "./Buttons";
 
 const tabs = [
-  { label: "User", to: "/pms/user-dashboard" },
-  { label: "Department", to: "/pms/department" },
+  { label: "Users", to: "/pms/user-dashboard" },
+  // { label: "Department", to: "/pms/department" },
   { label: "Task Assignment", to: "/pms/task-assignment" },
   { label: "My Tasks", to: "/pms/my-task" },
   { label: "API", to: "/pms/api" },

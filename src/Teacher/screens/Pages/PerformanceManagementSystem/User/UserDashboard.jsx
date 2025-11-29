@@ -5,7 +5,7 @@ import { Filter, ChevronDown, Plus, Upload, Eye, Edit, Trash2, User, Mail, Phone
 import SweetAlert from "react-bootstrap-sweetalert";
 // import OtherStaffBulkUploadModal from "../../OtherStaff/Dashboard/BulkUploadModal";
 // import TeacherBulkUploadModal from "../../Teacher/Components/BulkUploadModal";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
 // Custom Select Component
 const CustomSelect = ({ label, value, onChange, options, placeholder, disabled = false }) => {
@@ -66,6 +66,7 @@ const CustomSelect = ({ label, value, onChange, options, placeholder, disabled =
 };
 
 export default function UserDashboard() {
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [staff, setStaff] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -356,6 +357,15 @@ export default function UserDashboard() {
     return `/pms/user-dashboard/edit/${staffId}`;
   };
 
+  const viewUser = (member) => {
+    const staffId = member.teacher_id || member.other_staff_id;
+    
+    navigate(`/pms/user-dashboard/view-user/${staffId}`, {
+      state: { userData: member }
+    });
+  };
+  
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 p-4 md:p-6 lg:p-8">
       <div className="max-w-7xl mx-auto">
@@ -559,11 +569,9 @@ export default function UserDashboard() {
                   <td className="px-4 py-3">{member.designation || '-'}</td>
                   <td className="px-4 py-3">{member.department || '-'}</td>
                   <td className="px-4 py-3">
-                    <Link to={`/performance-management/users/view-user/${staffId}?type=${staffType}`}>
-                      <button className="p-2 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition">
-                        <Eye className="w-4 h-4" />
-                      </button>
-                    </Link>
+                    <button onClick={() => viewUser(member)} className="p-2 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition">
+                      <Eye className="w-4 h-4" />
+                    </button>
                     {/* <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
                         staffType === 'teacher' 
                           ? 'bg-green-100 text-green-800' 
@@ -707,23 +715,26 @@ export default function UserDashboard() {
                 </div>
               </div>
 
-              <div className="flex justify-end gap-2">
-                <Link to={`/performance-management/users/view-user/${staffId}?type=${staffType}`}>
-                  <button className="p-2 bg-blue-100 rounded">
+              <div className="flex justify-end items-center">
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => viewUser(member)}
+                    className="p-2.5 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition"
+                  >
                     <Eye className="w-4 h-4" />
                   </button>
-                </Link>
-                <Link to={editLink}>
-                  <button className="p-2 bg-yellow-100 rounded">
-                    <Edit className="w-4 h-4" />
+                  <Link to={editLink}>
+                    <button className="p-2.5 rounded-lg bg-yellow-50 text-yellow-600 hover:bg-yellow-100 transition">
+                      <Edit className="w-4 h-4" />
+                    </button>
+                  </Link>
+                  <button
+                    onClick={() => handleDelete(staffId, staffType)}
+                    className="p-2.5 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition"
+                  >
+                    <Trash2 className="w-4 h-4" />
                   </button>
-                </Link>
-                <button
-                  onClick={() => handleDelete(staffId, staffType)}
-                  className="p-2 bg-red-100 rounded"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
+                </div>
               </div>
             </div>
           );
