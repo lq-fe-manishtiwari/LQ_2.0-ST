@@ -200,5 +200,157 @@ export function apiRequest(url, options = {}) {
       ...options.headers
     }
   };
-  return fetch(`${DevAPI}${url}`, config); 
+  return fetch(`${DevAPI}${url}`, config);
 }
+
+// ========== USER PROFILE API FUNCTIONS ==========
+export function getUserProfile(userType = null) {
+  // Determine the endpoint based on user type
+  const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
+  const type = userType || currentUser?.iss;
+  
+  let endpoint = '/profile/me';
+  if (type === 'TEACHER') {
+    endpoint = '/profile/me';
+  } else if (type === 'STUDENT') {
+    endpoint = '/profile/me';
+  }
+
+  const requestOptions = {
+    method: 'GET',
+    headers: authHeader(),
+  };
+
+  return fetch(`${DevAPI}${endpoint}`, requestOptions)
+    .then(handleResponse)
+    .then(data => ({
+      success: true,
+      data: data
+    }))
+    .catch(error => ({
+      success: false,
+      message: error.message || 'Failed to fetch user profile'
+    }));
+}
+
+export function updateUserProfile(profileData, userType = null) {
+  const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
+  const type = userType || currentUser?.iss;
+  
+  let endpoint = '/user/profile';
+  if (type === 'TEACHER') {
+    endpoint = '/teacher/profile';
+  } else if (type === 'STUDENT') {
+    endpoint = '/student/profile';
+  }
+
+  const requestOptions = {
+    method: 'PUT',
+    headers: authHeaderToPost(),
+    body: JSON.stringify(profileData),
+  };
+
+  return fetch(`${DevAPI}${endpoint}`, requestOptions)
+    .then(handlePostResponse)
+    .then(data => ({
+      success: true,
+      data: data
+    }))
+    .catch(error => ({
+      success: false,
+      message: error.message || 'Failed to update user profile'
+    }));
+}
+
+// ========== TEACHER PROGRAMS API FUNCTIONS ==========
+export function getTeacherAllocatedPrograms(teacherId) {
+  const requestOptions = {
+    method: 'GET',
+    headers: authHeader(),
+  };
+
+  return fetch(`${DevAPI}/admin/teacher-allocation/teacher/${teacherId}`, requestOptions)
+    .then(handleResponse)
+    .then(data => ({
+      success: true,
+      data: data
+    }))
+    .catch(error => ({
+      success: false,
+      message: error.message || 'Failed to fetch teacher allocated programs'
+    }));
+}
+
+// ========== GRAPHQL STUDENTS API FUNCTIONS ==========
+export function getStudentsByFilters(programId, academicYearId, semesterId = null, divisionId = null) {
+  const query = `
+    query StudentsByFilters($programId: ID!, $academicYearId: ID!, $semesterId: ID, $divisionId: ID) {
+      studentsByFilters(
+        programId: $programId,
+        academicYearId: $academicYearId,
+        semesterId: $semesterId,
+        divisionId: $divisionId
+      ) {
+        student {
+          studentId
+          firstname
+          lastname
+          email
+          rollNumber
+          admissionNumber
+        }
+        allocation {
+          id
+          rollNumber
+          academicYear {
+            name
+            yearNumber
+            startDate
+            endDate
+          }
+          semester {
+            name
+            semesterNumber
+          }
+        }
+      }
+    }
+  `;
+
+  const variables = {
+    programId,
+    academicYearId,
+    semesterId,
+    divisionId
+  };
+
+  const requestOptions = {
+    method: 'POST',
+    headers: authHeaderToPost(),
+    body: JSON.stringify({
+      query,
+      variables
+    }),
+  };
+
+  return fetch(`${DevAPI}/graphql`, requestOptions)
+    .then(handleResponse)
+    .then(data => ({
+      success: true,
+      data: data?.data?.studentsByFilters || []
+    }))
+    .catch(error => ({
+      success: false,
+      message: error.message || 'Failed to fetch students'
+    }));
+}
+
+// Enhanced API object with user profile methods
+export const api = {
+  getUserProfile,
+  updateUserProfile,
+  getTeacherAllocatedPrograms,
+  getStudentsByFilters,
+  // Add other existing functions if needed
+  request: apiRequest,
+};

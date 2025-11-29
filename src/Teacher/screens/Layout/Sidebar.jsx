@@ -2,6 +2,7 @@
 import React, { useMemo, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import classNames from "classnames";
+import { useUserProfile } from "@/contexts/UserProfileContext";
 // import { authenticationService } from "@/_services/admin";
 import "@/_assets/customStyle.css";
 
@@ -39,6 +40,7 @@ import closebtn from "@/_assets/images/Close.svg";
 const Sidebar = ({ isOpen, toggle }) => {
   const location = useLocation();
   const navigate = useNavigate();
+  const { fullName, designation, userType, profileImage } = useUserProfile();
 
   // Mobile state
   const [isMobileOpen, setIsMobileOpen] = useState(false);
@@ -299,6 +301,36 @@ const Sidebar = ({ isOpen, toggle }) => {
           </button>
         </div>
 
+        {/* User Profile Section */}
+        {isOpen && (fullName || userType) && (
+          <div className="px-4 py-3 border-b border-gray-200">
+            <div className="flex items-center space-x-3">
+              {profileImage ? (
+                <img
+                  src={profileImage}
+                  alt="Profile"
+                  className="w-10 h-10 rounded-full object-cover"
+                />
+              ) : (
+                <div className="w-10 h-10 rounded-full bg-blue-500 flex items-center justify-center text-white text-sm font-bold">
+                  {fullName ? fullName.charAt(0).toUpperCase() : 'U'}
+                </div>
+              )}
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-gray-900 truncate">
+                  {fullName || 'User'}
+                </p>
+                {designation && (
+                  <p className="text-xs text-gray-500 truncate">{designation}</p>
+                )}
+                <p className="text-xs text-blue-600 font-medium">
+                  {userType || 'Teacher'}
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Menu */}
         <ul className="list-none flex-1 px-2">{renderMenu()}</ul>
 
@@ -353,6 +385,36 @@ const Sidebar = ({ isOpen, toggle }) => {
                 <img src={closebtn} alt="Close" className="w-4 h-4" />
               </button>
             </div>
+
+            {/* Mobile User Profile Section */}
+            {(fullName || userType) && (
+              <div className="py-3 border-b border-gray-200 mb-4">
+                <div className="flex items-center space-x-3">
+                  {profileImage ? (
+                    <img
+                      src={profileImage}
+                      alt="Profile"
+                      className="w-12 h-12 rounded-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-12 h-12 rounded-full bg-blue-500 flex items-center justify-center text-white font-bold">
+                      {fullName ? fullName.charAt(0).toUpperCase() : 'U'}
+                    </div>
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-gray-900 truncate">
+                      {fullName || 'User'}
+                    </p>
+                    {designation && (
+                      <p className="text-xs text-gray-500 truncate">{designation}</p>
+                    )}
+                    <p className="text-xs text-blue-600 font-medium">
+                      {userType || 'Teacher'}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Mobile Menu */}
             <ul className="list-none flex-1">{renderMenu(true)}</ul>
