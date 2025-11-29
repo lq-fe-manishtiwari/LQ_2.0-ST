@@ -269,7 +269,7 @@ export function getTeacherAllocatedPrograms(teacherId) {
     headers: authHeader(),
   };
 
-  return fetch(`${DevAPI}/admin/teacher-allocation/teacher/${teacherId}`, requestOptions)
+  return fetch(`https://lq-new-api.learnqoch.com/user/teacher/${teacherId}`, requestOptions)
     .then(handleResponse)
     .then(data => ({
       success: true,
