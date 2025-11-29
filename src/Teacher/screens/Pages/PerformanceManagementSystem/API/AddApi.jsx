@@ -34,73 +34,61 @@ export default function AddApi() {
 
                     {/* EMP Input */}
                     <div className="col-span-1">
-                        <label className="block text-sm font-medium text-gray-700 mb-2">EMP Input</label>
+                        <label className="block text-sm font-semibold text-blue-700 mb-2">EMP Input</label>
                         <input
                             type="text"
                             placeholder="Enter emp rating"
-                            className="w-full border border-gray-300 rounded-lg px-3 sm:px-4 py-2.5 text-sm 
-                            focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent
-                            transition-all duration-200"
+                            className="w-full border rounded px-3 py-2 focus:outline-none transition-colors border-gray-300 focus:border-blue-500"
                         />
                     </div>
 
                     {/* EMP Self Rating */}
                     <div className="col-span-1">
-                        <label className="block text-sm font-medium text-gray-700 mb-2">EMP Self Rating</label>
+                        <label className="block text-sm font-semibold text-blue-700 mb-2">EMP Self Rating</label>
                         <input
                             type="text"
                             placeholder="Enter emp self rating"
-                            className="w-full border border-gray-300 rounded-lg px-3 sm:px-4 py-2.5 text-sm 
-                            focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent
-                            transition-all duration-200"
+                            className="w-full border rounded px-3 py-2 focus:outline-none transition-colors border-gray-300 focus:border-blue-500"
                         />
                     </div>
 
                     {/* Achievement */}
                     <div className="col-span-1 xs:col-span-2 lg:col-span-1">
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Achievement</label>
+                        <label className="block text-sm font-semibold text-blue-700 mb-2">Achievement</label>
                         <input
                             type="text"
                             placeholder="Add achievement"
-                            className="w-full border border-gray-300 rounded-lg px-3 sm:px-4 py-2.5 text-sm 
-                            focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent
-                            transition-all duration-200"
+                            className="w-full border rounded px-3 py-2 focus:outline-none transition-colors border-gray-300 focus:border-blue-500"
                         />
                     </div>
 
                     {/* Manager 1 Input */}
                     <div className="col-span-1">
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Manager 1 Input</label>
+                        <label className="block text-sm font-semibold text-blue-700 mb-2">Manager 1 Input</label>
                         <input
                             type="text"
                             placeholder="Enter manager input"
-                            className="w-full border border-gray-300 rounded-lg px-3 sm:px-4 py-2.5 text-sm 
-                            focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent
-                            transition-all duration-200"
+                            className="w-full border rounded px-3 py-2 focus:outline-none transition-colors border-gray-300 focus:border-blue-500"
                         />
                     </div>
 
                     {/* Manager 1 Rating */}
                     <div className="col-span-1">
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Manager 1 Rating</label>
+                        <label className="block text-sm font-semibold text-blue-700 mb-2">Manager 1 Rating</label>
                         <input
                             type="text"
                             placeholder="Enter manager rating"
-                            className="w-full border border-gray-300 rounded-lg px-3 sm:px-4 py-2.5 text-sm 
-                            focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent
-                            transition-all duration-200"
+                            className="w-full border rounded px-3 py-2 focus:outline-none transition-colors border-gray-300 focus:border-blue-500"
                         />
                     </div>
 
                     {/* Manager 2 Input */}
                     <div className="col-span-1 xs:col-span-2 lg:col-span-1">
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Manager 2 Input</label>
+                        <label className="block text-sm font-semibold text-blue-700 mb-2">Manager 2 Input</label>
                         <input
                             type="text"
                             placeholder="Enter manager input"
-                            className="w-full border border-gray-300 rounded-lg px-3 sm:px-4 py-2.5 text-sm 
-                            focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent
-                            transition-all duration-200"
+                            className="w-full border rounded px-3 py-2 focus:outline-none transition-colors border-gray-300 focus:border-blue-500"
                         />
                     </div>
 
@@ -108,13 +96,11 @@ export default function AddApi() {
                     <div className="col-span-1 xs:col-span-2 lg:col-span-3">
                         <div className="flex justify-center">
                             <div className="w-full xs:w-4/5 sm:w-3/5 md:w-2/5 lg:w-1/3 xl:w-1/4">
-                                <label className="block text-sm font-medium text-gray-700 mb-2">Manager 2 Rating</label>
+                                <label className="block text-sm font-semibold text-blue-700 mb-2">Manager 2 Rating</label>
                                 <input
                                     type="text"
                                     placeholder="Enter manager rating"
-                                    className="w-full border border-gray-300 rounded-lg px-3 sm:px-4 py-2.5 text-sm 
-                                    focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent
-                                    transition-all duration-200"
+                                    className="w-full border rounded px-3 py-2 focus:outline-none transition-colors border-gray-300 focus:border-blue-500"
                                 />
                             </div>
                         </div>
@@ -122,17 +108,13 @@ export default function AddApi() {
                 </div>
 
                 {/* Submit Buttons */}
-                <div className="flex flex-col xs:flex-row justify-center gap-3 sm:gap-4 md:gap-5 mt-8 sm:mt-10 md:mt-12">
-                    <button className="bg-[#1F74D8] hover:bg-[#1965BD] text-white px-6 sm:px-8 py-2.5 
-                        rounded-full text-sm sm:text-base font-medium shadow-sm hover:shadow-md
-                        transition-all duration-200 transform hover:-translate-y-0.5">
+                <div className="flex justify-center gap-4 mt-8">
+                    <button className="px-8 py-3 rounded-lg shadow-md text-white bg-blue-600 hover:bg-blue-700 transition-all font-medium">
                         Submit
                     </button>
                     <button
                         onClick={() => navigate("/pms/api")}
-                        className="bg-[#FFA726] hover:bg-[#F19B0E] text-white px-6 sm:px-8 py-2.5 
-                        rounded-full text-sm sm:text-base font-medium shadow-sm hover:shadow-md
-                        transition-all duration-200 transform hover:-translate-y-0.5">
+                        className="px-8 py-3 rounded-lg shadow-md text-white bg-orange-500 hover:bg-orange-600 transition-all font-medium">
                         Cancel
                     </button>
                 </div>

@@ -1,6 +1,6 @@
 'use client';
 import React, { useState } from "react";
-import { ArrowLeft, Trash2 } from "lucide-react";
+import { ArrowLeft, Trash2, X } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import SweetAlert from 'react-bootstrap-sweetalert';
 
@@ -81,14 +81,16 @@ export default function ViewLeave() {
   return (
     <div className="w-full min-h-screen bg-[#fafafa] p-4 md:p-6">
 
-      {/* Back Button */}
-      <button
-        onClick={() => navigate(-1)}
-        className="flex items-center gap-2 bg-pink-100 text-black px-4 py-2 
-        rounded-full hover:bg-pink-200 transition mb-4"
-      >
-        <ArrowLeft size={18} /> Back
-      </button>
+      {/* Header with Cross Button */}
+      <div className="flex justify-between items-center mb-6">
+        <h2 className="text-xl font-semibold text-gray-800">Leave Details</h2>
+        <button
+          onClick={() => navigate(-1)}
+          className="p-2 bg-blue-600 hover:bg-blue-700 rounded-full transition-colors"
+        >
+          <X className="w-5 h-5 text-white" />
+        </button>
+      </div>
 
       {/* Main Card */}
       <div className="bg-white w-full p-5 md:p-8 rounded-xl shadow-md max-w-6xl mx-auto mb-6">
@@ -127,39 +129,41 @@ export default function ViewLeave() {
         <h3 className="p-4 font-semibold text-sm">Previous Leaves :</h3>
 
         {/* DESKTOP TABLE */}
-        <div className="hidden lg:block">
-          <table className="w-full text-sm">
-            <thead className="table-header">
-              <tr>
-                <th className="table-th text-left">From Date</th>
-                <th className="table-th text-left">To Date</th>
-                <th className="table-th text-left">Leave Type</th>
-                <th className="table-th text-left">Subject</th>
-                <th className="table-th text-left">Leave Days</th>
-                <th className="table-th text-left">Actions</th>
-              </tr>
-            </thead>
-
-            <tbody>
-              {previousLeaves.map((leave) => (
-                <tr key={leave.id} className="border-b">
-                  <td className="p-3">{leave.fromDate}</td>
-                  <td className="p-3">{leave.toDate}</td>
-                  <td className="p-3">{leave.leaveType}</td>
-                  <td className="p-3">{leave.subject}</td>
-                  <td className="p-3">{leave.leaveDays}</td>
-                  <td className="p-3">
-                    <button
-                      onClick={() => handleDelete(leave.id)}
-                      className="text-pink-500 hover:text-red-600 cursor-pointer transition-colors"
-                    >
-                      <Trash2 size={18} />
-                    </button>
-                  </td>
+        <div className="hidden lg:block bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full table-fixed">
+              <thead className="table-header">
+                <tr>
+                  <th className="table-th text-center table-header" style={{width: '16%'}}>From Date</th>
+                  <th className="table-th text-center table-header" style={{width: '16%'}}>To Date</th>
+                  <th className="table-th text-center table-header" style={{width: '20%'}}>Leave Type</th>
+                  <th className="table-th text-center table-header" style={{width: '28%'}}>Subject</th>
+                  <th className="table-th text-center table-header" style={{width: '12%'}}>Leave Days</th>
+                  <th className="table-th text-center table-header" style={{width: '8%'}}>Actions</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+
+              <tbody className="divide-y divide-gray-200">
+                {previousLeaves.map((leave) => (
+                  <tr key={leave.id} className="hover:bg-gray-50 transition-colors">
+                    <td className="px-3 py-4 text-sm text-gray-900 truncate text-center">{leave.fromDate}</td>
+                    <td className="px-3 py-4 text-sm text-gray-900 truncate text-center">{leave.toDate}</td>
+                    <td className="px-3 py-4 text-sm text-gray-700 truncate text-center">{leave.leaveType}</td>
+                    <td className="px-3 py-4 text-sm text-gray-700 truncate text-center">{leave.subject}</td>
+                    <td className="px-3 py-4 text-sm text-gray-700 truncate text-center">{leave.leaveDays}</td>
+                    <td className="px-2 py-4 text-center">
+                      <button
+                        onClick={() => handleDelete(leave.id)}
+                        className="p-1.5 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
 
         {/* MOBILE CARD VIEW */}

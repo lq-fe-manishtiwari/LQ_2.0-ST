@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { Eye, X } from "lucide-react";
 import RoleModal from '../Components/RoleModal';
 
-export default function ViewMyTasks({ task }) {
+export default function TaskView({ task }) {
   // Modal state
   const [showRoleModal, setShowRoleModal] = useState(false);
   const [selectedEmployee, setSelectedEmployee] = useState(null);
@@ -47,14 +47,14 @@ export default function ViewMyTasks({ task }) {
   // Example fallback data
   const data = task || {
     title: "Creative of Diwali",
-    description: "I have to make a creative on a Diwali",
+    description: "I have to made a creative on a Diwali",
     assignedDate: "20-09-2025 , 12:10 PM",
-    dueDate: "20-09-2025 , 12:10 PM",
-    assignedBy: "Self",
+    dueDate: "15-09-2024 , 12:10 PM",
+    assignedBy: "Ranee Nikure",
     taskType: "Scheduled",
     priority: "High",
     status: "In-Progress",
-    overdue: "5 Days 21 Hrs 25 Min",
+    overdue: "5 Day 21 Hrs 25 Min",
   };
 
   // Helper function to check if task is overdue
@@ -73,6 +73,7 @@ export default function ViewMyTasks({ task }) {
 
       {/* ⭐ TOP HEADING + BACK BUTTON */}
       <div className="flex items-center justify-between mb-4 sm:mb-6">
+
         {/* LEFT: ICON + HEADING */}
         <div className="flex items-center gap-2">
           <Eye className="w-6 h-6 text-[#2162C1]" />
@@ -89,15 +90,15 @@ export default function ViewMyTasks({ task }) {
         </button>
       </div>
 
-      {/* ⭐ MAIN VIEW CARD - Updated Layout */}
+      {/* ⭐ MAIN VIEW CARD */}
       <div className="bg-white rounded-2xl p-6 sm:p-8 shadow-sm border w-full">
-        
-        {/* Two Column Layout as per screenshot */}
+
+        {/* Responsive Grid - Single column on mobile, two columns on desktop */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
 
           {/* LEFT COLUMN */}
           <div className="space-y-4 lg:space-y-6">
-            
+
             <div className="break-words">
               <span className="font-semibold text-gray-700">Title:</span>
               <p className="text-gray-900 mt-1">{data.title}</p>
@@ -127,12 +128,11 @@ export default function ViewMyTasks({ task }) {
                 {data.priority}
               </span>
             </div>
-
           </div>
 
           {/* RIGHT COLUMN */}
           <div className="space-y-4 lg:space-y-6">
-            
+
             <div className="break-words">
               <span className="font-semibold text-gray-700">Description:</span>
               <p className="text-gray-900 mt-1">{data.description}</p>
@@ -171,12 +171,12 @@ export default function ViewMyTasks({ task }) {
                 {data.status}
               </span>
             </div>
-
           </div>
+
         </div>
       </div>
 
-      {/* ⭐ TASK ASSIGNMENTS TABLE - Desktop */}
+      {/* ⭐ TASK ASSIGNMENTS TABLE */}
       <div className="hidden lg:block bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full min-w-[900px]">
@@ -186,7 +186,7 @@ export default function ViewMyTasks({ task }) {
                 <th className="table-th text-center">Designation</th>
                 <th className="table-th text-center">Role</th>
                 <th className="table-th text-center">Department</th>
-                {/* <th className="table-th text-center">Roles & Responsibility</th> */}
+                <th className="table-th text-center">Roles & Responsibility</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
@@ -196,14 +196,14 @@ export default function ViewMyTasks({ task }) {
                   <td className="px-6 py-4 text-sm text-gray-700 text-center">{employee.designation}</td>
                   <td className="px-6 py-4 text-sm text-gray-700 text-center">{employee.role}</td>
                   <td className="px-6 py-4 text-sm text-gray-700 text-center">{employee.department}</td>
-                  {/* <td className="px-6 py-4 text-center">
+                  <td className="px-6 py-4 text-center">
                     <button 
                       onClick={() => handleViewRoles(employee)}
                       className="p-2 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition"
                     >
                       <Eye className="w-4 h-4" />
                     </button>
-                  </td> */}
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -262,11 +262,11 @@ export default function ViewMyTasks({ task }) {
       </div>
 
       {/* Roles & Responsibility Modal */}
-      {/* <RoleModal 
+      <RoleModal 
         isOpen={showRoleModal}
         onClose={() => setShowRoleModal(false)}
         employee={selectedEmployee}
-      /> */}
+      />
     </div>
   );
 }
