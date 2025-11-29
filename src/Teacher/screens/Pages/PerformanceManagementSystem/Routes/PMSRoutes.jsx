@@ -11,6 +11,10 @@ import DepartmentDashoard from "../Department/DepartmentDashoard";
 
 import CreateNewTasks from "../MyTasks/CreateNewTasks";
 import ViewMyTasks from "../MyTasks/ViewMyTasks";
+import AddApi from "../API/AddApi";
+import AddLeave from "../Leave/AddLeave";
+import ViewLeave from "../Leave/ViewLeave";
+import EditLeave from "../Leave/EditLeave";  
 
 export default function PMSRoutes() {
   return (
@@ -23,8 +27,12 @@ export default function PMSRoutes() {
         <Route path="task-assignment" element={<TaskAssignmentDashboard/>} />
         <Route path="my-task" element={<MyTaskDashboard/>} />
         <Route path="api" element={<ApiDashboard/>} />
+        <Route path="api/add-api" element={<AddApi/>} />
         <Route path="timesheet" element={<TimeSheetDashboard/>} />
         <Route path="leave" element={<LeaveDashboard/>} />
+        <Route path="leave/add-leave" element={<AddLeave/>} />
+        <Route path="leave/view-leave/:id" element={<ViewLeave/>} />
+        <Route path="leave/edit/:id" element={<EditLeave/>} />
 
       {/* mytasks ui  */}
         <Route path="my-task/add-task" element={<CreateNewTasks />} />

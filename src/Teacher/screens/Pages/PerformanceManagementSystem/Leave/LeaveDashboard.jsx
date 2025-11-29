@@ -11,19 +11,12 @@ import {
     Edit,
     Trash2,
     User,
-    Mail,
-    Phone,
-    ClipboardList,
-    ToggleLeft,
-    ToggleRight,
-    X,
     Plus,
-    Calendar,
 } from 'lucide-react';
 import SweetAlert from 'react-bootstrap-sweetalert';
 import Loader from '../Components/Loader';
 
-// Custom Select Components
+// Custom Select Component (keep the same as your original)
 const CustomSelect = ({ label, value, onChange, options, placeholder, disabled = false }) => {
     const [isOpen, setIsOpen] = useState(false);
     const dropdownRef = useRef(null);
@@ -81,6 +74,7 @@ const CustomSelect = ({ label, value, onChange, options, placeholder, disabled =
     );
 };
 
+// LeavesTable Component (keep the same as your original)
 const LeavesTable = ({
     tasks = [],
     selectedTask,
@@ -228,6 +222,7 @@ const LeavesTable = ({
                 )}
             </div>
 
+            {/* Mobile view remains the same */}
             <div className="lg:hidden space-y-4">
                 {loading ? (
                     <div className="bg-white rounded-xl shadow-md p-8 text-center border border-gray-200">
@@ -305,6 +300,7 @@ const LeavesTable = ({
     );
 };
 
+// Main Leaves Component
 export default function Leaves() {
     const navigate = useNavigate();
     const [loading, setLoading] = useState(true);
@@ -488,11 +484,11 @@ export default function Leaves() {
     };
 
     const handleView = (task) => {
-        navigate(`/performance-management/leave/view/${task.id}`);
+        navigate(`view-leave/${task.id}`);
     };
 
     const handleEdit = (task) => {
-        navigate(`/performance-management/leave/edit/${task.id}`);
+        navigate(`edit/${task.id}`);
     };
 
     const handleDelete = (id) => {
@@ -585,7 +581,7 @@ export default function Leaves() {
                     </button>
 
                     <button
-                        onClick={() => navigate("/performance-management/leave/add")}
+                        onClick={() => navigate("add-leave")}
                         className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-medium px-4 py-2 rounded-md shadow-md transition-all hover:shadow-lg flex-1 sm:flex-none justify-center"
                     >
                         <Plus className="w-4 h-4" />
@@ -789,6 +785,7 @@ export default function Leaves() {
                 loading={loading}
             />
 
+            {/* Alerts remain the same */}
             {showAlert && (
                 <SweetAlert
                     warning
