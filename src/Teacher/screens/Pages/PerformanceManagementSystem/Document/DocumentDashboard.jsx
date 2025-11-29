@@ -12,7 +12,7 @@ import {
 } from 'lucide-react';
 
 import SweetAlert from 'react-bootstrap-sweetalert';
-// import DocumentViewer from './Components/DocumentViewer';
+import DocumentViewer from './Components/DocumentViewer';
 import Loader from '../Components/Loader';
 
 // Custom Select Components
@@ -476,12 +476,12 @@ export default function Document() {
         onDelete={handleDelete}
         loading={loading}
       />
-{/*       
+       
       <DocumentViewer
         isOpen={showDocumentModal}
         document={selectedDocument}
         onClose={() => setShowDocumentModal(false)}
-      /> */}
+      /> 
       
       {/* Delete Confirmation Alert */}
       {showAlert && (
