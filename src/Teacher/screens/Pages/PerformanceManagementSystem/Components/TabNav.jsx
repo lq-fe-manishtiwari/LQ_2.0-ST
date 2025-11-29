@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React from "react";
 import { NavLink } from "react-router-dom";
 import { Plus, Upload } from "lucide-react";
 // import Buttons from "./Buttons";
@@ -17,7 +17,6 @@ const tabs = [
 ];
 
 export default function TabsNav() {
-
   return (
     <div className="p-2 md:p-2">
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">

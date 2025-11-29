@@ -663,11 +663,13 @@ export default function MyTasks() {
   };
 
   const handleView = (task) => {
-    navigate(`/performance-management/my-tasks/view/${task.id}`);
+    // navigate(`/performance-management/my-tasks/view/${task.id}`);
+    navigate(`/pms/my-task/view/${task.id}`);
   };
   
   const handleEdit = (task) => {
-    navigate(`/performance-management/my-tasks/edit/${task.id}`);
+    // navigate(`/performance-management/my-tasks/edit/${task.id}`);
+    navigate(`/pms/my-task/edit/${task.id}`);
   };
   
   // UPDATED DELETE HANDLERS - ADDED
@@ -785,12 +787,13 @@ export default function MyTasks() {
 
           {/* Create Task - All screens */}
           <button
-            onClick={() => navigate("/performance-management/my-tasks/add")}
-            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-medium px-4 py-2 rounded-md shadow-md transition-all hover:shadow-lg flex-1 sm:flex-none justify-center"
-          >
-            <Plus className="w-4 h-4" aria-hidden="true" />
-            <span className="sm:inline">Create Task</span>
-          </button>
+  onClick={() => navigate("/pms/my-task/add-task")}
+  className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-medium px-4 py-2 rounded-md shadow-md transition-all hover:shadow-lg flex-1 sm:flex-none justify-center"
+>
+  <Plus className="w-4 h-4" />
+  <span>Create Task</span>
+</button>
+
         </div>
       </div>
 
