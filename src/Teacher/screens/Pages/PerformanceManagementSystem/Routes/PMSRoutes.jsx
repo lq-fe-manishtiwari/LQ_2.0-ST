@@ -7,6 +7,7 @@ import MyTaskDashboard from "../MyTasks/MyTaskDashboard";
 import ApiDashboard from  "../API/ApiDashboard";
 import TimeSheetDashboard from "../Timesheet/TimeSheetDashboard";
 import LeaveDashboard from "../Leave/LeaveDashboard";
+import DepartmentDashoard from "../Department/DepartmentDashoard";
 
 
 export default function PMSRoutes() {
@@ -16,7 +17,7 @@ export default function PMSRoutes() {
         {/* <Route index element={<UserDashboard/>} /> */}
         <Route path="user-dashboard" element={<UserDashboard/>} />
         <Route path="document" element={<DocumentDashboard/>} />
-        <Route path="department" element={<UserDashboard/>} />
+        <Route path="department" element={<DepartmentDashoard/>} />
         <Route path="task-assignment" element={<TaskAssignmentDashboard/>} />
         <Route path="my-task" element={<MyTaskDashboard/>} />
         <Route path="api" element={<ApiDashboard/>} />

@@ -5,13 +5,13 @@ import { Plus, Upload } from "lucide-react";
 
 const tabs = [
   { label: "User", to: "/pms/user-dashboard" },
-  { label: "Document", to: "/pms/document" },
   { label: "Department", to: "/pms/department" },
   { label: "Task Assignment", to: "/pms/task-assignment" },
   { label: "My Tasks", to: "/pms/my-task" },
   { label: "API", to: "/pms/api" },
   { label: "Timesheet", to: "/pms/timesheet" },
   { label: "Leave", to: "/pms/leave" },
+   { label: "Document", to: "/pms/document" },
  
 
 ];
