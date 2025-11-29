@@ -27,8 +27,9 @@ export default function TabsNav() {
             <NavLink
               key={t.to}
               to={t.to}
+              style={{ width: "9.6rem" }}
               className={({ isActive }) =>
-                `tab-link text-center flex-1 sm:flex-none px-3 py-2 text-xs sm:text-sm ${
+                `tab-link whitespace-nowrap text-center flex-1 sm:flex-none px-3 py-2 text-xs sm:text-sm ${
                   isActive ? "tab-active" : "tab-inactive"
                 }`
               }
