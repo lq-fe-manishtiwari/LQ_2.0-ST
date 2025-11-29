@@ -185,10 +185,10 @@ const Sidebar = ({ isOpen, toggle }) => {
       },
       {
         to: "/pms",
-        label: "TMS",
+        label: "PMS",
         iconActive: classActive,
         iconInactive: classInactive,
-      },
+       },
       {
         to: "/teacher-certificate",
         label: "Certificate",
