@@ -19,6 +19,7 @@ import StudentHomepage from '../Student/screens/Homepage/StudentHomepage.jsx';
 import TeacherRoutes from '../Teacher/screens/Routes/TeacherRoutes.jsx';
 import StudentRoutes from '../Student/screens/Routes/StudentRoutes.jsx';
 import ProfileRoutes from '../Student/screens/Pages/Profile/Routes/ProfileRoutes.jsx';
+import PMSRoutes from '../Teacher/screens/Pages/PerformanceManagementSystem/Routes/PMSRoutes.jsx';
 
 // ────── Route guards ──────
 const ProtectedRoute = ({ children }) => {
@@ -100,6 +101,17 @@ function App() {
             <ProtectedRoute>
               <StudentHomepage>
                 <ProfileRoutes/>
+              </StudentHomepage>
+            </ProtectedRoute>
+          }
+        />
+
+<Route
+          path="/pms/*"
+          element={
+            <ProtectedRoute>
+              <StudentHomepage>
+                <PMSRoutes />
               </StudentHomepage>
             </ProtectedRoute>
           }
