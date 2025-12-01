@@ -283,7 +283,7 @@ const Sidebar = ({ isOpen, toggle }) => {
                 />
               ) : (
                 <img
-                  src="https://demo-learnqoch.s3.ap-south-1.amazonaws.com/engage/1751987287-western-removebg-preview.png"
+                  src="https://learnqoch.com/wp-content/uploads/al_opt_content/IMAGE/learnqoch.com/wp-content/uploads/2024/08/LearnQoch-WebT_Logo.png.bv_resized_mobile.png.bv.webp?bv_host=learnqoch.com"
                   alt="Default Logo"
                   className="w-[140px]"
                 />

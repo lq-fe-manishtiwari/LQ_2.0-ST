@@ -78,7 +78,7 @@ export const UserProfileProvider = ({ children }) => {
     clearProfile,
     // Helper getters for common profile fields
     get fullName() {
-      return userProfile?.fullName || userProfile?.name || '';
+      return userProfile?.firstname + " "+ userProfile?.lastname || userProfile?.name || '';
     },
     get designation() {
       return userProfile?.designation || '';
