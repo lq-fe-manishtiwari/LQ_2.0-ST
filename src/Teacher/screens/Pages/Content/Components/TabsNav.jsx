@@ -25,7 +25,7 @@ export default function TabsNav() {
               key={t.to}
               to={t.to}
               className={({ isActive }) =>
-                `tab-link text-center flex-1 sm:flex-none px-3 py-2 text-xs sm:text-sm ${
+                `tab-link whitespace-nowrap w-auto flex-shrink-0 cursor-default px-4 py-2 text-sm tab-active ${
                   isActive ? "tab-active" : "tab-inactive"
                 }`
               }
