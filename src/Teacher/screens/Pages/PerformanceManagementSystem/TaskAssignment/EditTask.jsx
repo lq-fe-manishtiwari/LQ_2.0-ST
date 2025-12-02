@@ -1,11 +1,8 @@
 import React, { useEffect, useState, useRef } from "react";
-import { useNavigate } from "react-router-dom";
-import { Plus, X, ChevronDown, Eye, Trash2 } from "lucide-react";
+import { useNavigate, useParams } from "react-router-dom";
+import { X, Pencil, ChevronDown, Eye, Trash2 } from "lucide-react";
 import SweetAlert from 'react-bootstrap-sweetalert';
 import RoleModal from '../Components/RoleModal';
-// import { DepartmentService } from '../../Academics/Services/Department.service';
-// import { Settings } from '../Settings/Settings.service';
-import { TaskManagement } from '../Services/TaskManagement.service';
 
 // Multi-Select Responsibility Component
 const MultiSelectResponsibility = ({ label, selectedItems, options, onChange, onRemove }) => {
@@ -138,22 +135,21 @@ const CustomSelect = ({ label, value, onChange, options, placeholder, disabled =
   );
 };
 
-export default function CreateTask() {
+export default function EditTask() {
+  const { id } = useParams();
   const navigate = useNavigate();
 
-  // API data states
-  const [departments, setDepartments] = useState([]);
+  // Mock data states
+  const [departments, setDepartments] = useState([
+    { name: 'Mathematics' },
+    { name: 'Science' },
+    { name: 'English' },
+    { name: 'History' },
+    { name: 'Administration' }
+  ]);
   const [employees, setEmployees] = useState([]);
-  const [loadingDepartments, setLoadingDepartments] = useState(true);
+  const [loadingDepartments, setLoadingDepartments] = useState(false);
   const [loadingEmployees, setLoadingEmployees] = useState(false);
-  const [roles, setRoles] = useState([]);
-  const [loadingRoles, setLoadingRoles] = useState(true);
-  const [taskTypes, setTaskTypes] = useState([]);
-  const [loadingTaskTypes, setLoadingTaskTypes] = useState(true);
-
-  const activeCollege = JSON.parse(localStorage.getItem("activeCollege"));
-  const collegeId = activeCollege?.id;
-  const user = JSON.parse(localStorage.getItem("user"));
 
   const [form, setForm] = useState({
     title: "",
@@ -223,286 +219,117 @@ export default function CreateTask() {
 
   const labelClass = "block text-sm font-semibold text-blue-700 mb-2";
 
-  // Error handling for API calls
-  const handleAPIError = (error, context) => {
-    console.error(`Error ${context}:`, error);
-    setAlertMessage(`Failed to ${context}. Please try again.`);
-    setShowErrorAlert(true);
-  };
-
-  // Fetch Departments on Mount
+  // Mock employees based on department selection
   useEffect(() => {
-    console.log("Fetching departments for collegeId:", collegeId);
-    if (!collegeId) {
-      console.warn("No collegeId found");
-      setLoadingDepartments(false);
-      return;
-    }
-
-    DepartmentService.getDepartmentByCollegeId(collegeId)
-      .then(response => {
-        console.log("Departments API response:", response);
-        const deptList = response.data || response || [];
-        console.log("Departments list:", deptList);
-        
-        // Format for CustomSelect component (needs name strings)
-        const formattedDepartments = deptList.map(dept => ({
-          id: dept.department_id || dept.id,
-          name: dept.name || dept.department_name || `Department ${dept.department_id}`
-        }));
-        
-        setDepartments(formattedDepartments);
-        setLoadingDepartments(false);
-      })
-      .catch(err => {
-        console.error("Error fetching departments:", err);
-        setLoadingDepartments(false);
-        handleAPIError(err, "fetch departments");
-      });
-  }, [collegeId]);
-
-  // Fetch Employees when Department changes
-  useEffect(() => {
-    console.log("Fetching employees for department:", form.department);
     if (!form.department) {
-      console.log("No department selected, clearing employees");
       setEmployees([]);
       setForm(prev => ({ ...prev, employee: "" }));
       return;
     }
 
     setLoadingEmployees(true);
-    
-    // Find the department ID from the selected department name
-    const selectedDept = departments.find(d => d.name === form.department);
-    const departmentId = selectedDept?.id;
-    
-    if (!departmentId) {
-      console.error("Could not find department ID for:", form.department);
-      setEmployees([]);
+    // Simulate API call with timeout
+    setTimeout(() => {
+      const mockEmployees = {
+        'Mathematics': [
+          { name: 'John Doe' },
+          { name: 'Jane Smith' },
+          { name: 'Mike Johnson' }
+        ],
+        'Science': [
+          { name: 'Sarah Wilson' },
+          { name: 'David Brown' },
+          { name: 'Lisa Davis' }
+        ],
+        'English': [
+          { name: 'Emily Taylor' },
+          { name: 'Robert Miller' }
+        ],
+        'History': [
+          { name: 'Michael Anderson' },
+          { name: 'Jennifer White' }
+        ],
+        'Administration': [
+          { name: 'Admin User' },
+          { name: 'Manager User' }
+        ]
+      };
+      
+      setEmployees(mockEmployees[form.department] || []);
       setLoadingEmployees(false);
+    }, 500);
+  }, [form.department]);
+
+  // Prefill edit data
+  useEffect(() => {
+    // Example static data — replace with API call later
+    const fetchedTask = {
+      title: "Creative of Diwali",
+      description: "Festival creative work",
+      taskType: "Adopt",
+      assignedDate: "2025-09-20T12:00",
+      dueDate: "2025-09-20T12:00",
+      priority: "High",
+      department: "Design",
+      employee: "Manish Tiwari",
+      role: "Teacher",
+      responsibility: "Daily creative tasks",
+    };
+
+    // Pre-assigned employees for edit mode
+    const preAssignedEmployees = [
+      {
+        id: 1,
+        department: "Design",
+        employee: "Manish Tiwari",
+        role: "Creative Lead",
+        responsibility: "Project Management, Team Leadership, Quality Assurance"
+      },
+      {
+        id: 2,
+        department: "Marketing",
+        employee: "Priya Sharma",
+        role: "Marketing Coordinator",
+        responsibility: "Client Communication, Documentation, Testing"
+      }
+    ];
+
+    setForm(fetchedTask);
+    setAssignedEmployees(preAssignedEmployees);
+  }, [id]);
+
+  // Form submission handler
+  const handleSubmit = () => {
+    // Basic validation
+    if (!form.title || !form.description || !form.taskType || !form.assignedDate || !form.dueDate || !form.priority) {
+      setAlertMessage('Please fill in all required fields.');
+      setShowErrorAlert(true);
       return;
-    }
-    
-    // NOTE: You need to fix the getStaffByDepartment function in your service
-    // Currently it fetches all staff. You need to update it to filter by department
-    TaskManagement.getStaffByDepartment(departmentId)
-      .then(response => {
-        console.log("Employees API response:", response);
-        const empList = response.data || response || [];
-        
-        // Format for CustomSelect component
-        const formattedEmployees = empList.map(emp => ({
-          id: emp.staff_id || emp.id || emp.employee_id || emp.user_id,
-          name: emp.name || emp.fullname || 
-                `${emp.firstname || ''} ${emp.lastname || ''}`.trim() || 
-                `Employee ${emp.staff_id}`
-        }));
-        
-        setEmployees(formattedEmployees);
-        setLoadingEmployees(false);
-      })
-      .catch(err => {
-        console.error("Error fetching employees:", err);
-        setEmployees([]);
-        setLoadingEmployees(false);
-        handleAPIError(err, "fetch employees");
-      });
-  }, [form.department, departments]);
-
-  // Fetch Roles on Mount
-  useEffect(() => {
-    Settings.getAllRole()
-      .then(response => {
-        const roleList = response.data || response || [];
-        
-        // Format for select options
-        const formattedRoles = roleList.map(role => ({
-          id: role.role_id || role.id,
-          name: role.role_name || role.name || `Role ${role.role_id}`
-        }));
-        
-        setRoles(formattedRoles);
-        setLoadingRoles(false);
-      })
-      .catch(err => {
-        console.error("Error fetching roles:", err);
-        setRoles([]);
-        setLoadingRoles(false);
-        handleAPIError(err, "fetch roles");
-      });
-  }, []);
-
-  // Fetch Task Types on Mount
-  useEffect(() => {
-    Settings.getAllTaskType()
-      .then(response => {
-        const types = response.data || response || [];
-        
-        // Format for select options
-        const formattedTypes = types.map(type => ({
-          id: type.task_type_id || type.id,
-          name: type.task_type_name || type.name || `Task Type ${type.task_type_id}`
-        }));
-        
-        setTaskTypes(formattedTypes);
-        setLoadingTaskTypes(false);
-      })
-      .catch(err => {
-        console.error("Error fetching task types:", err);
-        setTaskTypes([]);
-        setLoadingTaskTypes(false);
-        handleAPIError(err, "fetch task types");
-      });
-  }, []);
-
-  // Form validation
-  const validateForm = () => {
-    if (!form.title || form.title.trim() === '') {
-      setAlertMessage('Title is required.');
-      setShowErrorAlert(true);
-      return false;
-    }
-
-    if (!form.description || form.description.trim() === '') {
-      setAlertMessage('Description is required.');
-      setShowErrorAlert(true);
-      return false;
-    }
-
-    if (!form.taskType) {
-      setAlertMessage('Task type is required.');
-      setShowErrorAlert(true);
-      return false;
-    }
-
-    if (!form.assignedDate) {
-      setAlertMessage('Assigned date is required.');
-      setShowErrorAlert(true);
-      return false;
-    }
-
-    if (!form.dueDate) {
-      setAlertMessage('Due date is required.');
-      setShowErrorAlert(true);
-      return false;
-    }
-
-    if (!form.priority) {
-      setAlertMessage('Priority is required.');
-      setShowErrorAlert(true);
-      return false;
     }
 
     if (assignedEmployees.length === 0) {
       setAlertMessage('Please assign at least one employee to the task.');
       setShowErrorAlert(true);
-      return false;
-    }
-
-    // Date validation
-    const assignedDate = new Date(form.assignedDate);
-    const dueDate = new Date(form.dueDate);
-    
-    if (assignedDate >= dueDate) {
-      setAlertMessage('Due date must be after assigned date.');
-      setShowErrorAlert(true);
-      return false;
-    }
-
-    return true;
-  };
-
-  // Form submission handler with API integration
-  const handleSubmit = async () => {
-    if (!validateForm()) {
       return;
     }
 
     setIsSubmitting(true);
 
-    try {
-      const assigned_by = user?.id || user?.user_id || 1;
-      
-      // Find the selected task type ID
-      const selectedTaskType = taskTypes.find(t => t.name === form.taskType);
-      const taskTypeId = selectedTaskType?.id;
-      
-      if (!taskTypeId) {
-        throw new Error('Invalid task type selected');
-      }
-
-      // Prepare assigned employees data
-      const userAssignments = assignedEmployees.map(emp => {
-        // Find employee ID from employees list
-        const employeeObj = employees.find(e => e.name === emp.employee);
-        // Find role ID from roles list
-        const roleObj = roles.find(r => r.name === emp.role);
-        // Find department ID from departments list
-        const deptObj = departments.find(d => d.name === emp.department);
-        
-        return {
-          user_id: employeeObj?.id || 0,
-          user_name: emp.employee,
-          user_role_id: roleObj?.id || 0,
-          user_role_name: emp.role,
-          department_id: deptObj?.id || 0,
-          department_name: emp.department,
-          remarks: emp.responsibility || "N/A"
-        };
-      });
-
-      // Get role ID from first assigned employee for task level role
-      const firstAssignment = userAssignments[0];
-      
-      const payload = {
-        task_name: form.title,
-        description: form.description,
-        task_type_id: parseInt(taskTypeId),
-        due_date_time: new Date(form.dueDate).toISOString(),
-        assigned_date_time: new Date(form.assignedDate).toISOString(),
-        priority: form.priority,
-        college_id: parseInt(collegeId),
-        assigned_by: parseInt(assigned_by),
-        role_id: firstAssignment?.user_role_id || null,
-        user_assignments: userAssignments
-      };
-
-      console.log("Creating task with payload:", payload);
-      
-      // API call to create task
-      const response = await TaskManagement.postTaskAssignment(payload);
-      console.log("Create task response:", response);
-      
-      // Check if response indicates success
-      if (response && (response.status === 200 || response.status === 201 || response.success)) {
-        setIsSubmitting(false);
-        setAlertMessage('Task created successfully!');
-        setShowSuccessAlert(true);
-      } else {
-        throw new Error(response?.message || 'Unknown error occurred');
-      }
-
-    } catch (error) {
-      console.error('Error creating task:', error);
+    // Simulate API call
+    setTimeout(() => {
       setIsSubmitting(false);
       
-      let errorMsg = 'Failed to create task. Please try again.';
+      // Simulate success/failure (90% success rate)
+      const isSuccess = Math.random() > 0.1;
       
-      if (error.response) {
-        console.error("Error response data:", error.response.data);
-        if (error.response.data) {
-          errorMsg = error.response.data.message || 
-                    error.response.data.error || 
-                    JSON.stringify(error.response.data);
-        }
-      } else if (error.message) {
-        errorMsg = error.message;
+      if (isSuccess) {
+        setAlertMessage('Task updated successfully!');
+        setShowSuccessAlert(true);
+      } else {
+        setAlertMessage('Failed to update task. Please try again.');
+        setShowErrorAlert(true);
       }
-      
-      setAlertMessage(errorMsg);
-      setShowErrorAlert(true);
-    }
+    }, 1500);
   };
 
   // Delete handlers
@@ -546,17 +373,6 @@ export default function CreateTask() {
       return;
     }
 
-    // Check if employee is already assigned
-    const isAlreadyAssigned = assignedEmployees.some(emp => 
-      emp.employee === form.employee && emp.role === form.role
-    );
-    
-    if (isAlreadyAssigned) {
-      setAlertMessage('This employee with the same role is already assigned to the task.');
-      setShowErrorAlert(true);
-      return;
-    }
-
     const newEmployee = {
       id: Date.now(),
       department: form.department,
@@ -594,13 +410,13 @@ export default function CreateTask() {
       <div className="flex items-center justify-between mb-4 sm:mb-6">
         {/* LEFT: ICON + HEADING */}
         <div className="flex items-center gap-2">
-          <Plus className="w-6 h-6 text-[#2162C1]" />
+          <Pencil className="w-6 h-6 text-[#2162C1]" />
           <h2 className="pageheading text-lg sm:text-xl md:text-2xl">
-            Create Task
+            Edit Task
           </h2>
         </div>
 
-        {/* RIGHT: BACK BUTTON */}
+        {/* RIGHT: BACK BUTTON - FIXED */}
         <button
           className="bg-blue-600 hover:bg-blue-700 text-white w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center rounded-full shadow-md transition-all"
           onClick={() => navigate("/pms/task-assignment")}
@@ -640,15 +456,17 @@ export default function CreateTask() {
             />
           </div>
 
-          {/* Task Type - Updated to select from API */}
-          <CustomSelect
-            label="Task Type"
-            value={form.taskType}
-            onChange={(e) => setForm({ ...form, taskType: e.target.value })}
-            options={taskTypes.map(t => t.name)}
-            placeholder={loadingTaskTypes ? "Loading task types..." : "enter task type *"}
-            disabled={loadingTaskTypes}
-          />
+          {/* Task Type */}
+          <div className="w-full">
+            <label className={labelClass}>Task Type</label>
+            <input
+              type="text"
+              placeholder="enter task type *"
+              className={inputClass}
+              value={form.taskType}
+              onChange={(e) => setForm({ ...form, taskType: e.target.value })}
+            />
+          </div>
 
           {/* Assigned Date */}
           <div className="w-full">
@@ -690,7 +508,7 @@ export default function CreateTask() {
         </h2>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-          {/* Department - Updated with API data */}
+          {/* Department */}
           <CustomSelect
             label="Department"
             value={form.department}
@@ -700,7 +518,6 @@ export default function CreateTask() {
             disabled={loadingDepartments}
           />
 
-          {/* Employee - Updated with API data */}
           <CustomSelect
             label="Employee"
             value={form.employee}
@@ -716,15 +533,17 @@ export default function CreateTask() {
             disabled={!form.department || loadingEmployees}
           />
 
-          {/* Role - Updated with API data */}
-          <CustomSelect
-            label="Role"
-            value={form.role}
-            onChange={(e) => setForm({ ...form, role: e.target.value })}
-            options={roles.map(r => r.name)}
-            placeholder={loadingRoles ? "Loading roles..." : "enter role"}
-            disabled={loadingRoles}
-          />
+          {/* Role */}
+          <div className="w-full">
+            <label className={labelClass}>Role</label>
+            <input
+              type="text"
+              className={inputClass}
+              placeholder="enter role"
+              value={form.role}
+              onChange={(e) => setForm({ ...form, role: e.target.value })}
+            />
+          </div>
 
           {/* Responsibility */}
           <MultiSelectResponsibility
@@ -882,25 +701,25 @@ export default function CreateTask() {
           <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
             <div className="text-center sm:text-left">
               <h3 className="text-lg font-semibold text-gray-900">
-                Ready to Assign Task
+                Ready to Update Task
               </h3>
               <p className="text-sm text-gray-600 mt-1">
-                {assignedEmployees.length} employee(s) will be assigned to this task
+                {assignedEmployees.length} employee(s) will be updated for this task
               </p>
             </div>
             <button 
               onClick={handleSubmit}
               disabled={isSubmitting}
-              className="w-full sm:w-auto px-6 sm:px-8 py-3 rounded-full shadow-md text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base font-medium bg-orange-500 hover:bg-orange-600"
+              className="w-full sm:w-auto px-6 sm:px-8 py-3 rounded-full shadow-md text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base font-medium bg-blue-600 hover:bg-blue-700"
             >
               {isSubmitting ? (
                 <div className="flex items-center justify-center gap-2">
                   <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                  <span className="hidden sm:inline">Assigning...</span>
-                  <span className="sm:hidden">Assigning</span>
+                  <span className="hidden sm:inline">Updating...</span>
+                  <span className="sm:hidden">Updating</span>
                 </div>
               ) : (
-                <span>Submit Task</span>
+                <span>Update Task</span>
               )}
             </button>
           </div>
@@ -914,7 +733,7 @@ export default function CreateTask() {
           title="Success!"
           onConfirm={() => {
             setShowSuccessAlert(false);
-            navigate("/pms/task-assignment");
+            console.log('Navigate back to task assignment');
           }}
           confirmBtnText="OK"
           confirmBtnCssClass="btn-confirm"
@@ -982,7 +801,7 @@ export default function CreateTask() {
         isOpen={showRoleModal}
         onClose={() => setShowRoleModal(false)}
         employee={selectedEmployee}
-      />
+      /> 
     </div>
   );
 }

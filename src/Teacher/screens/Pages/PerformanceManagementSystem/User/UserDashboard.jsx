@@ -113,39 +113,39 @@ export default function UserDashboard() {
     return () => document.removeEventListener("click", closeDropdowns);
   }, []);
 
-  useEffect(() => {
-    if (!isFetchedRef.current) {
-      getAllStaff();
-      isFetchedRef.current = true;
-    }
-  }, []);
+  // useEffect(() => {
+  //   if (!isFetchedRef.current) {
+  //     getAllStaff();
+  //     isFetchedRef.current = true;
+  //   }
+  // }, []);
 
 
 
 
-  const getAllStaff = () => {
-    setLoading(true);
+  // const getAllStaff = () => {
+  //   setLoading(true);
   
-    TaskManagement.getAllStaff()
-      .then((response) => {
-        console.log("API Response:", response);
+  //   TaskManagement.getAllStaff()
+  //     .then((response) => {
+  //       console.log("API Response:", response);
   
-        // If your API returns array directly
-        if (Array.isArray(response)) {
-          setStaff(response);
-        } 
-        // If your API returns { data: [...] }
-        else if (response.data) {
-          setStaff(response.data);
-        }
+  //       // If your API returns array directly
+  //       if (Array.isArray(response)) {
+  //         setStaff(response);
+  //       } 
+  //       // If your API returns { data: [...] }
+  //       else if (response.data) {
+  //         setStaff(response.data);
+  //       }
   
-        setLoading(false);
-      })
-      .catch((error) => {
-        console.error("Error fetching staff:", error);
-        setLoading(false);
-      });
-  };
+  //       setLoading(false);
+  //     })
+  //     .catch((error) => {
+  //       console.error("Error fetching staff:", error);
+  //       setLoading(false);
+  //     });
+  // };
   
 
 

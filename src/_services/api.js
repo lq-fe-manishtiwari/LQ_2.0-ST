@@ -191,6 +191,9 @@ export function authHeaderToDownloadReport() {
 
 // ========== DEV API HELPER ==========
 export const DevAPI = import.meta.env.VITE_API_URL;
+export const PMSAPI = import.meta.env.VITE_API_URL_PMS;
+export const PMSNEWAPI = import.meta.env.VITE_API_URL_PMSNEW;
+
 // ========== DEFAULT FETCH HELPER ==========
 export function apiRequest(url, options = {}) {
   const config = {
