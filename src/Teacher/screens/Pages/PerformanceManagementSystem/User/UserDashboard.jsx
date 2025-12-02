@@ -3,6 +3,8 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Filter, ChevronDown, Plus, Upload, Eye, Edit, Trash2, User, Mail, Phone, ToggleLeft, ToggleRight, Search, X } from 'lucide-react';
 import SweetAlert from "react-bootstrap-sweetalert";
+import { TaskManagement } from "../Services/TaskManagement.service";
+
 // import OtherStaffBulkUploadModal from "../../OtherStaff/Dashboard/BulkUploadModal";
 // import TeacherBulkUploadModal from "../../Teacher/Components/BulkUploadModal";
 import { Link, useNavigate } from "react-router-dom";
@@ -111,62 +113,40 @@ export default function UserDashboard() {
     return () => document.removeEventListener("click", closeDropdowns);
   }, []);
 
-  useEffect(() => {
-    if (!isFetchedRef.current) {
-      getAllStaff();
-      isFetchedRef.current = true;
-    }
-  }, []);
+  // useEffect(() => {
+  //   if (!isFetchedRef.current) {
+  //     getAllStaff();
+  //     isFetchedRef.current = true;
+  //   }
+  // }, []);
 
 
 
-  const getAllStaff = () => {
-    setLoading(true);
-    // Simulate API call with sample data
-    setTimeout(() => {
-      const sampleData = [
-        {
-          teacher_id: 1,
-          firstname: "John",
-          lastname: "Doe",
-          email: "john.doe@example.com",
-          mobile: "9876543210",
-          employee_id: "EMP001",
-          designation: "Senior Teacher",
-          department: "Mathematics",
-          roles: ["TEACHER"],
-          active: true
-        },
-        {
-          other_staff_id: 2,
-          firstname: "Jane",
-          lastname: "Smith",
-          email: "jane.smith@example.com",
-          mobile: "9876543211",
-          employee_id: "EMP002",
-          designation: "Administrator",
-          department: "Administration",
-          roles: ["ADMIN"],
-          active: true
-        },
-        {
-          teacher_id: 3,
-          firstname: "Mike",
-          lastname: "Johnson",
-          email: "mike.johnson@example.com",
-          mobile: "9876543212",
-          employee_id: "EMP003",
-          designation: "Teacher",
-          department: "Science",
-          roles: ["TEACHER"],
-          active: false
-        }
-      ];
-      setStaff(sampleData);
-      setLoading(false);
-    }, 1000);
-  };
 
+  // const getAllStaff = () => {
+  //   setLoading(true);
+  
+  //   TaskManagement.getAllStaff()
+  //     .then((response) => {
+  //       console.log("API Response:", response);
+  
+  //       // If your API returns array directly
+  //       if (Array.isArray(response)) {
+  //         setStaff(response);
+  //       } 
+  //       // If your API returns { data: [...] }
+  //       else if (response.data) {
+  //         setStaff(response.data);
+  //       }
+  
+  //       setLoading(false);
+  //     })
+  //     .catch((error) => {
+  //       console.error("Error fetching staff:", error);
+  //       setLoading(false);
+  //     });
+  // };
+  
 
 
   /* ==================== PAGINATION & FILTERING ==================== */
@@ -403,17 +383,17 @@ export default function UserDashboard() {
             </button>
 
             {/* Add New User */}
-            <Link to="/pms/user-dashboard/add">
+            {/* <Link to="/pms/user-dashboard/add">
               <button className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-medium px-4 py-2 rounded-md shadow-md transition-all hover:shadow-lg">
                 <Plus className="w-4 h-4" />
                 Add New User
               </button>
-            </Link>
+            </Link> */}
 
           </div>
 
           {/* Bulk Upload Dropdown */}
-          <div className="relative">
+          {/* <div className="relative">
             <button
               onClick={(e) => {
                 e.stopPropagation();
@@ -450,7 +430,7 @@ export default function UserDashboard() {
                 </button>
               </div>
             )}
-          </div>
+          </div> */}
         </div>
       </div>
 

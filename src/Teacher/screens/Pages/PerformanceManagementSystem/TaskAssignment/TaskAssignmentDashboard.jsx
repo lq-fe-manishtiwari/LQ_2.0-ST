@@ -23,6 +23,8 @@ import {
 import { useNavigate } from "react-router-dom";
 import SweetAlert from 'react-bootstrap-sweetalert';
 import Loader from '../Components/Loader';
+// import { TaskManagement } from '../../TaskManagement/Services/TaskManagement.service';
+import { TaskManagement } from "../Services/TaskManagement.service";
 
 // Custom Select Components
 const CustomSelect = ({ label, value, onChange, options, placeholder, disabled = false }) => {
@@ -178,16 +180,61 @@ const TaskAssignmentTable = ({
   const handlePrev = () => currentPage > 1 && setCurrentPage((p) => p - 1);
   const handleNext = () => currentPage < totalPages && setCurrentPage((p) => p + 1);
 
-  // Helper function to check if task is overdue
+  // Format date to readable format
+  const formatDate = (dateString) => {
+    if (!dateString) return 'N/A';
+    try {
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) return 'Invalid Date';
+      
+      const day = String(date.getDate()).padStart(2, '0');
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const year = date.getFullYear();
+      let hours = date.getHours();
+      const minutes = String(date.getMinutes()).padStart(2, '0');
+      const ampm = hours >= 12 ? 'PM' : 'AM';
+      hours = hours % 12;
+      hours = hours ? hours : 12; // the hour '0' should be '12'
+      
+      return `${day}-${month}-${year} ${hours}:${minutes} ${ampm}`;
+    } catch (error) {
+      console.error('Error formatting date:', error, dateString);
+      return 'Invalid Date';
+    }
+  };
+
+  // Helper function to check if task is overdue - FIXED
   const isTaskOverdue = (task) => {
-    if (task.status === 'Complete') return false;
-    // Parse date format: DD-MM-YYYY HH:MM AM/PM
-    const dateStr = task.dueOn.split(' ')[0]; // Get date part
-    const [day, month, year] = dateStr.split('-');
-    const dueDate = new Date(year, month - 1, day);
-    const currentDate = new Date();
-    currentDate.setHours(0, 0, 0, 0); // Reset time for date comparison
-    return dueDate < currentDate;
+    if (!task.dueOn || task.status === 'Complete') return false;
+    
+    try {
+      // If dueOn is already in DD-MM-YYYY HH:MM AM/PM format
+      if (typeof task.dueOn === 'string' && task.dueOn.includes('-')) {
+        const dateStr = task.dueOn.split(' ')[0]; // Get date part
+        const [day, month, year] = dateStr.split('-');
+        const dueDate = new Date(year, month - 1, day);
+        const currentDate = new Date();
+        currentDate.setHours(0, 0, 0, 0);
+        return dueDate < currentDate;
+      } else {
+        // If it's an ISO string or other format
+        const dueDate = new Date(task.dueOn);
+        if (isNaN(dueDate.getTime())) return false;
+        const currentDate = new Date();
+        currentDate.setHours(0, 0, 0, 0);
+        dueDate.setHours(0, 0, 0, 0);
+        return dueDate < currentDate;
+      }
+    } catch (error) {
+      console.error('Error checking overdue:', error, task.dueOn);
+      return false;
+    }
+  };
+
+  // Get display date
+  const getDisplayDate = (dateString) => {
+    if (!dateString) return 'N/A';
+    return formatDate(dateString);
   };
 
   return (
@@ -233,87 +280,92 @@ const TaskAssignmentTable = ({
                   </td>
                 </tr>
               ) : (
-                currentEntries.map((task) => (
-                  <tr key={task.id} className="hover:bg-gray-50 transition-colors">
+                currentEntries.map((task) => {
+                  const displayDueDate = getDisplayDate(task.dueOn);
+                  const displayAssignedDate = getDisplayDate(task.assignedOn);
+                  const isOverdue = isTaskOverdue(task);
+                  
+                  return (
+                    <tr key={task.id} className="hover:bg-gray-50 transition-colors">
+                      <td className="px-3 py-4 text-center">
+                        <p className="font-semibold text-gray-900 text-sm truncate">{task.name}</p>
+                      </td>
 
-                    <td className="px-3 py-4 text-center">
-                      <p className="font-semibold text-gray-900 text-sm truncate">{task.name}</p>
-                    </td>
-
-                    <td className="px-3 py-4 text-sm text-gray-900 truncate text-center">{task.taskTitle}</td>
-                    <td className="px-3 py-4 text-sm text-gray-700 truncate text-center">{task.taskType}</td>
-                    <td className="px-3 py-4 text-sm text-gray-700 truncate text-center">{task.assignedBy}</td>
-                    <td className="px-3 py-4 text-sm text-gray-700 truncate text-center">{task.assignedOn}</td>
-                    <td className={`px-3 py-4 text-sm font-semibold truncate text-center ${
-                      isTaskOverdue(task) ? 'text-red-600' : 'text-gray-700'
-                    }`}>
-                      {task.dueOn}
-                    </td>
-
-                    <td className="px-2 py-4 text-center">
-                      <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                        task.priority === 'High' ? 'bg-red-100 text-red-800' :
-                        task.priority === 'Medium' ? 'bg-yellow-100 text-yellow-800' :
-                        'bg-green-100 text-green-800'
+                      <td className="px-3 py-4 text-sm text-gray-900 truncate text-center">{task.taskTitle}</td>
+                      <td className="px-3 py-4 text-sm text-gray-700 truncate text-center">{task.taskType}</td>
+                      <td className="px-3 py-4 text-sm text-gray-700 truncate text-center">{task.assignedBy}</td>
+                      <td className="px-3 py-4 text-sm text-gray-700 truncate text-center">{displayAssignedDate}</td>
+                      <td className={`px-3 py-4 text-sm font-semibold truncate text-center ${
+                        isOverdue ? 'text-red-600' : 'text-gray-700'
                       }`}>
-                        {task.priority}
-                      </span>
-                    </td>
+                        {displayDueDate}
+                      </td>
 
-                    <td className="px-2 py-4 text-center">
-                      <button
-                        onClick={() => onToggleActive(task.id)}
-                        disabled={statusChanging[task.id]}
-                        className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium transition-all ${
-                          statusChanging[task.id]
-                            ? 'bg-gray-100 text-gray-500 cursor-not-allowed'
-                            : task.status === 'Complete'
-                            ? 'bg-green-100 text-green-800 hover:bg-green-200'
-                            : task.status === 'Pending'
-                            ? 'bg-blue-100 text-blue-800 hover:bg-blue-200'
-                            : task.status === 'Incomplete'
-                            ? 'bg-orange-100 text-orange-800 hover:bg-orange-200'
-                            : 'bg-red-100 text-red-800 hover:bg-red-200'
-                        }`}
-                      >
-                        {statusChanging[task.id] ? (
-                          <>
-                            <Loader  size="sm" className="mr-1" />
-                            Updating...
-                          </>
-                        ) : (
-                          <>
-                            {task.status === 'Complete' ? <ToggleRight className="w-4 h-4 mr-1" /> : <ToggleLeft className="w-4 h-4 mr-1" />}
-                            {task.status}
-                          </>
-                        )}
-                      </button>
-                    </td>
+                      <td className="px-2 py-4 text-center">
+                        <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                          task.priority === 'High' ? 'bg-red-100 text-red-800' :
+                          task.priority === 'Medium' ? 'bg-yellow-100 text-yellow-800' :
+                          'bg-green-100 text-green-800'
+                        }`}>
+                          {task.priority || 'Medium'}
+                        </span>
+                      </td>
 
-                    <td className="px-2 py-4 text-center">
-                      <div className="flex items-center justify-center gap-1">
+                      <td className="px-2 py-4 text-center">
                         <button
-                          onClick={() => onView(task)}
-                          className="p-1.5 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition"
+                          onClick={() => onToggleActive(task.id)}
+                          disabled={statusChanging[task.id]}
+                          className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium transition-all ${
+                            statusChanging[task.id]
+                              ? 'bg-gray-100 text-gray-500 cursor-not-allowed'
+                              : task.status === 'Complete'
+                              ? 'bg-green-100 text-green-800 hover:bg-green-200'
+                              : task.status === 'Pending'
+                              ? 'bg-blue-100 text-blue-800 hover:bg-blue-200'
+                              : task.status === 'Incomplete'
+                              ? 'bg-orange-100 text-orange-800 hover:bg-orange-200'
+                              : 'bg-red-100 text-red-800 hover:bg-red-200'
+                          }`}
                         >
-                          <Eye className="w-4 h-4" />
+                          {statusChanging[task.id] ? (
+                            <>
+                              <Loader size="sm" className="mr-1" />
+                              Updating...
+                            </>
+                          ) : (
+                            <>
+                              {task.status === 'Complete' ? <ToggleRight className="w-4 h-4 mr-1" /> : <ToggleLeft className="w-4 h-4 mr-1" />}
+                              {task.status || 'Pending'}
+                            </>
+                          )}
                         </button>
-                        <button
-                          onClick={() => onEdit(task)}
-                          className="p-1.5 rounded-lg bg-yellow-50 text-yellow-600 hover:bg-yellow-100 transition"
-                        >
-                          <Edit className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => onDelete(task.id)}
-                          className="p-1.5 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))
+                      </td>
+
+                      <td className="px-2 py-4 text-center">
+                        <div className="flex items-center justify-center gap-1">
+                          <button
+                            onClick={() => onView(task)}
+                            className="p-1.5 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition"
+                          >
+                            <Eye className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => onEdit(task)}
+                            className="p-1.5 rounded-lg bg-yellow-50 text-yellow-600 hover:bg-yellow-100 transition"
+                          >
+                            <Edit className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => onDelete(task.id)}
+                            className="p-1.5 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>
@@ -373,90 +425,105 @@ const TaskAssignmentTable = ({
             </div>
           </div>
         ) : (
-          currentEntries.map((task) => (
-            <div
-              key={task.id}
-              className="bg-white rounded-xl shadow-md border border-gray-200 p-5 hover:shadow-lg transition-all"
-            >
-              <div className="flex justify-between items-start mb-3">
-                <div className="flex items-center">
-                  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-100 to-blue-200 flex items-center justify-center">
-                    <User className="w-7 h-7 text-blue-600" />
+          currentEntries.map((task) => {
+            const displayDueDate = getDisplayDate(task.dueOn);
+            const displayAssignedDate = getDisplayDate(task.assignedOn);
+            const isOverdue = isTaskOverdue(task);
+            
+            return (
+              <div
+                key={task.id}
+                className="bg-white rounded-xl shadow-md border border-gray-200 p-5 hover:shadow-lg transition-all"
+              >
+                <div className="flex justify-between items-start mb-3">
+                  <div className="flex items-center">
+                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-100 to-blue-200 flex items-center justify-center">
+                      <User className="w-7 h-7 text-blue-600" />
+                    </div>
+                    <div className="ml-3">
+                      <p className="font-semibold text-gray-900">{task.name}</p>
+                    </div>
                   </div>
-                  <div className="ml-3">
-                    <p className="font-semibold text-gray-900">{task.name}</p>
+
+                  <button
+                    onClick={() => onToggleActive(task.id)}
+                    disabled={statusChanging[task.id]}
+                    className={`flex items-center px-2.5 py-1.5 rounded-full text-xs font-medium transition-all ${statusChanging[task.id]
+                      ? 'bg-gray-100 text-gray-500 cursor-not-allowed'
+                      : task.status === 'Complete'
+                        ? 'bg-green-100 text-green-800'
+                        : task.status === 'Pending'
+                        ? 'bg-blue-100 text-blue-800'
+                        : task.status === 'Incomplete'
+                        ? 'bg-orange-100 text-orange-800'
+                        : 'bg-red-100 text-red-800'
+                      }`}
+                  >
+                    {statusChanging[task.id] ? (
+                      <>
+                        <Loader size="sm" className="mr-1" />
+                        Updating...
+                      </>
+                    ) : (
+                      <>
+                        {task.status === 'Complete' ? <ToggleRight className="w-3.5 h-3.5 mr-1" /> : <ToggleLeft className="w-3.5 h-3.5 mr-1" />}
+                        {task.status || 'Pending'}
+                      </>
+                    )}
+                  </button>
+                </div>
+
+                <div className="space-y-2 text-sm text-gray-700 mb-4">
+                  <div className="grid grid-cols-2 gap-2">
+                    <div><span className="font-medium">Task:</span> {task.taskTitle || 'N/A'}</div>
+                    <div><span className="font-medium">Type:</span> {task.taskType || 'N/A'}</div>
+                    <div><span className="font-medium">Assigned By:</span> {task.assignedBy || 'N/A'}</div>
+                    <div><span className="font-medium">Assigned:</span> {displayAssignedDate}</div>
+                    <div className="col-span-2">
+                      <span className={`font-medium ${
+                        isOverdue ? 'text-red-600' : 'text-gray-700'
+                      }`}>Due:</span> 
+                      <span className={`font-semibold ml-1 ${
+                        isOverdue ? 'text-red-600' : 'text-gray-700'
+                      }`}>{displayDueDate}</span>
+                    </div>
+                    <div><span className="font-medium">Priority:</span> 
+                      <span className={`ml-1 px-1.5 py-0.5 rounded text-xs ${
+                        task.priority === 'High' ? 'bg-red-100 text-red-800' :
+                        task.priority === 'Medium' ? 'bg-yellow-100 text-yellow-800' :
+                        'bg-green-100 text-green-800'
+                      }`}>
+                        {task.priority || 'Medium'}
+                      </span>
+                    </div>
                   </div>
                 </div>
 
-                <button
-                  onClick={() => onToggleActive(task.id)}
-                  disabled={statusChanging[task.id]}
-                  className={`flex items-center px-2.5 py-1.5 rounded-full text-xs font-medium transition-all ${statusChanging[task.id]
-                    ? 'bg-gray-100 text-gray-500 cursor-not-allowed'
-                    : task.status === 'Complete'
-                      ? 'bg-green-100 text-green-800'
-                      : task.status === 'Pending'
-                      ? 'bg-blue-100 text-blue-800'
-                      : task.status === 'Incomplete'
-                      ? 'bg-orange-100 text-orange-800'
-                      : 'bg-red-100 text-red-800'
-                    }`}
-                >
-                  {statusChanging[task.id] ? (
-                    <>
-                      <Loader  size="sm" className="mr-1" />
-                      Updating...
-                    </>
-                  ) : (
-                    <>
-                      {task.status === 'Complete' ? <ToggleRight className="w-3.5 h-3.5 mr-1" /> : <ToggleLeft className="w-3.5 h-3.5 mr-1" />}
-                      {task.status}
-                    </>
-                  )}
-                </button>
-              </div>
-
-              <div className="space-y-2 text-sm text-gray-700 mb-4">
-                <div className="grid grid-cols-2 gap-2">
-                  <div><span className="font-medium">Task:</span> {task.taskTitle}</div>
-                  <div><span className="font-medium">Type:</span> {task.taskType}</div>
-                  <div><span className="font-medium">Assigned By:</span> {task.assignedBy}</div>
-                  <div><span className="font-medium">Assigned:</span> {task.assignedOn}</div>
-                  <div className="col-span-2">
-                    <span className={`font-medium ${
-                      isTaskOverdue(task) ? 'text-red-600' : 'text-gray-700'
-                    }`}>Due:</span> 
-                    <span className={`font-semibold ${
-                      isTaskOverdue(task) ? 'text-red-600' : 'text-gray-700'
-                    }`}>{task.dueOn}</span>
+                <div className="flex justify-end items-center">
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => onView(task)}
+                      className="p-2.5 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition"
+                    >
+                      <Eye className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => onEdit(task)}
+                      className="p-2.5 rounded-lg bg-yellow-50 text-yellow-600 hover:bg-yellow-100 transition"
+                    >
+                      <Edit className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => onDelete(task.id)}
+                      className="p-2.5 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
                   </div>
                 </div>
               </div>
-
-              <div className="flex justify-end items-center">
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => onView(task)}
-                    className="p-2.5 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition"
-                  >
-                    <Eye className="w-4 h-4" />
-                  </button>
-                  <button
-                    onClick={() => onEdit(task)}
-                    className="p-2.5 rounded-lg bg-yellow-50 text-yellow-600 hover:bg-yellow-100 transition"
-                  >
-                    <Edit className="w-4 h-4" />
-                  </button>
-                  <button
-                    onClick={() => onDelete(task.id)}
-                    className="p-2.5 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-            </div>
-          ))
+            );
+          })
         )}
       </div>
     </>
@@ -465,116 +532,9 @@ const TaskAssignmentTable = ({
 
 export default function TaskAssignment() {
 
-  const navigate = useNavigate();   // ⭐ ADDED
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
-
-  const [tasks] = useState([
-    {
-      id: "U001",
-      name: "Manish Tiwari",
-      taskTitle: "Creative of Diwali",
-      taskType: "Adopt",
-      assignedBy: "Ranee Nikure",
-      assignedOn: "20-09-2025 12:00 PM",
-      dueOn: "20-09-2025 12:00 PM",
-      priority: "High",
-      status: "Pending",
-      email: "manish@example.com",
-      phone: "9876543210",
-      designation: "Teacher",
-      department: "HR",
-    },
-    {
-      id: "U002",
-      name: "Priya Sharma",
-      taskTitle: "Event Planning",
-      taskType: "Organize",
-      assignedBy: "Ranee Nikure",
-      assignedOn: "15-09-2025 10:00 AM",
-      dueOn: "25-09-2025 05:00 PM",
-      priority: "Medium",
-      status: "Complete",
-      email: "priya@example.com",
-      phone: "9876543211",
-      designation: "Coordinator",
-      department: "Marketing",
-    },
-    {
-      id: "U003",
-      name: "Rahul Kumar",
-      taskTitle: "Library Management",
-      taskType: "Maintain",
-      assignedBy: "Admin",
-      assignedOn: "18-09-2025 09:00 AM",
-      dueOn: "30-09-2025 06:00 PM",
-      priority: "Low",
-      status: "Pending",
-      email: "rahul@example.com",
-      phone: "9876543212",
-      designation: "Librarian",
-      department: "Operations",
-    },
-    {
-      id: "U004",
-      name: "Anjali Patel",
-      taskTitle: "Student Attendance Review",
-      taskType: "Review",
-      assignedBy: "Principal",
-      assignedOn: "22-09-2025 11:30 AM",
-      dueOn: "28-09-2025 04:00 PM",
-      priority: "Low",
-      status: "Incomplete",
-      email: "anjali@example.com",
-      phone: "9876543213",
-      designation: "Teacher",
-      department: "IT",
-    },
-    {
-      id: "U005",
-      name: "Vikash Singh",
-      taskTitle: "Sports Equipment Check",
-      taskType: "Inspect",
-      assignedBy: "Sports Head",
-      assignedOn: "19-09-2025 02:00 PM",
-      dueOn: "26-09-2025 03:00 PM",
-      priority: "Low",
-      status: "Incomplete",
-      email: "vikash@example.com",
-      phone: "9876543214",
-      designation: "Sports Teacher",
-      department: "Operations",
-    },
-    {
-      id: "U006",
-      name: "Neha Gupta",
-      taskTitle: "Monthly Report Submission",
-      taskType: "Submit",
-      assignedBy: "HOD",
-      assignedOn: "21-09-2025 10:15 AM",
-      dueOn: "29-09-2025 05:30 PM",
-      priority: "Medium",
-      status: "Pending",
-      email: "neha@example.com",
-      phone: "9876543215",
-      designation: "Assistant",
-      department: "Finance",
-    },
-    {
-      id: "U007",
-      name: "Suresh Yadav",
-      taskTitle: "Classroom Cleaning",
-      taskType: "Maintenance",
-      assignedBy: "Admin",
-      assignedOn: "10-09-2025 08:00 AM",
-      dueOn: "15-09-2024 05:00 PM",
-      priority: "High",
-      status: "Incomplete",
-      email: "suresh@example.com",
-      phone: "9876543216",
-      designation: "Janitor",
-      department: "Operations",
-    },
-  ]);
+  const [tasks, setTasks] = useState([]);
 
   const [searchQuery, setSearchQuery] = useState("");
   const [filters, setFilters] = useState({
@@ -586,7 +546,9 @@ export default function TaskAssignment() {
     week: '',
     fromDate: '',
     toDate: '',
-    activeSubTab: ''
+    activeSubTab: '',
+    priority: '',
+    status: ''
   });
   const [mobileTabStart, setMobileTabStart] = useState(0);
 
@@ -674,13 +636,15 @@ export default function TaskAssignment() {
   const filteredTasks = useMemo(() => {
     let list = tasks;
     
+    console.log("Filtering tasks:", list.length, "filters:", filters);
+    
     // Search filter
     if (searchQuery) {
       list = list.filter(
         (task) =>
-          task.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          task.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          task.taskTitle.toLowerCase().includes(searchQuery.toLowerCase())
+          (task.name && task.name.toLowerCase().includes(searchQuery.toLowerCase())) ||
+          (task.email && task.email.toLowerCase().includes(searchQuery.toLowerCase())) ||
+          (task.taskTitle && task.taskTitle.toLowerCase().includes(searchQuery.toLowerCase()))
       );
     }
     
@@ -700,21 +664,34 @@ export default function TaskAssignment() {
     }
     
     // Date-based filtering for view types
-    if (filters.view === 'monthly' && filters.activeSubTab) {
+    if (filters.view === 'monthly' && filters.activeSubTab && filters.year) {
       const monthIndex = monthTabs.indexOf(filters.activeSubTab);
       if (monthIndex !== -1) {
         list = list.filter(task => {
-          const taskDate = new Date(task.assignedOn.split(' ')[0].split('-').reverse().join('-'));
-          return taskDate.getMonth() === monthIndex && taskDate.getFullYear() === parseInt(filters.year);
+          try {
+            if (!task.assignedOn) return false;
+            const date = new Date(task.assignedOn);
+            if (isNaN(date.getTime())) return false;
+            return date.getMonth() === monthIndex && date.getFullYear() === parseInt(filters.year);
+          } catch (error) {
+            console.error('Error filtering by month:', error);
+            return false;
+          }
         });
       }
     }
     
-    if (filters.view === 'weekly' && filters.activeSubTab) {
-      // Filter by selected week (simplified - you can enhance this)
+    if (filters.view === 'weekly' && filters.activeSubTab && filters.month && filters.year) {
       list = list.filter(task => {
-        const taskDate = new Date(task.assignedOn.split(' ')[0].split('-').reverse().join('-'));
-        return taskDate.getMonth() === ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'].indexOf(filters.month);
+        try {
+          if (!task.assignedOn) return false;
+          const date = new Date(task.assignedOn);
+          if (isNaN(date.getTime())) return false;
+          return date.getMonth() === ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'].indexOf(filters.month);
+        } catch (error) {
+          console.error('Error filtering by week:', error);
+          return false;
+        }
       });
     }
     
@@ -722,23 +699,25 @@ export default function TaskAssignment() {
       const fromDate = new Date(filters.fromDate);
       const toDate = new Date(filters.toDate);
       list = list.filter(task => {
-        const taskDate = new Date(task.assignedOn.split(' ')[0].split('-').reverse().join('-'));
-        return taskDate >= fromDate && taskDate <= toDate;
+        try {
+          if (!task.assignedOn) return false;
+          const taskDate = new Date(task.assignedOn);
+          if (isNaN(taskDate.getTime())) return false;
+          return taskDate >= fromDate && taskDate <= toDate;
+        } catch (error) {
+          console.error('Error filtering by period:', error);
+          return false;
+        }
       });
     }
     
+    console.log("Filtered tasks count:", list.length);
     return list;
   }, [tasks, searchQuery, filters.priority, filters.status, filters.department, filters.view, filters.activeSubTab, filters.year, filters.month, filters.fromDate, filters.toDate]);
 
   const [selectedTask, setSelectedTask] = useState(null);
   const [statusChanging, setStatusChanging] = useState({});
 
-  useEffect(() => {
-    // Simulate loading delay
-    const timer = setTimeout(() => setLoading(false), 1500);
-    return () => clearTimeout(timer);
-  }, []);
-  
   // Delete Alert States
   const [showAlert, setShowAlert] = useState(false);
   const [taskToDelete, setTaskToDelete] = useState(null);
@@ -751,6 +730,233 @@ export default function TaskAssignment() {
   const [showStatusSuccessAlert, setShowStatusSuccessAlert] = useState(false);
   const [showStatusErrorAlert, setShowStatusErrorAlert] = useState(false);
   const [alertMessage, setAlertMessage] = useState('');
+  const [errorMessage, setErrorMessage] = useState('');
+
+  // Fetch tasks from API - IMPROVED
+  useEffect(() => {
+    async function fetchTasks() {
+      try {
+        setLoading(true);
+        console.log("Fetching tasks from API...");
+  
+        // const response = await TaskManagement.getAllPMSTasks();
+        console.log("API Response:", response);
+  
+        // Check if response is an array
+        let taskList = [];
+        if (Array.isArray(response)) {
+          taskList = response;
+        } else if (response && response.data && Array.isArray(response.data)) {
+          taskList = response.data;
+        } else if (response && Array.isArray(response.tasks)) {
+          taskList = response.tasks;
+        } else {
+          console.error("Unexpected API response format:", response);
+          taskList = [];
+        }
+  
+        console.log("Task list:", taskList);
+  
+        // Map tasks with better error handling
+        const formatted = taskList.map((item, index) => {
+          try {
+            return {
+              id: item.taskAssignmentId || item.task_assignment_id || item.id || `task-${index}`,
+            
+              name: 
+              item.userName || 
+              item.user?.name || 
+              item.assignedTo || 
+              item.user_id || 
+              "Unknown",
+            
+              taskTitle: item.task?.task_name || item.taskName || item.title || "No Title",
+            
+              taskType: 
+                  item.task?.task_type?.task_type_name ||
+                  item.taskType ||
+                  "N/A",
+            
+              assignedBy: item.assignedByName || item.assigned_by || item.assignedBy || "-",
+            
+              assignedOn: 
+                  item.assignedDateTime ||
+                  item.assigned_date_time ||
+                  item.assignedDate ||
+                  item.createdAt ||
+                  item.created_at,
+            
+              dueOn: 
+                  item.dueDateTime ||
+                  item.due_date_time ||
+                  item.dueDate ||
+                  item.deadline,
+            
+              priority: item.priority || "Medium",
+            
+              status: 
+                  item.assignmentStatus ||
+                  item.assignment_status ||
+                  item.status ||
+                  "Pending",
+            
+              email: item.user?.email || item.email || "",
+            
+              phone: item.user?.phone || item.phone || "",
+            
+              department: item.departmentName || item.department || "",
+            
+              _raw: item
+            };
+            
+          } catch (error) {
+            console.error("Error formatting task:", error, item);
+            return {
+              id: `error-${index}`,
+              name: "Error",
+              taskTitle: "Error formatting task",
+              taskType: "N/A",
+              assignedBy: "-",
+              assignedOn: "",
+              dueOn: "",
+              priority: "Medium",
+              status: "Error",
+              email: "",
+              phone: "",
+              department: ""
+            };
+          }
+        });
+  
+        console.log("Formatted tasks:", formatted);
+        setTasks(formatted);
+      } catch (error) {
+        console.error("Error fetching tasks:", error);
+        // Set empty array instead of throwing
+        setTasks([]);
+      } finally {
+        setLoading(false);
+      }
+    }
+  
+    fetchTasks();
+  }, []);
+  
+  // DELETE HANDLERS
+  const handleDelete = (id) => {
+    console.log("Delete requested for task ID:", id);
+    setTaskToDelete(id);
+    setShowAlert(true);
+  };
+  
+  const handleConfirmDelete = async () => {
+    console.log("Confirming delete for task ID:", taskToDelete);
+    setShowAlert(false);
+
+    try {
+        setLoading(true);
+
+        // Check if delete method exists in service
+        if (!TaskManagement.deletePMSTaskAssignment) {
+          throw new Error("Delete method not found in service");
+        }
+
+        const response = await TaskManagement.deletePMSTaskAssignment(taskToDelete);
+        console.log("Delete response:", response);
+
+        setLoading(false);
+        setAlertMessage("Task deleted successfully!");
+        setShowDeleteSuccessAlert(true);
+
+        // Remove from UI
+        setTasks(prev => prev.filter(t => t.id !== taskToDelete));
+
+        setTaskToDelete(null);
+    } catch (error) {
+        setLoading(false);
+        console.error("Delete Error:", error);
+
+        let message = "Failed to delete task. Please try again.";
+        if (error?.message) message = error.message;
+        if (error?.response?.data?.message) message = error.response.data.message;
+
+        setErrorMessage(message);
+        setShowDeleteErrorAlert(true);
+    }
+  };
+  
+  const handleCancelDelete = () => {
+    setShowAlert(false);
+    setTaskToDelete(null);
+  };
+
+  const handlePasswordConfirm = async () => {
+    try {
+      const currentUser = JSON.parse(localStorage.getItem("currentUser"));
+      const adminUserId = Number(currentUser?.jti);
+
+      if (!password) {
+        SweetAlert({
+          title: "Error!",
+          text: "Please enter your admin password.",
+          type: "error",
+          confirmButtonText: "OK"
+        });
+        return;
+      }
+
+      const payload = {
+        task_id: Number(taskToDelete),
+        admin_user_id: adminUserId,
+        admin_password: password,
+      };
+
+      // Call the API
+      const response = await TaskManagement.deleteTaskAssignment(payload);
+
+      // If API returns 400 inside try
+      if (response?.status === 400) {
+        const message = response?.message || response?.error || "Invalid admin password. Please try again.";
+        setErrorMessage(message);
+        setShowDeleteErrorAlert(true);
+        return;
+      }
+
+      // If successful
+      setPasswordAlert(false);
+      setPassword("");
+      setTaskToDelete(null);
+      setAlertMessage('Task deleted successfully!');
+      setShowDeleteSuccessAlert(true);
+      
+      // Remove task from local state
+      setTasks(prevTasks => prevTasks.filter(task => task.id !== taskToDelete));
+
+    } catch (error) {
+      console.log("Full error object:", error);
+      console.log("Error response:", error.response);
+      console.log("Error data:", error.response?.data);
+
+      // Extract proper message
+      let apiErrorMessage = "Something went wrong. Try again.";
+      const status = error?.response?.status;
+
+      if (status === 400) {
+        apiErrorMessage = error?.response?.data?.message || error?.response?.data?.error || "Invalid admin password. Please try again.";
+      } else if (error?.message) {
+        apiErrorMessage = error.message;
+      }
+
+      setErrorMessage(apiErrorMessage);
+      setShowDeleteErrorAlert(true);
+    }
+  };
+  
+  const handleCancelPassword = () => {
+    setPasswordAlert(false);
+    setPassword("");
+    setTaskToDelete(null);
+  };
 
   const handleTaskSelect = (id) => {
     setSelectedTask(selectedTask === id ? null : id);
@@ -764,49 +970,13 @@ export default function TaskAssignment() {
   };
 
   const handleView = (task) => {
-  navigate(`/pms/task-assignment/${task.id}`);
-};
+    navigate(`/pms/task-assignment/${task.id}`);
+  };
 
   const handleEdit = (task) => {
-  navigate(`/pms/task-assignment/${task.id}/edit`);
-};
-  const handleDelete = (id) => {
-    setTaskToDelete(id);
-    setShowAlert(true);
+    navigate(`/pms/task-assignment/${task.id}/edit`);
   };
-  
-  const handleConfirmDelete = () => {
-    setShowAlert(false);
-    setPasswordAlert(true);
-  };
-  
-  const handleCancelDelete = () => {
-    setShowAlert(false);
-    setTaskToDelete(null);
-  };
-  
-  const handlePasswordConfirm = () => {
-    if (password === 'admin123') {
-      setTimeout(() => {
-        setPasswordAlert(false);
-        setPassword('');
-        setTaskToDelete(null);
-        setAlertMessage('Task deleted successfully!');
-        setShowDeleteSuccessAlert(true);
-      }, 500);
-    } else {
-      setPasswordAlert(false);
-      setPassword('');
-      setAlertMessage('Incorrect password. Task deletion failed.');
-      setShowDeleteErrorAlert(true);
-    }
-  };
-  
-  const handleCancelPassword = () => {
-    setPasswordAlert(false);
-    setPassword('');
-    setTaskToDelete(null);
-  };
+
   const handleShowDetails = (task) => console.log('Show details:', task);
 
   useEffect(() => {
@@ -825,12 +995,15 @@ export default function TaskAssignment() {
     setMobileTabStart(0);
   }, [filters.month, filters.year, filters.week, filters.view]);
 
+  // Debug
+  console.log("Total tasks:", tasks.length);
+  console.log("Filtered tasks:", filteredTasks.length);
+  console.log("Loading:", loading);
+
   return (
     <div className="p-6">
-
       {/* Search + Filter + Create Task */}
       <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-4 mb-4">
-
         {/* Search */}
         <div className="relative w-full sm:w-80">
           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -1069,8 +1242,6 @@ export default function TaskAssignment() {
         </div>
       )}
 
-
-
       <TaskAssignmentTable
         tasks={filteredTasks}
         selectedTask={selectedTask}
@@ -1161,11 +1332,14 @@ export default function TaskAssignment() {
         <SweetAlert
           error
           title="Error!"
-          onConfirm={() => setShowDeleteErrorAlert(false)}
+          onConfirm={() => {
+            setShowDeleteErrorAlert(false);
+            setErrorMessage('');
+          }}
           confirmBtnText="OK"
           confirmBtnCssClass="btn-confirm"
         >
-          {alertMessage}
+          {errorMessage}
         </SweetAlert>
       )}
       

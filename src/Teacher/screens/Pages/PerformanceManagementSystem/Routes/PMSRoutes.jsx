@@ -18,6 +18,7 @@ import EditLeave from "../Leave/EditLeave";
 
 import CreateTask from "../TaskAssignment/CreateTask";
 import TaskView from "../TaskAssignment/TaskView";
+import EditTask from "../TaskAssignment/EditTask";
 
 import AddDepartment from "../Department/AddDepartment";
 import AddUser from "../User/AddUser";
@@ -48,7 +49,7 @@ export default function PMSRoutes() {
 
         {/* View / Edit Task */}
         <Route path="user-dashboard/view-task/:id" element={<TaskView />} />
-        <Route path="user-dashboard/edit-task/:id" element={<CreateTask />} />
+        <Route path="user-dashboard/edit-task/:id" element={<EditTask />} />
 
         {/* Leaves */}
         <Route path="leave/add-leave" element={<AddLeave />} />

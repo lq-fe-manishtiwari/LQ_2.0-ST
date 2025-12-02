@@ -79,18 +79,18 @@ const Sidebar = ({ isOpen, toggle }) => {
         iconActive: dashboardActive,
         iconInactive: dashboardInactive,
       },
-      {
-        to: "/teacher/class",
-        label: "Class",
-        iconActive: classActive,
-        iconInactive: classInactive,
-        match: [
-          "/teacher/class",
-          "/timetable-list",
-          "/timetable-view",
-          "/timetable-edit",
-        ],
-      },
+      // {
+      //   to: "/teacher/class",
+      //   label: "Class",
+      //   iconActive: classActive,
+      //   iconInactive: classInactive,
+      //   match: [
+      //     "/teacher/class",
+      //     "/timetable-list",
+      //     "/timetable-view",
+      //     "/timetable-edit",
+      //   ],
+      // },
 
 
       {
