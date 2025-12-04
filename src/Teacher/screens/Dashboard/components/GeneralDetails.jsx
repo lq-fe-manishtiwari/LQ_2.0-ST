@@ -1,169 +1,203 @@
-import React from 'react';
+import React, { useRef, useState } from "react";
+import {
+  User,
+  Mail,
+  Phone,
+  Briefcase,
+  IdCard,
+  ShieldCheck,
+  CalendarDays,
+  Building,
+  Landmark,
+  CreditCard,
+  IndianRupee,
+  Image as ImageIcon,
+} from "lucide-react";
 
-const GeneralDetails = ({ 
-  userProfile, 
-  fullName, 
-  email, 
-  phone, 
-  designation, 
-  profileImage 
+const GeneralDetails = ({
+  userProfile,
+  fullName,
+  email,
+  phone,
+  designation,
+  profileImage,
+  onProfileUpload, // <-- ADD THIS IN PARENT
 }) => {
-  const personalInfo = [
-    {
-      label: 'Full Name',
-      value: fullName || 'Not provided',
-      icon: (
-        <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-        </svg>
-      )
-    },
-    {
-      label: 'Email Address',
-      value: email || 'Not provided',
-      icon: (
-        <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-        </svg>
-      )
-    },
-    {
-      label: 'Phone Number',
-      value: phone || 'Not provided',
-      icon: (
-        <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
-        </svg>
-      )
-    },
-    {
-      label: 'Designation',
-      value: designation || 'Not provided',
-      icon: (
-        <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2-2v2m8 0V6a2 2 0 012 2v6a2 2 0 01-2 2H8a2 2 0 01-2-2V8a2 2 0 012-2V6" />
-        </svg>
-      )
+  const fileInputRef = useRef(null);
+  const [uploading, setUploading] = useState(false);
+  const [localImage, setLocalImage] = useState(profileImage || userProfile?.avatar);
+
+  const iconColors = {
+    user: "text-blue-600",
+    mail: "text-purple-500",
+    phone: "text-green-600",
+    shield: "text-orange-500",
+    id: "text-indigo-500",
+    calendar: "text-pink-500",
+    bank: "text-amber-600",
+    briefcase: "text-rose-500",
+    building: "text-cyan-600",
+    image: "text-purple-600",
+  };
+
+  // ------------ HANDLE PROFILE UPLOAD ---------------
+  const handleFileSelect = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    setUploading(true);
+
+    // Show preview instantly
+    const previewUrl = URL.createObjectURL(file);
+    setLocalImage(previewUrl);
+
+    // Trigger upload to parent
+    if (onProfileUpload) {
+      await onProfileUpload(file);
     }
+
+    setUploading(false);
+  };
+
+  const personalInfo = [
+    { label: "First Name", value: userProfile?.firstname || "Not provided", icon: <User className={`w-5 h-5 ${iconColors.user}`} /> },
+    { label: "Middle Name", value: userProfile?.middlename || "Not provided", icon: <User className={`w-5 h-5 ${iconColors.user}`} /> },
+    { label: "Last Name", value: userProfile?.lastname || "Not provided", icon: <User className={`w-5 h-5 ${iconColors.user}`} /> },
+
+    { label: "Email", value: email || userProfile?.email || "Not provided", icon: <Mail className={`w-5 h-5 ${iconColors.mail}`} /> },
+    { label: "Phone", value: phone || userProfile?.mobile || "Not provided", icon: <Phone className={`w-5 h-5 ${iconColors.phone}`} /> },
+
+    { label: "Gender", value: userProfile?.gender || "Not provided", icon: <User className={`w-5 h-5 ${iconColors.user}`} /> },
+    { label: "Marital Status", value: userProfile?.marital_status || "Not provided", icon: <ShieldCheck className={`w-5 h-5 ${iconColors.shield}`} /> },
+    { label: "Blood Group", value: userProfile?.blood_group || "Not provided", icon: <ShieldCheck className={`w-5 h-5 ${iconColors.shield}`} /> },
+
+    {
+      label: "Date of Birth",
+      value: userProfile?.date_of_birth
+        ? new Date(userProfile.date_of_birth).toLocaleDateString()
+        : "Not available",
+      icon: <CalendarDays className={`w-5 h-5 ${iconColors.calendar}`} />,
+    },
+
+    { label: "Father Name", value: userProfile?.father_name || "Not provided", icon: <User className={`w-5 h-5 ${iconColors.user}`} /> },
+    { label: "Spouse Name", value: userProfile?.spouse_name || "Not provided", icon: <User className={`w-5 h-5 ${iconColors.user}`} /> },
   ];
 
-  const additionalInfo = [
-    {
-      label: 'Teacher ID',
-      value: userProfile?.teacher_id || 'Not available',
-      icon: (
-        <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0a2 2 0 104 0m-5 8a2 2 0 100-4 2 2 0 000 4zm0 0c1.306 0 2.417.835 2.83 2M9 14a3.001 3.001 0 00-2.83 2M15 11h3m-3 4h2" />
-        </svg>
-      )
-    },
-    {
-      label: 'User Type',
-      value: userProfile?.user_type || 'Teacher',
-      icon: (
-        <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-        </svg>
-      )
-    },
-    {
-      label: 'Status',
-      value: 'Active',
-      icon: (
-        <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-        </svg>
-      )
-    },
-    {
-      label: 'Join Date',
-      value: userProfile?.created_at ? new Date(userProfile.created_at).toLocaleDateString() : 'Not available',
-      icon: (
-        <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-        </svg>
-      )
-    }
+  const identityInfo = [
+    { label: "Teacher ID", value: userProfile?.teacher_id || "Not available", icon: <IdCard className={`w-5 h-5 ${iconColors.id}`} /> },
+    { label: "Employee ID", value: userProfile?.employee_id || "Not available", icon: <IdCard className={`w-5 h-5 ${iconColors.id}`} /> },
+    { label: "Aadhaar", value: userProfile?.aadhar_number || "Not available", icon: <IdCard className={`w-5 h-5 ${iconColors.id}`} /> },
+    { label: "PAN", value: userProfile?.pan_number || "Not available", icon: <IdCard className={`w-5 h-5 ${iconColors.id}`} /> },
+    { label: "UAN", value: userProfile?.uan_number || "Not available", icon: <IdCard className={`w-5 h-5 ${iconColors.id}`} /> },
   ];
+
+  const employmentInfo = [
+    { label: "Designation", value: designation || userProfile?.designation || "Not provided", icon: <Briefcase className={`w-5 h-5 ${iconColors.briefcase}`} /> },
+    { label: "College ID", value: userProfile?.college_id || "Not available", icon: <Building className={`w-5 h-5 ${iconColors.building}`} /> },
+
+    {
+      label: "Date of Joining",
+      value: userProfile?.date_of_joining
+        ? new Date(userProfile.date_of_joining).toLocaleDateString()
+        : "Not available",
+      icon: <CalendarDays className={`w-5 h-5 ${iconColors.calendar}`} />,
+    },
+
+    { label: "User Type", value: userProfile?.user?.user_type || "Not available", icon: <User className={`w-5 h-5 ${iconColors.user}`} /> },
+    { label: "Status", value: userProfile?.user?.active ? "Active" : "Inactive", icon: <ShieldCheck className={`w-5 h-5 ${iconColors.shield}`} /> },
+  ];
+
+  const bankInfo = [
+    { label: "Bank Name", value: userProfile?.bank_name || "Not available", icon: <Landmark className={`w-5 h-5 ${iconColors.bank}`} /> },
+    { label: "Account Number", value: userProfile?.bank_account_no || "Not available", icon: <CreditCard className={`w-5 h-5 ${iconColors.bank}`} /> },
+    { label: "IFSC Code", value: userProfile?.ifsc_code || "Not available", icon: <CreditCard className={`w-5 h-5 ${iconColors.bank}`} /> },
+    { label: "Financial Year", value: userProfile?.financial_year || "Not available", icon: <CalendarDays className={`w-5 h-5 ${iconColors.calendar}`} /> },
+    { label: "CTC", value: userProfile?.cost_to_company || "Not available", icon: <IndianRupee className={`w-5 h-5 ${iconColors.bank}`} /> },
+    { label: "Deduction", value: userProfile?.deduction || "Not available", icon: <IndianRupee className={`w-5 h-5 ${iconColors.bank}`} /> },
+    { label: "Net Pay", value: userProfile?.net_pay || "Not available", icon: <IndianRupee className={`w-5 h-5 ${iconColors.bank}`} /> },
+  ];
+
+  const renderSection = (title, icon, items, colorClass) => (
+    <div>
+      <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+        <span className={`${colorClass} mr-2`}>{icon}</span>
+        {title}
+      </h3>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {items.map((info, index) => (
+          <div key={index} className="bg-gray-50 p-4 rounded-lg border">
+            <div className="flex items-center mb-2">
+              {info.icon}
+              <label className="block text-sm font-medium text-gray-700 ml-2">
+                {info.label}
+              </label>
+            </div>
+            <p className="text-gray-900 font-medium">{info.value}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
 
   return (
-    <div className="space-y-6">
-      {/* Personal Information Section */}
-      <div>
-        <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-          <svg className="w-5 h-5 text-blue-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-          </svg>
-          Personal Information
-        </h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {personalInfo.map((info, index) => (
-            <div key={index} className="bg-gray-50 p-4 rounded-lg border">
-              <div className="flex items-center mb-2">
-                {info.icon}
-                <label className="block text-sm font-medium text-gray-700 ml-2">{info.label}</label>
-              </div>
-              <p className="text-gray-900 font-medium">{info.value}</p>
-            </div>
-          ))}
-        </div>
-      </div>
+    <div className="space-y-10">
 
-      {/* Additional Information Section */}
-      <div>
-        <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-          <svg className="w-5 h-5 text-green-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
-          Additional Information
-        </h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {additionalInfo.map((info, index) => (
-            <div key={index} className="bg-gray-50 p-4 rounded-lg border">
-              <div className="flex items-center mb-2">
-                {info.icon}
-                <label className="block text-sm font-medium text-gray-700 ml-2">{info.label}</label>
-              </div>
-              <p className="text-gray-900 font-medium">{info.value}</p>
-            </div>
-          ))}
-        </div>
-      </div>
+      {renderSection("Personal Information", <User />, personalInfo, iconColors.user)}
+      {renderSection("Identity Information", <IdCard />, identityInfo, iconColors.id)}
+      {renderSection("Employment Information", <Briefcase />, employmentInfo, iconColors.briefcase)}
+      {renderSection("Bank Information", <Landmark />, bankInfo, iconColors.bank)}
 
-      {/* Profile Picture Section */}
+      {/* PROFILE PICTURE SECTION */}
       <div>
         <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-          <svg className="w-5 h-5 text-purple-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-          </svg>
+          <ImageIcon className={`w-5 h-5 ${iconColors.image} mr-2`} />
           Profile Picture
         </h3>
-        <div className="bg-gray-50 p-6 rounded-lg border">
-          <div className="flex items-center space-x-4">
-            <div className="flex-shrink-0">
-              {profileImage ? (
-                <img
-                  src={profileImage}
-                  alt="Profile"
-                  className="w-20 h-20 rounded-full object-cover border-2 border-gray-200"
-                />
-              ) : (
-                <div className="w-20 h-20 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white text-xl font-bold border-2 border-blue-200">
-                  {fullName ? fullName.charAt(0).toUpperCase() : 'U'}
-                </div>
-              )}
-            </div>
-            <div className="flex-1">
-              <p className="text-sm text-gray-600 mb-2">
-                {profileImage ? 'Profile picture uploaded' : 'No profile picture uploaded'}
-              </p>
-              <button className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-200">
-                {profileImage ? 'Change Picture' : 'Upload Picture'}
-              </button>
-            </div>
+
+        <div className="bg-gray-50 p-6 rounded-lg border flex items-center space-x-4">
+
+          {/* Profile Preview */}
+          <div className="flex-shrink-0">
+            {localImage ? (
+              <img
+                src={localImage}
+                alt="Profile"
+                className="w-20 h-20 rounded-full object-cover border-2 border-gray-200"
+              />
+            ) : (
+              <div className="w-20 h-20 rounded-full bg-blue-600 flex items-center justify-center text-white text-xl font-bold">
+                {fullName ? fullName.charAt(0).toUpperCase() : "U"}
+              </div>
+            )}
+          </div>
+
+          {/* Upload Button */}
+          <div>
+            <p className="text-sm text-gray-600 mb-2">
+              {localImage ? "Profile picture uploaded" : "No profile picture uploaded"}
+            </p>
+
+            <button
+              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm"
+              onClick={() => fileInputRef.current.click()}
+              disabled={uploading}
+            >
+              {uploading ? "Uploading..." : localImage ? "Change Picture" : "Upload Picture"}
+            </button>
+
+            {/* Hidden File Input */}
+            <input
+              type="file"
+              accept="image/*"
+              ref={fileInputRef}
+              className="hidden"
+              onChange={handleFileSelect}
+            />
           </div>
         </div>
       </div>
+
     </div>
   );
 };

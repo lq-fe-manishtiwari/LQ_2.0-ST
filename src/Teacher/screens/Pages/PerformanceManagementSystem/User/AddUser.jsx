@@ -82,12 +82,12 @@ export default function AddUser() {
 
   // Dummy options
   const roleOptions = ["TEACHER", "ADMIN", "STAFF"];
-  const designationOptions = ["Senior Teacher", "Administrator", "Teacher", "Assistant"];
+  const designationOptions = ["SeniorTeacher", "Administrator", "Teacher", "Assistant"];
   const departmentOptions = ["Mathematics", "Science", "English", "Administration", "IT"];
 
   // Dummy user data for edit mode
   const dummyUsers = {
-    1: { name: "John Doe", email: "john.doe@example.com", phone: "9876543210", role: "TEACHER", designation: "Senior Teacher", department: "Mathematics" },
+    1: { name: "John Doe", email: "john.doe@example.com", phone: "9876543210", role: "TEACHER", designation: "SeniorTeacher", department: "Mathematics" },
     2: { name: "Jane Smith", email: "jane.smith@example.com", phone: "9876543211", role: "ADMIN", designation: "Administrator", department: "Administration" },
     3: { name: "Mike Johnson", email: "mike.johnson@example.com", phone: "9876543212", role: "TEACHER", designation: "Teacher", department: "Science" }
   };

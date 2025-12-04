@@ -68,7 +68,7 @@ const AcademicInfo = ({ userProfile }) => {
 
   const achievements = [
     {
-      title: 'Best Teacher Award 2023',
+      title: 'BestTeacher Award 2023',
       description: 'Recognized for outstanding teaching performance',
       date: '2023-12-15',
       icon: '🏆'

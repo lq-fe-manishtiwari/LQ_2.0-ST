@@ -55,7 +55,7 @@ const AllocatedPrograms = ({
                   </h3>
                   <div className="flex items-center gap-2">
                     <span className={badgeStyle}>
-                      {isClassTeacher ? 'Class Teacher' : 'Subject Teacher'}
+                      {isClassTeacher ? 'ClassTeacher' : 'SubjectTeacher'}
                     </span>
                     {allocation.program?.program_code && (
                       <span className="bg-gray-100 text-gray-700 px-2 py-1 rounded text-xs font-medium">
@@ -325,7 +325,7 @@ const AllocatedPrograms = ({
         <div>
           {(allocatedPrograms.class_teacher_allocation.length > 0 || allocatedPrograms.normal_allocation.length > 0) ? (
             <div className="space-y-8">
-              {/* Class Teacher Allocations Section */}
+              {/* ClassTeacher Allocations Section */}
               {allocatedPrograms.class_teacher_allocation.length > 0 && (
                 <div>
                   <div className="flex items-center gap-3 mb-6">
@@ -335,7 +335,7 @@ const AllocatedPrograms = ({
                       </svg>
                     </div>
                     <div className="flex-1">
-                      <h3 className="text-xl font-bold text-gray-900">Class Teacher Allocations</h3>
+                      <h3 className="text-xl font-bold text-gray-900">ClassTeacher Allocations</h3>
                       <p className="text-sm text-gray-600">Programs where you serve as the class teacher</p>
                     </div>
                     <div className="bg-purple-50 text-purple-700 px-4 py-2 rounded-full text-sm font-semibold">
