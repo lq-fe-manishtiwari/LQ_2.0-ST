@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Search, Filter, ChevronDown } from 'lucide-react';
 import ContentApiService from '../services/contentApi';
 import { useUserProfile } from '../../../../../contexts/UserProfileContext';
+import SubjectsList from '../components/SubjectsList';
 
 export default function ContentDashboard() {
   const { userProfile } = useUserProfile();
@@ -57,11 +58,15 @@ export default function ContentDashboard() {
   // Fetch allocated programs when user profile is available
   useEffect(() => {
     const fetchAllocatedPrograms = async () => {
-      if (!userProfile?.teacher_id) {
+      console.log("userProfile", userProfile);
+      console.log("teacher_id", userProfile?.teacher_id);
+      
+      if (!userProfile || !userProfile.teacher_id) {
         console.log('Teacher ID not available yet, waiting for user profile...');
         return;
       }
 
+      console.log('Teacher ID found:', userProfile.teacher_id);
       setLoading(true);
       setError(null);
       try {
@@ -99,7 +104,7 @@ export default function ContentDashboard() {
     };
 
     fetchAllocatedPrograms();
-  }, [userProfile?.teacher_id]);
+  }, [userProfile]);
 
   // Process allocations data to group by programs
   const processAllocationsData = (allocations) => {
@@ -369,90 +374,13 @@ export default function ContentDashboard() {
             <span className="ml-2 text-gray-600">Loading...</span>
           </div>
         ) : selectedProgram && selectedSemester && subjectTypes[selectedPaperType.toLowerCase()] ? (
-          <div>
-            <h3 className="text-lg font-medium text-gray-900 mb-4">
-              {selectedPaperType} Subjects - {selectedProgramData?.name} (Semester {selectedProgramData?.semesters?.find(s => s.id.toString() === selectedSemester)?.name})
-            </h3>
-            
-            {/* Show type information */}
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h4 className="font-medium text-blue-900">{subjectTypes[selectedPaperType.toLowerCase()].type_info.type_name}</h4>
-                  <p className="text-sm text-blue-700 mt-1">{subjectTypes[selectedPaperType.toLowerCase()].type_info.type_description}</p>
-                </div>
-                <div className="text-right">
-                  <span className="text-2xl font-bold text-blue-600">{subjectTypes[selectedPaperType.toLowerCase()].type_info.subject_count}</span>
-                  <p className="text-xs text-blue-600">Total Subjects</p>
-                </div>
-              </div>
-            </div>
-
-            {/* Show vertical sub-type buttons */}
-            {subjectTypes[selectedPaperType.toLowerCase()]?.verticals?.length > 0 && (
-              <div>
-                <h4 className="font-medium text-gray-900 mb-3">Select Vertical Type:</h4>
-                <div className="flex flex-wrap gap-3">
-                  {subjectTypes[selectedPaperType.toLowerCase()].verticals.map((vertical) => (
-                    <button
-                      key={vertical.id}
-                      onClick={() => {
-                        // TODO: Make API call to get subjects for this vertical
-                        console.log('Fetch subjects for vertical:', vertical.id);
-                      }}
-                      className="px-4 py-3 bg-white border-2 border-gray-200 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors group"
-                    >
-                      <div className="text-left">
-                        <div className="font-medium text-gray-900 group-hover:text-blue-700">{vertical.name}</div>
-                        <div className="text-sm text-gray-500 mt-1">{vertical.subject_count} subjects</div>
-                        <div className="text-xs text-gray-400 mt-1">{vertical.code}</div>
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Show specialization sub-type buttons */}
-            {subjectTypes[selectedPaperType.toLowerCase()]?.specializations?.length > 0 && (
-              <div className="mt-6">
-                <h4 className="font-medium text-gray-900 mb-3">Select Specialization:</h4>
-                <div className="flex flex-wrap gap-3">
-                  {subjectTypes[selectedPaperType.toLowerCase()].specializations.map((specialization) => (
-                    <button
-                      key={specialization.id}
-                      onClick={() => {
-                        // TODO: Make API call to get subjects for this specialization
-                        console.log('Fetch subjects for specialization:', specialization.id);
-                      }}
-                      className="px-4 py-3 bg-white border-2 border-gray-200 rounded-lg hover:border-purple-500 hover:bg-purple-50 transition-colors group"
-                    >
-                      <div className="text-left">
-                        <div className="font-medium text-gray-900 group-hover:text-purple-700">{specialization.name}</div>
-                        <div className="text-sm text-gray-500 mt-1">{specialization.subject_count} subjects</div>
-                        <div className="text-xs text-gray-400 mt-1">{specialization.code}</div>
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* If no sub-types, show message for direct subjects */}
-            {(!subjectTypes[selectedPaperType.toLowerCase()]?.verticals?.length &&
-              !subjectTypes[selectedPaperType.toLowerCase()]?.specializations?.length) && (
-              <div className="text-center py-8">
-                <div className="text-gray-500 mb-2">
-                  <svg className="w-12 h-12 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                  </svg>
-                </div>
-                <p className="text-gray-600">
-                  This type has direct subjects. Click on a different type or use filters to view content.
-                </p>
-              </div>
-            )}
-          </div>
+          <SubjectsList
+            subjectTypes={subjectTypes}
+            selectedPaperType={selectedPaperType}
+            academicYearId={selectedProgramData?.academicYearId}
+            semesterId={selectedSemester}
+            selectedProgramData={selectedProgramData}
+          />
         ) : (
           <div className="text-center py-12">
             <div className="text-gray-500 mb-4">
