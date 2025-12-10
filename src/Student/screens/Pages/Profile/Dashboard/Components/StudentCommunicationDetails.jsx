@@ -1,44 +1,30 @@
-import React, { useRef, useState } from "react";
-import { User, Calendar, MapPin, Image as ImageIcon } from "lucide-react";
+import React from "react";
+import { Phone, User, MapPin, Globe } from "lucide-react";
 
-const StudentPersonalDetails = ({ studentData, studentName, profileImage, onProfileUpload }) => {
-  const fileInputRef = useRef(null);
-  const [uploading, setUploading] = useState(false);
-  const [localImage, setLocalImage] = useState(profileImage);
+const StudentCommunicationDetails = ({ studentData }) => {
+  const primaryContactInfo = [
+    { label: "Primary Mobile", value: studentData?.primary_mobile || "Not provided", icon: <Phone className="w-5 h-5 text-green-600" /> },
+    { label: "Primary Relation", value: studentData?.primary_relation || "Not provided", icon: <User className="w-5 h-5 text-blue-600" /> },
+  ];
 
-  const handleFileSelect = async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
+  const fatherInfo = [
+    { label: "Father First Name", value: studentData?.father_firstname || "Not provided", icon: <User className="w-5 h-5 text-blue-600" /> },
+    { label: "Father Last Name", value: studentData?.father_lastname || "Not provided", icon: <User className="w-5 h-5 text-blue-600" /> },
+    { label: "Father Mobile", value: studentData?.father_mobile || "Not provided", icon: <Phone className="w-5 h-5 text-green-600" /> },
+  ];
 
-    setUploading(true);
-    const previewUrl = URL.createObjectURL(file);
-    setLocalImage(previewUrl);
-
-    if (onProfileUpload) {
-      await onProfileUpload(file);
-    }
-
-    setUploading(false);
-  };
-  const personalInfo = [
-    { label: "First Name", value: studentData?.firstname || "Not provided", icon: <User className="w-5 h-5 text-blue-600" /> },
-    { label: "Middle Name", value: studentData?.middlename || "Not provided", icon: <User className="w-5 h-5 text-blue-600" /> },
-    { label: "Last Name", value: studentData?.lastname || "Not provided", icon: <User className="w-5 h-5 text-blue-600" /> },
-    { label: "Gender", value: studentData?.gender || "Not provided", icon: <User className="w-5 h-5 text-blue-600" /> },
-    { 
-      label: "Date of Birth", 
-      value: studentData?.date_of_birth ? new Date(studentData.date_of_birth).toLocaleDateString() : "Not provided", 
-      icon: <Calendar className="w-5 h-5 text-pink-500" /> 
-    },
-    { 
-      label: "Date of Admission", 
-      value: studentData?.date_of_admission ? new Date(studentData.date_of_admission).toLocaleDateString() : "Not provided", 
-      icon: <Calendar className="w-5 h-5 text-pink-500" /> 
-    },
+  const motherInfo = [
+    { label: "Mother First Name", value: studentData?.mother_firstname || "Not provided", icon: <User className="w-5 h-5 text-blue-600" /> },
+    { label: "Mother Last Name", value: studentData?.mother_lastname || "Not provided", icon: <User className="w-5 h-5 text-blue-600" /> },
+    { label: "Mother Mobile", value: studentData?.mother_mobile || "Not provided", icon: <Phone className="w-5 h-5 text-green-600" /> },
   ];
 
   const addressInfo = [
-    { label: "Address", value: studentData?.address || "Not provided", icon: <MapPin className="w-5 h-5 text-green-600" /> },
+    { label: "Address Line 1", value: studentData?.address_line1 || "Not provided", icon: <MapPin className="w-5 h-5 text-orange-500" /> },
+    { label: "Country", value: studentData?.country || "Not provided", icon: <Globe className="w-5 h-5 text-purple-600" /> },
+    { label: "State", value: studentData?.state || "Not provided", icon: <MapPin className="w-5 h-5 text-orange-500" /> },
+    { label: "City", value: studentData?.city || "Not provided", icon: <MapPin className="w-5 h-5 text-orange-500" /> },
+    { label: "Pincode", value: studentData?.pincode || "Not provided", icon: <MapPin className="w-5 h-5 text-orange-500" /> },
   ];
 
   const renderSection = (title, icon, items, colorClass) => (
@@ -66,58 +52,12 @@ const StudentPersonalDetails = ({ studentData, studentName, profileImage, onProf
 
   return (
     <div className="space-y-10">
-      {renderSection("Personal Information", <User />, personalInfo, "text-blue-600")}
-      {renderSection("Address Information", <MapPin />, addressInfo, "text-green-600")}
-
-      {/* PROFILE PICTURE SECTION */}
-      <div>
-        <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-          <ImageIcon className="w-5 h-5 text-purple-600 mr-2" />
-          Profile Picture
-        </h3>
-
-        <div className="bg-gray-50 p-6 rounded-lg border flex items-center space-x-4">
-          {/* Profile Preview */}
-          <div className="flex-shrink-0">
-            {localImage ? (
-              <img
-                src={localImage}
-                alt="Profile"
-                className="w-20 h-20 rounded-full object-cover border-2 border-gray-200"
-              />
-            ) : (
-              <div className="w-20 h-20 rounded-full bg-blue-600 flex items-center justify-center text-white text-xl font-bold">
-                {studentName ? studentName.charAt(0).toUpperCase() : "S"}
-              </div>
-            )}
-          </div>
-
-          {/* Upload Button */}
-          <div>
-            <p className="text-sm text-gray-600 mb-2">
-              {localImage ? "Profile picture uploaded" : "No profile picture uploaded"}
-            </p>
-
-            <button
-              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm"
-              onClick={() => fileInputRef.current.click()}
-              disabled={uploading}
-            >
-              {uploading ? "Uploading..." : localImage ? "Change Picture" : "Upload Picture"}
-            </button>
-
-            <input
-              type="file"
-              accept="image/*"
-              ref={fileInputRef}
-              className="hidden"
-              onChange={handleFileSelect}
-            />
-          </div>
-        </div>
-      </div>
+      {renderSection("Primary Contact", <Phone />, primaryContactInfo, "text-green-600")}
+      {renderSection("Father's Details", <User />, fatherInfo, "text-blue-600")}
+      {renderSection("Mother's Details", <User />, motherInfo, "text-purple-600")}
+      {renderSection("Address Details", <MapPin />, addressInfo, "text-orange-500")}
     </div>
   );
 };
 
-export default StudentPersonalDetails;
+export default StudentCommunicationDetails;
