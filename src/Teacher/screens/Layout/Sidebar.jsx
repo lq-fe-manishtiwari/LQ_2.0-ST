@@ -2,6 +2,7 @@
 import React, { useMemo, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import classNames from "classnames";
+import { useUserProfile } from "@/contexts/UserProfileContext";
 // import { authenticationService } from "@/_services/admin";
 import "@/_assets/customStyle.css";
 
@@ -39,6 +40,7 @@ import closebtn from "@/_assets/images/Close.svg";
 const Sidebar = ({ isOpen, toggle }) => {
   const location = useLocation();
   const navigate = useNavigate();
+  const { fullName, designation, userType, profileImage } = useUserProfile();
 
   // Mobile state
   const [isMobileOpen, setIsMobileOpen] = useState(false);
@@ -76,24 +78,19 @@ const Sidebar = ({ isOpen, toggle }) => {
         label: "My Teaching",
         iconActive: dashboardActive,
         iconInactive: dashboardInactive,
-         match: [
-          "/teacher-profile",
-          
-        ],
       },
-
-      {
-        to: "/teacher/class",
-        label: "Class",
-        iconActive: classActive,
-        iconInactive: classInactive,
-        match: [
-          "/teacher/class",
-          "/timetable-list",
-          "/timetable-view",
-          "/timetable-edit",
-        ],
-      },
+      // {
+      //   to: "/teacher/class",
+      //   label: "Class",
+      //   iconActive: classActive,
+      //   iconInactive: classInactive,
+      //   match: [
+      //     "/teacher/class",
+      //     "/timetable-list",
+      //     "/timetable-view",
+      //     "/timetable-edit",
+      //   ],
+      // },
 
 
       {
@@ -188,10 +185,10 @@ const Sidebar = ({ isOpen, toggle }) => {
       },
       {
         to: "/pms",
-        label: "TMS",
+        label: "PMS",
         iconActive: classActive,
         iconInactive: classInactive,
-      },
+       },
       {
         to: "/teacher-certificate",
         label: "Certificate",
@@ -286,7 +283,7 @@ const Sidebar = ({ isOpen, toggle }) => {
                 />
               ) : (
                 <img
-                  src="https://demo-learnqoch.s3.ap-south-1.amazonaws.com/engage/1751987287-western-removebg-preview.png"
+                  src="https://learnqoch.com/wp-content/uploads/al_opt_content/IMAGE/learnqoch.com/wp-content/uploads/2024/08/LearnQoch-WebT_Logo.png.bv_resized_mobile.png.bv.webp?bv_host=learnqoch.com"
                   alt="Default Logo"
                   className="w-[140px]"
                 />
@@ -303,6 +300,8 @@ const Sidebar = ({ isOpen, toggle }) => {
             <img src={toggleIcon} alt="Toggle" className="w-4 h-4" />
           </button>
         </div>
+
+
 
         {/* Menu */}
         <ul className="list-none flex-1 px-2">{renderMenu()}</ul>
@@ -358,6 +357,36 @@ const Sidebar = ({ isOpen, toggle }) => {
                 <img src={closebtn} alt="Close" className="w-4 h-4" />
               </button>
             </div>
+
+            {/* Mobile User Profile Section */}
+            {(fullName || userType) && (
+              <div className="py-3 border-b border-gray-200 mb-4">
+                <div className="flex items-center space-x-3">
+                  {profileImage ? (
+                    <img
+                      src={profileImage}
+                      alt="Profile"
+                      className="w-12 h-12 rounded-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-12 h-12 rounded-full bg-blue-500 flex items-center justify-center text-white font-bold">
+                      {fullName ? fullName.charAt(0).toUpperCase() : 'U'}
+                    </div>
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-gray-900 truncate">
+                      {fullName || 'User'}
+                    </p>
+                    {designation && (
+                      <p className="text-xs text-gray-500 truncate">{designation}</p>
+                    )}
+                    <p className="text-xs text-blue-600 font-medium">
+                      {userType || 'Teacher'}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Mobile Menu */}
             <ul className="list-none flex-1">{renderMenu(true)}</ul>

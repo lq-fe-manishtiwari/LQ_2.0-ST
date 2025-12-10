@@ -1,20 +1,22 @@
-import React, { useState } from "react";
+import React from "react";
 import { NavLink } from "react-router-dom";
 import { Plus, Upload } from "lucide-react";
-import Buttons from "./Buttons";
+// import Buttons from "./Buttons";
 
 const tabs = [
-  { label: "Academic", to: "/teacher/content/Academic" },
-  { label: "Sport", to: "/teacher/content/Sport" },
-  { label: "Vertical1_4 (Major)", to: "/teacher/content/Vertical1_4" },
-  { label: "Vertical2 (Minor)", to: "/teacher/content/Vertical2" },
-  { label: "Vertical3 (OE)", to: "/teacher/content/Vertical3" },
-  { label: "Vertical5 (AEC/VEC/IKS)", to: "/teacher/content/Vertical5" },
-  { label: "Vertical6 (Other's)", to: "/teacher/content/Vertical6" },
+  { label: "Users", to: "/pms/user-dashboard" },
+  // { label: "Department", to: "/pms/department" },
+  { label: "Task Assignment", to: "/pms/task-assignment" },
+  { label: "My Tasks", to: "/pms/my-task" },
+  { label: "API", to: "/pms/api" },
+  { label: "Timesheet", to: "/pms/timesheet" },
+  { label: "Leave", to: "/pms/leave" },
+   { label: "Document", to: "/pms/document" },
+ 
+
 ];
 
 export default function TabsNav() {
-
   return (
     <div className="p-2 md:p-2">
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
@@ -24,8 +26,9 @@ export default function TabsNav() {
             <NavLink
               key={t.to}
               to={t.to}
+              style={{ width: "9.6rem" }}
               className={({ isActive }) =>
-                `tab-link whitespace-nowrap w-auto flex-shrink-0 cursor-default px-4 py-2 text-sm tab-active ${
+                `tab-link whitespace-nowrap text-center flex-1 sm:flex-none px-3 py-2 text-xs sm:text-sm ${
                   isActive ? "tab-active" : "tab-inactive"
                 }`
               }
@@ -35,7 +38,7 @@ export default function TabsNav() {
           ))}
         </div>
       </div>
-      <Buttons/>
+      {/* <Buttons/> */}
 
     </div>
   );

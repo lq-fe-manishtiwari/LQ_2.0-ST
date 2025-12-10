@@ -1,193 +1,226 @@
 import React, { useEffect, useState } from 'react';
-import { Link } from "react-router-dom"
-
-import {
-  BarChart3,
-  Users,
-  BookOpen,
-  Bell,
-  Calendar,
-  Settings,
-  LogOut,
-  Menu,
-  X,
-} from 'lucide-react';
-import { authenticationService } from '@/_services/api';
-import Logo from "@/_assets/images_new_design/Login/lq_new.png";
+import { useUserProfile } from '@/contexts/UserProfileContext';
+import { api } from '@/_services/api';
+import WelcomeHeader from './components/WelcomeHeader';
+import QuickActions from './components/QuickActions';
+import ProfileView from './components/ProfileView';
 
 const Dashboard = () => {
-  const [user, setUser] = useState(null);
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const {
+    userProfile,
+    loading,
+    error,
+    fetchProfile,
+    fullName,
+    designation,
+    userType,
+    profileImage,
+    email,
+    phone
+  } = useUserProfile();
 
-  useEffect(() => {
-    const currentUser = authenticationService.currentUser();
-    setUser(currentUser);
-  }, []);
+  // State for allocated programs
+  const [allocatedPrograms, setAllocatedPrograms] = useState({
+    class_teacher_allocation: [],
+    normal_allocation: []
+  });
+  const [programsLoading, setProgramsLoading] = useState(false);
+  const [programsError, setProgramsError] = useState(null);
+  const [expandedProgram, setExpandedProgram] = useState(null);
+  const [studentsData, setStudentsData] = useState({});
+  const [studentsLoading, setStudentsLoading] = useState({});
+  const [showProfileView, setShowProfileView] = useState(false);
+  
+  // Pagination state for students
+  const [studentsPagination, setStudentsPagination] = useState({});
+  const STUDENTS_PER_PAGE = 10;
 
-  const handleLogout = () => {
-    authenticationService.logout();
+  // Function to fetch allocated programs
+  const fetchAllocatedPrograms = async () => {
+    try {
+      setProgramsLoading(true);
+      setProgramsError(null);
+      
+      // Get teacher ID from user profile response
+      const teacherId = userProfile?.teacher_id;
+      
+      if (teacherId) {
+        const response = await api.getTeacherAllocatedPrograms(teacherId);
+        
+        if (response.success) {
+          // Handle new API structure with two sections
+          const data = response.data;
+          if (data && (data.class_teacher_allocation || data.normal_allocation)) {
+            setAllocatedPrograms({
+              class_teacher_allocation: data.class_teacher_allocation || [],
+              normal_allocation: data.normal_allocation || []
+            });
+          } else {
+            // Fallback for old API structure
+            setAllocatedPrograms({
+              class_teacher_allocation: [],
+              normal_allocation: data?.programs || data || []
+            });
+          }
+        } else {
+          setProgramsError(response.message || 'Failed to fetch allocated programs');
+        }
+      } else {
+        setProgramsError('Teacher ID not found in profile');
+      }
+    } catch (err) {
+      console.error('Error fetching allocated programs:', err);
+      setProgramsError(err.message || 'An error occurred while fetching programs');
+    } finally {
+      setProgramsLoading(false);
+    }
   };
 
-  const stats = [
-    { title: 'Total Students', value: '1,234', icon: Users, color: 'from-blue-500 to-blue-600' },
-    { title: 'Courses Active', value: '45', icon: BookOpen, color: 'from-green-500 to-green-600' },
-    { title: 'Classes Today', value: '8', icon: Calendar, color: 'from-purple-500 to-purple-600' },
-    { title: 'Notifications', value: '3', icon: Bell, color: 'from-orange-500 to-orange-600' },
-  ];
+  // Function to fetch students for a specific program
+  const fetchStudents = async (allocation) => {
+    const allocationId = allocation.allocation_id;
+    
+    try {
+      setStudentsLoading(prev => ({ ...prev, [allocationId]: true }));
+      
+      const response = await api.getStudentsByFilters(
+        allocation.program_id,
+        allocation.academic_year_id,
+        allocation.semester_id,
+        allocation.division_id
+      );
+      
+      if (response.success) {
+        setStudentsData(prev => ({ ...prev, [allocationId]: response.data }));
+        // Initialize pagination for this allocation
+        setStudentsPagination(prev => ({ 
+          ...prev, 
+          [allocationId]: { currentPage: 1, totalPages: Math.ceil(response.data.length / STUDENTS_PER_PAGE) }
+        }));
+      } else {
+        console.error('Failed to fetch students:', response.message);
+      }
+    } catch (err) {
+      console.error('Error fetching students:', err);
+    } finally {
+      setStudentsLoading(prev => ({ ...prev, [allocationId]: false }));
+    }
+  };
 
-  const classes = [
-    { time: '09:00 AM', subject: 'Mathematics', students: 32, color: 'blue' },
-    { time: '11:00 AM', subject: 'Science', students: 28, color: 'green' },
-    { time: '02:00 PM', subject: 'English', students: 35, color: 'purple' },
-  ];
+  // Function to get paginated students
+  const getPaginatedStudents = (allocationId) => {
+    const students = studentsData[allocationId] || [];
+    const pagination = studentsPagination[allocationId] || { currentPage: 1 };
+    const startIndex = (pagination.currentPage - 1) * STUDENTS_PER_PAGE;
+    const endIndex = startIndex + STUDENTS_PER_PAGE;
+    return students.slice(startIndex, endIndex);
+  };
 
-  const announcements = [
-    'New course "Advanced Physics" added!',
-    'Parent-Teacher meeting on Friday',
-    'System maintenance scheduled for Sunday',
-  ];
+  // Function to change page
+  const changePage = (allocationId, newPage) => {
+    setStudentsPagination(prev => ({
+      ...prev,
+      [allocationId]: { ...prev[allocationId], currentPage: newPage }
+    }));
+  };
 
-  const quickLinks = [
-    { name: 'Academics', icon: BookOpen, path: '/academics', color: 'blue' },
-    { name: 'Student List', icon: Users, path: '/students', color: 'green' },
-    { name: 'Reports', icon: BarChart3, path: '/reports', color: 'purple' },
-    { name: 'Settings', icon: Settings, path: '/settings', color: 'gray' },
-  ];
+  useEffect(() => {
+    // Fetch profile data when component mounts
+    if (!userProfile) {
+      fetchProfile();
+    }
+  }, [userProfile, fetchProfile]);
 
+  useEffect(() => {
+    // Fetch allocated programs when user profile is available and profile view is shown
+    if (userProfile && showProfileView) {
+      fetchAllocatedPrograms();
+    }
+  }, [userProfile, showProfileView]);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+          <strong className="font-bold">Error!</strong>
+          <span className="block sm:inline"> {error}</span>
+          <button 
+            onClick={fetchProfile}
+            className="mt-2 bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // If showing profile view, render the ProfileView component
+  if (showProfileView) {
+    return (
+      <ProfileView
+        userProfile={userProfile}
+        fullName={fullName}
+        email={email}
+        phone={phone}
+        designation={designation}
+        profileImage={profileImage}
+        allocatedPrograms={allocatedPrograms}
+        programsLoading={programsLoading}
+        programsError={programsError}
+        fetchAllocatedPrograms={fetchAllocatedPrograms}
+        expandedProgram={expandedProgram}
+        setExpandedProgram={setExpandedProgram}
+        studentsData={studentsData}
+        studentsLoading={studentsLoading}
+        fetchStudents={fetchStudents}
+        studentsPagination={studentsPagination}
+        changePage={changePage}
+        getPaginatedStudents={getPaginatedStudents}
+        onBack={() => setShowProfileView(false)}
+      />
+    );
+  }
+
+  // Main dashboard view
   return (
-    <div className="min-h-screen to-indigo-100">
+    <div className="min-h-screen bg-gray-50">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        {/* Welcome Header */}
+        <WelcomeHeader
+          profileImage={profileImage}
+          fullName={fullName}
+          designation={designation}
+          userType={userType}
+          onViewProfile={() => setShowProfileView(true)}
+        />
 
+        {/* Quick Actions */}
+        {/* <QuickActions /> */}
 
-      {/* ==================== MAIN CONTENT ==================== */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-8">
-
-        {/* ---------- Welcome Card ---------- */}
-        <Link to="/teacher-profile">
-        <section className="bg-white bg-primary-600 rounded-2xl shadow-lg p-6 border border-gray-200" style={{backgroundColor:"#2162C1"}}>
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <div>
-              <h2 className="text-2xl sm:text-3xl font-bold text-primary-50 text-gray-900">
-                Welcome Back, {user?.sub || 'Admin'}!
-              </h2>
-              <p className="text-gray-600 mt-1 text-primary-50">
-                Here’s what’s happening with your classes today.
-              </p>
-            </div>
-            <BarChart3 className="w-12 h-12 text-primary-50 sm:w-16 sm:h-16 text-blue-600" />
-          </div>
-        </section>
-</Link>
-        {/* ---------- Stats Grid (2 on mobile, 4 on lg) ---------- */}
-        <section className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {stats.map((stat, idx) => {
-            const Icon = stat.icon;
-            return (
-              <div
-                key={idx}
-                className="bg-white rounded-xl shadow-md hover:shadow-xl transition-all duration-300 p-5 border border-gray-100"
-              >
-                <div className="flex items-center justify-between">
-                  <div className={`p-2.5 rounded-lg bg-gradient-to-r ${stat.color}`}>
-                    <Icon className="w-5 h-5 text-white" />
-                  </div>
-                  <div className="text-right">
-                    <p className="text-2xl font-bold text-gray-900">{stat.value}</p>
-                    <p className="text-xs text-gray-600 mt-0.5">{stat.title}</p>
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-        </section>
-
-        {/* ---------- Main Grid (Classes + Announcements) ---------- */}
-        <section className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Upcoming Classes */}
-          <div className="lg:col-span-2 space-y-4">
-            <div className="bg-white rounded-2xl shadow-lg p-5 border border-gray-200">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                <Calendar className="w-5 h-5 mr-2 text-blue-600" />
-                Upcoming Classes
-              </h3>
-              <div className="space-y-3">
-                {classes.map((cls, idx) => (
-                  <div
-                    key={idx}
-                    className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
-                  >
-                    <div className="flex items-center space-x-3 mb-2 sm:mb-0">
-                      <div
-                        className={`w-10 h-10 rounded-full bg-${cls.color}-100 flex items-center justify-center flex-shrink-0`}
-                      >
-                        <Calendar className={`w-5 h-5 text-${cls.color}-600`} />
-                      </div>
-                      <div>
-                        <p className="font-medium text-gray-900">{cls.subject}</p>
-                        <p className="text-xs text-gray-600">{cls.time}</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center justify-between sm:justify-end space-x-3">
-                      <span className="text-xs text-gray-600">{cls.students} students</span>
-                      <button className="px-3 py-1.5 bg-blue-600 text-white text-xs rounded-lg hover:bg-blue-700 transition-colors">
-                        Start Class
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* Announcements */}
-          <div className="space-y-4">
-            <div className="bg-white rounded-2xl shadow-lg p-5 border border-gray-200 sticky top-24">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                <Bell className="w-5 h-5 mr-2 text-orange-600" />
-                Notification's
-              </h3>
-              <div className="space-y-3">
-                {announcements.map((ann, idx) => (
-                  <div
-                    key={idx}
-                    className="flex items-start space-x-2 p-2.5 bg-orange-50 rounded-lg border-l-4 border-orange-500"
-                  >
-                    <Bell className="w-4 h-4 text-orange-600 mt-0.5 flex-shrink-0" />
-                    <p className="text-xs text-gray-800">{ann}</p>
-                  </div>
-                ))}
-              </div>
-              <button className="mt-4 w-full py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors text-sm">
-                View All
-              </button>
-            </div>
-          </div>
-        </section>
-
-        {/* ---------- Quick Links ---------- */}
-        <section className="bg-white rounded-2xl shadow-lg p-5 border border-gray-200">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-            <Settings className="w-5 h-5 mr-2 text-gray-600" />
-            Quick Links
-          </h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {quickLinks.map((link, idx) => {
-              const Icon = link.icon;
-              return (
-                <a
-                  key={idx}
-                  href={link.path}
-                  className={`flex items-center space-x-3 p-3 bg-gradient-to-r from-${link.color}-50 to-${link.color}-100 rounded-xl hover:shadow-md transition-all duration-200 border border-${link.color}-200`}
-                >
-                  <div className={`p-2.5 rounded-lg bg-${link.color}-100`}>
-                    <Icon className={`w-5 h-5 text-${link.color}-600`} />
-                  </div>
-                  <span className="font-medium text-gray-900">{link.name}</span>
-                </a>
-              );
-            })}
-          </div>
-        </section>
-      </main>
+        {/* Main Dashboard Content */}
+        {/* <div className="text-center py-20">
+          <div className="text-gray-400 text-6xl mb-6">🎓</div>
+          <h2 className="text-3xl font-bold text-gray-900 mb-4">Teacher Dashboard</h2>
+          <p className="text-gray-600 mb-8 max-w-md mx-auto">
+            Click on your profile to view allocated programs and manage your classes efficiently.
+          </p>
+          <button
+            onClick={() => setShowProfileView(true)}
+            className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-xl font-medium transition-colors duration-200 shadow-sm hover:shadow-md"
+          >
+            View My Profile & Programs
+          </button>
+        </div> */}
+      </div>
     </div>
   );
 };

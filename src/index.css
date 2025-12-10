@@ -43,7 +43,7 @@
   }
 
   .table-th {
-    @apply text-left px-4 py-3;
+    @apply  px-4 py-3 bg-primary-600;
   }
 
   .table-td {
