@@ -3,6 +3,7 @@ import { Search, Filter, ChevronDown } from 'lucide-react';
 import ContentApiService from '../services/contentApi';
 import { useUserProfile } from '../../../../../contexts/UserProfileContext';
 import SubjectsList from '../components/SubjectsList';
+import ModulesUnitsList from '../components/ModulesUnitsList';
 
 export default function ContentDashboard() {
   const { userProfile } = useUserProfile();
@@ -10,16 +11,22 @@ export default function ContentDashboard() {
   const [selectedProgram, setSelectedProgram] = useState('');
   const [selectedBatch, setSelectedBatch] = useState('');
   const [selectedSemester, setSelectedSemester] = useState('');
-  const [selectedVertical, setSelectedVertical] = useState('Vertical 1');
+
+  const [selectedSubTab, setSelectedSubTab] = useState(null); // For sub-tabs (verticals/specializations)
   const [searchQuery, setSearchQuery] = useState('');
   const [filterOpen, setFilterOpen] = useState(false);
   const [showFilters, setShowFilters] = useState(true); // Show filters by default
+  const [allSubjects, setAllSubjects] = useState([]); // Store all subjects before filtering
 
   // State for API data
   const [allocatedPrograms, setAllocatedPrograms] = useState([]);
   const [subjectTypes, setSubjectTypes] = useState({});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+
+  // State for modules/units display
+  const [selectedSubject, setSelectedSubject] = useState(null);
+  const [modulesData, setModulesData] = useState([]);
 
   // Dynamic paper types based on API response
   const getPaperTypes = () => {
@@ -28,7 +35,7 @@ export default function ContentDashboard() {
       const typeInfo = subjectTypes[typeName].type_info;
       let color = 'bg-primary-600 text-gray-50 border-gray-200';
 
-      
+
       types.push({
         id: typeName,
         label: typeInfo.type_name,
@@ -39,28 +46,111 @@ export default function ContentDashboard() {
     return types;
   };
 
-  // Get vertical options from API response
-  const getVerticalOptions = () => {
-    if (subjectTypes.vertical?.verticals) {
-      return subjectTypes.vertical.verticals.map(vertical => ({
-        id: vertical.id,
+  const paperTypes = getPaperTypes();
+
+
+  // Get sub-tabs based on selected paper type
+  const getSubTabs = () => {
+    const currentType = subjectTypes[selectedPaperType.toLowerCase()];
+    if (!currentType) return [];
+
+    if (selectedPaperType.toLowerCase() === 'vertical') {
+      // For vertical, use verticals as sub-tabs
+      return currentType.verticals?.map(vertical => ({
+        id: vertical.id, // Fix: API uses 'id' for verticals in subjectTypes
         name: vertical.name,
         code: vertical.code,
-        count: vertical.subject_count
-      }));
+        type: 'vertical'
+      })) || [];
+    } else {
+      // For non-vertical types, use specializations from subjects
+      return getSpecializationsFromSubjects();
     }
-    return [];
   };
 
-  const paperTypes = getPaperTypes();
-  const verticalOptions = getVerticalOptions();
+  // Get unique specializations from all subjects
+  const getSpecializationsFromSubjects = () => {
+    if (!allSubjects || allSubjects.length === 0) return [];
+
+    const specializationsMap = new Map();
+    let hasSubjectsWithoutSpecialization = false;
+
+    allSubjects.forEach(subject => {
+      // Check if subject has no specialization
+      if (!subject.specialization || subject.specialization === null) {
+        hasSubjectsWithoutSpecialization = true;
+      }
+
+      if (subject.specializations && subject.specializations.length > 0) {
+        subject.specializations.forEach(spec => {
+          // Include all specializations (even deleted ones) since subjects might reference them
+          specializationsMap.set(spec.specialization_id, {
+            id: spec.specialization_id,
+            name: spec.name,
+            code: spec.code,
+            type: 'specialization'
+          });
+        });
+      }
+    });
+
+    const specializations = Array.from(specializationsMap.values());
+
+    // Add "General" option for subjects without specialization
+    if (hasSubjectsWithoutSpecialization) {
+      specializations.unshift({
+        id: null,
+        name: "General",
+        code: "general",
+        type: 'specialization'
+      });
+    }
+
+    return specializations;
+  };
+
+  const availableSubTabs = getSubTabs();
+
+  // Filter subjects based on selected sub-tab
+  const getFilteredSubjects = () => {
+    if (!selectedSubTab || !allSubjects) return allSubjects;
+
+    if (selectedSubTab.type === 'vertical') {
+      // Filter by vertical
+      return allSubjects.filter(subject => {
+        return subject.verticals && subject.verticals.some(vertical =>
+          // Use loose equality or ensure types match, and ignore is_deleted for now as it causes issues with test data
+          vertical.vertical_id == selectedSubTab.id
+        );
+      });
+    } else if (selectedSubTab.type === 'specialization') {
+      // Filter by specialization
+      if (selectedSubTab.id === null) {
+        // "General" - subjects without specialization
+        return allSubjects.filter(subject =>
+          !subject.specialization || subject.specialization === null
+        );
+      } else {
+        // Specific specialization
+        return allSubjects.filter(subject => {
+          const subjectSpecializationId = subject.specialization ?
+            parseInt(subject.specialization) : null;
+          return subjectSpecializationId === selectedSubTab.id;
+        });
+      }
+    }
+
+    return allSubjects;
+  };
+
+  const filteredSubjects = getFilteredSubjects();
 
   // Fetch allocated programs when user profile is available
   useEffect(() => {
     const fetchAllocatedPrograms = async () => {
       console.log("userProfile", userProfile);
       console.log("teacher_id", userProfile?.teacher_id);
-      
+
       if (!userProfile || !userProfile.teacher_id) {
         console.log('Teacher ID not available yet, waiting for user profile...');
         return;
@@ -71,23 +161,23 @@ export default function ContentDashboard() {
       setError(null);
       try {
         const teacherId = userProfile.teacher_id;
-        
+
         const response = await ContentApiService.getAllocatedPrograms(teacherId);
-        
+
         // Process the API response to group by programs
         if (response.success && response.data?.allocations) {
           const processedPrograms = processAllocationsData(response.data.allocations);
           setAllocatedPrograms(processedPrograms);
-          
+
           // Auto-select first program, batch, and semester
           if (processedPrograms.length > 0) {
             const firstProgram = processedPrograms[0];
             setSelectedProgram(firstProgram.id.toString());
-            
+
             if (firstProgram.batches.length > 0) {
               setSelectedBatch(firstProgram.batches[0].id.toString());
             }
-            
+
             if (firstProgram.semesters.length > 0) {
               setSelectedSemester(firstProgram.semesters[0].id.toString());
             }
@@ -109,10 +199,10 @@ export default function ContentDashboard() {
   // Process allocations data to group by programs
   const processAllocationsData = (allocations) => {
     const programsMap = new Map();
-    
+
     allocations.forEach(allocation => {
       const programId = allocation.program_id;
-      
+
       if (!programsMap.has(programId)) {
         programsMap.set(programId, {
           id: programId,
@@ -123,9 +213,9 @@ export default function ContentDashboard() {
           semesters: new Map()
         });
       }
-      
+
       const program = programsMap.get(programId);
-      
+
       // Add batch if not exists
       if (allocation.batch) {
         program.batches.set(allocation.batch.batch_id, {
@@ -134,7 +224,7 @@ export default function ContentDashboard() {
           code: allocation.batch.batch_code
         });
       }
-      
+
       // Add semester if not exists
       if (allocation.semester) {
         program.semesters.set(allocation.semester_id, {
@@ -144,7 +234,7 @@ export default function ContentDashboard() {
         });
       }
     });
-    
+
     // Convert Maps to Arrays
     return Array.from(programsMap.values()).map(program => ({
       ...program,
@@ -156,7 +246,7 @@ export default function ContentDashboard() {
   // Process subject types API response
   const processSubjectTypesData = (apiData) => {
     const processedTypes = {};
-    
+
     if (apiData.type_buttons) {
       apiData.type_buttons.forEach(typeButton => {
         const typeName = typeButton.type_name.toLowerCase();
@@ -167,7 +257,7 @@ export default function ContentDashboard() {
         };
       });
     }
-    
+
     return processedTypes;
   };
 
@@ -181,13 +271,13 @@ export default function ContentDashboard() {
           // Get academic year ID from selected program data
           const selectedProgramData = allocatedPrograms.find(p => p.id.toString() === selectedProgram);
           const academicYearId = selectedProgramData?.academicYearId;
-          
+
           if (!academicYearId) {
             throw new Error('Academic year ID not found for selected program');
           }
-          
+
           const response = await ContentApiService.getSubjectTypes(academicYearId, selectedSemester);
-          
+
           if (response.success && response.data) {
             // Process the new API response structure
             const processedTypes = processSubjectTypesData(response.data);
@@ -209,7 +299,55 @@ export default function ContentDashboard() {
     fetchSubjectTypes();
   }, [selectedProgram, selectedSemester, allocatedPrograms]);
 
+  // Auto-select first sub-tab when sub-tabs are available
+  useEffect(() => {
+    if (availableSubTabs.length > 0 && !selectedSubTab) {
+      setSelectedSubTab(availableSubTabs[0]);
+    } else if (availableSubTabs.length === 0) {
+      setSelectedSubTab(null);
+    }
+  }, [availableSubTabs.length]);
+
+  // Reset sub-tab and selected subject when paper type changes
+  useEffect(() => {
+    setSelectedSubTab(null);
+    setAllSubjects([]);
+    setSelectedSubject(null);
+    setModulesData([]);
+  }, [selectedPaperType]);
+
   const selectedProgramData = allocatedPrograms.find(p => p.id.toString() === selectedProgram);
+
+  const handleSubjectClick = async (subject) => {
+    console.log('Subject clicked:', subject);
+
+    if (!subject || !subject.subject_id) {
+      console.error('Invalid subject data');
+      return;
+    }
+
+    // Set selected subject immediately to show loading/selection state
+    setSelectedSubject(subject);
+    setModulesData([]); // Clear previous data while fetching
+
+    try {
+      // Don't set global loading as it hides the subject list, user might want to see the list while fetching content details
+      // Or we can use a separate loading state for modules
+      const response = await ContentApiService.getModulesAndUnits(subject.subject_id);
+
+      if (response.success && response.data) {
+        // The API returns the subject object with 'modules' array inside it
+        // based on the user provided example: { subject_id, subject_name, modules: [...] }
+        const subjectData = response.data;
+        setModulesData(subjectData.modules || []);
+      } else {
+        setModulesData([]);
+      }
+    } catch (error) {
+      console.error('Error fetching modules and units:', error);
+      // Optional: Show a toast notification instead of alert
+    }
+  };
 
   return (
     <div className="p-4 space-y-6">
@@ -225,7 +363,7 @@ export default function ContentDashboard() {
             <span className="text-gray-700">Filter</span>
             <ChevronDown className={`w-4 h-4 text-gray-500 transition-transform ${showFilters ? 'rotate-180' : ''}`} />
           </button>
-          
+
           {filterOpen && (
             <div className="absolute top-full left-0 mt-2 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-10">
               <div className="p-2">
@@ -258,11 +396,10 @@ export default function ContentDashboard() {
             <button
               key={type.id}
               onClick={() => setSelectedPaperType(type.label)}
-              className={`px-4 py-2 rounded-lg font-medium transition-colors border ${
-                selectedPaperType === type.label
-                  ? type.color
-                  : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
-              }`}
+              className={`px-4 py-2 rounded-lg font-medium transition-colors border ${selectedPaperType === type.label
+                ? type.color
+                : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
+                }`}
             >
               {type.label}
             </button>
@@ -275,84 +412,86 @@ export default function ContentDashboard() {
         <>
           {/* Second Row - Program, Batch, Semester dropdowns */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {/* Program Dropdown */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Program</label>
-          <select
-            value={selectedProgram}
-            onChange={(e) => {
-              setSelectedProgram(e.target.value);
-              setSelectedBatch('');
-              setSelectedSemester('');
-            }}
-            disabled={loading}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white disabled:bg-gray-100 disabled:cursor-not-allowed"
-          >
-            <option value="">select program</option>
-            {allocatedPrograms.map((program) => (
-              <option key={program.id} value={program.id}>
-                {program.name}
-              </option>
-            ))}
-          </select>
-        </div>
+            {/* Program Dropdown */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Program</label>
+              <select
+                value={selectedProgram}
+                onChange={(e) => {
+                  setSelectedProgram(e.target.value);
+                  setSelectedBatch('');
+                  setSelectedSemester('');
+                }}
+                disabled={loading}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white disabled:bg-gray-100 disabled:cursor-not-allowed"
+              >
+                <option value="">select program</option>
+                {allocatedPrograms.map((program) => (
+                  <option key={program.id} value={program.id}>
+                    {program.name}
+                  </option>
+                ))}
+              </select>
+            </div>
 
-        {/* Batch Dropdown */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Batch</label>
-          <select
-            value={selectedBatch}
-            onChange={(e) => setSelectedBatch(e.target.value)}
-            disabled={!selectedProgram || loading}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white disabled:bg-gray-100 disabled:cursor-not-allowed"
-          >
-            <option value="">select batch</option>
-            {selectedProgramData?.batches?.map((batch) => (
-              <option key={batch.id} value={batch.id}>
-                {batch.name}
-              </option>
-            ))}
-          </select>
-        </div>
+            {/* Batch Dropdown */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Batch</label>
+              <select
+                value={selectedBatch}
+                onChange={(e) => setSelectedBatch(e.target.value)}
+                disabled={!selectedProgram || loading}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white disabled:bg-gray-100 disabled:cursor-not-allowed"
+              >
+                <option value="">select batch</option>
+                {selectedProgramData?.batches?.map((batch) => (
+                  <option key={batch.id} value={batch.id}>
+                    {batch.name}
+                  </option>
+                ))}
+              </select>
+            </div>
 
-        {/* Semester Dropdown */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Semester</label>
-          <select
-            value={selectedSemester}
-            onChange={(e) => setSelectedSemester(e.target.value)}
-            disabled={!selectedProgram || loading}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white disabled:bg-gray-100 disabled:cursor-not-allowed"
-          >
-            <option value="">select semester</option>
-            {selectedProgramData?.semesters?.map((semester) => (
-              <option key={semester.id} value={semester.id}>
-                {semester.name}
-              </option>
-            ))}
-          </select>
-        </div>
-      </div>
+            {/* Semester Dropdown */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Semester</label>
+              <select
+                value={selectedSemester}
+                onChange={(e) => setSelectedSemester(e.target.value)}
+                disabled={!selectedProgram || loading}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white disabled:bg-gray-100 disabled:cursor-not-allowed"
+              >
+                <option value="">select semester</option>
+                {selectedProgramData?.semesters?.map((semester) => (
+                  <option key={semester.id} value={semester.id}>
+                    {semester.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
 
-      {/* Third Row - Vertical filter buttons */}
-      {selectedPaperType === 'Vertical' && verticalOptions.length > 0 && (
+
+        </>
+      )}
+
+      {/* Sub-tabs Row */}
+      {availableSubTabs.length > 0 && (
         <div className="flex flex-wrap gap-2">
-          {verticalOptions.map((vertical) => (
+
+          {availableSubTabs.map((subTab, index) => (
             <button
-              key={vertical.id}
-              onClick={() => setSelectedVertical(vertical.name)}
-              className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                selectedVertical === vertical.name
-                  ? 'bg-orange-500 text-white'
-                  : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
-              }`}
+              key={`${subTab.type || 'tab'}-${subTab.id ?? 'general'}-${index}`}
+              onClick={() => setSelectedSubTab(subTab)}
+              className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${selectedSubTab?.id === subTab.id
+                ? 'bg-blue-600 text-white'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
             >
-              {vertical.name} 
+              {subTab.name}
             </button>
           ))}
         </div>
-      )}
-        </>
       )}
 
       {/* Content Area */}
@@ -374,13 +513,25 @@ export default function ContentDashboard() {
             <span className="ml-2 text-gray-600">Loading...</span>
           </div>
         ) : selectedProgram && selectedSemester && subjectTypes[selectedPaperType.toLowerCase()] ? (
-          <SubjectsList
-            subjectTypes={subjectTypes}
-            selectedPaperType={selectedPaperType}
-            academicYearId={selectedProgramData?.academicYearId}
-            semesterId={selectedSemester}
-            selectedProgramData={selectedProgramData}
-          />
+          <>
+            <SubjectsList
+              subjectTypes={subjectTypes}
+              selectedPaperType={selectedPaperType}
+              academicYearId={selectedProgramData?.academicYearId}
+              semesterId={selectedSemester}
+              selectedProgramData={selectedProgramData}
+              filteredSubjects={filteredSubjects}
+              setAllSubjects={setAllSubjects}
+              onSubjectClick={handleSubjectClick}
+              selectedSubjectId={selectedSubject?.subject_id}
+            />
+            {selectedSubject && (
+              <ModulesUnitsList
+                modules={modulesData}
+                colorCode={selectedSubject.color_code || "#3b82f6"}
+              />
+            )}
+          </>
         ) : (
           <div className="text-center py-12">
             <div className="text-gray-500 mb-4">
@@ -398,12 +549,12 @@ export default function ContentDashboard() {
                 <p>Semester: {selectedProgramData?.semesters?.find(s => s.id.toString() === selectedSemester)?.name}</p>
                 {selectedBatch && <p>Batch: {selectedProgramData?.batches?.find(b => b.id.toString() === selectedBatch)?.name}</p>}
                 <p>Paper Type: {selectedPaperType}</p>
-                {selectedPaperType === 'Vertical' && <p>Vertical: {selectedVertical}</p>}
+
               </div>
             )}
           </div>
         )}
       </div>
-    </div>
+    </div >
   );
 }

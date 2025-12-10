@@ -6,7 +6,11 @@ export default function SubjectsList({
   selectedPaperType,
   academicYearId,
   semesterId,
-  selectedProgramData
+  selectedProgramData,
+  filteredSubjects,
+  setAllSubjects,
+  onSubjectClick,
+  selectedSubjectId
 }) {
 
   const [selectedTab, setSelectedTab] = useState(null);
@@ -19,35 +23,18 @@ export default function SubjectsList({
     const currentType = subjectTypes[selectedPaperType.toLowerCase()];
     if (!currentType) return [];
 
-    const tabs = [];
+    const typeInfo = currentType?.type_info;
+    if (!typeInfo) return [];
 
-    // Add verticals as tabs
-    if (currentType.verticals?.length > 0) {
-      currentType.verticals.forEach(vertical => {
-        tabs.push({
-          id: vertical.id,
-          name: vertical.name,
-          type: 'vertical',
-          count: vertical.subject_count,
-          code: vertical.code
-        });
-      });
-    }
-
-    // Add specializations as tabs
-    if (currentType.specializations?.length > 0) {
-      currentType.specializations.forEach(specialization => {
-        tabs.push({
-          id: specialization.id,
-          name: specialization.name,
-          type: 'specialization',
-          count: specialization.subject_count,
-          code: specialization.code
-        });
-      });
-    }
-
-    return tabs;
+    return [
+      {
+        id: typeInfo.type_id,
+        name: typeInfo.type_name,
+        type: "type_info",
+        count: typeInfo.subject_count,
+        code: typeInfo.type_code,
+      }
+    ];
   };
 
   const availableTabs = getAvailableTabs();
@@ -83,7 +70,12 @@ export default function SubjectsList({
           console.log('API Response:', response);
 
           if (response.success && response.data) {
-            setSubjects(response.data || []);
+            const fetchedSubjects = response.data || [];
+            setSubjects(fetchedSubjects);
+            // Pass all subjects to parent for filtering
+            if (setAllSubjects) {
+              setAllSubjects(fetchedSubjects);
+            }
           } else {
             throw new Error('Invalid response format');
           }
@@ -109,12 +101,18 @@ export default function SubjectsList({
     }
   }, [availableTabs.length, academicYearId, semesterId, subjectTypes, selectedPaperType]);
 
-
   // Reset when paper type changes
   useEffect(() => {
     setSelectedTab(null);
     setSubjects([]);
   }, [selectedPaperType]);
+
+  // Update subjects when filtered subjects change
+  useEffect(() => {
+    if (filteredSubjects) {
+      setSubjects(filteredSubjects);
+    }
+  }, [filteredSubjects]);
 
   if (!subjectTypes[selectedPaperType.toLowerCase()]) {
     return null;
@@ -124,59 +122,52 @@ export default function SubjectsList({
 
   return (
     <div>
-      <h3 className="text-lg font-medium text-gray-900 mb-4">
-        {selectedPaperType} Subjects - {selectedProgramData?.name} (Semester {selectedProgramData?.semesters?.find(s => s.id.toString() === semesterId)?.name})
-      </h3>
-
-
       {/* Show tab buttons */}
       {availableTabs.length > 0 ? (
         <div>
-
-
-
+          {/* Subjects Grid */}
           <div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {subjects.map((subject, index) => {
-                console.log('Rendering subject:', subject);
-                return (
-                  <div
+            {loading ? (
+              <div className="text-center py-8">
+                <div className="text-gray-500">Loading subjects...</div>
+              </div>
+            ) : error ? (
+              <div className="text-center py-8">
+                <div className="text-red-500">{error}</div>
+              </div>
+            ) : subjects.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                {subjects.map((subject, index) => (
+                  <button
                     key={subject.subject_id || index}
-                    className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow"
+                    onClick={() => onSubjectClick && onSubjectClick(subject)}
+                    className={`w-full py-2 px-3 rounded-md text-white text-sm font-medium shadow transition-all duration-200 transform ${selectedSubjectId === subject.subject_id
+                      ? 'translate-y-[-2px] ring-2 ring-offset-2 ring-offset-white opacity-100 shadow-md scale-[1.02]'
+                      : 'hover:opacity-90 hover:scale-[1.01]'
+                      }`}
+                    style={{
+                      backgroundColor: subject.color_code || "#3b82f6",
+                      // Use outline color that matches background if selected
+                      '--tw-ring-color': subject.color_code || "#3b82f6"
+                    }}
                   >
-                    <h6 className="font-medium text-gray-900 mb-2">
-                      {subject.name}
-                    </h6>
-                    {subject.subject_code && (
-                      <p className="text-sm text-gray-500 mb-2">
-                        Subject Code: {subject.subject_code}
-                      </p>
-                    )}
-                    {subject.paper_code && (
-                      <p className="text-sm text-gray-500 mb-2">
-                        Paper Code: {subject.paper_code}
-                      </p>
-                    )}
-                    {subject.credits && (
-                      <p className="text-sm text-gray-500 mb-2">
-                        Credits: {subject.credits}
-                      </p>
-                    )}
-                    {subject.color_code && (
-                      <div className="flex items-center mt-2">
-                        <div
-                          className="w-4 h-4 rounded-full mr-2"
-                          style={{ backgroundColor: subject.color_code }}
-                        ></div>
-                        <span className="text-xs text-gray-400">Color Code</span>
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
+                    {subject.name}
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                <div className="text-gray-500 mb-2">
+                  <svg className="w-12 h-12 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                </div>
+                <p className="text-gray-600">
+                  No subjects available for this selection.
+                </p>
+              </div>
+            )}
           </div>
-
         </div>
       ) : (
         <div className="text-center py-8">

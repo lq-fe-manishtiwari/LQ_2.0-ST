@@ -1,10 +1,10 @@
-import { apiRequest, DevAPI,COREAPI, authHeader } from '../../../../../_services/api';
+import { apiRequest, DevAPI, COREAPI, authHeader } from '../../../../../_services/api';
 
 /**
  * Content API service for handling teacher content dashboard data
  */
 export class ContentApiService {
-  
+
   /**
    * Fetch allocated programs for a teacher
    * @param {string} teacherId - The teacher's ID
@@ -16,11 +16,11 @@ export class ContentApiService {
         method: 'GET',
         headers: authHeader()
       });
-      
+
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
-      
+
       const data = await response.json();
       return {
         success: true,
@@ -45,11 +45,11 @@ export class ContentApiService {
         method: 'GET',
         headers: authHeader()
       });
-      
+
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
-      
+
       const data = await response.json();
       return {
         success: true,
@@ -75,11 +75,11 @@ export class ContentApiService {
         method: 'GET',
         headers: authHeader()
       });
-      
+
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
-      
+
       const data = await response.json();
       return {
         success: true,
@@ -87,6 +87,33 @@ export class ContentApiService {
       };
     } catch (error) {
       console.error('Error fetching subjects by tab:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Fetch modules and units for a specific subject
+   * @param {string} subjectId - The subject ID
+   * @returns {Promise} API response with modules and units
+   */
+  static async getModulesAndUnits(subjectId) {
+    try {
+      const response = await fetch(`${COREAPI}/admin/academic/api/subjects/${subjectId}/modules-units`, {
+        method: 'GET',
+        headers: authHeader()
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      return {
+        success: true,
+        data: data
+      };
+    } catch (error) {
+      console.error('Error fetching modules and units:', error);
       throw error;
     }
   }
