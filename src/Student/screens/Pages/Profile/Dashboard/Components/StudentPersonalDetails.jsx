@@ -35,6 +35,26 @@ const StudentPersonalDetails = ({ studentData, studentName, profileImage, onProf
       value: studentData?.date_of_admission ? new Date(studentData.date_of_admission).toLocaleDateString() : "Not provided", 
       icon: <Calendar className="w-5 h-5 text-pink-500" /> 
     },
+    { label: "Blood Group", value: studentData?.blood_group || "Not provided", icon: <User className="w-5 h-5 text-red-500" /> },
+    { label: "Mother Tongue", value: studentData?.mother_tongue || "Not provided", icon: <User className="w-5 h-5 text-blue-600" /> },
+    { label: "Birth Place", value: studentData?.birth_place || "Not provided", icon: <MapPin className="w-5 h-5 text-green-600" /> },
+    { label: "Nationality", value: studentData?.nationality || "Not provided", icon: <User className="w-5 h-5 text-blue-600" /> },
+    { label: "Caste", value: studentData?.caste || "Not provided", icon: <User className="w-5 h-5 text-blue-600" /> },
+    { label: "Sub Caste", value: studentData?.sub_caste || "Not provided", icon: <User className="w-5 h-5 text-blue-600" /> },
+    { label: "Caste Category", value: studentData?.caste_category || "Not provided", icon: <User className="w-5 h-5 text-blue-600" /> },
+    { label: "Religion", value: studentData?.religion || "Not provided", icon: <User className="w-5 h-5 text-blue-600" /> },
+    { label: "Class House", value: studentData?.class_house || "Not provided", icon: <User className="w-5 h-5 text-blue-600" /> },
+    { label: "Weight (kg)", value: studentData?.weight || "Not provided", icon: <User className="w-5 h-5 text-blue-600" /> },
+    { label: "Native Place", value: studentData?.native_place || "Not provided", icon: <MapPin className="w-5 h-5 text-green-600" /> },
+  ];
+
+  const identificationInfo = [
+    { label: "Aadhaar Number", value: studentData?.aadhaar_number || "Not provided", icon: <User className="w-5 h-5 text-indigo-500" /> },
+    { label: "Name As Per Aadhaar", value: studentData?.name_as_per_aadhaar || "Not provided", icon: <User className="w-5 h-5 text-indigo-500" /> },
+    { label: "PRN", value: studentData?.prn || "Not provided", icon: <User className="w-5 h-5 text-indigo-500" /> },
+    { label: "Admission Number", value: studentData?.admission_number || "Not provided", icon: <User className="w-5 h-5 text-indigo-500" /> },
+    { label: "Roll Number", value: studentData?.roll_number || "Not provided", icon: <User className="w-5 h-5 text-indigo-500" /> },
+    { label: "Saral ID", value: studentData?.saral_id || "Not provided", icon: <User className="w-5 h-5 text-indigo-500" /> },
   ];
 
   const addressInfo = [
@@ -67,6 +87,7 @@ const StudentPersonalDetails = ({ studentData, studentName, profileImage, onProf
   return (
     <div className="space-y-10">
       {renderSection("Personal Information", <User />, personalInfo, "text-blue-600")}
+      {renderSection("Identification Information", <User />, identificationInfo, "text-indigo-500")}
       {renderSection("Address Information", <MapPin />, addressInfo, "text-green-600")}
 
       {/* PROFILE PICTURE SECTION */}

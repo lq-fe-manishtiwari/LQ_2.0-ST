@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import { ArrowLeft, User, GraduationCap, MessageCircle, Bus, FileText } from "lucide-react";
+import moment from "moment";
 import StudentPersonalDetails from "./Components/StudentPersonalDetails";
 import StudentEducationalDetails from "./Components/StudentEducationalDetails";
 import StudentCommunicationDetails from "./Components/StudentCommunicationDetails";
@@ -25,7 +26,6 @@ export default function ProfileDashboard() {
   const profileImage = null; // Set to null or image URL
 
   const handleProfileUpload = async (file) => {
-    // Add your upload logic here
     console.log('Uploading file:', file);
   };
 
@@ -51,7 +51,53 @@ export default function ProfileDashboard() {
         return <StudentTransportDetails studentData={studentData} />;
 
       case 'academic':
-        return <StudentAcademicJourney studentData={studentData} historyLoading={historyLoading} />;
+        // Dummy academic history data
+        const dummyHistory = [
+          {
+            class_name: "BCA Semester 6",
+            academic_year_name: "2023-2024",
+            semester_name: "Semester 6",
+            batch_name: "Batch 2021-2024",
+            division_name: "Division A",
+            roll_number: "21BCA045",
+            is_active: true,
+            allocated_at: moment().subtract(6, 'months').unix(),
+            promoted_at: null,
+            deallocated_at: null
+          },
+          {
+            class_name: "BCA Semester 5",
+            academic_year_name: "2023-2024",
+            semester_name: "Semester 5",
+            batch_name: "Batch 2021-2024",
+            division_name: "Division A",
+            roll_number: "21BCA045",
+            is_active: false,
+            allocated_at: moment().subtract(12, 'months').unix(),
+            promoted_at: moment().subtract(6, 'months').unix(),
+            deallocated_at: null
+          },
+          {
+            class_name: "BCA Semester 4",
+            academic_year_name: "2022-2023",
+            semester_name: "Semester 4",
+            batch_name: "Batch 2021-2024",
+            division_name: "Division B",
+            roll_number: "21BCA045",
+            is_active: false,
+            allocated_at: moment().subtract(18, 'months').unix(),
+            promoted_at: moment().subtract(12, 'months').unix(),
+            deallocated_at: null
+          }
+        ];
+        
+        return (
+          <StudentAcademicJourney 
+            studentData={studentData} 
+            historyLoading={historyLoading}
+            enrichedHistory={dummyHistory}
+          />
+        );
 
       default:
         return null;
@@ -96,7 +142,7 @@ export default function ProfileDashboard() {
               <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">
                 {studentName}
               </h1>
-              <p className="text-lg text-gray-600 mb-2">Student</p>
+              {/* <p className="text-lg text-gray-600 mb-2">Student</p> */}
 
               {/* Tags */}
               <div className="flex flex-wrap justify-center md:justify-start gap-2 mt-2">
