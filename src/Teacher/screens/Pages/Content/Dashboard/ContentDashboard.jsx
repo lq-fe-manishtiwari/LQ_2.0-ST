@@ -145,6 +145,12 @@ export default function ContentDashboard() {
 
   const filteredSubjects = getFilteredSubjects();
 
+  // Clear selected subject when sub-tab changes
+  useEffect(() => {
+    setSelectedSubject(null);
+    setModulesData([]);
+  }, [selectedSubTab]);
+
   // Fetch allocated programs when user profile is available
   useEffect(() => {
     const fetchAllocatedPrograms = async () => {
@@ -282,6 +288,11 @@ export default function ContentDashboard() {
             // Process the new API response structure
             const processedTypes = processSubjectTypesData(response.data);
             setSubjectTypes(processedTypes);
+            
+            // Auto-select first available paper type
+            if (response.data.type_buttons && response.data.type_buttons.length > 0) {
+              setSelectedPaperType(response.data.type_buttons[0].type_name);
+            }
           } else {
             throw new Error('Invalid response format');
           }
@@ -301,20 +312,14 @@ export default function ContentDashboard() {
 
   // Auto-select first sub-tab when sub-tabs are available
   useEffect(() => {
-    if (availableSubTabs.length > 0 && !selectedSubTab) {
+    if (availableSubTabs.length > 0) {
       setSelectedSubTab(availableSubTabs[0]);
-    } else if (availableSubTabs.length === 0) {
+    } else {
       setSelectedSubTab(null);
     }
-  }, [availableSubTabs.length]);
-
-  // Reset sub-tab and selected subject when paper type changes
-  useEffect(() => {
-    setSelectedSubTab(null);
-    setAllSubjects([]);
     setSelectedSubject(null);
     setModulesData([]);
-  }, [selectedPaperType]);
+  }, [availableSubTabs.length, selectedPaperType]);
 
   const selectedProgramData = allocatedPrograms.find(p => p.id.toString() === selectedProgram);
 
@@ -483,7 +488,7 @@ export default function ContentDashboard() {
             <button
               key={`${subTab.type || 'tab'}-${subTab.id ?? 'general'}-${index}`}
               onClick={() => setSelectedSubTab(subTab)}
-              className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${selectedSubTab?.id === subTab.id
+              className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${selectedSubTab?.id == subTab.id && selectedSubTab?.type === subTab.type
                 ? 'bg-blue-600 text-white'
                 : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                 }`}
@@ -541,15 +546,15 @@ export default function ContentDashboard() {
             </div>
             <h3 className="text-lg font-medium text-gray-900 mb-2">Content Dashboard</h3>
             <p className="text-gray-600 mb-4">
-              Select Program and Semester to view available content.
+              {selectedProgram && selectedSemester && !subjectTypes[selectedPaperType.toLowerCase()] 
+                ? 'Content not available' 
+                : 'Select Program and Semester to view available content.'}
             </p>
-            {selectedProgram && selectedSemester && (
+            {selectedProgram && selectedSemester && subjectTypes[selectedPaperType.toLowerCase()] && (
               <div className="text-sm text-gray-500 space-y-1">
                 <p>Selected: {selectedProgramData?.name}</p>
                 <p>Semester: {selectedProgramData?.semesters?.find(s => s.id.toString() === selectedSemester)?.name}</p>
                 {selectedBatch && <p>Batch: {selectedProgramData?.batches?.find(b => b.id.toString() === selectedBatch)?.name}</p>}
-                <p>Paper Type: {selectedPaperType}</p>
-
               </div>
             )}
           </div>

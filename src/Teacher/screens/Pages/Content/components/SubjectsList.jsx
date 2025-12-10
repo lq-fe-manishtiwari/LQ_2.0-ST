@@ -81,7 +81,6 @@ export default function SubjectsList({
           }
         } catch (error) {
           console.error('Error fetching subjects:', error);
-          setError(`Failed to load subjects: ${error.message}`);
           setSubjects([]);
         } finally {
           setLoading(false);
@@ -130,10 +129,6 @@ export default function SubjectsList({
             {loading ? (
               <div className="text-center py-8">
                 <div className="text-gray-500">Loading subjects...</div>
-              </div>
-            ) : error ? (
-              <div className="text-center py-8">
-                <div className="text-red-500">{error}</div>
               </div>
             ) : subjects.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
