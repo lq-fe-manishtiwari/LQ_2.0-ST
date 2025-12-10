@@ -1,4 +1,4 @@
-import { apiRequest, DevAPI, authHeader } from '../../../../../_services/api';
+import { apiRequest, DevAPI,COREAPI, authHeader } from '../../../../../_services/api';
 
 /**
  * Content API service for handling teacher content dashboard data
@@ -12,7 +12,7 @@ export class ContentApiService {
    */
   static async getAllocatedPrograms(teacherId) {
     try {
-      const response = await fetch(`https://lq-new-api.learnqoch.com/core/api/teacher/allocated-program/${teacherId}`, {
+      const response = await fetch(`${DevAPI}/teacher/allocated-program/${teacherId}`, {
         method: 'GET',
         headers: authHeader()
       });
@@ -34,13 +34,14 @@ export class ContentApiService {
 
   /**
    * Fetch subject types for a specific program and semester
-   * @param {string} programId - The program ID
+   * @param {string} academicYearId - The program ID
    * @param {string} semesterId - The semester ID
    * @returns {Promise} API response with subject types
    */
-  static async getSubjectTypes(programId, semesterId) {
+  static async getSubjectTypes(academicYearId, semesterId) {
+    // /subjects/types-ui/academic-year/{academicYearId}/semester/{semesterId}
     try {
-      const response = await fetch(`${DevAPI}/admin/academic/subjects/types-ui/program/${programId}/semester/${semesterId}`, {
+      const response = await fetch(`${COREAPI}/admin/academic/api/teacher/subjects/types-ui/academic-year/${academicYearId}/semester/${semesterId}`, {
         method: 'GET',
         headers: authHeader()
       });

@@ -193,6 +193,7 @@ export function authHeaderToDownloadReport() {
 export const DevAPI = import.meta.env.VITE_API_URL;
 export const PMSAPI = import.meta.env.VITE_API_URL_PMS;
 export const PMSNEWAPI = import.meta.env.VITE_API_URL_PMSNEW;
+export const COREAPI = import.meta.env.VITE_API_CORE;
 
 // ========== DEFAULT FETCH HELPER ==========
 export function apiRequest(url, options = {}) {

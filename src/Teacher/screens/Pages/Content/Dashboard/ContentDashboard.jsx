@@ -113,6 +113,7 @@ export default function ContentDashboard() {
           id: programId,
           name: allocation.program.program_name,
           code: allocation.program.program_code,
+          academicYearId: allocation.academic_year_id, // Add academic year ID
           batches: new Map(),
           semesters: new Map()
         });
@@ -172,7 +173,15 @@ export default function ContentDashboard() {
         setLoading(true);
         setError(null);
         try {
-          const response = await ContentApiService.getSubjectTypes(selectedProgram, selectedSemester);
+          // Get academic year ID from selected program data
+          const selectedProgramData = allocatedPrograms.find(p => p.id.toString() === selectedProgram);
+          const academicYearId = selectedProgramData?.academicYearId;
+          
+          if (!academicYearId) {
+            throw new Error('Academic year ID not found for selected program');
+          }
+          
+          const response = await ContentApiService.getSubjectTypes(academicYearId, selectedSemester);
           
           if (response.success && response.data) {
             // Process the new API response structure
@@ -193,7 +202,7 @@ export default function ContentDashboard() {
     };
 
     fetchSubjectTypes();
-  }, [selectedProgram, selectedSemester]);
+  }, [selectedProgram, selectedSemester, allocatedPrograms]);
 
   const selectedProgramData = allocatedPrograms.find(p => p.id.toString() === selectedProgram);
 
