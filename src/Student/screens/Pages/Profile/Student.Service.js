@@ -12,6 +12,6 @@ function getStudentHistory(studentId) {
   };
 
   
-  return fetch(`${DevAPI}/api/admin/students/student/${studentId}/history`, requestOptions)
+  return fetch(`${DevAPI}/admin/students/student/${studentId}/history`, requestOptions)
     .then(handleResponse);
 }

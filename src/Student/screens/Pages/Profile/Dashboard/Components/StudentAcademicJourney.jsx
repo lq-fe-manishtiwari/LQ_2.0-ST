@@ -1,21 +1,79 @@
-import React from "react";
-import { GraduationCap } from "lucide-react";
+import React, { useEffect, useState } from "react";
+import { GraduationCap, History } from "lucide-react";
 import moment from "moment";
+import { StudentService } from "../../Student.Service";
+import { useUserProfile } from "@/contexts/UserProfileContext";
 
 const StudentAcademicJourney = ({ studentData, historyLoading, enrichedHistory = [] }) => {
+  const { userProfile } = useUserProfile();
+  const [historyLoadingLocal, setHistoryLoadingLocal] = useState(false);
+  const [localHistory, setLocalHistory] = useState([]);
+
+  const historyLoadingEffective = historyLoading !== undefined ? historyLoading : historyLoadingLocal;
+  const enrichedHistoryEffective = (enrichedHistory && enrichedHistory.length) ? enrichedHistory : localHistory;
+
+  useEffect(() => {
+    // Priority: userProfile context > studentData prop > localStorage fallback
+    let studentId = userProfile?.student_id || studentData?.student_id;
+    
+    if (!studentId) {
+      try {
+        const userState = localStorage.getItem('user');
+        if (userState) {
+          const userData = JSON.parse(userState);
+          studentId = userData.student_id || userData.id;
+        }
+      } catch (e) {
+        // eslint-disable-next-line no-console
+        console.warn("Could not parse user from localStorage", e);
+      }
+    }
+
+    if (!studentId) {
+      setLocalHistory([]);
+      return;
+    }
+
+    setHistoryLoadingLocal(true);
+    StudentService.getStudentHistory(studentId)
+      .then((res) => {
+        // eslint-disable-next-line no-console
+        console.log("Student history response:", res);
+        
+        // handleResponse in the service may return data directly or an object
+        if (res && res.data) {
+          setLocalHistory(res.data);
+        } else if (Array.isArray(res)) {
+          setLocalHistory(res);
+        } else if (res && typeof res === "object") {
+          // try common payload shapes
+          setLocalHistory(res.history || res.records || []);
+        } else {
+          setLocalHistory([]);
+        }
+      })
+      .catch((err) => {
+        // eslint-disable-next-line no-console
+        console.error("Error fetching student history:", err);
+        setLocalHistory([]);
+      })
+      .finally(() => setHistoryLoadingLocal(false));
+  }, [studentData?.student_id, userProfile?.student_id]);
+
   return (
     <div className="space-y-10">
+      {/* Timeline section remains the same */}
       <div>
         <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
           <GraduationCap className="w-5 h-5 text-indigo-500 mr-2" />
           Academic History
         </h3>
 
-        {historyLoading ? (
+        {historyLoadingEffective ? (
           <div className="bg-gray-50 p-12 rounded-lg border flex items-center justify-center">
             <div className="h-12 w-12 animate-spin rounded-full border-t-4 border-blue-600"></div>
           </div>
-        ) : enrichedHistory.length === 0 ? (
+        ) : enrichedHistoryEffective.length === 0 ? (
           <div className="bg-gray-50 p-12 rounded-lg border text-center">
             <GraduationCap className="w-16 h-16 mx-auto mb-4 text-gray-400" />
             <p className="text-gray-500 text-lg">No academic history available</p>
@@ -25,7 +83,7 @@ const StudentAcademicJourney = ({ studentData, historyLoading, enrichedHistory =
             {/* Timeline line */}
             <div className="absolute left-3 sm:left-6 top-0 bottom-0 w-0.5 bg-gradient-to-b from-blue-400 to-blue-200"></div>
             <div className="space-y-6 sm:space-y-8">
-              {enrichedHistory.map((record, index) => (
+              {enrichedHistoryEffective.map((record, index) => (
                 <div key={index} className="relative pl-10 sm:pl-16">
                   {/* Timeline circle */}
                   <div className="absolute left-0 sm:left-3 top-2 sm:top-3 w-6 h-6 rounded-full bg-blue-500 border-4 border-white shadow-md flex items-center justify-center">
@@ -78,7 +136,7 @@ const StudentAcademicJourney = ({ studentData, historyLoading, enrichedHistory =
                         <p className="text-xs font-semibold text-orange-600 uppercase tracking-wide mb-1">Status</p>
                         <p className="font-semibold text-gray-800 text-xs sm:text-sm capitalize">{record.is_active ? "Active" : "Inactive"}</p>
                       </div>
-                    </div>
+                    </div> 
 
                     {/* Timeline Events */}
                     {(record.allocated_at || record.promoted_at || record.deallocated_at) && (
@@ -123,7 +181,7 @@ const StudentAcademicJourney = ({ studentData, historyLoading, enrichedHistory =
         )}
       </div>
 
-      {/* STUDENT HISTORY SECTION */}
+      {/* STUDENT HISTORY SECTION - Updated to use enrichedHistory */}
       <div>
         <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
           <History className="w-5 h-5 text-red-600 mr-2" />
@@ -131,9 +189,9 @@ const StudentAcademicJourney = ({ studentData, historyLoading, enrichedHistory =
         </h3>
 
         <div className="bg-gray-50 p-6 rounded-lg border">
-          {historyLoading ? (
+          {historyLoadingEffective ? (
             <p className="text-gray-600">Loading history...</p>
-          ) : historyData.length === 0 ? (
+          ) : enrichedHistoryEffective.length === 0 ? (
             <div>
               <p className="text-gray-600 mb-2">No history records found.</p>
               <p className="text-gray-500 text-sm">
@@ -142,11 +200,13 @@ const StudentAcademicJourney = ({ studentData, historyLoading, enrichedHistory =
             </div>
           ) : (
             <div className="space-y-4">
-              {historyData.map((item, idx) => (
+              {enrichedHistoryEffective.map((item, idx) => (
                 <div key={idx} className="p-4 bg-white border rounded-lg shadow">
                   <p><strong>Class:</strong> {item.class_name || "N/A"}</p>
-                  <p><strong>Division:</strong> {item.division || "N/A"}</p>
-                  <p><strong>Year:</strong> {item.academic_year || "N/A"}</p>
+                  <p><strong>Division:</strong> {item.division_name || "N/A"}</p>
+                  <p><strong>Year:</strong> {item.academic_year_name || "N/A"}</p>
+                  <p><strong>Roll Number:</strong> {item.roll_number || "N/A"}</p>
+                  <p><strong>Status:</strong> {item.is_active ? "Active" : "Inactive"}</p>
                 </div>
               ))}
             </div>
