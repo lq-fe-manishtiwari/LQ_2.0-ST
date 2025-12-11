@@ -131,7 +131,7 @@ function App() {
 
         {/* ────── FALLBACK ────── */}
         <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>``
+      </Routes>
     </BrowserRouter>
   );
 }
