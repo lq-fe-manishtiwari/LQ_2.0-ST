@@ -44,7 +44,7 @@ import { Table, Calendar } from "lucide-react";
 export default function TabsNav() {
   return (
     <div className="flex gap-2 mb-4">
-      <NavLink
+      {/* <NavLink
         to="dashboard"
         className={({ isActive }) =>
           `px-3 py-2 rounded-md ${
@@ -66,7 +66,7 @@ export default function TabsNav() {
       >
         <Calendar className="inline w-4 h-4 mr-1" />
         Month View
-      </NavLink>
+      </NavLink> */}
     </div>
   );
 }

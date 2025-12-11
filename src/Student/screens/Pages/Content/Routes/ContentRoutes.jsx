@@ -44,8 +44,8 @@ export default function ContentRoutes() {
     <Routes>
       <Route path="/" element={<ContentLayout />}>
         <Route index element={<ContentDashboard />} />
-        <Route path="dashboard" element={<TableView />} />
-        <Route path="calendar" element={<CalendarView />} />
+        {/* <Route path="dashboard" element={<TableView />} />
+        <Route path="calendar" element={<CalendarView />} /> */}
       </Route>
     </Routes>
   );
