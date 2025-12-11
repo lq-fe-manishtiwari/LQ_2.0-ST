@@ -122,6 +122,37 @@ const StudentAcademicJourney = ({ studentData, historyLoading, enrichedHistory =
           </div>
         )}
       </div>
+
+      {/* STUDENT HISTORY SECTION */}
+      <div>
+        <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+          <History className="w-5 h-5 text-red-600 mr-2" />
+          Student Academic History
+        </h3>
+
+        <div className="bg-gray-50 p-6 rounded-lg border">
+          {historyLoading ? (
+            <p className="text-gray-600">Loading history...</p>
+          ) : historyData.length === 0 ? (
+            <div>
+              <p className="text-gray-600 mb-2">No history records found.</p>
+              <p className="text-gray-500 text-sm">
+                Current student ID: {studentData?.student_id || "Not available"}
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {historyData.map((item, idx) => (
+                <div key={idx} className="p-4 bg-white border rounded-lg shadow">
+                  <p><strong>Class:</strong> {item.class_name || "N/A"}</p>
+                  <p><strong>Division:</strong> {item.division || "N/A"}</p>
+                  <p><strong>Year:</strong> {item.academic_year || "N/A"}</p>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 };
