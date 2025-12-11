@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom'; // Import Link
 import { Search, Filter, ChevronDown } from 'lucide-react';
 import ContentApiService from '../services/contentApi';
 import { useUserProfile } from '../../../../../contexts/UserProfileContext';
@@ -27,6 +28,13 @@ export default function ContentDashboard() {
   // State for modules/units display
   const [selectedSubject, setSelectedSubject] = useState(null);
   const [modulesData, setModulesData] = useState([]);
+
+  // Add Content handler - modified to work with Link
+  const onAddContent = () => {
+    console.log('Add Content button clicked');
+    // This function will still be called if you click the button,
+    // but the Link will handle navigation
+  };
 
   // Dynamic paper types based on API response
   const getPaperTypes = () => {
@@ -383,16 +391,29 @@ export default function ContentDashboard() {
           )}
         </div>
 
-        {/* Center - Search bar */}
-        <div className="relative flex-1 max-w-md">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-          <input
-            type="text"
-            placeholder="Search"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          />
+        <div className="flex items-center gap-4 w-full">
+          {/* Search Bar */}
+          <div className="relative flex-1 max-w-md">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Search"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg 
+                         focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+
+          {/* Add Content Button */}
+          <Link
+            to="/teacher/content/add-content"
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg font-medium 
+                     hover:bg-blue-700 transition-all shadow-sm"
+            onClick={onAddContent}
+          >
+            Add Content
+          </Link>
         </div>
 
         {/* Right side - Paper type buttons */}
