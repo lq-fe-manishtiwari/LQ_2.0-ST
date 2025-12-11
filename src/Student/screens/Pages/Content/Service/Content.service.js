@@ -39,9 +39,9 @@ export class ContentService {
    * @returns {Promise} API response with subject types
    */
   static async getSubjectTypes(academicYearId, semesterId) {
-    // /subjects/types-ui/academic-year/{academicYearId}/semester/{semesterId}
+    // /api/student/subjects/types-ui/academic-year/{academicYearId}/semester/{semesterId}
     try {
-      const response = await fetch(`${COREAPI}/admin/academic/api/teacher/subjects/types-ui/academic-year/${academicYearId}/semester/${semesterId}`, {
+      const response = await fetch(`${COREAPI}/student/subjects/types-ui/academic-year/${academicYearId}/semester/${semesterId}`, {
         method: 'GET',
         headers: authHeader()
       });
