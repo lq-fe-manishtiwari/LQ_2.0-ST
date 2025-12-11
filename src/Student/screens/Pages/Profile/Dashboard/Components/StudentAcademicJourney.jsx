@@ -15,7 +15,7 @@ const StudentAcademicJourney = ({ studentData, historyLoading, enrichedHistory =
   useEffect(() => {
     // Priority: userProfile context > studentData prop > localStorage fallback
     let studentId = userProfile?.student_id || studentData?.student_id;
-    
+
     if (!studentId) {
       try {
         const userState = localStorage.getItem('user');
@@ -39,18 +39,54 @@ const StudentAcademicJourney = ({ studentData, historyLoading, enrichedHistory =
       .then((res) => {
         // eslint-disable-next-line no-console
         console.log("Student history response:", res);
-        
-        // handleResponse in the service may return data directly or an object
-        if (res && res.data) {
-          setLocalHistory(res.data);
-        } else if (Array.isArray(res)) {
-          setLocalHistory(res);
+
+        let rawData = [];
+        if (Array.isArray(res)) {
+          rawData = res;
+        } else if (res && Array.isArray(res.data)) {
+          rawData = res.data;
         } else if (res && typeof res === "object") {
-          // try common payload shapes
-          setLocalHistory(res.history || res.records || []);
-        } else {
-          setLocalHistory([]);
+          rawData = res.history || res.records || [];
         }
+
+        const toTimestamp = (v) => {
+          if (v === null || v === undefined) return null;
+          if (typeof v === 'number') return v;
+          // if already a numeric string
+          if (!Number.isNaN(Number(v)) && v.toString().trim() !== '') return Number(v);
+          // try ISO/date string
+          const parsed = Date.parse(v);
+          return isNaN(parsed) ? null : Math.floor(parsed / 1000);
+        };
+
+        const mappedData = rawData.map((item) => ({
+          ...item,
+          // ids & basic
+          id: item.id ?? item.student_history_id ?? null,
+          student_id: item.student_id ?? null,
+          student_name: item.student_name ?? item.name ?? null,
+          roll_number: item.roll_number ?? item.rollNo ?? item.roll ?? null,
+          is_active: typeof item.is_active === 'boolean' ? item.is_active : !!item.active,
+
+          // flattened labels for UI (with fallbacks)
+          class_name: item.class_name
+            ?? item.academic_year?.program?.program_name
+            ?? item.academic_year?.class_year?.name
+            ?? (item.academic_year?.year_number ? `Year ${item.academic_year.year_number}` : null),
+          academic_year_name: item.academic_year?.name ?? item.academic_year_name ?? null,
+          semester_name: item.semester?.name ?? item.semester_name ?? null,
+          batch_name: item.academic_year?.batch?.batch_name ?? item.academic_year?.batch?.batch_code ?? null,
+          division_name: item.division?.division_name ?? item.division?.name ?? item.division_name ?? null,
+
+          // timeline timestamps: prefer explicit fields, else try related dates
+          allocated_at: toTimestamp(item.allocated_at ?? item.allocatedAt ?? item.allocation_at ?? item.academic_year?.start_date ?? null),
+          promoted_at: toTimestamp(item.promoted_at ?? item.promotedAt ?? item.promotion_at ?? null),
+          deallocated_at: toTimestamp(item.deallocated_at ?? item.deallocatedAt ?? item.deallocation_at ?? null),
+
+          _raw: item,
+        }));
+
+        setLocalHistory(mappedData);
       })
       .catch((err) => {
         // eslint-disable-next-line no-console
@@ -89,7 +125,7 @@ const StudentAcademicJourney = ({ studentData, historyLoading, enrichedHistory =
                   <div className="absolute left-0 sm:left-3 top-2 sm:top-3 w-6 h-6 rounded-full bg-blue-500 border-4 border-white shadow-md flex items-center justify-center">
                     <span className="text-white text-xs font-bold">{enrichedHistory.length - index}</span>
                   </div>
-                  
+
                   {/* Card */}
                   <div className="bg-white p-4 sm:p-6 rounded-xl shadow-md border border-gray-200 hover:shadow-lg transition-all">
                     {/* Header */}
@@ -136,7 +172,7 @@ const StudentAcademicJourney = ({ studentData, historyLoading, enrichedHistory =
                         <p className="text-xs font-semibold text-orange-600 uppercase tracking-wide mb-1">Status</p>
                         <p className="font-semibold text-gray-800 text-xs sm:text-sm capitalize">{record.is_active ? "Active" : "Inactive"}</p>
                       </div>
-                    </div> 
+                    </div>
 
                     {/* Timeline Events */}
                     {(record.allocated_at || record.promoted_at || record.deallocated_at) && (
@@ -182,7 +218,7 @@ const StudentAcademicJourney = ({ studentData, historyLoading, enrichedHistory =
       </div>
 
       {/* STUDENT HISTORY SECTION - Updated to use enrichedHistory */}
-      <div>
+      {/* <div>
         <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
           <History className="w-5 h-5 text-red-600 mr-2" />
           Student Academic History
@@ -212,7 +248,7 @@ const StudentAcademicJourney = ({ studentData, historyLoading, enrichedHistory =
             </div>
           )}
         </div>
-      </div>
+      </div> */}
     </div>
   );
 };

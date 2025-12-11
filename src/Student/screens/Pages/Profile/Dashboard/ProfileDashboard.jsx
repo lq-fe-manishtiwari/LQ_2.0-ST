@@ -51,51 +51,11 @@ export default function ProfileDashboard() {
         return <StudentTransportDetails studentData={studentData} />;
 
       case 'academic':
-        // Dummy academic history data
-        const dummyHistory = [
-          {
-            class_name: "BCA Semester 6",
-            academic_year_name: "2023-2024",
-            semester_name: "Semester 6",
-            batch_name: "Batch 2021-2024",
-            division_name: "Division A",
-            roll_number: "21BCA045",
-            is_active: true,
-            allocated_at: moment().subtract(6, 'months').unix(),
-            promoted_at: null,
-            deallocated_at: null
-          },
-          {
-            class_name: "BCA Semester 5",
-            academic_year_name: "2023-2024",
-            semester_name: "Semester 5",
-            batch_name: "Batch 2021-2024",
-            division_name: "Division A",
-            roll_number: "21BCA045",
-            is_active: false,
-            allocated_at: moment().subtract(12, 'months').unix(),
-            promoted_at: moment().subtract(6, 'months').unix(),
-            deallocated_at: null
-          },
-          {
-            class_name: "BCA Semester 4",
-            academic_year_name: "2022-2023",
-            semester_name: "Semester 4",
-            batch_name: "Batch 2021-2024",
-            division_name: "Division B",
-            roll_number: "21BCA045",
-            is_active: false,
-            allocated_at: moment().subtract(18, 'months').unix(),
-            promoted_at: moment().subtract(12, 'months').unix(),
-            deallocated_at: null
-          }
-        ];
         
         return (
           <StudentAcademicJourney 
             studentData={studentData} 
             historyLoading={historyLoading}
-            enrichedHistory={dummyHistory}
           />
         );
 
