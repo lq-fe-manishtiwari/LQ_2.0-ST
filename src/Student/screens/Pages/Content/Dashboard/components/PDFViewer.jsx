@@ -8,6 +8,7 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.js';
 export default function PDFViewer({ content, colorCode, onClose, onQuizClick }) {
     const containerRef = useRef(null);
     const canvasRefs = useRef({});
+    const renderTasksRef = useRef({});
     const [pdfDoc, setPdfDoc] = useState(null);
     const [currentPage, setCurrentPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
@@ -58,6 +59,12 @@ export default function PDFViewer({ content, colorCode, onClose, onQuizClick }) 
         if (!pdf || !canvasRefs.current[pageNum]) return;
         
         try {
+            // Cancel any existing render task for this page
+            if (renderTasksRef.current[pageNum]) {
+                renderTasksRef.current[pageNum].cancel();
+                delete renderTasksRef.current[pageNum];
+            }
+
             const page = await pdf.getPage(pageNum);
             const canvas = canvasRefs.current[pageNum];
             const context = canvas.getContext('2d');
@@ -71,9 +78,19 @@ export default function PDFViewer({ content, colorCode, onClose, onQuizClick }) 
                 viewport: viewport
             };
             
-            await page.render(renderContext).promise;
+            // Store the render task so we can cancel it if needed
+            const renderTask = page.render(renderContext);
+            renderTasksRef.current[pageNum] = renderTask;
+            
+            await renderTask.promise;
+            
+            // Clean up the render task reference
+            delete renderTasksRef.current[pageNum];
         } catch (error) {
-            console.error(`Error rendering page ${pageNum}:`, error);
+            // Only log errors that aren't cancellation errors
+            if (error.name !== 'RenderingCancelledException') {
+                console.error(`Error rendering page ${pageNum}:`, error);
+            }
         }
     };
 
@@ -125,31 +142,29 @@ export default function PDFViewer({ content, colorCode, onClose, onQuizClick }) 
         }
     };
 
+    // Cancel all render tasks
+    const cancelAllRenderTasks = () => {
+        Object.values(renderTasksRef.current).forEach(task => {
+            if (task && task.cancel) {
+                task.cancel();
+            }
+        });
+        renderTasksRef.current = {};
+    };
+
     // Zoom functions
     const handleZoomIn = () => {
         const newScale = Math.min(scale + 0.2, 3.0); // Max zoom 3x
         setScale(newScale);
-        if (pdfDoc) {
-            setRenderedPages(new Set());
-            renderAllPages(pdfDoc);
-        }
     };
 
     const handleZoomOut = () => {
         const newScale = Math.max(scale - 0.2, 0.5); // Min zoom 0.5x
         setScale(newScale);
-        if (pdfDoc) {
-            setRenderedPages(new Set());
-            renderAllPages(pdfDoc);
-        }
     };
 
     const handleResetZoom = () => {
         setScale(1.2); // Reset to default
-        if (pdfDoc) {
-            setRenderedPages(new Set());
-            renderAllPages(pdfDoc);
-        }
     };
 
     // Load PDF when component mounts
@@ -157,7 +172,21 @@ export default function PDFViewer({ content, colorCode, onClose, onQuizClick }) 
         if (content?.content_link) {
             loadPDF(content.content_link);
         }
+        
+        // Cleanup function to cancel all render tasks when component unmounts
+        return () => {
+            cancelAllRenderTasks();
+        };
     }, [content]);
+
+    // Also cancel render tasks when scale changes
+    useEffect(() => {
+        if (pdfDoc) {
+            cancelAllRenderTasks();
+            setRenderedPages(new Set());
+            renderAllPages(pdfDoc);
+        }
+    }, [scale]);
 
     return (
         <div className="relative w-full h-full bg-gray-50">

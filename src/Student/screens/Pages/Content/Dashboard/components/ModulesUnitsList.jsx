@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { ChevronDown, ChevronRight, FileText, BookOpen, Loader2, Play, File, Eye, X, ExternalLink, HelpCircle, ZoomIn, ZoomOut, RotateCcw } from 'lucide-react';
 import { ContentService } from '../../Service/Content.service';
 import PDFViewer from './PDFViewer';
+import QuizModal from './QuizModal';
 
 
 export default function ModulesUnitsList({ modules, colorCode }) {
@@ -12,6 +13,7 @@ export default function ModulesUnitsList({ modules, colorCode }) {
     const [contentError, setContentError] = useState(null);
     const [previewModal, setPreviewModal] = useState({ isOpen: false, content: null });
     const [imageZoom, setImageZoom] = useState(1);
+    const [quizModal, setQuizModal] = useState({ isOpen: false, quizId: null, contentId: null });
 
     const toggleModule = (moduleId) => {
         if (expandedModuleId === moduleId) {
@@ -90,10 +92,13 @@ export default function ModulesUnitsList({ modules, colorCode }) {
         setImageZoom(1); // Reset to default
     };
 
-    const handleQuizClick = (quizAttachment) => {
-        // Handle quiz click - you can implement your quiz logic here
-        console.log('Quiz clicked:', quizAttachment);
-        alert(`Starting Quiz ${quizAttachment.quiz_id} on page ${quizAttachment.attachment_place}`);
+    const handleQuizClick = (quizAttachment, contentId) => {
+        console.log('Quiz clicked:', quizAttachment, 'Content ID:', contentId);
+        setQuizModal({ isOpen: true, quizId: quizAttachment.quiz_id, contentId: contentId });
+    };
+
+    const closeQuizModal = () => {
+        setQuizModal({ isOpen: false, quizId: null, contentId: null });
     };
 
     const renderPreviewContent = (content) => {
@@ -107,7 +112,7 @@ export default function ModulesUnitsList({ modules, colorCode }) {
                         content={content}
                         colorCode={colorCode}
                         onClose={closePreviewModal}
-                        onQuizClick={handleQuizClick}
+                        onQuizClick={(quiz) => handleQuizClick(quiz, content.content_id)}
                     />
                 );
             case 'jpg':
@@ -166,7 +171,7 @@ export default function ModulesUnitsList({ modules, colorCode }) {
                                 {content.quiz_attachments.map((quiz, index) => (
                                     <button
                                         key={quiz.attachment_id || index}
-                                        onClick={() => handleQuizClick(quiz)}
+                                        onClick={() => handleQuizClick(quiz, content.content_id)}
                                         className="flex items-center gap-2 px-4 py-2 text-white rounded-lg shadow-lg hover:opacity-90 transition-colors"
                                         style={{ backgroundColor: colorCode }}
                                     >
@@ -196,7 +201,7 @@ export default function ModulesUnitsList({ modules, colorCode }) {
                                 {content.quiz_attachments.map((quiz, index) => (
                                     <button
                                         key={quiz.attachment_id || index}
-                                        onClick={() => handleQuizClick(quiz)}
+                                        onClick={() => handleQuizClick(quiz, content.content_id)}
                                         className="flex items-center gap-2 px-4 py-2 bg-orange-500 text-white rounded-lg shadow-lg hover:bg-orange-600 transition-colors"
                                     >
                                         <HelpCircle className="w-5 h-5" />
@@ -466,6 +471,15 @@ export default function ModulesUnitsList({ modules, colorCode }) {
                     </div>
                 </div>
             )}
+
+            {/* Quiz Modal */}
+            <QuizModal
+                isOpen={quizModal.isOpen}
+                onClose={closeQuizModal}
+                quizId={quizModal.quizId}
+                colorCode={colorCode}
+                contentId={quizModal.contentId}
+            />
         </>
     );
 }

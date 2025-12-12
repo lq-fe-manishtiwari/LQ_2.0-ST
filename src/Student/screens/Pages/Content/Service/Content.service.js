@@ -146,6 +146,127 @@ export class ContentService {
       throw error;
     }
   }
+
+  /**
+   * Fetch quiz data by quiz ID
+   * @param {string} quizId - The quiz ID
+   * @returns {Promise} API response with quiz data
+   */
+  static async getQuizById(quizId) {
+    try {
+      const response = await fetch(`${ContentAPI}/quizzes/${quizId}`, {
+        method: 'GET',
+        headers: authHeader()
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      return {
+        success: true,
+        data: data
+      };
+    } catch (error) {
+      console.error('Error fetching quiz data:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Submit quiz answers
+   * @param {string} quizId - The quiz ID
+   * @param {Object} answers - The quiz answers
+   * @param {number} score - The calculated score
+   * @returns {Promise} API response
+   */
+  static async submitQuizAnswers(quizId, answers, score) {
+    try {
+      const response = await fetch(`${ContentAPI}/api/quizzes/${quizId}/submit`, {
+        method: 'POST',
+        headers: {
+          ...authHeader(),
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          answers: answers,
+          score: score,
+          submitted_at: new Date().toISOString()
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      return {
+        success: true,
+        data: data
+      };
+    } catch (error) {
+      console.error('Error submitting quiz answers:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Save quiz result
+   * @param {Object} resultData - The quiz result data
+   * @returns {Promise} API response
+   */
+  static async saveQuizResult(resultData) {
+    try {
+      const response = await fetch(`${ContentAPI}/admin/content-quiz/result`, {
+        method: 'POST',
+        headers: {
+          ...authHeader(),
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(resultData)
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      return {
+        success: true,
+        data: data
+      };
+    } catch (error) {
+      console.error('Error saving quiz result:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get user profile information
+   * @returns {Promise} API response with user profile
+   */
+  static async getProfile() {
+    try {
+      const response = await fetch(`${DevAPI}/profile/me`, {
+        method: 'GET',
+        headers: authHeader()
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      return {
+        success: true,
+        data: data
+      };
+    } catch (error) {
+      console.error('Error fetching user profile:', error);
+      throw error;
+    }
+  }
 }
 
 export default ContentService;
