@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
-import { ChevronDown, ChevronRight, FileText, BookOpen, Loader2, Play, File, Eye, X, ExternalLink } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { ChevronDown, ChevronRight, FileText, BookOpen, Loader2, Play, File, Eye, X, ExternalLink, HelpCircle, ZoomIn, ZoomOut, RotateCcw } from 'lucide-react';
 import { ContentService } from '../../Service/Content.service';
+import PDFViewer from './PDFViewer';
 
 
 export default function ModulesUnitsList({ modules, colorCode }) {
@@ -10,6 +11,7 @@ export default function ModulesUnitsList({ modules, colorCode }) {
     const [loadingContent, setLoadingContent] = useState(false);
     const [contentError, setContentError] = useState(null);
     const [previewModal, setPreviewModal] = useState({ isOpen: false, content: null });
+    const [imageZoom, setImageZoom] = useState(1);
 
     const toggleModule = (moduleId) => {
         if (expandedModuleId === moduleId) {
@@ -58,6 +60,8 @@ export default function ModulesUnitsList({ modules, colorCode }) {
             if (previewableTypes.includes(fileExtension)) {
                 // Open in preview modal
                 setPreviewModal({ isOpen: true, content });
+                setCurrentPage(1);
+                setTotalPages(1);
             } else {
                 // Open external link in new tab
                 window.open(link, '_blank', 'noopener,noreferrer');
@@ -70,6 +74,26 @@ export default function ModulesUnitsList({ modules, colorCode }) {
 
     const closePreviewModal = () => {
         setPreviewModal({ isOpen: false, content: null });
+        setImageZoom(1); // Reset zoom when closing
+    };
+
+    // Image zoom functions
+    const handleImageZoomIn = () => {
+        setImageZoom(prev => Math.min(prev + 0.25, 3.0)); // Max zoom 3x
+    };
+
+    const handleImageZoomOut = () => {
+        setImageZoom(prev => Math.max(prev - 0.25, 0.25)); // Min zoom 0.25x
+    };
+
+    const handleImageResetZoom = () => {
+        setImageZoom(1); // Reset to default
+    };
+
+    const handleQuizClick = (quizAttachment) => {
+        // Handle quiz click - you can implement your quiz logic here
+        console.log('Quiz clicked:', quizAttachment);
+        alert(`Starting Quiz ${quizAttachment.quiz_id} on page ${quizAttachment.attachment_place}`);
     };
 
     const renderPreviewContent = (content) => {
@@ -79,10 +103,11 @@ export default function ModulesUnitsList({ modules, colorCode }) {
         switch (fileExtension) {
             case 'pdf':
                 return (
-                    <iframe
-                        src={link}
-                        className="w-full h-full border-0"
-                        title={content.content_name}
+                    <PDFViewer
+                        content={content}
+                        colorCode={colorCode}
+                        onClose={closePreviewModal}
+                        onQuizClick={handleQuizClick}
                     />
                 );
             case 'jpg':
@@ -90,22 +115,97 @@ export default function ModulesUnitsList({ modules, colorCode }) {
             case 'png':
             case 'gif':
                 return (
-                    <img
-                        src={link}
-                        alt={content.content_name}
-                        className="max-w-full max-h-full object-contain"
-                    />
+                    <div className="relative w-full h-full flex items-center justify-center overflow-auto">
+                        <img
+                            src={link}
+                            alt={content.content_name}
+                            className="object-contain transition-transform duration-200"
+                            style={{
+                                transform: `scale(${imageZoom})`,
+                                maxWidth: imageZoom > 1 ? 'none' : '100%',
+                                maxHeight: imageZoom > 1 ? 'none' : '100%'
+                            }}
+                        />
+                        
+                        {/* Image Zoom Controls */}
+                        <div className="absolute top-4 right-4 flex items-center gap-2 bg-white shadow-lg border border-gray-200 px-3 py-2 rounded-lg z-20">
+                            <button
+                                onClick={handleImageZoomOut}
+                                disabled={imageZoom <= 0.25}
+                                className="p-1 text-gray-600 hover:bg-gray-100 rounded disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                title="Zoom Out"
+                            >
+                                <ZoomOut className="w-4 h-4" />
+                            </button>
+                            
+                            <span className="text-sm font-medium text-gray-700 min-w-[3rem] text-center">
+                                {Math.round(imageZoom * 100)}%
+                            </span>
+                            
+                            <button
+                                onClick={handleImageZoomIn}
+                                disabled={imageZoom >= 3.0}
+                                className="p-1 text-gray-600 hover:bg-gray-100 rounded disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                title="Zoom In"
+                            >
+                                <ZoomIn className="w-4 h-4" />
+                            </button>
+                            
+                            <button
+                                onClick={handleImageResetZoom}
+                                className="p-1 text-gray-600 hover:bg-gray-100 rounded transition-colors"
+                                title="Reset Zoom"
+                            >
+                                <RotateCcw className="w-4 h-4" />
+                            </button>
+                        </div>
+                        
+                        {/* Quiz Buttons for Images */}
+                        {content.quiz_attachments && content.quiz_attachments.length > 0 && (
+                            <div className="absolute top-4 left-4 space-y-2">
+                                {content.quiz_attachments.map((quiz, index) => (
+                                    <button
+                                        key={quiz.attachment_id || index}
+                                        onClick={() => handleQuizClick(quiz)}
+                                        className="flex items-center gap-2 px-4 py-2 text-white rounded-lg shadow-lg hover:opacity-90 transition-colors"
+                                        style={{ backgroundColor: colorCode }}
+                                    >
+                                        <HelpCircle className="w-5 h-5" />
+                                        Quiz {quiz.quiz_id}
+                                    </button>
+                                ))}
+                            </div>
+                        )}
+                    </div>
                 );
             case 'mp4':
             case 'webm':
             case 'ogg':
                 return (
-                    <video
-                        src={link}
-                        controls
-                        className="max-w-full max-h-full"
-                        title={content.content_name}
-                    />
+                    <div className="relative w-full h-full flex items-center justify-center">
+                        <video
+                            src={link}
+                            controls
+                            className="max-w-full max-h-full"
+                            title={content.content_name}
+                        />
+                        
+                        {/* Quiz Buttons for Videos */}
+                        {content.quiz_attachments && content.quiz_attachments.length > 0 && (
+                            <div className="absolute top-4 right-4 space-y-2">
+                                {content.quiz_attachments.map((quiz, index) => (
+                                    <button
+                                        key={quiz.attachment_id || index}
+                                        onClick={() => handleQuizClick(quiz)}
+                                        className="flex items-center gap-2 px-4 py-2 bg-orange-500 text-white rounded-lg shadow-lg hover:bg-orange-600 transition-colors"
+                                    >
+                                        <HelpCircle className="w-5 h-5" />
+                                        Quiz {quiz.quiz_id}
+                                    </button>
+                                ))}
+                            </div>
+                        )}
+                    </div>
                 );
             default:
                 return (
@@ -309,38 +409,60 @@ export default function ModulesUnitsList({ modules, colorCode }) {
                 </div>
             </div>
 
-            {/* Full Screen Preview Modal */}
+            {/* Content Preview Modal - Integrated with Layout */}
             {previewModal.isOpen && (
-                <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
-                    <div className="relative w-full h-full max-w-7xl max-h-full m-4 bg-white rounded-lg overflow-hidden">
+                <div className="fixed inset-0 bg-white z-40" style={{ marginLeft: '220px' }}>
+                    <div className="relative w-full h-full bg-white">
                         {/* Modal Header */}
-                        <div className="flex items-center justify-between p-4 border-b bg-gray-50">
-                            <h3 className="text-lg font-semibold text-gray-800">
-                                {previewModal.content?.content_name || 'Content Preview'}
-                            </h3>
+                        <div className="flex items-center justify-between p-4 bg-white border-b border-gray-200 shadow-sm">
+                            <div className="flex items-center gap-4">
+                                <h3 className="text-lg font-semibold text-gray-800">
+                                    {previewModal.content?.content_name || 'Content Preview'}
+                                </h3>
+                                {previewModal.content?.quiz_attachments && previewModal.content.quiz_attachments.length > 0 && (
+                                    <span
+                                        className="px-3 py-1 text-white text-sm rounded-full"
+                                        style={{ backgroundColor: colorCode }}
+                                    >
+                                        {previewModal.content.quiz_attachments.length} Quiz{previewModal.content.quiz_attachments.length > 1 ? 'zes' : ''} Available
+                                    </span>
+                                )}
+                            </div>
                             <div className="flex items-center gap-2">
-                                <button
-                                    onClick={() => window.open(previewModal.content?.content_link, '_blank', 'noopener,noreferrer')}
-                                    className="flex items-center gap-1 px-3 py-1.5 bg-blue-500 text-white text-sm rounded-md hover:bg-blue-600 transition-colors"
-                                >
-                                    <ExternalLink className="w-4 h-4" />
-                                    Open in New Tab
-                                </button>
+                             
                                 <button
                                     onClick={closePreviewModal}
-                                    className="p-2 hover:bg-gray-200 rounded-md transition-colors"
+                                    className="p-2 hover:bg-gray-100 rounded-md transition-colors"
                                 >
                                     <X className="w-5 h-5 text-gray-600" />
                                 </button>
                             </div>
                         </div>
 
-                        {/* Modal Content */}
-                        <div className="flex-1 p-4 h-full overflow-auto">
-                            <div className="w-full h-full flex items-center justify-center">
-                                {renderPreviewContent(previewModal.content)}
-                            </div>
+                        {/* Modal Content - Full Height */}
+                        <div className="bg-gray-50" style={{ height: 'calc(100vh - 80px)' }}>
+                            {renderPreviewContent(previewModal.content)}
                         </div>
+
+                        {/* Quiz Information Panel */}
+                        {previewModal.content?.quiz_attachments && previewModal.content.quiz_attachments.length > 0 && (
+                            <div className="absolute bottom-4 left-4 bg-white border border-gray-200 shadow-lg p-3 rounded-lg max-w-xs">
+                                <h4 className="font-semibold mb-2 text-gray-800 text-sm">Available Quizzes:</h4>
+                                <div className="space-y-1 text-xs">
+                                    {previewModal.content.quiz_attachments.map((quiz, index) => (
+                                        <div key={quiz.attachment_id || index} className="flex items-center justify-between">
+                                            <span className="text-gray-700">Quiz {quiz.quiz_id}</span>
+                                            <span
+                                                className="text-white px-2 py-0.5 rounded text-xs"
+                                                style={{ backgroundColor: colorCode }}
+                                            >
+                                                Page {quiz.attachment_place}
+                                            </span>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
                     </div>
                 </div>
             )}

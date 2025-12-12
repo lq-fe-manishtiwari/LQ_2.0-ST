@@ -23,6 +23,7 @@
     "jwt-decode": "^4.0.0",
     "lucide-react": "^0.552.0",
     "moment": "^2.30.1",
+    "pdfjs-dist": "^5.4.449",
     "react": "^19.1.1",
     "react-bootstrap-sweetalert": "^5.2.0",
     "react-datepicker": "^8.8.0",
