@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Search, Filter, ChevronDown } from 'lucide-react';
 import ContentService from '../Service/Content.service';
+import { StudentService } from '../../Profile/Student.Service';
 import { useUserProfile } from '../../../../../contexts/UserProfileContext';
 
 export default function ContentDashboard() {
@@ -57,24 +58,19 @@ export default function ContentDashboard() {
   // Fetch allocated programs when user profile is available
   useEffect(() => {
     const fetchAllocatedPrograms = async () => {
-      if (!userProfile?.teacher_id) {
-        console.log('Teacher ID not available yet, waiting for user profile...');
+      if (!userProfile?.student_id) {
         return;
       }
 
       setLoading(true);
       setError(null);
       try {
-        const teacherId = userProfile.teacher_id;
+        const response = await StudentService.getStudentHistory(userProfile.student_id);
         
-        const response = await ContentService.getAllocatedPrograms(teacherId);
-        
-        // Process the API response to group by programs
-        if (response.success && response.data?.allocations) {
-          const processedPrograms = processAllocationsData(response.data.allocations);
+        if (Array.isArray(response)) {
+          const processedPrograms = processAllocationsData(response);
           setAllocatedPrograms(processedPrograms);
           
-          // Auto-select first program, batch, and semester
           if (processedPrograms.length > 0) {
             const firstProgram = processedPrograms[0];
             setSelectedProgram(firstProgram.id.toString());
@@ -87,60 +83,61 @@ export default function ContentDashboard() {
               setSelectedSemester(firstProgram.semesters[0].id.toString());
             }
           }
-        } else {
-          throw new Error('Invalid response format');
         }
       } catch (error) {
-        console.error('Error fetching allocated programs:', error);
-        setError('Failed to load programs. Please try again.');
+        console.error('Error fetching programs:', error);
+        setError('Failed to load programs.');
       } finally {
         setLoading(false);
       }
     };
 
     fetchAllocatedPrograms();
-  }, [userProfile?.teacher_id]);
+  }, [userProfile?.student_id]);
 
-  // Process allocations data to group by programs
-  const processAllocationsData = (allocations) => {
+  // Process student history data
+  const processAllocationsData = (students) => {
     const programsMap = new Map();
     
-    allocations.forEach(allocation => {
-      const programId = allocation.program_id;
+    students.forEach(student => {
+      const program = student.academic_year?.program;
+      const batch = student.academic_year?.batch;
+      const semester = student.semester;
+      
+      if (!program) return;
+      
+      const programId = program.program_id;
       
       if (!programsMap.has(programId)) {
         programsMap.set(programId, {
           id: programId,
-          name: allocation.program.program_name,
-          code: allocation.program.program_code,
-          academicYearId: allocation.academic_year_id, // Add academic year ID
+          name: program.program_name,
+          code: program.program_code,
+          academicYearId: student.academic_year_id,
           batches: new Map(),
           semesters: new Map()
         });
       }
       
-      const program = programsMap.get(programId);
+      const programData = programsMap.get(programId);
       
-      // Add batch if not exists
-      if (allocation.batch) {
-        program.batches.set(allocation.batch.batch_id, {
-          id: allocation.batch.batch_id,
-          name: allocation.batch.batch_name,
-          code: allocation.batch.batch_code
+      if (batch) {
+        programData.batches.set(batch.batch_id, {
+          id: batch.batch_id,
+          name: batch.batch_name,
+          code: batch.batch_code
         });
       }
       
-      // Add semester if not exists
-      if (allocation.semester) {
-        program.semesters.set(allocation.semester_id, {
-          id: allocation.semester_id,
-          number: allocation.semester.semester_number,
-          name: allocation.semester.name
+      if (semester) {
+        programData.semesters.set(student.semester_id, {
+          id: student.semester_id,
+          number: semester.semester_number,
+          name: semester.name
         });
       }
     });
     
-    // Convert Maps to Arrays
     return Array.from(programsMap.values()).map(program => ({
       ...program,
       batches: Array.from(program.batches.values()),
@@ -188,7 +185,7 @@ export default function ContentDashboard() {
             const processedTypes = processSubjectTypesData(response.data);
             setSubjectTypes(processedTypes);
           } else {
-            throw new Error('Invalid response format');
+            throw new Error(response.error || 'API endpoint not found. Please verify the endpoint URL.');
           }
         } catch (error) {
           console.error('Error fetching subject types:', error);

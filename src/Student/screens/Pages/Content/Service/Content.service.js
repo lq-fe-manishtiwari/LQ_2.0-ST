@@ -41,7 +41,7 @@ export class ContentService {
   static async getSubjectTypes(academicYearId, semesterId) {
     // /api/student/subjects/types-ui/academic-year/{academicYearId}/semester/{semesterId}
     try {
-      const response = await fetch(`${COREAPI}/student/subjects/types-ui/academic-year/${academicYearId}/semester/${semesterId}`, {
+      const response = await fetch(`${COREAPI}/admin/academic/api/student/subjects/types-ui/academic-year/${academicYearId}/semester/${semesterId}`, {
         method: 'GET',
         headers: authHeader()
       });
