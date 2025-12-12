@@ -34,10 +34,10 @@ const CustomSelect = ({ label, value, onChange, options, placeholder, disabled =
           className={`w-full px-3 py-2 border ${disabled ? 'bg-gray-100 text-gray-500 border-gray-200 cursor-not-allowed' : 'bg-white border-gray-300 cursor-pointer hover:border-blue-400'} rounded-lg min-h-[44px] flex items-center justify-between transition-all duration-150`}
           onClick={() => !disabled && setIsOpen(!isOpen)}
         >
-          <span className={value ? 'text-gray-900' : 'text-gray-400'}>
+          <span className={`${value ? 'text-gray-900' : 'text-gray-400'} whitespace-nowrap overflow-hidden text-ellipsis flex-1`}>
             {value || placeholder}
           </span>
-          <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${isOpen ? 'rotate-180' : 'rotate-0'}`} />
+          <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform flex-shrink-0 ml-2 ${isOpen ? 'rotate-180' : 'rotate-0'}`} />
         </div>
 
         {isOpen && !disabled && (
@@ -288,7 +288,15 @@ export default function ContentDashboard() {
     }
     setSelectedSubject(null);
     setModulesData([]);
+    setAllSubjects([]);
   }, [availableSubTabs.length, selectedPaperType]);
+
+  // Clear selected subject when sub-tab changes
+  useEffect(() => {
+    setSelectedSubject(null);
+    setModulesData([]);
+    setAllSubjects([]);
+  }, [selectedSubTab?.id]);
 
   const selectedProgramData = allocatedPrograms.find(p => p.id.toString() === selectedProgram);
 
@@ -325,104 +333,69 @@ export default function ContentDashboard() {
 
   return (
     <div className="p-4 space-y-6">
-      {/* Top Filter Bar */}
-      <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-4">
-        {/* Left side - Search */}
-        <div className="relative w-full sm:w-80">
-          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-            <Search className="w-5 h-5 text-gray-400" />
-          </div>
-          <input
-            type="search"
-            placeholder="Search for content"
-            className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 placeholder-gray-400 text-gray-900 bg-white shadow-sm"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+      {/* Top Bar */}
+      <div className="flex justify-between items-center gap-4">
+        {/* Left side - Paper type buttons */}
+        <div className="flex gap-3 flex-wrap">
+          {paperTypes.map((type) => (
+            <button
+              key={type.id}
+              onClick={() => setSelectedPaperType(type.label)}
+              className={`px-4 py-2 rounded-xl font-medium transition-all duration-200 border ${
+                selectedPaperType === type.label 
+                  ? 'bg-blue-600 text-white border-blue-600 shadow-lg shadow-blue-200/50' 
+                  : 'bg-white text-gray-700 border-gray-200 hover:border-blue-300 hover:bg-gray-50'
+              }`}
+            >
+              {type.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Right side - Filter */}
+        <button
+          onClick={() => setShowFilters(!showFilters)}
+          className="flex items-center gap-2 bg-white border border-gray-300 hover:bg-gray-50 px-4 py-3 rounded-xl shadow-sm transition-all"
+        >
+          <Filter className="w-5 h-5 text-blue-600" />
+          <span className="text-blue-600 font-medium">Filter</span>
+          <ChevronDown
+            className={`w-4 h-4 text-blue-600 transition-transform ${showFilters ? 'rotate-180' : 'rotate-0'}`}
+          />
+        </button>
+      </div>
+
+      {/* Filter Row */}
+      {showFilters && (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <CustomSelect
+            label="Program"
+            value={selectedProgramData?.name || ''}
+            onChange={() => {}}
+            options={[]}
+            placeholder="select program"
+            disabled={true}
+          />
+          <CustomSelect
+            label="Batch"
+            value={selectedProgramData?.batches?.find(b => b.id.toString() === selectedBatch)?.name || ''}
+            onChange={() => {}}
+            options={[]}
+            placeholder="select batch"
+            disabled={true}
+          />
+          <CustomSelect
+            label="Semester"
+            value={selectedProgramData?.semesters?.find(s => s.id.toString() === selectedSemester)?.name || ''}
+            onChange={(e) => {
+              const semester = selectedProgramData?.semesters?.find(s => s.name === e.target.value);
+              setSelectedSemester(semester ? semester.id.toString() : '');
+            }}
+            options={selectedProgramData?.semesters?.map(s => ({ value: s.name, label: s.name })) || []}
+            placeholder="select semester"
+            disabled={loading}
           />
         </div>
-
-        {/* Right side - Filter + Add Content */}
-        <div className="flex gap-3 w-full sm:w-auto">
-          <div ref={dropdownRef} className="relative flex-1 sm:flex-none">
-            <button
-              onClick={() => setShowFilters(!showFilters)}
-              className="flex items-center justify-center gap-2 bg-white border border-gray-300 hover:bg-gray-50 px-4 py-3 rounded-xl shadow-sm transition-all w-full sm:w-auto"
-            >
-              <Filter className="w-5 h-5 text-blue-600" />
-              <span className="text-blue-600 font-medium">Filter</span>
-              <ChevronDown
-                className={`w-4 h-4 text-blue-600 transition-transform ${showFilters ? 'rotate-180' : 'rotate-0'}`}
-              />
-            </button>
-          </div>
-
-          <Link
-            to="/student/content/add-content"
-            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-medium px-4 py-2 rounded-md shadow-md transition-all hover:shadow-lg flex-1 sm:flex-none justify-center"
-          >
-            Add Content
-          </Link>
-        </div>
-      </div>
-
-      {/* Paper type buttons row */}
-      <div className="flex gap-3 flex-wrap">
-        {paperTypes.map((type) => (
-          <button
-            key={type.id}
-            onClick={() => setSelectedPaperType(type.label)}
-            className={`px-4 py-2 rounded-xl font-medium transition-all duration-200 border ${
-              selectedPaperType === type.label 
-                ? 'bg-blue-600 text-white border-blue-600 shadow-lg shadow-blue-200/50' 
-                : 'bg-white text-gray-700 border-gray-200 hover:border-blue-300 hover:bg-gray-50'
-            }`}
-          >
-            {type.label}
-          </button>
-        ))}
-      </div>
-
-      {/* Filter Rows - Show/Hide based on showFilters state */}
-      {showFilters && (
-        <>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <CustomSelect
-              label="Program"
-              value={allocatedPrograms.find(p => p.id.toString() === selectedProgram)?.name || ''}
-              onChange={(e) => {
-                const program = allocatedPrograms.find(p => p.name === e.target.value);
-                setSelectedProgram(program ? program.id.toString() : '');
-                setSelectedBatch('');
-                setSelectedSemester('');
-              }}
-              options={allocatedPrograms.map(p => ({ value: p.name, label: p.name }))}
-              placeholder="select program"
-              disabled={loading}
-            />
-            <CustomSelect
-              label="Batch"
-              value={selectedProgramData?.batches?.find(b => b.id.toString() === selectedBatch)?.name || ''}
-              onChange={(e) => {
-                const batch = selectedProgramData?.batches?.find(b => b.name === e.target.value);
-                setSelectedBatch(batch ? batch.id.toString() : '');
-              }}
-              options={selectedProgramData?.batches?.map(b => ({ value: b.name, label: b.name })) || []}
-              placeholder="select batch"
-              disabled={!selectedProgram || loading}
-            />
-            <CustomSelect
-              label="Semester"
-              value={selectedProgramData?.semesters?.find(s => s.id.toString() === selectedSemester)?.name || ''}
-              onChange={(e) => {
-                const semester = selectedProgramData?.semesters?.find(s => s.name === e.target.value);
-                setSelectedSemester(semester ? semester.id.toString() : '');
-              }}
-              options={selectedProgramData?.semesters?.map(s => ({ value: s.name, label: s.name })) || []}
-              placeholder="select semester"
-              disabled={!selectedProgram || loading}
-            />
-          </div>
-        </>
       )}
 
       {/* Sub-tabs Row */}
@@ -474,8 +447,9 @@ export default function ContentDashboard() {
               setAllSubjects={setAllSubjects}
               onSubjectClick={handleSubjectClick}
               selectedSubjectId={selectedSubject?.subject_id}
+              selectedSubTab={selectedSubTab}
             />
-            {selectedSubject && (
+            {selectedSubject && allSubjects.length > 0 && (
               <ModulesUnitsList
                 modules={modulesData}
                 colorCode={selectedSubject.color_code || "#3b82f6"}
