@@ -4,13 +4,21 @@ import { Plus, Upload } from "lucide-react";
 import Buttons from "./Buttons";
 
 const tabs = [
-  { label: "Academic", to: "/teacher/content/Academic" },
-  { label: "Sport", to: "/teacher/content/Sport" },
-  { label: "Vertical1_4 (Major)", to: "/teacher/content/Vertical1_4" },
-  { label: "Vertical2 (Minor)", to: "/teacher/content/Vertical2" },
-  { label: "Vertical3 (OE)", to: "/teacher/content/Vertical3" },
-  { label: "Vertical5 (AEC/VEC/IKS)", to: "/teacher/content/Vertical5" },
-  { label: "Vertical6 (Other's)", to: "/teacher/content/Vertical6" },
+  // { label: "Academic", to: "/teacher/content/Academic" },
+  // { label: "Sport", to: "/teacher/content/Sport" },
+  // { label: "Vertical1_4 (Major)", to: "/teacher/content/Vertical1_4" },
+  // { label: "Vertical2 (Minor)", to: "/teacher/content/Vertical2" },
+  // { label: "Vertical3 (OE)", to: "/teacher/content/Vertical3" },
+  // { label: "Vertical5 (AEC/VEC/IKS)", to: "/teacher/content/Vertical5" },
+  // { label: "Vertical6 (Other's)", to: "/teacher/content/Vertical6" },
+
+    { label: "Content", to: "/content/content-dashboard" },
+  // { label: "Content Setting", to: "/content/content-setting" },
+  // { label: "Quiz", to: "/content/add-quiz" },
+  { label: "Quiz", to: "/content/quiz-dashboard" },
+  { label: "Question", to: "/content/question-dashboard" },
+  // { label: "Teacher Content", to: "/content/teacher-content" },
+  { label: "Student Project", to: "/content/student-project" },
 ];
 
 export default function TabsNav() {
