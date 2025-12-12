@@ -60,8 +60,10 @@ export function logout() {
   currentUserSubject.value = null;
   currentUserToken.value = null;
   
-  // Redirect to login
-  window.location.href = '/';
+  // Only redirect if not already on login page to prevent loops
+  if (!window.location.pathname.includes('/login')) {
+    window.location.href = '/login';
+  }
 }
 // ✅ Forgot Password FUNCTION
 export function forgotPassword(data) {
@@ -100,7 +102,10 @@ export function handleResponse(response) {
     const data = text && JSON.parse(text);
     if (!response.ok) {
       if ([401, 403].includes(response.status)) {
-        authenticationService.logout();
+        // Only logout if not already on login page
+        if (!window.location.pathname.includes('/login')) {
+          authenticationService.logout();
+        }
       } else if ([400].includes(response.status)) {
         return data;
       }
@@ -153,7 +158,10 @@ export function handlePostResponse(response) {
 
     if (!response.ok) {
       if ([401, 403].includes(response.status)) {
-        authenticationService.logout();
+        // Only logout if not already on login page
+        if (!window.location.pathname.includes('/login')) {
+          authenticationService.logout();
+        }
       }
       return Promise.reject(data);
     }

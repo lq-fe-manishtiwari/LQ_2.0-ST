@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Mail, Lock, Eye, EyeOff } from 'lucide-react';
-import SweetAlert from 'react-bootstrap-sweetalert'; 
-import loginImg from "./loginImg.mp4"; 
+import SweetAlert from 'react-bootstrap-sweetalert';
+import loginImg from "./loginImg.mp4";
 import Logo from "@/_assets/images_new_design/Login/lq_new.png";
 import { authenticationService } from "@/_services/api";
 
@@ -11,8 +11,20 @@ export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [alert, setAlert] = useState(null); 
-  const [loading, setLoading] = useState(false); 
+  const [alert, setAlert] = useState(null);
+  const [loading, setLoading] = useState(false);
+
+  // Cleanup effect to prevent memory leaks and infinite loops
+  useEffect(() => {
+    // Clear any existing alerts on component mount
+    setAlert(null);
+    
+    // Cleanup function
+    return () => {
+      setAlert(null);
+      setLoading(false);
+    };
+  }, []);
 
   const showSuccessAlert = () => {
     setAlert(
@@ -21,7 +33,8 @@ export default function Login() {
         title="Login Successful!"
         onConfirm={() => {
           setAlert(null);
-          navigate('/dashboard');
+          // Use replace to prevent back navigation issues
+          navigate('/dashboard', { replace: true });
         }}
         confirmBtnCssClass="btn-confirm"
       >
@@ -62,7 +75,12 @@ export default function Login() {
       <SweetAlert
         danger
         title="Access Denied!"
-        onConfirm={() => setAlert(null)}
+        onConfirm={() => {
+          setAlert(null);
+          // Clear localStorage and use window.location for clean redirect
+          localStorage.clear();
+          window.location.href = "/login";
+        }}
       >
         You don't have permission to access this system!<br/>
         <strong>Only ADMIN/SUPERADMIN allowed.</strong>
@@ -86,10 +104,8 @@ export default function Login() {
         (decodedUser.sub === "SUPERADMIN" && decodedUser.iss === "ADMINISTRATOR");
 
       if (!isAuthorized) {
-        showAccessDeniedAlert(); 
-        setTimeout(() => {
-         authenticationService.logout(); 
-        }, 2000);
+        showAccessDeniedAlert();
+        // Don't call logout here - let the alert handle it
         return;
       }
       showSuccessAlert();
