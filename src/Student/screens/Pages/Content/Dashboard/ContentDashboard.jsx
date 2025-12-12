@@ -4,7 +4,7 @@ import { Search, Filter, ChevronDown } from 'lucide-react';
 import ContentService from '../Service/Content.service';
 import { StudentService } from '../../Profile/Student.Service';
 import { useUserProfile } from '../../../../../contexts/UserProfileContext';
-import SubjectsList from './components/ModulesUnitsList';
+import SubjectsList from './components/SubjectsList';
 import ModulesUnitsList from './components/ModulesUnitsList';
 
 export default function ContentDashboard() {

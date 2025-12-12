@@ -32,7 +32,7 @@ export default function ModulesUnitsList({ modules, colorCode }) {
         setContentError(null);
 
         try {
-            const response = await ContentApiService.getContentByUnits(unitId);
+            const response = await ContentService.getContentByUnits(unitId);
             if (response.success) {
                 setUnitContent(response.data);
             } else {

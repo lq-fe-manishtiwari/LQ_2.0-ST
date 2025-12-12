@@ -61,7 +61,7 @@ export default function SubjectsList({
         setLoading(true);
         setError(null);
         try {
-          const response = await ContentApiService.getSubjectsByTab(
+          const response = await ContentService.getSubjectsByTab(
             tabToUse.id,
             academicYearId,
             semesterId,
