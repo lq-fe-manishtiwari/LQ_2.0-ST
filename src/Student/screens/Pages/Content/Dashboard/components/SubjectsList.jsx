@@ -21,6 +21,7 @@ export default function SubjectsList({
 
   // Get available tabs from subject types
   const getAvailableTabs = () => {
+    if (!selectedPaperType || !subjectTypes || typeof selectedPaperType !== 'string') return [];
     const currentType = subjectTypes[selectedPaperType.toLowerCase()];
     if (!currentType) return [];
 
@@ -46,17 +47,9 @@ export default function SubjectsList({
     console.log('Current selected tab:', selectedTab);
 
     const fetchSubjects = async (tabToUse) => {
-      if (tabToUse && academicYearId && semesterId) {
-        // Get the type_name from subjectTypes for tabType
+      if (tabToUse && academicYearId && semesterId && selectedPaperType) {
         const currentType = subjectTypes[selectedPaperType.toLowerCase()];
         const tabType = currentType?.type_info?.type_name || selectedPaperType;
-
-        console.log('Fetching subjects with params:', {
-          tabId: tabToUse.id,
-          academicYearId,
-          semesterId,
-          tabType: tabType
-        });
 
         setLoading(true);
         setError(null);
@@ -68,12 +61,9 @@ export default function SubjectsList({
             tabType
           );
 
-          console.log('API Response:', response);
-
           if (response.success && response.data) {
             const fetchedSubjects = response.data || [];
             setSubjects(fetchedSubjects);
-            // Pass all subjects to parent for filtering
             if (setAllSubjects) {
               setAllSubjects(fetchedSubjects);
             }
@@ -82,6 +72,7 @@ export default function SubjectsList({
           }
         } catch (error) {
           console.error('Error fetching subjects:', error);
+          setError(error.message || 'Failed to load subjects');
           setSubjects([]);
         } finally {
           setLoading(false);
@@ -114,7 +105,7 @@ export default function SubjectsList({
     }
   }, [filteredSubjects]);
 
-  if (!subjectTypes[selectedPaperType.toLowerCase()]) {
+  if (!selectedPaperType || typeof selectedPaperType !== 'string' || !subjectTypes || !subjectTypes[selectedPaperType.toLowerCase()]) {
     return null;
   }
 
@@ -130,6 +121,17 @@ export default function SubjectsList({
             {loading ? (
               <div className="text-center py-8">
                 <div className="text-gray-500">Loading subjects...</div>
+              </div>
+            ) : error ? (
+              <div className="text-center py-8">
+                <div className="text-red-500 mb-2">
+                  <svg className="w-12 h-12 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+                <p className="text-gray-600">
+                  {error}
+                </p>
               </div>
             ) : subjects.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">

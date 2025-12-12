@@ -71,13 +71,14 @@ export class ContentService {
    */
   static async getSubjectsByTab(tabId, academicYearId, semesterId, tabType) {
     try {
-      const response = await fetch(`${COREAPI}/admin/academic/api/subjects/by-tab/${tabId}/academic-year/${academicYearId}/semester/${semesterId}?tabType=${tabType}`, {
+      const response = await fetch(`${COREAPI}/admin/academic/api/subjects/by-tab/${tabId}/academic-year/${academicYearId}/semester/${semesterId}?tabType=${encodeURIComponent(tabType)}`, {
         method: 'GET',
         headers: authHeader()
       });
 
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || `Server error: ${response.status}`);
       }
 
       const data = await response.json();
