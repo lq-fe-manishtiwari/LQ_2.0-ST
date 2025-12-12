@@ -23,7 +23,8 @@ export const authenticationService = {
   currentUserToken: () => currentUserToken?.value,
   login,
   logout,
-  forgotPassword
+  forgotPassword,
+  getProfile
 };
 
 // ✅ MAIN LOGIN FUNCTION (GLOBAL!)
@@ -34,7 +35,7 @@ export function login(data) {
     body: JSON.stringify(data),
   };
 
-  return fetch(`${DevAPI}/auth`, requestOptions) 
+  return fetch(`${TeacherLoginAPI}/auth`, requestOptions)
     .then(handleLoginResponse)
     .then((user) => {
       const decoded = jwtDecode(user.token);
@@ -54,6 +55,7 @@ export function logout() {
   localStorage.removeItem("currentUser");
   localStorage.removeItem("refreshToken");
   localStorage.removeItem("show_payment_popup");
+  localStorage.removeItem("userProfile"); // Clear profile data
   
   currentUserSubject.value = null;
   currentUserToken.value = null;
@@ -70,11 +72,22 @@ export function forgotPassword(data) {
   };
 
   return fetch(
-    `${DevAPI}/auth/forgot-password`,
+    `${TeacherLoginAPI}/auth/forgot-password`,
     requestOptions
   ).then((result) => {
     return result;
   });
+}
+
+// ✅ GET PROFILE FUNCTION
+export function getProfile() {
+  const requestOptions = {
+    method: "GET",
+    headers: authHeader(),
+  };
+
+  return fetch(`${TeacherLoginAPI}/profile/me`, requestOptions)
+    .then(handleResponse);
 }
 
 // ========== RESPONSE HANDLERS ==========
@@ -189,13 +202,40 @@ export function authHeaderToDownloadReport() {
   return token ? { 'Authorization': `Bearer ${token}` } : {};
 }
 
-// ========== DEV API HELPER ==========
-export const DevAPI = import.meta.env.VITE_API_URL;
+// ========== API ENDPOINTS CONFIGURATION ==========
+export const AcademicAPI = import.meta.env.VITE_API_URL_Academic;
+export const TeacherLoginAPI = import.meta.env.VITE_API_URL_TeacherORLogin;
 export const PMSAPI = import.meta.env.VITE_API_URL_PMS;
 export const PMSNEWAPI = import.meta.env.VITE_API_URL_PMSNEW;
 export const COREAPI = import.meta.env.VITE_API_CORE;
 
-// ========== DEFAULT FETCH HELPER ==========
+// Legacy support - defaults to TeacherLoginAPI for backward compatibility
+export const DevAPI = TeacherLoginAPI;
+
+// ========== DIFFERENTIATED API HELPERS ==========
+export function academicApiRequest(url, options = {}) {
+  const config = {
+    ...options,
+    headers: {
+      ...authHeader(),
+      ...options.headers
+    }
+  };
+  return fetch(`${AcademicAPI}${url}`, config);
+}
+
+export function teacherApiRequest(url, options = {}) {
+  const config = {
+    ...options,
+    headers: {
+      ...authHeader(),
+      ...options.headers
+    }
+  };
+  return fetch(`${TeacherLoginAPI}${url}`, config);
+}
+
+// ========== DEFAULT FETCH HELPER (Legacy) ==========
 export function apiRequest(url, options = {}) {
   const config = {
     ...options,
@@ -204,7 +244,7 @@ export function apiRequest(url, options = {}) {
       ...options.headers
     }
   };
-  return fetch(`${DevAPI}${url}`, config);
+  return fetch(`${TeacherLoginAPI}${url}`, config);
 }
 
 // ========== USER PROFILE API FUNCTIONS ==========
@@ -254,7 +294,7 @@ export function updateUserProfile(profileData, userType = null) {
     body: JSON.stringify(profileData),
   };
 
-  return fetch(`${DevAPI}${endpoint}`, requestOptions)
+  return fetch(`${TeacherLoginAPI}${endpoint}`, requestOptions)
     .then(handlePostResponse)
     .then(data => ({
       success: true,
@@ -273,7 +313,7 @@ export function getTeacherAllocatedPrograms(teacherId) {
     headers: authHeader(),
   };
 
-  return fetch(`https://lq-new-api.learnqoch.com/user/teacher/${teacherId}`, requestOptions)
+  return fetch(`${TeacherLoginAPI}/user/teacher/${teacherId}`, requestOptions)
     .then(handleResponse)
     .then(data => ({
       success: true,
@@ -337,7 +377,7 @@ export function getStudentsByFilters(programId, academicYearId, semesterId = nul
     }),
   };
 
-  return fetch(`${DevAPI}/graphql`, requestOptions)
+  return fetch(`${TeacherLoginAPI}/graphql`, requestOptions)
     .then(handleResponse)
     .then(data => ({
       success: true,
@@ -349,12 +389,31 @@ export function getStudentsByFilters(programId, academicYearId, semesterId = nul
     }));
 }
 
+//  Upload file to S3 and get the path
+export function uploadFileToS3(file) {
+  const formData = new FormData();
+  formData.append("file", file);
+
+  const requestOptions = {
+    method: "POST",
+    headers: authHeaderToFile(),
+    body: formData,
+  };
+
+  return fetch(`${AcademicAPI}/s3/upload`, requestOptions)
+    .then(handlePostResponse)
+    .then((response) => {
+      return response;
+    });
+}
+
 // Enhanced API object with user profile methods
 export const api = {
   getUserProfile,
   updateUserProfile,
   getTeacherAllocatedPrograms,
   getStudentsByFilters,
+  uploadFileToS3,
   // Add other existing functions if needed
   request: apiRequest,
 };

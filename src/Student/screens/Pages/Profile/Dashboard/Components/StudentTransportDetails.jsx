@@ -1,11 +1,13 @@
 import React from "react";
-import { Bus } from "lucide-react";
+import { Bus, User, Phone } from "lucide-react";
 
 const StudentTransportDetails = ({ studentData }) => {
   const transportInfo = [
     { label: "Mode of Transport", value: studentData?.transport_mode || "Not provided", icon: <Bus className="w-5 h-5 text-orange-500" /> },
     { label: "Bus Number", value: studentData?.bus_number || "Not provided", icon: <Bus className="w-5 h-5 text-orange-500" /> },
     { label: "Bus Stop", value: studentData?.bus_stop || "Not provided", icon: <Bus className="w-5 h-5 text-orange-500" /> },
+    { label: "Driver Name", value: studentData?.driver_name || "Not provided", icon: <User className="w-5 h-5 text-blue-600" /> },
+    { label: "Driver Phone", value: studentData?.driver_phone || "Not provided", icon: <Phone className="w-5 h-5 text-green-600" /> },
   ];
 
   const renderSection = (title, icon, items, colorClass) => (
@@ -15,7 +17,7 @@ const StudentTransportDetails = ({ studentData }) => {
         {title}
       </h3>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {items.map((info, index) => (
           <div key={index} className="bg-gray-50 p-4 rounded-lg border">
             <div className="flex items-center mb-2">

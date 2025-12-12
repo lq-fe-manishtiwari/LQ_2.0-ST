@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import { ArrowLeft, User, GraduationCap, MessageCircle, Bus, FileText } from "lucide-react";
+import moment from "moment";
 import StudentPersonalDetails from "./Components/StudentPersonalDetails";
 import StudentEducationalDetails from "./Components/StudentEducationalDetails";
 import StudentCommunicationDetails from "./Components/StudentCommunicationDetails";
@@ -25,7 +26,6 @@ export default function ProfileDashboard() {
   const profileImage = null; // Set to null or image URL
 
   const handleProfileUpload = async (file) => {
-    // Add your upload logic here
     console.log('Uploading file:', file);
   };
 
@@ -51,7 +51,13 @@ export default function ProfileDashboard() {
         return <StudentTransportDetails studentData={studentData} />;
 
       case 'academic':
-        return <StudentAcademicJourney studentData={studentData} historyLoading={historyLoading} />;
+        
+        return (
+          <StudentAcademicJourney 
+            studentData={studentData} 
+            historyLoading={historyLoading}
+          />
+        );
 
       default:
         return null;
@@ -96,7 +102,7 @@ export default function ProfileDashboard() {
               <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">
                 {studentName}
               </h1>
-              <p className="text-lg text-gray-600 mb-2">Student</p>
+              {/* <p className="text-lg text-gray-600 mb-2">Student</p> */}
 
               {/* Tags */}
               <div className="flex flex-wrap justify-center md:justify-start gap-2 mt-2">

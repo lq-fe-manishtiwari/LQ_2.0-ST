@@ -29,7 +29,7 @@ const Login = () => {
 
   // Redirect if already logged in
   useEffect(() => {
-    if (authenticationService.currentUserValue) {
+    if (authenticationService.currentUser()) {
       const user = authenticationService.currentUser();
       if (user?.iss === "STUDENT") navigate("/student-dashboard");
       else navigate("/dashboard");
@@ -147,6 +147,9 @@ const Login = () => {
                 if (decodedUser?.iss === "STUDENT") {
                   navigate("/student-dashboard");
                 } else if (decodedUser?.iss === "TEACHER") {
+                  navigate("/dashboard");
+                } else if (decodedUser?.iss === "ADMINISTRATOR" &&
+                          (decodedUser?.sub === "ADMIN" || decodedUser?.sub === "SUPERADMIN")) {
                   navigate("/dashboard");
                 } else {
                   showAccessDeniedAlert();
