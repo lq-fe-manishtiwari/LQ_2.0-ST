@@ -334,7 +334,7 @@ export default function ContentDashboard() {
   return (
     <div className="p-4 space-y-6">
       {/* Top Bar */}
-      <div className="flex justify-between items-center gap-4">
+      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
         {/* Left side - Paper type buttons */}
         <div className="flex gap-3 flex-wrap">
           {paperTypes.map((type) => (
@@ -355,7 +355,7 @@ export default function ContentDashboard() {
         {/* Right side - Filter */}
         <button
           onClick={() => setShowFilters(!showFilters)}
-          className="flex items-center gap-2 bg-white border border-gray-300 hover:bg-gray-50 px-4 py-3 rounded-xl shadow-sm transition-all"
+          className="flex items-center gap-2 bg-white border border-gray-300 hover:bg-gray-50 px-4 py-3 rounded-xl shadow-sm transition-all w-full lg:w-auto justify-center"
         >
           <Filter className="w-5 h-5 text-blue-600" />
           <span className="text-blue-600 font-medium">Filter</span>
@@ -418,7 +418,7 @@ export default function ContentDashboard() {
       )}
 
       {/* Content Area */}
-      <div className="bg-white rounded-lg border border-gray-200 p-6">
+      <div className="bg-white rounded-lg border border-gray-200 p-4 sm:p-6">
         {error && (
           <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
             <div className="flex items-center">
