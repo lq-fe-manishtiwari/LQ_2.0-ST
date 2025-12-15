@@ -4,6 +4,7 @@ import { ChevronDown } from "lucide-react";
 // import { fetchClassesByprogram } from "../../Student/Services/student.service.js";
 // import { contentService } from "../Services/AddContent.service.js";
 
+
 // Custom Select Component
 const CustomSelect = ({ label, value, onChange, options, placeholder, disabled = false, required = false, loading = false }) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -271,26 +272,31 @@ export default function AddContent() {
     return (
         <div className="p-6">
             <div className="flex items-center justify-between mb-6">
-                <h2 className="text-2xl font-semibold text-gray-800">Add Content</h2>
+                <h2 className="text-2xl font-semibold text-blue-700">Add Content</h2>
                 <button type="button" className="w-10 h-10 rounded-full bg-blue-600 text-white flex items-center justify-center hover:bg-blue-700 transition" onClick={() => window.history.back()}>✕</button>
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-6">
                 {/* Academic Selection */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-                    <CustomSelect label="Select Program" value={formData.selectedProgram} onChange={(value) => handleChange('selectedProgram', value)} options={options.programs} placeholder="Select Program" required />
-                    <CustomSelect label="Select Class" value={formData.selectedClass} onChange={(value) => handleChange('selectedClass', value)} options={options.classes} placeholder="Select Class" disabled={!formData.selectedProgram} required />
-                    <CustomSelect label="Select Semester" value={formData.selectedSemester} onChange={(value) => handleChange('selectedSemester', value)} options={options.semesters} placeholder="Select Semester" disabled={!formData.selectedClass} required />
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <CustomSelect label="Program" value={formData.selectedProgram} onChange={(value) => handleChange('selectedProgram', value)} options={options.programs} placeholder="Select Program" required />
+                    <CustomSelect label="Class" value={formData.selectedClass} onChange={(value) => handleChange('selectedClass', value)} options={options.classes} placeholder="Select Class" disabled={!formData.selectedProgram} required />
+                    <CustomSelect label="Semester" value={formData.selectedSemester} onChange={(value) => handleChange('selectedSemester', value)} options={options.semesters} placeholder="Select Semester" disabled={!formData.selectedClass} required />
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-                    <CustomSelect label="Select Subject" value={formData.selectedSubject} onChange={(value) => handleChange('selectedSubject', value)} options={options.subjects} placeholder="Select Subject" disabled={!formData.selectedProgram} loading={loading.subjects} required />
-                    <CustomSelect label="Select Module" value={formData.selectedModule} onChange={(value) => handleChange('selectedModule', value)} options={options.modules} placeholder="Select Module" disabled={!formData.selectedSubject} loading={loading.modules} />
-                    <CustomSelect label="Select Unit" value={formData.selectedUnit} onChange={(value) => handleChange('selectedUnit', value)} options={options.units} placeholder="Select Unit" disabled={!formData.selectedModule} loading={loading.units} />
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <CustomSelect label="Paper" value={formData.selectedSubject} onChange={(value) => handleChange('selectedSubject', value)} options={options.subjects} placeholder="Select Paper" disabled={!formData.selectedProgram} loading={loading.subjects} required />
+                    <CustomSelect label="Module" value={formData.selectedModule} onChange={(value) => handleChange('selectedModule', value)} options={options.modules} placeholder="Select Module" disabled={!formData.selectedSubject} loading={loading.modules} />
+                    <CustomSelect label="Unit" value={formData.selectedUnit} onChange={(value) => handleChange('selectedUnit', value)} options={options.units} placeholder="Select Unit" disabled={!formData.selectedModule} loading={loading.units} />
                 </div>
 
                 {/* Content Details */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <CustomSelect label="Content Type" value={formData.contentType} onChange={(value) => handleChange('contentType', value)} options={options.contentTypes} placeholder="Select Content Type" required />
+                    <CustomSelect label="Content Level" value={formData.contentLevel} onChange={(value) => handleChange('contentLevel', value)} options={[{ label: "Beginner", value: "beginner" }, { label: "Intermediate", value: "intermediate" }, { label: "Advanced", value: "advanced" }]} placeholder="Select Content Level" />
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                         <label className="block font-medium mb-1 text-gray-700">Content Title <span className="text-red-500">*</span></label>
                         <input type="text" name="contentTitle" value={formData.contentTitle} onChange={handleInputChange} className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:border-blue-500" placeholder="Enter Title" required />
@@ -299,45 +305,31 @@ export default function AddContent() {
                         <label className="block font-medium mb-1 text-gray-700">Average Reading Time (minutes) <span className="text-red-500">*</span></label>
                         <input type="number" name="averageReadingTime" value={formData.averageReadingTime} onChange={handleInputChange} className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:border-blue-500" placeholder="30" min="1" required />
                     </div>
-                    <CustomSelect label="Content Type" value={formData.contentType} onChange={(value) => handleChange('contentType', value)} options={options.contentTypes} placeholder="Select Content Type" required />
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-                    <CustomSelect label="Content Level" value={formData.contentLevel} onChange={(value) => handleChange('contentLevel', value)} options={[{ label: "Beginner", value: "beginner" }, { label: "Intermediate", value: "intermediate" }, { label: "Advanced", value: "advanced" }]} placeholder="Select Content Level" />
                 </div>
 
                 {/* Conditional Fields */}
-                {formData.contentType && (
-                    <div className="space-y-4">
-                        {formData.contentType === "quiz" && (
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-                                <CustomSelect label="Select Quiz" value={formData.selectedQuiz} onChange={(value) => handleChange('selectedQuiz', value)} options={options.quizzes} placeholder="Select Quiz" required />
-                            </div>
-                        )}
-                        {["file", "pdf", "image"].includes(formData.contentType) && (
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-                                <div>
-                                    <label className="block font-medium mb-1 text-gray-700">Upload {formData.contentType.toUpperCase()} <span className="text-red-500">*</span></label>
-                                    <input type="file" name="file" onChange={handleInputChange} accept={formData.contentType === "pdf" ? "application/pdf" : formData.contentType === "image" ? "image/*" : "*"} className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:border-blue-500" required />
-                                </div>
-                            </div>
-                        )}
-                        {formData.contentType === "external" && (
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-                                <div>
-                                    <label className="block font-medium mb-1 text-gray-700">External Link <span className="text-red-500">*</span></label>
-                                    <input type="url" name="externalLink" value={formData.externalLink} onChange={handleInputChange} placeholder="https://example.com" className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:border-blue-500" required />
-                                </div>
-                            </div>
-                        )}
-                        {formData.contentType === "video" && (
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-                                <div>
-                                    <label className="block font-medium mb-1 text-gray-700">Video URL <span className="text-red-500">*</span></label>
-                                    <input type="url" name="videoUrl" value={formData.videoUrl} onChange={handleInputChange} placeholder="https://youtube.com/..." className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:border-blue-500" required />
-                                </div>
-                            </div>
-                        )}
+                {formData.contentType === "quiz" && (
+                    <CustomSelect label="Select Quiz" value={formData.selectedQuiz} onChange={(value) => handleChange('selectedQuiz', value)} options={options.quizzes} placeholder="Select Quiz" required />
+                )}
+                
+                {["file", "pdf", "image"].includes(formData.contentType) && (
+                    <div>
+                        <label className="block font-medium mb-1 text-gray-700">Upload {formData.contentType.toUpperCase()} <span className="text-red-500">*</span></label>
+                        <input type="file" name="file" onChange={handleInputChange} accept={formData.contentType === "pdf" ? "application/pdf" : formData.contentType === "image" ? "image/*" : "*"} className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:border-blue-500" required />
+                    </div>
+                )}
+                
+                {formData.contentType === "external" && (
+                    <div>
+                        <label className="block font-medium mb-1 text-gray-700">External Link <span className="text-red-500">*</span></label>
+                        <input type="url" name="externalLink" value={formData.externalLink} onChange={handleInputChange} placeholder="https://example.com" className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:border-blue-500" required />
+                    </div>
+                )}
+                
+                {formData.contentType === "video" && (
+                    <div>
+                        <label className="block font-medium mb-1 text-gray-700">Video URL <span className="text-red-500">*</span></label>
+                        <input type="url" name="videoUrl" value={formData.videoUrl} onChange={handleInputChange} placeholder="https://youtube.com/..." className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:border-blue-500" required />
                     </div>
                 )}
 

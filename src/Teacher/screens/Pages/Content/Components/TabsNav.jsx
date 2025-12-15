@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { NavLink } from "react-router-dom";
 import { Plus, Upload } from "lucide-react";
-import Buttons from "./Buttons";
+// import Buttons from "./Buttons";
 
 const tabs = [
   // { label: "Academic", to: "/teacher/content/Academic" },
@@ -43,7 +43,7 @@ export default function TabsNav() {
           ))}
         </div>
       </div>
-      <Buttons/>
+      {/* <Buttons/> */}
 
     </div>
   );
