@@ -71,13 +71,6 @@ const StudentSidebar = ({ isOpen, toggle }) => {
         iconInactive: dashboardInactive,
       },
       {
-        to: "/student-class",
-        label: "Class",
-        iconActive: classActive,
-        iconInactive: classInactive,
-        match: ["/student-class", "/student-timetable"],
-      },
-      {
         to: "/curriculum",
         label: "Content",
         iconActive: contentActive,
