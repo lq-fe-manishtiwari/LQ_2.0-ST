@@ -193,29 +193,29 @@ export default function QuizModal({ isOpen, onClose, quizId, colorCode, contentI
     const handleSubmit = async (isAutoSubmit = false) => {
         if (!quiz || !quiz.questions) return;
         
+        // If manually submitting, prevent auto-submit from running
+        if (!isAutoSubmit) {
+            setTimeExpired(false);
+        }
+        
         // Stop the timer
         stopTimer();
 
         // Calculate score
         let correctAnswers = 0;
-        let totalWeightage = 0;
-        let earnedWeightage = 0;
+        const totalQuestions = quiz.questions.length;
 
         quiz.questions.forEach((question, index) => {
             const selectedOptionIndex = answers[index];
             const selectedOption = selectedOptionIndex !== null ? question.options[selectedOptionIndex] : null;
-            const weightage = question.default_weightage || 1;
-            
-            totalWeightage += weightage;
             
             if (selectedOption === question.correct_answer) {
                 correctAnswers++;
-                earnedWeightage += weightage;
             }
         });
 
-        // Calculate percentage based on weightage
-        const calculatedScore = totalWeightage > 0 ? Math.round((earnedWeightage / totalWeightage) * 100) : 0;
+        // Calculate percentage for display
+        const calculatedScore = totalQuestions > 0 ? Math.round((correctAnswers / totalQuestions) * 100) : 0;
         
         // Calculate time taken in seconds
         const timeTaken = quizStartTime ? Math.floor((new Date() - quizStartTime) / 1000) : 0;
@@ -223,8 +223,8 @@ export default function QuizModal({ isOpen, onClose, quizId, colorCode, contentI
         setScore(calculatedScore);
         setSubmitted(true);
 
-        // Save quiz result to backend
-        await saveQuizResult(earnedWeightage, totalWeightage, timeTaken, isAutoSubmit);
+        // Save quiz result to backend - send correct answers count and total questions count
+        await saveQuizResult(correctAnswers, totalQuestions, timeTaken, isAutoSubmit);
     };
 
     // Popup functions
@@ -237,13 +237,13 @@ export default function QuizModal({ isOpen, onClose, quizId, colorCode, contentI
     };
 
     // Save quiz result function
-    const saveQuizResult = async (earnedScore, totalMarks, timeTaken, isAutoSubmit = false) => {
+    const saveQuizResult = async (correctAnswers, totalQuestions, timeTaken, isAutoSubmit = false) => {
         console.log('Attempting to save quiz result:', {
             contentId,
             studentId,
             quizId,
-            earnedScore,
-            totalMarks,
+            correctAnswers,
+            totalQuestions,
             timeTaken
         });
 
@@ -262,9 +262,10 @@ export default function QuizModal({ isOpen, onClose, quizId, colorCode, contentI
                 content_id: contentId,
                 quiz_id: quizId,
                 student_id: studentId,
-                score: earnedScore,
-                total_marks: totalMarks,
-                time_taken: timeTaken
+                score: correctAnswers,
+                total_marks: totalQuestions,
+                time_taken: timeTaken,
+                completed: true
             };
 
             const response = await ContentService.saveQuizResult(resultData);
@@ -274,7 +275,7 @@ export default function QuizModal({ isOpen, onClose, quizId, colorCode, contentI
                 if (isAutoSubmit) {
                     showPopup('success', 'Time up! Your response has been submitted successfully.');
                 } else {
-                    showPopup('success', 'Quiz result saved successfully!');
+                    showPopup('success', 'Quiz submitted successfully!');
                 }
             } else {
                 throw new Error('Failed to save quiz result');
@@ -285,7 +286,7 @@ export default function QuizModal({ isOpen, onClose, quizId, colorCode, contentI
             if (isAutoSubmit) {
                 showPopup('error', 'Time up! Error saving your response. Please contact support.');
             } else {
-                showPopup('error', 'Error: Failed to save quiz result. Please contact support.');
+                showPopup('error', 'Failed to save quiz result. Please contact support.');
             }
         } finally {
             setSaving(false);
@@ -476,7 +477,7 @@ export default function QuizModal({ isOpen, onClose, quizId, colorCode, contentI
                                 </button>
                             ) : (
                                 <button
-                                    onClick={handleSubmit}
+                                    onClick={() => handleSubmit(false)}
                                     disabled={!allQuestionsAnswered || saving}
                                     className="px-6 py-2 text-white rounded-lg hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
                                     style={{ backgroundColor: colorCode }}

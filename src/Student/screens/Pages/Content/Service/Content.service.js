@@ -267,6 +267,40 @@ export class ContentService {
       throw error;
     }
   }
+
+  /**
+   * Get quiz results for a specific student and quiz
+   * @param {string} contentId - The content ID
+   * @param {string} quizId - The quiz ID (optional)
+   * @param {string} studentId - The student ID
+   * @returns {Promise} API response with quiz results history
+   */
+  static async getQuizResultsByStudent(contentId, quizId, studentId) {
+    try {
+      let url = `${ContentAPI}/admin/content-quiz/result?contentId=${contentId}&studentId=${studentId}`;
+      if (quizId) {
+        url += `&quizId=${quizId}`;
+      }
+
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: authHeader()
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      return {
+        success: true,
+        data: data
+      };
+    } catch (error) {
+      console.error('Error fetching quiz results by student:', error);
+      throw error;
+    }
+  }
 }
 
 export default ContentService;

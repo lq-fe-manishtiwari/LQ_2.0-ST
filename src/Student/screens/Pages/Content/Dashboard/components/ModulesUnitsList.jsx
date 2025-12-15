@@ -3,6 +3,7 @@ import { ChevronDown, ChevronRight, FileText, BookOpen, Loader2, Play, File, Eye
 import { ContentService } from '../../Service/Content.service';
 import PDFViewer from './PDFViewer';
 import QuizModal from './QuizModal';
+import QuizHistoryModal from './QuizHistoryModal';
 
 
 export default function ModulesUnitsList({ modules, colorCode }) {
@@ -14,6 +15,13 @@ export default function ModulesUnitsList({ modules, colorCode }) {
     const [previewModal, setPreviewModal] = useState({ isOpen: false, content: null });
     const [imageZoom, setImageZoom] = useState(1);
     const [quizModal, setQuizModal] = useState({ isOpen: false, quizId: null, contentId: null });
+    const [quizHistoryModal, setQuizHistoryModal] = useState({
+        isOpen: false,
+        quizId: null,
+        contentId: null,
+        quizName: null
+    });
+    const [studentId, setStudentId] = useState(null);
 
     const toggleModule = (moduleId) => {
         if (expandedModuleId === moduleId) {
@@ -22,6 +30,23 @@ export default function ModulesUnitsList({ modules, colorCode }) {
             setExpandedModuleId(moduleId);
         }
     };
+
+    // Fetch student profile on component mount
+    useEffect(() => {
+        const fetchStudentProfile = async () => {
+            try {
+                const response = await ContentService.getProfile();
+                if (response.success && response.data) {
+                    const extractedStudentId = response.data.student_id || response.data.id;
+                    setStudentId(extractedStudentId);
+                }
+            } catch (error) {
+                console.error('Error fetching student profile:', error);
+            }
+        };
+
+        fetchStudentProfile();
+    }, []);
 
     const handleUnitClick = async (unitId) => {
         if (selectedUnitId === unitId) {
@@ -92,13 +117,36 @@ export default function ModulesUnitsList({ modules, colorCode }) {
         setImageZoom(1); // Reset to default
     };
 
-    const handleQuizClick = (quizAttachment, contentId) => {
+    const handleQuizClick = (quizAttachment, contentId, quizName = null) => {
         console.log('Quiz clicked:', quizAttachment, 'Content ID:', contentId);
-        setQuizModal({ isOpen: true, quizId: quizAttachment.quiz_id, contentId: contentId });
+        
+        // First show quiz history modal to check previous attempts
+        setQuizHistoryModal({
+            isOpen: true,
+            quizId: quizAttachment.quiz_id,
+            contentId: contentId,
+            quizName: quizName || `Quiz ${quizAttachment.quiz_id}`
+        });
     };
 
     const closeQuizModal = () => {
         setQuizModal({ isOpen: false, quizId: null, contentId: null });
+    };
+
+    const closeQuizHistoryModal = () => {
+        setQuizHistoryModal({
+            isOpen: false,
+            quizId: null,
+            contentId: null,
+            quizName: null
+        });
+    };
+
+    const handleStartQuizFromHistory = () => {
+        // Close history modal and open quiz modal
+        const { quizId, contentId } = quizHistoryModal;
+        closeQuizHistoryModal();
+        setQuizModal({ isOpen: true, quizId: quizId, contentId: contentId });
     };
 
     const renderPreviewContent = (content) => {
@@ -112,7 +160,7 @@ export default function ModulesUnitsList({ modules, colorCode }) {
                         content={content}
                         colorCode={colorCode}
                         onClose={closePreviewModal}
-                        onQuizClick={(quiz) => handleQuizClick(quiz, content.content_id)}
+                        onQuizClick={(quiz) => handleQuizClick(quiz, content.content_id, content.content_name)}
                     />
                 );
             case 'jpg':
@@ -171,7 +219,7 @@ export default function ModulesUnitsList({ modules, colorCode }) {
                                 {content.quiz_attachments.map((quiz, index) => (
                                     <button
                                         key={quiz.attachment_id || index}
-                                        onClick={() => handleQuizClick(quiz, content.content_id)}
+                                        onClick={() => handleQuizClick(quiz, content.content_id, content.content_name)}
                                         className="flex items-center gap-2 px-4 py-2 text-white rounded-lg shadow-lg hover:opacity-90 transition-colors"
                                         style={{ backgroundColor: colorCode }}
                                     >
@@ -201,7 +249,7 @@ export default function ModulesUnitsList({ modules, colorCode }) {
                                 {content.quiz_attachments.map((quiz, index) => (
                                     <button
                                         key={quiz.attachment_id || index}
-                                        onClick={() => handleQuizClick(quiz, content.content_id)}
+                                        onClick={() => handleQuizClick(quiz, content.content_id, content.content_name)}
                                         className="flex items-center gap-2 px-4 py-2 bg-orange-500 text-white rounded-lg shadow-lg hover:bg-orange-600 transition-colors"
                                     >
                                         <HelpCircle className="w-5 h-5" />
@@ -479,6 +527,18 @@ export default function ModulesUnitsList({ modules, colorCode }) {
                 quizId={quizModal.quizId}
                 colorCode={colorCode}
                 contentId={quizModal.contentId}
+            />
+
+            {/* Quiz History Modal */}
+            <QuizHistoryModal
+                isOpen={quizHistoryModal.isOpen}
+                onClose={closeQuizHistoryModal}
+                onStartQuiz={handleStartQuizFromHistory}
+                quizId={quizHistoryModal.quizId}
+                contentId={quizHistoryModal.contentId}
+                studentId={studentId}
+                colorCode={colorCode}
+                quizName={quizHistoryModal.quizName}
             />
         </>
     );
