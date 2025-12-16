@@ -7,13 +7,14 @@ export const collegeService = {
 };
 
 // GET /api/admin/academic/programs/by-college/{collegeId}
-function getAllProgramByCollegeId(collegeId) {
+function getAllProgramByCollegeId(userId,collegeId) {
     const requestOptions = {
         method: 'GET',
         headers: authHeader()
     };
-    return fetch(`${AcademicAPI}/programs/by-college/${collegeId}`, requestOptions).then(handleResponse);
+    return fetch(`${AcademicAPI}/admin/academic/programs/allocated/user/${userId}/college/${collegeId}`, requestOptions).then(handleResponse);
 }
+
 
 // GET /api/admin/academic/colleges
 function getAllColleges() {

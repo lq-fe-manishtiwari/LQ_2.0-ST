@@ -64,7 +64,7 @@ const CustomSelect = ({ label, value, onChange, options, placeholder, disabled =
 };
 
 export default function ContentDashboard() {
-  const { userProfile } = useUserProfile();
+  const { profile, getTeacherId, isLoaded, loading: profileLoading } = useUserProfile();
   const [selectedPaperType, setSelectedPaperType] = useState('Vertical');
   const [selectedProgram, setSelectedProgram] = useState('');
   const [selectedBatch, setSelectedBatch] = useState('');
@@ -219,20 +219,24 @@ export default function ContentDashboard() {
   // Fetch allocated programs when user profile is available
   useEffect(() => {
     const fetchAllocatedPrograms = async () => {
-      console.log("userProfile", userProfile);
-      console.log("teacher_id", userProfile?.teacher_id);
-
-      if (!userProfile || !userProfile.teacher_id) {
-        console.log('Teacher ID not available yet, waiting for user profile...');
+      if (!isLoaded || profileLoading) {
+        console.log('Profile not loaded yet, waiting...');
         return;
       }
 
-      console.log('Teacher ID found:', userProfile.teacher_id);
+      const teacherId = getTeacherId();
+      console.log("Profile loaded:", profile);
+      console.log("teacher_id:", teacherId);
+
+      if (!teacherId) {
+        console.log('Teacher ID not available in profile');
+        return;
+      }
+
+      console.log('Teacher ID found:', teacherId);
       setLoading(true);
       setError(null);
       try {
-        const teacherId = userProfile.teacher_id;
-
         const response = await ContentApiService.getAllocatedPrograms(teacherId);
 
         // Process the API response to group by programs
@@ -265,7 +269,7 @@ export default function ContentDashboard() {
     };
 
     fetchAllocatedPrograms();
-  }, [userProfile]);
+  }, [isLoaded, profileLoading, getTeacherId, profile]);
 
   // Process allocations data to group by programs
   const processAllocationsData = (allocations) => {

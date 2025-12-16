@@ -6,41 +6,29 @@ import SweetAlert from 'react-bootstrap-sweetalert';
 import { collegeService } from '../services/college.service';
 import { contentService } from '../services/content.service.js';
 import { fetchClassesByprogram } from '../services/student.service.js';
+import { useUserProfile } from '../../../../../contexts/UserProfileContext';
 
-const ObjectiveQuestion = ({ 
-  formData, 
-  handleChange, 
-  errors, 
-  touched, 
-  isEdit = false, 
+const ObjectiveQuestion = ({
+  formData,
+  handleChange,
+  errors,
+  touched,
+  isEdit = false,
   question_id,
   questionData,
-  onSaveSuccess 
+  onSaveSuccess
 }) => {
   const [openDropdown, setOpenDropdown] = useState(null);
   const [showAlert, setShowAlert] = useState(false);
   const [alertConfig, setAlertConfig] = useState({});
   const dropdownRefs = useRef({});
 
-  // Get college ID with fallback
-  const getCollegeId = () => {
-    const activeCollege = JSON.parse(localStorage.getItem("activeCollege") || "{}");
-    const currentUser = JSON.parse(localStorage.getItem("currentUser") || "{}");
-    
-    // Try to get college ID from activeCollege first, then from currentUser
-    const collegeId = activeCollege?.id || currentUser?.college_id || currentUser?.collegeId;
-    
-    console.log("Active College:", activeCollege);
-    console.log("Current User:", currentUser);
-    console.log("College ID:", collegeId);
-    
-    return collegeId;
-  };
-
-  const collegeId = getCollegeId();
+  // Get user profile data
+  const { getUserId, getCollegeId, isLoaded: isProfileLoaded, loading: profileLoading } = useUserProfile();
 
   // Data
   const [programOptions, setProgramOptions] = useState([]);
+
   const [classOptions, setClassOptions] = useState([]);
   const [subjectOptions, setSubjectOptions] = useState([]);     // { id, name }
   const [semesterOptions, setSemesterOptions] = useState([]);
@@ -58,6 +46,7 @@ const ObjectiveQuestion = ({
   const [loadingSubjects, setLoadingSubjects] = useState(false);
   const [loadingModules, setLoadingModules] = useState(false);
   const [saving, setSaving] = useState(false);
+
 
   // Effect to initialize state in edit mode
   useEffect(() => {
@@ -165,13 +154,22 @@ const ObjectiveQuestion = ({
   // Fetch Programs
   useEffect(() => {
     const fetchPrograms = async () => {
-      if (!collegeId) {
-        console.warn('No college ID found. Please ensure you are logged in and have an active college selected.');
+      if (!isProfileLoaded || profileLoading) {
+        console.log('Profile not loaded yet, waiting...');
         return;
       }
+
+      const userId = getUserId();
+      const collegeId = getCollegeId();
+
+      if (!collegeId || !userId) {
+        console.warn('No college ID or user ID found. Please ensure you are logged in and have an active college selected.');
+        return;
+      }
+      
       try {
-        console.log('Fetching programs for college ID:', collegeId);
-        const programs = await collegeService.getAllProgramByCollegeId(collegeId);
+        console.log('Fetching programs for college ID:', userId, collegeId);
+        const programs = await collegeService.getAllProgramByCollegeId(userId, collegeId);
         console.log('Programs fetched:', programs);
         
         if (Array.isArray(programs)) {
@@ -191,7 +189,7 @@ const ObjectiveQuestion = ({
       }
     };
     fetchPrograms();
-  }, [collegeId]);
+  }, [isProfileLoaded, profileLoading, getUserId, getCollegeId]);
 
     // Fetch Question Levels
     useEffect(() => {

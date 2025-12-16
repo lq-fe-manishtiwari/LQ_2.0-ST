@@ -7,17 +7,26 @@ import ProfileView from './components/ProfileView';
 
 const Dashboard = () => {
   const {
-    userProfile,
+    profile,
     loading,
     error,
     fetchProfile,
-    fullName,
-    designation,
-    userType,
-    profileImage,
-    email,
-    phone
+    getFullName,
+    getEmail,
+    getMobile,
+    getUserType,
+    getTeacherId,
+    isLoaded
   } = useUserProfile();
+
+  // Derived values from profile
+  const userProfile = profile;
+  const fullName = getFullName();
+  const email = getEmail();
+  const phone = getMobile();
+  const userType = getUserType();
+  const designation = profile?.designation || 'Teacher';
+  const profileImage = profile?.avatar || null;
 
   // State for allocated programs
   const [allocatedPrograms, setAllocatedPrograms] = useState({
@@ -47,7 +56,7 @@ const Dashboard = () => {
       setProgramsError(null);
       
       // Get teacher ID from user profile response
-      const teacherId = userProfile?.teacher_id;
+      const teacherId = getTeacherId();
       
       if (teacherId) {
         const response = await api.getTeacherAllocatedPrograms(teacherId);
@@ -131,10 +140,10 @@ const Dashboard = () => {
 
   useEffect(() => {
     // Fetch profile data when component mounts
-    if (!userProfile) {
+    if (!isLoaded && !loading) {
       fetchProfile();
     }
-  }, [userProfile, fetchProfile]);
+  }, [isLoaded, loading, fetchProfile]);
 
   // Function to fetch teacher dashboard data
   const fetchTeacherDashboard = async () => {
@@ -166,10 +175,10 @@ const Dashboard = () => {
 
   useEffect(() => {
     // Fetch allocated programs when user profile is available and profile view is shown
-    if (userProfile && showProfileView) {
+    if (isLoaded && showProfileView) {
       fetchAllocatedPrograms();
     }
-  }, [userProfile, showProfileView]);
+  }, [isLoaded, showProfileView]);
   
   useEffect(() => {
     // Fetch teacher dashboard data when component mounts

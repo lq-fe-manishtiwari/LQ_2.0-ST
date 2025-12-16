@@ -7,12 +7,14 @@ import { collegeService } from '../services/college.service';
 import { courseService } from '../services/courses.service';
 import { fetchClassesByprogram } from '../services/student.service.js';
 import { contentService } from '../services/content.service.js';
-import SweetAlert from 'react-bootstrap-sweetalert'; 
+import SweetAlert from 'react-bootstrap-sweetalert';
+import { useUserProfile } from '../../../../../contexts/UserProfileContext';
 
 const Questions = () => {
   const navigate = useNavigate();
-  const activeCollege = JSON.parse(localStorage.getItem("activeCollege"));
-  const collegeId = activeCollege?.id;
+  
+  // Get user profile data
+  const { getUserId, getCollegeId, isLoaded: isProfileLoaded, loading: profileLoading } = useUserProfile();
 
   const [filters, setFilters] = useState({
     filterOpen: false,
@@ -280,10 +282,23 @@ const Questions = () => {
   // Fetch Programs
   useEffect(() => {
     const fetchPrograms = async () => {
-      if (!collegeId) return;
+      if (!isProfileLoaded || profileLoading) {
+        console.log('Profile not loaded yet, waiting...');
+        return;
+      }
+
+      const userId = getUserId();
+      const collegeId = getCollegeId();
+
+      if (!collegeId || !userId) {
+        console.warn('No college ID or user ID found. Please ensure you are logged in and have an active college selected.');
+        return;
+      }
+      
       try {
-        const programs = await collegeService.getAllProgramByCollegeId(collegeId);
-        const formatted = programs.map(p => ({
+        console.log('Fetching programs for college ID:', userId, collegeId);
+        const programs = await collegeService.getAllProgramByCollegeId(userId, collegeId);
+        const formatted = programs?.map(p => ({
           id: p.program_id,
           name: p.program_name || p.name
         }));
@@ -294,7 +309,7 @@ const Questions = () => {
       }
     };
     fetchPrograms();
-  }, [collegeId]);
+  }, [isProfileLoaded, profileLoading, getUserId, getCollegeId]);
 
   // Fetch Classes when Program selected
   useEffect(() => {

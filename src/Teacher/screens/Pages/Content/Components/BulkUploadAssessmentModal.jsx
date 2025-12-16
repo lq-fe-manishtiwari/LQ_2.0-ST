@@ -5,6 +5,7 @@ import SweetAlert from 'react-bootstrap-sweetalert';
 import { collegeService } from '../services/college.service';
 import { contentService } from '../services/content.service.js';
 import { fetchClassesByprogram } from '../services/student.service.js';
+import { useUserProfile } from '../../../../../contexts/UserProfileContext';
 
 export default function BulkUploadAssessmentModal({ onClose }) {
    const [selectedFile, setSelectedFile] = useState(null);
@@ -12,8 +13,8 @@ export default function BulkUploadAssessmentModal({ onClose }) {
    const [openDropdown, setOpenDropdown] = useState(null);
    const dropdownRefs = useRef({});
 
-   const activeCollege = JSON.parse(localStorage.getItem("activeCollege"));
-   const collegeId = activeCollege?.id;
+   // Get user profile data
+   const { getUserId, getCollegeId, isLoaded: isProfileLoaded, loading: profileLoading } = useUserProfile();
 
    // Data
    const [programOptions, setProgramOptions] = useState([]);
@@ -118,9 +119,22 @@ export default function BulkUploadAssessmentModal({ onClose }) {
    // Fetch Programs
    useEffect(() => {
      const fetchPrograms = async () => {
-       if (!collegeId) return;
+       if (!isProfileLoaded || profileLoading) {
+         console.log('Profile not loaded yet, waiting...');
+         return;
+       }
+
+       const userId = getUserId();
+       const collegeId = getCollegeId();
+
+       if (!collegeId || !userId) {
+         console.warn('No college ID or user ID found. Please ensure you are logged in and have an active college selected.');
+         return;
+       }
+       
        try {
-         const programs = await collegeService.getAllProgramByCollegeId(collegeId);
+         console.log('Fetching programs for college ID:', userId, collegeId);
+         const programs = await collegeService.getAllProgramByCollegeId(userId, collegeId);
          const formatted = programs.map(p => ({
            id: p.program_id,
            name: p.program_name || p.name
@@ -131,7 +145,7 @@ export default function BulkUploadAssessmentModal({ onClose }) {
        }
      };
      fetchPrograms();
-   }, [collegeId]);
+   }, [isProfileLoaded, profileLoading, getUserId, getCollegeId]);
 
    // Fetch Classes
    useEffect(() => {

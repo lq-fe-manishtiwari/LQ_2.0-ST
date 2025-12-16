@@ -37,7 +37,7 @@ export function login(data) {
 
   return fetch(`${TeacherLoginAPI}/auth`, requestOptions)
     .then(handleLoginResponse)
-    .then((user) => {
+    .then(async (user) => {
       const decoded = jwtDecode(user.token);
       localStorage.setItem("currentUser", JSON.stringify(decoded));
       localStorage.setItem("refreshToken", JSON.stringify(user));
@@ -45,6 +45,16 @@ export function login(data) {
       
       currentUserSubject.value = decoded;
       currentUserToken.value = user;
+      
+      // Initialize user profile after successful login
+      try {
+        const { default: userProfileService } = await import('./userProfile.service.js');
+        await userProfileService.initializeAfterLogin();
+        console.log('User profile initialized after login');
+      } catch (error) {
+        console.error('Failed to initialize user profile after login:', error);
+        // Don't throw error as login was successful, profile can be fetched later
+      }
       
       return decoded;
     });
@@ -322,7 +332,7 @@ export function getTeacherAllocatedPrograms(teacherId) {
     headers: authHeader(),
   };
 
-  return fetch(`${TeacherLoginAPI}/user/teacher/${teacherId}`, requestOptions)
+  return fetch(`https://lq-new-api.learnqoch.com/user/teacher/${teacherId}`, requestOptions)
     .then(handleResponse)
     .then(data => ({
       success: true,
