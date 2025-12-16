@@ -5,6 +5,7 @@ import Assessment from "../AssessmentTab/Assessment";
 import Questions from "../QuestionsTab/Questions";
 import AddNewAssessment from "../AssessmentTab/AddNewAssessment";
 import AddNewQuestion from "../AddQuestions/AddNewQuestions";
+import ContentObjectiveQuestionWrapper from "../AddQuestions/ContentObjectiveQuestionWrapper";
 // import AddNewAssessment from "../AssessmentTab/AddNewAssessment";
 
 export default function AssessmentRoutes() {
@@ -20,7 +21,7 @@ export default function AssessmentRoutes() {
       
       </Route>
       <Route path="/teacher-add-new-assessment" element={<AddNewAssessment />} />
-      <Route path="add-question" element={<AddNewQuestion />} />
+      <Route path="add-question" element={<ContentObjectiveQuestionWrapper />} />
     </Routes>
   );
 }

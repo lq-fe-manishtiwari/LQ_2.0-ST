@@ -1,50 +1,75 @@
 import React, { useState } from "react";
-import { NavLink } from "react-router-dom";
-import { Plus, Upload } from "lucide-react";
-// import Buttons from "./Buttons";
+import { FileText, HelpCircle, BookOpen, Users, X } from "lucide-react";
+import Questions from "../QuestionsTab/Questions";
+import ContentDashboard from "../Dashboard/ContentDashboard";
+import StudentProject from "../AddContent/StudentProject";
 
 const tabs = [
-  // { label: "Academic", to: "/teacher/content/Academic" },
-  // { label: "Sport", to: "/teacher/content/Sport" },
-  // { label: "Vertical1_4 (Major)", to: "/teacher/content/Vertical1_4" },
-  // { label: "Vertical2 (Minor)", to: "/teacher/content/Vertical2" },
-  // { label: "Vertical3 (OE)", to: "/teacher/content/Vertical3" },
-  // { label: "Vertical5 (AEC/VEC/IKS)", to: "/teacher/content/Vertical5" },
-  // { label: "Vertical6 (Other's)", to: "/teacher/content/Vertical6" },
-
-    { label: "Content", to: "/content/content-dashboard" },
-  // { label: "Content Setting", to: "/content/content-setting" },
-  // { label: "Quiz", to: "/content/add-quiz" },
-  { label: "Quiz", to: "/content/quiz-dashboard" },
-  { label: "Question", to: "/content/question-dashboard" },
-  // { label: "Teacher Content", to: "/content/teacher-content" },
-  { label: "Student Project", to: "/content/student-project" },
+  { name: "Content", key: "content", icon: <FileText size={18} /> },
+  { name: "Quiz", key: "quiz", icon: <BookOpen size={18} /> },
+  { name: "Question", key: "question", icon: <HelpCircle size={18} /> },
+  { name: "Student Project", key: "student-project", icon: <Users size={18} /> },
 ];
 
 export default function TabsNav() {
+  const [activeTab, setActiveTab] = useState("content");
+
+  const renderTabContent = () => {
+    switch (activeTab) {
+      case "content":
+        return <ContentDashboard />;
+      case "quiz":
+        return (
+          <div className="p-6 text-center text-gray-500">
+            <h3 className="text-lg font-semibold mb-2">Quiz Dashboard</h3>
+            <p>Quiz functionality will be implemented here.</p>
+          </div>
+        );
+      case "question":
+        return <Questions />;
+      case "student-project":
+        return <StudentProject />;
+      default:
+        return <ContentDashboard />;
+    }
+  };
 
   return (
-    <div className="p-2 md:p-2">
-      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
-        {/* Tabs Section */}
-        <div className="flex flex-wrap gap-1 sm:gap-2">
-          {tabs.map((t) => (
-            <NavLink
-              key={t.to}
-              to={t.to}
-              className={({ isActive }) =>
-                `tab-link whitespace-nowrap w-auto flex-shrink-0 cursor-default px-4 py-2 text-sm tab-active ${
-                  isActive ? "tab-active" : "tab-inactive"
-                }`
-              }
-            >
-              {t.label}
-            </NavLink>
-          ))}
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 p-4 md:p-6 lg:p-8">
+      <div className="max-w-7xl mx-auto">
+        {/* Header */}
+        <div className="bg-white rounded-xl shadow-md p-6 mb-6 border border-gray-200">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <h1 className="text-xl sm:text-2xl font-semibold mb-6 text-center sm:text-left text-blue-700">Content Management</h1>
+            </div>
+          </div>
+
+          {/* Tabs */}
+          <div className="flex gap-3 mt-6 border-b border-gray-200">
+            {tabs.map((tab) => (
+              <button
+                key={tab.key}
+                type="button"
+                onClick={() => setActiveTab(tab.key)}
+                className={`flex items-center gap-2 px-6 py-3 font-medium text-sm rounded-t-lg transition-all
+                  ${activeTab === tab.key
+                    ? 'bg-blue-600 text-white shadow-md'
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  }`}
+              >
+                {tab.icon}
+                {tab.name}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Content Area */}
+        <div className="bg-white rounded-xl shadow-md p-6 border border-gray-200">
+          {renderTabContent()}
         </div>
       </div>
-      {/* <Buttons/> */}
-
     </div>
   );
 }
