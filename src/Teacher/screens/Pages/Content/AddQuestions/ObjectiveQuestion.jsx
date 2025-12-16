@@ -111,16 +111,12 @@ const ObjectiveQuestion = ({
       const program = programOptions.find(p => p.name === value);
       setSelectedProgramId(program?.id || null);
       
-      // Extract academic year ID from program data
-      if (program?.academicYearId) {
-        setSelectedAcademicYearId(program.academicYearId);
-      }
-      
       resetFields(['class', 'semester', 'subject', 'chapter', 'topic']);
       setSelectedClass(null);
       setSelectedSubjectId(null);
       setSelectedUnitId(null);
       setSelectedSemesterId(null);
+      setSelectedAcademicYearId(null);
       setSemesterOptions([]);
     }
     else if (fieldName === 'class') {
@@ -210,15 +206,25 @@ const ObjectiveQuestion = ({
           const normalPrograms = response.data.normal_allocation || [];
           const allPrograms = [...classTeacherPrograms, ...normalPrograms];
           
-          const formatted = allPrograms.map(allocation => ({
-            id: allocation.program_id,
-            name: allocation.program?.program_name || allocation.program_name || `Program ${allocation.program_id}`,
-            academicYearId: allocation.academic_year_id,
-            semesterId: allocation.semester_id
-          }));
+          // Group allocations by program_id and merge them
+          const programMap = new Map();
           
-          // Remove duplicates based on program_id
-          const uniquePrograms = Array.from(new Map(formatted.map(p => [p.id, p])).values());
+          allPrograms.forEach(allocation => {
+            const programId = allocation.program_id;
+            const programName = allocation.program?.program_name || allocation.program_name || `Program ${programId}`;
+            
+            if (!programMap.has(programId)) {
+              programMap.set(programId, {
+                id: programId,
+                name: programName,
+                allocations: []
+              });
+            }
+            
+            programMap.get(programId).allocations.push(allocation);
+          });
+          
+          const uniquePrograms = Array.from(programMap.values());
           
           setProgramOptions(uniquePrograms);
           console.log('Formatted programs:', uniquePrograms);
@@ -257,38 +263,76 @@ const ObjectiveQuestion = ({
         fetchQuestionLevels();
     }, []);
 
-  // Fetch Classes
+  // Fetch Classes from allocation data only
   useEffect(() => {
-    const fetchClasses = async () => {
-      if (!selectedProgramId) {
+    const getClassesFromAllocations = async () => {
+      if (!selectedProgramId || !isProfileLoaded || profileLoading) {
         setClassOptions([]);
         setSelectedClass(null);
         return;
       }
+
+      const teacherId = getTeacherId();
+      if (!teacherId) {
+        console.warn('No teacher ID found. Please ensure you are logged in.');
+        return;
+      }
+
       try {
-        console.log('Fetching classes for program ID:', selectedProgramId);
-        const classes = await fetchClassesByprogram(selectedProgramId);
-        console.log('Classes fetched:', classes);
+        console.log('Getting classes from allocations for program ID:', selectedProgramId);
+        const response = await api.getTeacherAllocatedPrograms(teacherId);
         
-        if (Array.isArray(classes)) {
-          const formatted = classes.map(c => ({
-            id: c.program_class_year_id,
-            name: c.class_year_name,
-            semester_divisions: c.semester_divisions || []
-          }));
-          setClassOptions(formatted);
-          console.log('Formatted classes:', formatted);
+        if (response.success && response.data) {
+          const classTeacherPrograms = response.data.class_teacher_allocation || [];
+          const normalPrograms = response.data.normal_allocation || [];
+          const allPrograms = [...classTeacherPrograms, ...normalPrograms];
+          
+          // Find the selected program from programOptions to get all its allocations
+          const selectedProgram = programOptions.find(p => p.id === selectedProgramId);
+          if (selectedProgram) {
+            // Extract unique classes from the program's allocations
+            const uniqueClasses = [];
+            const seenClassIds = new Set();
+            
+            selectedProgram.allocations.forEach(allocation => {
+              if (allocation.class_year_id && !seenClassIds.has(allocation.class_year_id)) {
+                seenClassIds.add(allocation.class_year_id);
+                
+                // Get semester divisions for this class from all allocations of this program
+                const classAllocations = selectedProgram.allocations.filter(a => a.class_year_id === allocation.class_year_id);
+                const semesterDivisions = classAllocations.map(a => ({
+                  pcysd_id: a.allocation_id,
+                  semester_id: a.semester_id,
+                  semester_name: a.semester?.name || `S${a.semester?.semester_number || ''}`,
+                  semester_number: a.semester?.semester_number || 1,
+                  division_id: a.division_id,
+                  division_name: a.division?.division_name || 'A'
+                }));
+                
+                uniqueClasses.push({
+                  id: allocation.class_year_id,
+                  name: allocation.batch?.batch_name?.split(' ')[0] || 'FY', // Extract class year from batch name
+                  semester_divisions: semesterDivisions
+                });
+              }
+            });
+            
+            setClassOptions(uniqueClasses);
+            console.log('Classes from allocations:', uniqueClasses);
+          } else {
+            setClassOptions([]);
+          }
         } else {
-          console.error('Classes response is not an array:', classes);
+          console.error('Failed to fetch allocations:', response.message);
           setClassOptions([]);
         }
       } catch (err) {
-        console.error('Failed to fetch classes:', err);
+        console.error('Failed to fetch classes from allocations:', err);
         setClassOptions([]);
       }
     };
-    fetchClasses();
-  }, [selectedProgramId]);
+    getClassesFromAllocations();
+  }, [selectedProgramId, isProfileLoaded, profileLoading, getTeacherId, programOptions]);
 
  useEffect(() => {
     const fetchSubjects = async () => {

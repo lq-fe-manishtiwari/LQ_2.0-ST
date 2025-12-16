@@ -20,9 +20,8 @@ const Questions = () => {
   const [filters, setFilters] = useState({
     filterOpen: false,
     program: [],
-    classDataId: [],
-    gradeDivisionId: [],
     semester: '',
+    gradeDivisionId: [],
     chapter: '',
     topic: '',
     activeInactiveStatus: 'all',
@@ -53,6 +52,9 @@ const Questions = () => {
   const [selectedClass, setSelectedClass] = useState(null);
   const [selectedSubjectId, setSelectedSubjectId] = useState(null);
   const [selectedChapter, setSelectedChapter] = useState(null);
+  const [selectedAcademicYearId, setSelectedAcademicYearId] = useState(null);
+  const [selectedSemesterId, setSelectedSemesterId] = useState(null);
+  const [allAllocations, setAllAllocations] = useState([]);
 
   // SweetAlert function
   const showSweetAlert = (title, text, type = 'success', confirmText = 'OK', onConfirm = null) => {
@@ -71,23 +73,34 @@ const Questions = () => {
     setShowAlert(true);
   };
 
-  // Load all questions by default
+  // Auto-select first available options and load questions
   useEffect(() => {
-    const loadAllQuestions = async () => {
-      setLoading(prev => ({ ...prev, questions: true }));
-      try {
-        const response = await contentService.getAllQuestions();
-        if (Array.isArray(response)) {
-          setQuestions(response || []);
+    const autoSelectAndLoadQuestions = async () => {
+      if (allAllocations.length > 0 && programOptions.length > 0) {
+        // Auto-select first program
+        const firstProgram = programOptions[0];
+        if (firstProgram && !selectedProgramId) {
+          setSelectedProgramId(firstProgram.id);
+          setFilters(prev => ({ ...prev, program: [firstProgram.name] }));
+          
+          // Get semesters for this program and auto-select first one
+          const semesters = [...new Set(firstProgram.allocations.map(a => a.semester?.name).filter(Boolean))];
+          setSemesterOptions(semesters);
+          
+          if (semesters.length > 0) {
+            const firstSemester = semesters[0];
+            const semesterAllocation = firstProgram.allocations.find(a => a.semester?.name === firstSemester);
+            if (semesterAllocation) {
+              setSelectedSemesterId(semesterAllocation.semester_id);
+              setSelectedAcademicYearId(semesterAllocation.academic_year_id);
+              setFilters(prev => ({ ...prev, semester: firstSemester }));
+            }
+          }
         }
-      } catch (error) {
-        console.error('Failed to fetch all questions:', error);
-      } finally {
-        setLoading(prev => ({ ...prev, questions: false }));
       }
     };
-    loadAllQuestions();
-  }, []);
+    autoSelectAndLoadQuestions();
+  }, [allAllocations, programOptions, selectedProgramId]);
 
   // Filter questions based on selected filters
   const getFilteredQuestions = () => {
@@ -116,17 +129,18 @@ const Questions = () => {
     const program = programOptions.find(p => p.name === value);
     if (program) {
       setSelectedProgramId(program.id);
+      
+      // Get semesters from all allocations for this program
+      const semesters = [...new Set(program.allocations.map(a => a.semester?.name).filter(Boolean))];
+      setSemesterOptions(semesters);
+      
       setFilters(prev => ({
         ...prev,
         program: [value],
-        classDataId: [],
-        gradeDivisionId: [],
-        semester: ''
+        semester: '',
+        gradeDivisionId: []
       }));
-      setSelectedClass(null);
-      setClassOptions([]);
       setSubjectOptions([]);
-      setSemesterOptions([]);
     }
   };
 
@@ -134,15 +148,14 @@ const Questions = () => {
     setFilters(prev => ({
       ...prev,
       program: [],
-      classDataId: [],
-      gradeDivisionId: [],
-      semester: ''
+      semester: '',
+      gradeDivisionId: []
     }));
     setSelectedProgramId(null);
-    setSelectedClass(null);
-    setClassOptions([]);
-    setSubjectOptions([]);
+    setSelectedAcademicYearId(null);
+    setSelectedSemesterId(null);
     setSemesterOptions([]);
+    setSubjectOptions([]);
   };
 
   // Custom Select Component
@@ -280,7 +293,7 @@ const Questions = () => {
     );
   };
 
-  // Fetch Programs
+  // Fetch Programs and store all allocation data
   useEffect(() => {
     const fetchPrograms = async () => {
       if (!isProfileLoaded || profileLoading) {
@@ -306,13 +319,29 @@ const Questions = () => {
           const normalPrograms = response.data.normal_allocation || [];
           const allPrograms = [...classTeacherPrograms, ...normalPrograms];
           
-          const formatted = allPrograms.map(allocation => ({
-            id: allocation.program_id,
-            name: allocation.program?.program_name || allocation.program_name || `Program ${allocation.program_id}`
-          }));
+          // Store all allocation data
+          setAllAllocations(allPrograms);
+          console.log("allPrograms",allPrograms)
           
-          // Remove duplicates based on program_id
-          const uniquePrograms = Array.from(new Map(formatted.map(p => [p.id, p])).values());
+          // Group allocations by program_id and merge them
+          const programMap = new Map();
+          
+          allPrograms.forEach(allocation => {
+            const programId = allocation.program_id;
+            const programName = allocation.program?.program_name || allocation.program_name || `Program ${programId}`;
+            
+            if (!programMap.has(programId)) {
+              programMap.set(programId, {
+                id: programId,
+                name: programName,
+                allocations: []
+              });
+            }
+            
+            programMap.get(programId).allocations.push(allocation);
+          });
+          
+          const uniquePrograms = Array.from(programMap.values());
           
           setProgramOptions(uniquePrograms);
           console.log('Formatted programs:', uniquePrograms);
@@ -328,155 +357,82 @@ const Questions = () => {
     fetchPrograms();
   }, [isProfileLoaded, profileLoading, getTeacherId]);
 
-  // Fetch Classes when Program selected
-  useEffect(() => {
-    const fetchClasses = async () => {
-      if (!selectedProgramId) {
-        setClassOptions([]);
-        setSelectedClass(null);
-        return;
+  // Handle Semester Selection
+  const handleSemesterChange = (e) => {
+    const semesterName = e.target.value;
+    setFilters(prev => ({ ...prev, semester: semesterName, gradeDivisionId: [] }));
+    
+    if (semesterName && selectedProgramId) {
+      // Find the program and then the semester allocation
+      const program = programOptions.find(p => p.id === selectedProgramId);
+      if (program) {
+        const semesterAllocation = program.allocations.find(a => a.semester?.name === semesterName);
+        if (semesterAllocation) {
+          setSelectedSemesterId(semesterAllocation.semester_id);
+          setSelectedAcademicYearId(semesterAllocation.academic_year_id);
+        }
       }
-
-      try {
-        const classes = await fetchClassesByprogram(selectedProgramId);
-        console.log('Raw Classes Response:', classes);
-
-        const formatted = classes.map(c => ({
-          id: c.program_class_year_id,
-          name: c.class_year_name,
-          semester_divisions: c.semester_divisions || []
-        }));
-
-        console.log('Formatted Class Options:', formatted);
-        setClassOptions(formatted);
-      } catch (err) {
-        console.error('Failed to fetch classes:', err);
-        setClassOptions([]);
-      }
-    };
-
-    fetchClasses();
-  }, [selectedProgramId]);
-
-  // Extract Semesters when Class selected
-  useEffect(() => {
-    console.log('Selected Class Changed:', selectedClass);
-
-    if (selectedClass && Array.isArray(selectedClass.semester_divisions) && selectedClass.semester_divisions.length > 0) {
-      const uniqueSemesters = [...new Set(
-        selectedClass.semester_divisions
-          .map(div => div.semester_name)
-          .filter(Boolean)
-      )];
-
-      console.log('Extracted Semester Names:', uniqueSemesters);
-      setSemesterOptions(uniqueSemesters);
     } else {
-      console.log('No semesters found');
-      setSemesterOptions([]);
+      setSelectedSemesterId(null);
+      setSelectedAcademicYearId(null);
     }
-  }, [selectedClass]);
+    setSubjectOptions([]);
+  };
 
-  // Fetch Subjects when Program + Class + Semester are selected
+  // Fetch Subjects using teacher allocation API
   useEffect(() => {
     const fetchSubjects = async () => {
-      if (!selectedProgramId || !selectedClass) {
-        console.log('Not all filters ready for subjects → skipping');
+      if (!selectedAcademicYearId || !selectedSemesterId) {
+        console.log('Academic year ID or semester ID not available → skipping subjects');
         setSubjectOptions([]);
         return;
       }
 
-      try {
-        const res = await courseService.getAllCourses();
-        console.log('Raw Subjects (Courses) Response:', res);
+      if (!isProfileLoaded || profileLoading) {
+        console.log('Profile not loaded yet, waiting...');
+        return;
+      }
 
-        if (Array.isArray(res)) {
-          const subjects = res
-            .filter(s => !s.is_deleted)
-            .map(s => ({
-              id: s.subject_id,
-              name: s.name || s.paper_name || s.subject_name
-            }))
-            .filter(s => s.name);
+      const teacherId = getTeacherId();
+      if (!teacherId) {
+        console.warn('No teacher ID found. Please ensure you are logged in.');
+        return;
+      }
+
+      try {
+        console.log('Fetching subjects for teacher:', teacherId, 'academicYearId:', selectedAcademicYearId, 'semesterId:', selectedSemesterId);
+        const response = await contentService.getTeacherSubjectsAllocated(teacherId, selectedAcademicYearId, selectedSemesterId);
+        console.log('Teacher allocated subjects response:', response);
+
+        if (Array.isArray(response)) {
+          const subjects = response.map(subjectInfo => ({
+            id: subjectInfo.subject_id || subjectInfo.id,
+            name: subjectInfo.subject_name || subjectInfo.name
+          })).filter(s => s.name && s.id);
+
+          const unique = Array.from(new Map(subjects.map(s => [s.name, s])).values());
+          setSubjectOptions(unique);
+          console.log('Formatted allocated subjects:', unique);
           
-          const uniqueSubjects = Array.from(new Map(subjects.map(s => [s.name, s])).values());
-          console.log('Final Subject Options:', uniqueSubjects);
-          setSubjectOptions(uniqueSubjects);
+          // Auto-select first subject if available
+          if (unique.length > 0 && !selectedSubjectId) {
+            const firstSubject = unique[0];
+            setSelectedSubjectId(firstSubject.id);
+            setFilters(prev => ({ ...prev, gradeDivisionId: [firstSubject.name] }));
+          }
         } else {
+          console.error('Subjects response is not valid:', response);
           setSubjectOptions([]);
         }
       } catch (err) {
-        console.error('Error fetching subjects:', err);
+        console.error('Failed to fetch teacher allocated subjects:', err);
         setSubjectOptions([]);
       }
     };
 
     fetchSubjects();
-  }, [selectedProgramId, selectedClass, filters.semester]);
+  }, [selectedAcademicYearId, selectedSemesterId, isProfileLoaded, profileLoading, getTeacherId, selectedSubjectId]);
 
-  const handleGetQuestions = async () => {
-    if (!filters.topic) {
-      showSweetAlert('Warning', 'Please select a topic first.', 'warning');
-      return;
-    }
-
-    const selectedTopic = topicOptions.find(t => t.unit_name === filters.topic);
-    if (!selectedTopic || !selectedTopic.unit_id) {
-      showSweetAlert('Error', 'Could not find the selected topic ID.', 'error');
-      return;
-    }
-
-    setLoading(prev => ({ ...prev, questions: true }));
-    try {
-      const response = await contentService.getQuestionsByUnitId(selectedTopic.unit_id);
-      console.log('Fetched Questions Response:', response);
-      
-      if (Array.isArray(response)) {
-        if (response.length > 0) {
-          console.log('First question structure:', response[0]);
-          console.log('Available keys:', Object.keys(response[0]));
-        }
-        setQuestions(response || []);
-        if (response.length === 0) {
-          showSweetAlert('Info', 'No questions found for the selected topic.', 'info');
-        }
-      } else {
-        console.log('Response is not an array:', response);
-        setQuestions([]);
-        showSweetAlert('Error', 'Unexpected response format.', 'error');
-      }
-    } catch (error) {
-      console.error('Failed to fetch questions:', error);
-      setQuestions([]);
-      showSweetAlert('Error', 'Failed to fetch questions. Please try again.', 'error');
-    } finally {
-      setLoading(prev => ({ ...prev, questions: false }));
-    }
-  };
-
-  const handleGetAllQuestions = async () => {
-    setLoading(prev => ({ ...prev, questions: true }));
-    try {
-      const response = await contentService.getAllQuestions();
-      console.log('Fetched All Questions Response:', response);
-      
-      if (Array.isArray(response)) {
-        setQuestions(response || []);
-        if (response.length === 0) {
-          showSweetAlert('Info', 'No questions found.', 'info');
-        }
-      } else {
-        setQuestions([]);
-        showSweetAlert('Error', 'Unexpected response format.', 'error');
-      }
-    } catch (error) {
-      console.error('Failed to fetch all questions:', error);
-      setQuestions([]);
-      showSweetAlert('Error', 'Failed to fetch questions. Please try again.', 'error');
-    } finally {
-      setLoading(prev => ({ ...prev, questions: false }));
-    }
-  };
 
   // DELETE QUESTION FUNCTION WITH SWEETALERT CONFIRMATION
   const handleDeleteQuestion = async (questionId) => {
@@ -574,6 +530,46 @@ const Questions = () => {
     fetchModules();
   }, [selectedSubjectId]);
 
+  // Auto-fetch questions when unit is selected
+  useEffect(() => {
+    const autoFetchQuestions = async () => {
+      if (!filters.topic) {
+        setQuestions([]);
+        return;
+      }
+
+      const selectedTopic = topicOptions.find(t => t.unit_name === filters.topic);
+      if (!selectedTopic || !selectedTopic.unit_id) {
+        setQuestions([]);
+        return;
+      }
+
+      setLoading(prev => ({ ...prev, questions: true }));
+      try {
+        console.log('Auto-fetching questions for unit ID:', selectedTopic.unit_id);
+        const response = await contentService.getQuestionsByUnitId(selectedTopic.unit_id);
+        console.log('Auto-fetched Questions Response:', response);
+        
+        if (Array.isArray(response)) {
+          setQuestions(response || []);
+          if (response.length === 0) {
+            console.log('No questions found for the selected unit.');
+          }
+        } else {
+          console.log('Response is not an array:', response);
+          setQuestions([]);
+        }
+      } catch (error) {
+        console.error('Failed to auto-fetch questions:', error);
+        setQuestions([]);
+      } finally {
+        setLoading(prev => ({ ...prev, questions: false }));
+      }
+    };
+
+    autoFetchQuestions();
+  }, [filters.topic, topicOptions]);
+
   return (
     <div className="p-4 sm:p-6 bg-gray-50 min-h-screen">
       {/* Header */}
@@ -606,7 +602,7 @@ const Questions = () => {
       {/* Filter Panel */}
       {filters.filterOpen && (
         <div className="bg-white rounded-xl shadow-md p-5 mb-6 border border-gray-200">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
             {/* Program */}
             <MultiSelectProgram
               label="Program"
@@ -616,48 +612,15 @@ const Questions = () => {
               onProgramRemove={removeProgram}
             />
 
-            {/* Class */}
-            <CustomSelect
-              label="Class"
-              value={filters.classDataId[0] || ''}
-              onChange={(e) => {
-                const name = e.target.value;
-                const classObj = classOptions.find(c => c.name === name);
-                console.log('Class Selected:', name, classObj);
-
-                setSelectedClass(classObj || null);
-                setFilters(prev => ({
-                  ...prev,
-                  classDataId: name ? [name] : [],
-                  gradeDivisionId: [],
-                  semester: '',
-                  chapter: '',
-                  topic: ''
-                }));
-                setSemesterOptions([]);
-                setSubjectOptions([]);
-                setChapterOptions([]);
-                setTopicOptions([]);
-              }}
-              options={classOptions.map(c => c.name)}
-              placeholder="Select Class"
-              disabled={filters.program.length === 0}
-            />
-
-            {/* Semester
+            {/* Semester */}
             <CustomSelect
               label="Semester"
               value={filters.semester}
-              onChange={(e) => {
-                setFilters(prev => ({ ...prev, semester: e.target.value, gradeDivisionId: [], chapter: '', topic: '' }));
-                setSubjectOptions([]);
-                setChapterOptions([]);
-                setTopicOptions([]);
-              }}
+              onChange={handleSemesterChange}
               options={semesterOptions}
               placeholder="Select Semester"
-              disabled={!selectedClass || semesterOptions.length === 0}
-            /> */}
+              disabled={filters.program.length === 0 || semesterOptions.length === 0}
+            />
 
             {/* Subject */}
             <CustomSelect
@@ -697,12 +660,7 @@ const Questions = () => {
               disabled={!selectedSubjectId || chapterOptions.length === 0}
               loading={loading.chapters}
             />
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          
-
-            {/* Topic */}
+                  {/* Topic */}
             <CustomSelect
               label="Unit"
               value={filters.topic}
@@ -713,18 +671,9 @@ const Questions = () => {
               placeholder="Select Unit"
               disabled={!filters.chapter || topicOptions.length === 0}
             />
-
-            {/* Get Questions Button */}
-            <div className="flex items-end col-start-auto lg:col-start-4">
-              <button
-                onClick={handleGetQuestions}
-                disabled={loading.questions}
-                className="bg-[rgb(33,98,193)] hover:bg-[rgb(28,78,153)] text-white font-semibold px-4 py-3 rounded-lg text-sm transition w-full min-h-[44px] disabled:bg-gray-400 disabled:cursor-not-allowed"
-              >
-                {loading.questions ? 'Loading...' : 'Get Questions'}
-              </button>
-            </div>
           </div>
+
+
         </div>
       )}
 
@@ -784,8 +733,8 @@ const Questions = () => {
               </div>
             ) : (
               <div className="text-center text-gray-500 py-10">
-                {filters.topic ? 'No questions found for selected unit.' : 
-                 filters.program.length > 0 ? 'Select Class → Paper → Module → Unit to filter further' :
+                {filters.topic ? 'No questions found for selected unit.' :
+                 filters.program.length > 0 ? 'Select Semester → Paper → Module → Unit to filter further' :
                  'Select Program to start filtering questions'}
               </div>
             );
