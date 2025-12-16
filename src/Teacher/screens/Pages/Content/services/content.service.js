@@ -75,7 +75,7 @@ function getQuestionsByUnitId(unitId) {
         method: 'GET',
         headers: authHeader()
     };
-    return fetch(`${ContentAPI}/questions/unit/${unitId}`, requestOptions).then(handleResponse);
+    return fetch(`${ContentAPI}/questions/teacher/unit/${unitId}`, requestOptions).then(handleResponse);
 }
 
 // PUT /api/questions/{questionId}

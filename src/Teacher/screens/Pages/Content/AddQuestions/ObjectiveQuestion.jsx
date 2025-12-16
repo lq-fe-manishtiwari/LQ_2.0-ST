@@ -29,7 +29,6 @@ const ObjectiveQuestion = ({
 
   // Data
   const [programOptions, setProgramOptions] = useState([]);
-  const [classOptions, setClassOptions] = useState([]);
   const [subjectOptions, setSubjectOptions] = useState([]);     // { id, name }
   const [semesterOptions, setSemesterOptions] = useState([]);
   const [chapterOptions, setChapterOptions] = useState([]);     // modules
@@ -38,7 +37,6 @@ const ObjectiveQuestion = ({
 
   // Selection
   const [selectedProgramId, setSelectedProgramId] = useState(null);
-  const [selectedClass, setSelectedClass] = useState(null);
   const [selectedSubjectId, setSelectedSubjectId] = useState(null);
   const [selectedUnitId, setSelectedUnitId] = useState(null);
   const [selectedAcademicYearId, setSelectedAcademicYearId] = useState(null);
@@ -69,24 +67,23 @@ const ObjectiveQuestion = ({
   }, [isEdit, formData.program, programOptions, selectedProgramId]);
 
   useEffect(() => {
-    if (isEdit && formData.class && classOptions.length > 0 && !selectedClass) {
-      const classObj = classOptions.find(c => c.name === formData.class);
-      if (classObj) {
-        setSelectedClass(classObj);
-        // Set semester options from class data
-        if (classObj.semester_divisions) {
-          setSemesterOptions(classObj.semester_divisions);
+    if (isEdit && formData.program && programOptions.length > 0 && selectedProgramId) {
+      const program = programOptions.find(p => p.id === selectedProgramId);
+      if (program?.allocations) {
+        const semesters = [...new Set(program.allocations.map(a => a.semester?.name).filter(Boolean))];
+        setSemesterOptions(semesters);
+        
+        // Auto-select semester if available in edit mode
+        if (formData.semester && !selectedSemesterId) {
+          const semesterAllocation = program.allocations.find(a => a.semester?.name === formData.semester);
+          if (semesterAllocation) {
+            setSelectedSemesterId(semesterAllocation.semester_id);
+            setSelectedAcademicYearId(semesterAllocation.academic_year_id);
+          }
         }
       }
     }
-  }, [isEdit, formData.class, classOptions, selectedClass]);
-
-  useEffect(() => {
-    if (isEdit && formData.semester && semesterOptions.length > 0 && !selectedSemesterId) {
-      const semester = semesterOptions.find(s => s.semester_name === formData.semester);
-      if (semester) setSelectedSemesterId(semester.semester_id);
-    }
-  }, [isEdit, formData.semester, semesterOptions, selectedSemesterId]);
+  }, [isEdit, formData.program, formData.semester, programOptions, selectedProgramId, selectedSemesterId]);
   
   useEffect(() => {
     if (isEdit && formData.subject && subjectOptions.length > 0 && !selectedSubjectId) {
@@ -111,31 +108,28 @@ const ObjectiveQuestion = ({
       const program = programOptions.find(p => p.name === value);
       setSelectedProgramId(program?.id || null);
       
-      resetFields(['class', 'semester', 'subject', 'chapter', 'topic']);
-      setSelectedClass(null);
-      setSelectedSubjectId(null);
-      setSelectedUnitId(null);
-      setSelectedSemesterId(null);
-      setSelectedAcademicYearId(null);
-      setSemesterOptions([]);
-    }
-    else if (fieldName === 'class') {
-      const classObj = classOptions.find(c => c.name === value);
-      setSelectedClass(classObj || null);
-      
-      // Set semester options from class data
-      if (classObj?.semester_divisions) {
-        setSemesterOptions(classObj.semester_divisions);
+      // Get semesters from all allocations for this program
+      if (program?.allocations) {
+        const semesters = [...new Set(program.allocations.map(a => a.semester?.name).filter(Boolean))];
+        setSemesterOptions(semesters);
       }
       
       resetFields(['semester', 'subject', 'chapter', 'topic']);
       setSelectedSubjectId(null);
       setSelectedUnitId(null);
       setSelectedSemesterId(null);
+      setSelectedAcademicYearId(null);
     }
     else if (fieldName === 'semester') {
-      const semester = semesterOptions.find(s => s.semester_name === value);
-      setSelectedSemesterId(semester?.semester_id || null);
+      // Find the program and then the semester allocation
+      const program = programOptions.find(p => p.id === selectedProgramId);
+      if (program) {
+        const semesterAllocation = program.allocations.find(a => a.semester?.name === value);
+        if (semesterAllocation) {
+          setSelectedSemesterId(semesterAllocation.semester_id);
+          setSelectedAcademicYearId(semesterAllocation.academic_year_id);
+        }
+      }
       
       resetFields(['subject', 'chapter', 'topic']);
       setSelectedSubjectId(null);
@@ -263,76 +257,6 @@ const ObjectiveQuestion = ({
         fetchQuestionLevels();
     }, []);
 
-  // Fetch Classes from allocation data only
-  useEffect(() => {
-    const getClassesFromAllocations = async () => {
-      if (!selectedProgramId || !isProfileLoaded || profileLoading) {
-        setClassOptions([]);
-        setSelectedClass(null);
-        return;
-      }
-
-      const teacherId = getTeacherId();
-      if (!teacherId) {
-        console.warn('No teacher ID found. Please ensure you are logged in.');
-        return;
-      }
-
-      try {
-        console.log('Getting classes from allocations for program ID:', selectedProgramId);
-        const response = await api.getTeacherAllocatedPrograms(teacherId);
-        
-        if (response.success && response.data) {
-          const classTeacherPrograms = response.data.class_teacher_allocation || [];
-          const normalPrograms = response.data.normal_allocation || [];
-          const allPrograms = [...classTeacherPrograms, ...normalPrograms];
-          
-          // Find the selected program from programOptions to get all its allocations
-          const selectedProgram = programOptions.find(p => p.id === selectedProgramId);
-          if (selectedProgram) {
-            // Extract unique classes from the program's allocations
-            const uniqueClasses = [];
-            const seenClassIds = new Set();
-            
-            selectedProgram.allocations.forEach(allocation => {
-              if (allocation.class_year_id && !seenClassIds.has(allocation.class_year_id)) {
-                seenClassIds.add(allocation.class_year_id);
-                
-                // Get semester divisions for this class from all allocations of this program
-                const classAllocations = selectedProgram.allocations.filter(a => a.class_year_id === allocation.class_year_id);
-                const semesterDivisions = classAllocations.map(a => ({
-                  pcysd_id: a.allocation_id,
-                  semester_id: a.semester_id,
-                  semester_name: a.semester?.name || `S${a.semester?.semester_number || ''}`,
-                  semester_number: a.semester?.semester_number || 1,
-                  division_id: a.division_id,
-                  division_name: a.division?.division_name || 'A'
-                }));
-                
-                uniqueClasses.push({
-                  id: allocation.class_year_id,
-                  name: allocation.batch?.batch_name?.split(' ')[0] || 'FY', // Extract class year from batch name
-                  semester_divisions: semesterDivisions
-                });
-              }
-            });
-            
-            setClassOptions(uniqueClasses);
-            console.log('Classes from allocations:', uniqueClasses);
-          } else {
-            setClassOptions([]);
-          }
-        } else {
-          console.error('Failed to fetch allocations:', response.message);
-          setClassOptions([]);
-        }
-      } catch (err) {
-        console.error('Failed to fetch classes from allocations:', err);
-        setClassOptions([]);
-      }
-    };
-    getClassesFromAllocations();
-  }, [selectedProgramId, isProfileLoaded, profileLoading, getTeacherId, programOptions]);
 
  useEffect(() => {
     const fetchSubjects = async () => {
@@ -463,7 +387,7 @@ const ObjectiveQuestion = ({
             question_level_id: level ? level.question_level_id : null,
             questionImages: [], // Add later
             default_weightage: parseFloat(formData.defaultMarks) || 1.0,
-            is_admin: false,
+            admin: false,
             user_id: userId,
       };
 
@@ -544,18 +468,17 @@ const ObjectiveQuestion = ({
         {isEdit ? 'Edit Question' : 'Create New Question'}
       </h2>
 
-      {/* Program → Class → Semester → Subject */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+      {/* Program → Semester → Subject */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
         <CustomDropdown fieldName="program" label="Program" value={formData.program} options={programOptions.map(p => p.name)} placeholder="Select Program" required disabled={isEdit} />
-        <CustomDropdown fieldName="class" label="Class" value={formData.class} options={classOptions.map(c => c.name)} placeholder="Select Class" required disabled={isEdit || !formData.program} />
         <CustomDropdown
           fieldName="semester"
           label="Semester"
           value={formData.semester}
-          options={semesterOptions}
+          options={semesterOptions.map ? semesterOptions.map(s => s) : semesterOptions}
           placeholder="Select Semester"
           required
-          disabled={isEdit || !formData.class}
+          disabled={isEdit || !formData.program}
         />
         <CustomDropdown
           fieldName="subject"

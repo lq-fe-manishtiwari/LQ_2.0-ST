@@ -700,7 +700,7 @@ const Questions = () => {
                       <p className="font-semibold text-gray-800">Q{index + 1}.</p>
                       <p className="mt-1 text-gray-600">{q.question || q.question_text || 'Question text not found.'}</p>
                       <p className="text-xs text-gray-400 mt-1">
-                        Unit: {q.unit_name || 'N/A'} | Subject: {q.subject_name || 'N/A'}
+                        Unit: {q.unit_name || 'N/A'} | Subject: {q.subject_name || 'N/A'}  | Status: {q.subject_name || 'N/A'}
                       </p>
                     </div>
                     <div className="flex items-center gap-3 ml-4">
