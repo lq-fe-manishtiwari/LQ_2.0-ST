@@ -401,7 +401,10 @@ const ObjectiveQuestion = ({
         showSweetAlert('Success', 'Question created successfully!');
       }
 
-      onSaveSuccess?.();
+      // Call onSaveSuccess after a delay to allow SweetAlert to show
+      setTimeout(() => {
+        onSaveSuccess?.();
+      }, 2000);
     } catch (err) {
       console.error('Save failed:', err);
       showSweetAlert('Error', err.response?.data?.message || "Failed to save question", 'error');
@@ -577,6 +580,7 @@ const ObjectiveQuestion = ({
           onConfirm={alertConfig.onConfirm}
           type={alertConfig.type}
           confirmBtnText={alertConfig.confirmBtnText}
+          confirmBtnCssClass="btn-confirm"
           showCancel={false}
         >
           {alertConfig.text}
