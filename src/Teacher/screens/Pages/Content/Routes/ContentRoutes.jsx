@@ -3,6 +3,8 @@ import ContentLayout from "../ContentLayout";
 import TabLayout from "../AddContent/TabLayout";
 import Add_Content from "../AddContent/Add_Content";
 import StudentProject from "../AddContent/StudentProject";
+import Question from "../QuestionsTab/Questions.jsx";
+import AddNewQuestion from "../AddQuestions/AddNewQuestions.jsx";
 
 
 export default function ContentRoutes() {
@@ -23,6 +25,12 @@ export default function ContentRoutes() {
 
       {/* ✅ Redirect to dashboard when visiting /content */}
       <Route path="/" element={<Navigate to="content-dashboard" replace />} />
+
+
+
+              <Route path="question-dashboard" element={<Question />} />
+        <Route path="add-question" element={<AddNewQuestion />} />
+
     </Routes>
   );
 }

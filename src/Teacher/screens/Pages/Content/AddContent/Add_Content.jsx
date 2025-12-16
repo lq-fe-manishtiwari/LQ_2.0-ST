@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef } from "react";
 import { ChevronDown } from "lucide-react";
-// import { courseService } from "../../Courses/Services/courses.service";
-// import { fetchClassesByprogram } from "../../Student/Services/student.service.js";
-// import { contentService } from "../Services/AddContent.service.js";
+import { courseService } from "../services/courses.service";
+import { fetchClassesByprogram } from "../services/student.service.js";
+import { contentService } from "../services/AddContent.service.js";
 
 
 // Custom Select Component

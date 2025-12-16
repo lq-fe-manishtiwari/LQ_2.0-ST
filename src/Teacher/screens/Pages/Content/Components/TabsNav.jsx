@@ -4,6 +4,8 @@ import { FileText, HelpCircle, BookOpen, Users } from "lucide-react";
 import ContentDashboard from "../Dashboard/ContentDashboard";
 import StudentProject from "../AddContent/StudentProject";
 import Add_Content from "../AddContent/Add_Content"
+import Question from "../QuestionsTab/Questions.jsx";
+
 const tabs = [
   { name: "Content", key: "content", icon: <FileText size={16} /> },
   { name: "Quiz", key: "quiz", icon: <BookOpen size={16} /> },
@@ -26,7 +28,7 @@ export default function TabsNav() {
           </div>
         );
       case "question":
-        return '<Questions />';
+        return <Question/>;
       case "student-project":
         return <StudentProject />;
       default:
