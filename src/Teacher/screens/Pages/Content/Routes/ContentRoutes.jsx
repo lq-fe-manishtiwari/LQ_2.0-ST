@@ -3,8 +3,7 @@ import ContentLayout from "../ContentLayout";
 import TabLayout from "../AddContent/TabLayout";
 import Add_Content from "../AddContent/Add_Content";
 import StudentProject from "../AddContent/StudentProject";
-import Questions from "../QuestionsTab/Questions";
-// import ContentDashboard from "../Dashboard/ContentDashboard";_
+
 
 export default function ContentRoutes() {
   return (
@@ -16,8 +15,6 @@ export default function ContentRoutes() {
       {/* ✅ Add content route */}
       <Route path="add-content" element={<TabLayout />}/>
 
-      {/* ✅ Questions route */}
-      <Route path="question-dashboard" element={<Questions />} />
 
       {/* ✅ Quiz route - placeholder for now */}
       <Route path="quiz-dashboard" element={<ContentLayout />} />

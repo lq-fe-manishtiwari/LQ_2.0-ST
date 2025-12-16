@@ -1,6 +1,5 @@
 import React, { useState } from "react";
 import { FileText, HelpCircle, BookOpen, Users, X } from "lucide-react";
-import Questions from "../QuestionsTab/Questions";
 import ContentDashboard from "../Dashboard/ContentDashboard";
 import StudentProject from "../AddContent/StudentProject";
 
@@ -26,7 +25,7 @@ export default function TabsNav() {
           </div>
         );
       case "question":
-        return <Questions />;
+        return '<Questions />';
       case "student-project":
         return <StudentProject />;
       default:
