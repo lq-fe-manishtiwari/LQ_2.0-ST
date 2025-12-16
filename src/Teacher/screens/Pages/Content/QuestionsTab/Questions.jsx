@@ -63,6 +63,7 @@ const Questions = () => {
       text,
       type,
       confirmBtnText: confirmText,
+      confirmBtnCssClass: 'btn-confirm',
       onConfirm: () => {
         setShowAlert(false);
         if (onConfirm && typeof onConfirm === 'function') {
@@ -73,54 +74,40 @@ const Questions = () => {
     setShowAlert(true);
   };
 
-  // Auto-select first available options and load questions
+
+
+  // Fetch questions when topic is selected
   useEffect(() => {
-    const autoSelectAndLoadQuestions = async () => {
-      if (allAllocations.length > 0 && programOptions.length > 0) {
-        // Auto-select first program
-        const firstProgram = programOptions[0];
-        if (firstProgram && !selectedProgramId) {
-          setSelectedProgramId(firstProgram.id);
-          setFilters(prev => ({ ...prev, program: [firstProgram.name] }));
-          
-          // Get semesters for this program and auto-select first one
-          const semesters = [...new Set(firstProgram.allocations.map(a => a.semester?.name).filter(Boolean))];
-          setSemesterOptions(semesters);
-          
-          if (semesters.length > 0) {
-            const firstSemester = semesters[0];
-            const semesterAllocation = firstProgram.allocations.find(a => a.semester?.name === firstSemester);
-            if (semesterAllocation) {
-              setSelectedSemesterId(semesterAllocation.semester_id);
-              setSelectedAcademicYearId(semesterAllocation.academic_year_id);
-              setFilters(prev => ({ ...prev, semester: firstSemester }));
-            }
-          }
-        }
+    const fetchQuestions = async () => {
+      if (!filters.topic) {
+        setQuestions([]);
+        return;
+      }
+
+      const selectedTopic = topicOptions.find(t => t.unit_name === filters.topic);
+      if (!selectedTopic?.unit_id) {
+        setQuestions([]);
+        return;
+      }
+
+      setLoading(prev => ({ ...prev, questions: true }));
+      try {
+        const response = await contentService.getQuestionsByUnitId(selectedTopic.unit_id);
+        setQuestions(Array.isArray(response) ? response : []);
+      } catch (error) {
+        console.error('Failed to fetch questions:', error);
+        setQuestions([]);
+      } finally {
+        setLoading(prev => ({ ...prev, questions: false }));
       }
     };
-    autoSelectAndLoadQuestions();
-  }, [allAllocations, programOptions, selectedProgramId]);
+
+    fetchQuestions();
+  }, [filters.topic, topicOptions]);
 
   // Filter questions based on selected filters
   const getFilteredQuestions = () => {
-    let filtered = questions;
-    
-    // Filter by program if selected
-    if (filters.program.length > 0 && selectedProgramId) {
-      // Note: Questions don't have direct program_id, so we filter by other criteria when program is selected
-      // For now, we'll show all questions when only program is selected
-    }
-    
-    // Filter by unit if selected
-    if (filters.topic) {
-      const selectedTopic = topicOptions.find(t => t.unit_name === filters.topic);
-      if (selectedTopic?.unit_id) {
-        filtered = filtered.filter(q => String(q.unit_id) === String(selectedTopic.unit_id));
-      }
-    }
-    
-    return filtered;
+    return questions;
   };
 
   // Handle Program Selection
@@ -414,12 +401,7 @@ const Questions = () => {
           setSubjectOptions(unique);
           console.log('Formatted allocated subjects:', unique);
           
-          // Auto-select first subject if available
-          if (unique.length > 0 && !selectedSubjectId) {
-            const firstSubject = unique[0];
-            setSelectedSubjectId(firstSubject.id);
-            setFilters(prev => ({ ...prev, gradeDivisionId: [firstSubject.name] }));
-          }
+
         } else {
           console.error('Subjects response is not valid:', response);
           setSubjectOptions([]);
@@ -454,6 +436,8 @@ const Questions = () => {
       cancelBtnText: 'Cancel',
       confirmBtnBsStyle: 'danger',
       cancelBtnBsStyle: 'default',
+      confirmBtnCssClass: 'btn-confirm',
+      cancelBtnCssClass: 'btn-cancel',
       onConfirm: async () => {
         // Delete logic
         setDeletingId(questionId);
@@ -530,45 +514,7 @@ const Questions = () => {
     fetchModules();
   }, [selectedSubjectId]);
 
-  // Auto-fetch questions when unit is selected
-  useEffect(() => {
-    const autoFetchQuestions = async () => {
-      if (!filters.topic) {
-        setQuestions([]);
-        return;
-      }
 
-      const selectedTopic = topicOptions.find(t => t.unit_name === filters.topic);
-      if (!selectedTopic || !selectedTopic.unit_id) {
-        setQuestions([]);
-        return;
-      }
-
-      setLoading(prev => ({ ...prev, questions: true }));
-      try {
-        console.log('Auto-fetching questions for unit ID:', selectedTopic.unit_id);
-        const response = await contentService.getQuestionsByUnitId(selectedTopic.unit_id);
-        console.log('Auto-fetched Questions Response:', response);
-        
-        if (Array.isArray(response)) {
-          setQuestions(response || []);
-          if (response.length === 0) {
-            console.log('No questions found for the selected unit.');
-          }
-        } else {
-          console.log('Response is not an array:', response);
-          setQuestions([]);
-        }
-      } catch (error) {
-        console.error('Failed to auto-fetch questions:', error);
-        setQuestions([]);
-      } finally {
-        setLoading(prev => ({ ...prev, questions: false }));
-      }
-    };
-
-    autoFetchQuestions();
-  }, [filters.topic, topicOptions]);
 
   return (
     <div className="p-4 sm:p-6 bg-gray-50 min-h-screen">
@@ -585,7 +531,7 @@ const Questions = () => {
 
         <div className="flex flex-col sm:flex-row gap-3">
           <button
-            onClick={() => navigate('/teacher/content/add-question')}
+            onClick={() => navigate('/teacher/content/add-content/question/add-question')}
             className="flex items-center justify-center gap-2 bg-[rgb(33,98,193)] hover:bg-[rgb(28,78,153)] text-white font-medium px-4 py-3 rounded-lg shadow-md transition-all"
           >
             <Plus className="w-5 h-5" /> Add New Question
@@ -700,24 +646,24 @@ const Questions = () => {
                       <p className="font-semibold text-gray-800">Q{index + 1}.</p>
                       <p className="mt-1 text-gray-600">{q.question || q.question_text || 'Question text not found.'}</p>
                       <p className="text-xs text-gray-400 mt-1">
-                        Unit: {q.unit_name || 'N/A'} | Subject: {q.subject_name || 'N/A'}  | Status: {q.subject_name || 'N/A'}
+                        Unit: {q.unit_name || 'N/A'} | Subject: {q.subject_name || 'N/A'} | Status: <span className={q.approval_status ? 'text-green-600' : 'text-red-600'}>{q.approval_status ? 'Approved' : 'Pending'}</span>
                       </p>
                     </div>
                     <div className="flex items-center gap-3 ml-4">
                       <button
                         onClick={() => {
                           console.log("Navigating with question:", q, "and filters:", filters);
-                          navigate("/content/add-question", { state: { question: q, filters: filters } });
+                          navigate("/teacher/content/add-content/question/add-question", { state: { question: q, filters: filters } });
                         }}
-                        className="text-blue-600 hover:text-blue-800 transition-colors p-1"
+                        className="p-1.5 rounded-lg bg-yellow-50 text-yellow-600 hover:bg-yellow-100 transition"
                         disabled={loading.delete || !questionId}
                       >
-                        <Edit className="w-5 h-5" />
+                        <Edit className="w-4 h-4" />
                       </button>
                       <button
                         onClick={() => handleDeleteQuestion(questionId)}
                         disabled={loading.delete || !questionId}
-                        className="text-red-600 hover:text-red-800 transition-colors p-1 disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="p-1.5 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition disabled:opacity-50 disabled:cursor-not-allowed"
                         title={!questionId ? "Cannot delete: Missing ID" : "Delete question"}
                       >
                         {loading.delete && deletingId === questionId ? (

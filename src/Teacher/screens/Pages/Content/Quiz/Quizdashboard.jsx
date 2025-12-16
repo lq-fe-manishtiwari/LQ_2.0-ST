@@ -361,7 +361,7 @@ const handleCancelDelete = () => {
 
         <div className="flex gap-2 w-full sm:w-auto">
           <button 
-            onClick={() => navigate('/teacher/content/quiz/add')}
+            onClick={() => navigate('/teacher/content/add-content/quiz/add')}
             className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-medium px-4 py-2 rounded-md shadow-md transition-all hover:shadow-lg flex-1 sm:flex-none justify-center"
           >
             <Plus className="w-4 h-4" />
@@ -482,7 +482,7 @@ const handleCancelDelete = () => {
                     <div className="flex justify-end gap-2 mt-6">
                       <button
                         onClick={() =>
-                          navigate("/teacher/content/quiz/edit", {
+                          navigate("/teacher/content/add-content/quiz/edit", {
                             state: { quiz: quiz, filters: filters }
                           })
                         }

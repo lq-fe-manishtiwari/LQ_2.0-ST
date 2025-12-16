@@ -104,7 +104,7 @@ const AddNewQuestion = () => {
 
   // Navigate Back
   const goBack = () => {
-    navigate("/teacher/content/add-content");
+    navigate(-1);
   };
 
   // Modal Helpers

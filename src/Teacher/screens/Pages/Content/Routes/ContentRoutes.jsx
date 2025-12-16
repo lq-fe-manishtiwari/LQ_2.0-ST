@@ -2,7 +2,10 @@ import { Routes, Route, Navigate } from "react-router-dom";
 
 import ContentLayout from "../ContentLayout";
 import TabLayout from "../AddContent/TabLayout";
+
+import Add_Content from "../AddContent/Add_Content";
 import StudentProject from "../AddContent/StudentProject";
+
 import Question from "../QuestionsTab/Questions.jsx";
 import AddNewQuestion from "../AddQuestions/AddNewQuestions.jsx";
 
@@ -13,33 +16,31 @@ import EditQuiz from "../Quiz/EditQuiz";
 export default function ContentRoutes() {
   return (
     <Routes>
-      {/* ✅ Default redirect */}
+      {/* default */}
       <Route path="/" element={<Navigate to="dashboard" replace />} />
 
-      {/* ✅ Main Dashboard */}
+      {/* dashboard */}
       <Route path="dashboard" element={<ContentLayout />} />
 
-      {/* ✅ Add Content (tabs UI stays here) */}
-      <Route path="add-content" element={<TabLayout />} />
+      {/* TAB ROUTES */}
+      <Route path="add-content" element={<TabLayout />}>
+        <Route index element={<Navigate to="content" replace />} />
 
-      {/* ✅ Quiz Dashboard */}
-      <Route path="quiz-dashboard" element={<QuizDashboard />} />
+        {/* Content */}
+        <Route path="content" element={<Add_Content />} />
 
-      {/* ✅ Add Quiz */}
-      <Route path="quiz/add" element={<AddQuiz />} />
-      <Route path="quiz/edit" element={<EditQuiz />} />
+        {/* Student Project */}
+        <Route path="student-project" element={<StudentProject />} />
 
-      {/* ✅ Student Project */}
-      <Route path="student-project" element={<StudentProject />} />
+        {/* Question */}
+        <Route path="question" element={<Question />} />
+        <Route path="question/add-question" element={<AddNewQuestion />} />
 
-      {/* ✅ Redirect to dashboard when visiting /content */}
-      <Route path="/" element={<Navigate to="content-dashboard" replace />} />
-
-
-
-              <Route path="question-dashboard" element={<Question />} />
-        <Route path="add-question" element={<AddNewQuestion />} />
-
+        {/* Quiz (FIXED) */}
+        <Route path="quiz" element={<QuizDashboard />} />
+        <Route path="quiz/add" element={<AddQuiz />} />
+        <Route path="quiz/edit" element={<EditQuiz />} />
+      </Route>
     </Routes>
   );
 }
