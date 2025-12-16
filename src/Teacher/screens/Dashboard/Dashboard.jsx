@@ -26,6 +26,11 @@ const Dashboard = () => {
   });
   const [programsLoading, setProgramsLoading] = useState(false);
   const [programsError, setProgramsError] = useState(null);
+  
+  // State for teacher dashboard data
+  const [dashboardData, setDashboardData] = useState(null);
+  const [dashboardLoading, setDashboardLoading] = useState(false);
+  const [dashboardError, setDashboardError] = useState(null);
   const [expandedProgram, setExpandedProgram] = useState(null);
   const [studentsData, setStudentsData] = useState({});
   const [studentsLoading, setStudentsLoading] = useState({});
@@ -131,12 +136,45 @@ const Dashboard = () => {
     }
   }, [userProfile, fetchProfile]);
 
+  // Function to fetch teacher dashboard data
+  const fetchTeacherDashboard = async () => {
+    try {
+      setDashboardLoading(true);
+      setDashboardError(null);
+      
+      const response = await api.getTeacherDashboard();
+      
+      if (response.success) {
+        setDashboardData(response.data);
+        const activeCollege = {
+          id: response?.data?.college_id || response?.data?.id, 
+          name: response?.data?.college_name
+        }
+        
+        // Save to localStorage
+        localStorage.setItem('activeCollege', JSON.stringify(activeCollege));
+      } else {
+        setDashboardError(response.message || 'Failed to fetch dashboard data');
+      }
+    } catch (err) {
+      console.error('Error fetching dashboard data:', err);
+      setDashboardError(err.message || 'An error occurred while fetching dashboard');
+    } finally {
+      setDashboardLoading(false);
+    }
+  };
+
   useEffect(() => {
     // Fetch allocated programs when user profile is available and profile view is shown
     if (userProfile && showProfileView) {
       fetchAllocatedPrograms();
     }
   }, [userProfile, showProfileView]);
+  
+  useEffect(() => {
+    // Fetch teacher dashboard data when component mounts
+    fetchTeacherDashboard();
+  }, []);
 
   if (loading) {
     return (

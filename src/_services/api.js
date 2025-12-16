@@ -416,6 +416,35 @@ export function uploadFileToS3(file) {
     });
 }
 
+// ========== TEACHER DASHBOARD API FUNCTION ==========
+export function getTeacherDashboard() {
+  const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
+  const teacherId = currentUser?.jti;
+  
+  if (!teacherId) {
+    return Promise.reject({
+      success: false,
+      message: 'Teacher ID not found in token'
+    });
+  }
+
+  const requestOptions = {
+    method: 'GET',
+    headers: authHeader(),
+  };
+
+  return fetch(`${TeacherLoginAPI}/admin/teacher/${teacherId}`, requestOptions)
+    .then(handleResponse)
+    .then(data => ({
+      success: true,
+      data: data
+    }))
+    .catch(error => ({
+      success: false,
+      message: error.message || 'Failed to fetch teacher dashboard'
+    }));
+}
+
 // Enhanced API object with user profile methods
 export const api = {
   getUserProfile,
@@ -423,6 +452,7 @@ export const api = {
   getTeacherAllocatedPrograms,
   getStudentsByFilters,
   uploadFileToS3,
+  getTeacherDashboard,
   // Add other existing functions if needed
   request: apiRequest,
 };
