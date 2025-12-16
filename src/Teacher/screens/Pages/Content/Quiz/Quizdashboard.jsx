@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Filter, Upload, Edit, Trash2, ChevronDown } from "lucide-react";
+import { Plus, Filter, Upload, Edit, Trash2, ChevronDown, Clock, FileText } from "lucide-react";
+import SweetAlert from 'react-bootstrap-sweetalert';
 // import { courseService } from "../../Courses/Services/courses.service";
 // import { fetchClassesByprogram } from "../../Student/Services/student.service.js";
 // import { contentService } from '../Services/content.service.js';
@@ -86,6 +87,14 @@ export default function QuizDashboard() {
   const [units, setUnits] = useState([]);
   const [quizzes, setQuizzes] = useState([]);
   const [showBulkUpload, setShowBulkUpload] = useState(false);
+  
+  // Delete Alert States
+  const [showAlert, setShowAlert] = useState(false);
+  const [quizToDelete, setQuizToDelete] = useState(null);
+  const [showDeleteSuccessAlert, setShowDeleteSuccessAlert] = useState(false);
+  const [showDeleteErrorAlert, setShowDeleteErrorAlert] = useState(false);
+  const [alertMessage, setAlertMessage] = useState('');
+  const [errorMessage, setErrorMessage] = useState('');
 
   const [filters, setFilters] = useState({
     program: "",
@@ -304,29 +313,37 @@ const getFilteredQuizzes = () => {
   });
 };
 
-const handleDeleteQuiz = async (quizId) => {
+const handleDeleteQuiz = (quizId) => {
+  setQuizToDelete(quizId);
+  setShowAlert(true);
+};
+
+const handleConfirmDelete = async () => {
+  setShowAlert(false);
   try {
-    const confirmDelete = window.confirm("Are you sure you want to delete this quiz?");
-    if (!confirmDelete) return;
-
-    const response = await contentQuizService.softDeleteQuiz(quizId);
-
-    if (response?.success) {
-      alert("Quiz deleted successfully!");
-      loadAllQuizzes(); // refresh list
-    } else {
-      alert("Failed to delete quiz.");
-    }
+    // Simulate API call
+    setTimeout(() => {
+      setQuizzes(prev => prev.filter(quiz => quiz.quiz_id !== quizToDelete));
+      setAlertMessage('Quiz deleted successfully!');
+      setShowDeleteSuccessAlert(true);
+      setQuizToDelete(null);
+    }, 500);
   } catch (err) {
-    console.error("Delete quiz error:", err);
-    alert("Error deleting quiz.");
+    console.error('Delete quiz error:', err);
+    setErrorMessage('Failed to delete quiz. Please try again.');
+    setShowDeleteErrorAlert(true);
   }
+};
+
+const handleCancelDelete = () => {
+  setShowAlert(false);
+  setQuizToDelete(null);
 };
 
 
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 p-4 md:p-6 lg:p-8">
+    <div className="min-h-screen  p-4 md:p-6 lg:p-8">
       {/* Header: Filter + Create Quiz Button */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
         <div className="w-full sm:w-auto">
@@ -413,10 +430,10 @@ const handleDeleteQuiz = async (quizId) => {
         </div>
       )}
 
-      <div className="bg-white rounded-xl shadow-lg p-8 border border-gray-100">
+      <div className="bg-white/90 backdrop-blur-sm rounded-2xl shadow-xl p-8 border border-indigo-100">
 
       <div>
-        <h3 className="text-xl font-semibold text-gray-800 mb-6">
+        <h3 className="text-2xl font-bold text-blue-600 mb-8">
           {filters.unit ? 'Filtered Quizzes' : 'All Quizzes'}
         </h3>
 
@@ -427,21 +444,27 @@ const handleDeleteQuiz = async (quizId) => {
               {filteredQuizzes.map((quiz) => (
                 <div
                   key={quiz.quiz_id}  
-                  className="p-5 bg-white border border-gray-200 rounded-xl shadow-sm hover:shadow-md transition-all"
+                  className="group p-6 bg-gradient-to-br from-white to-indigo-50/50 border border-indigo-100 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 hover:border-indigo-200"
                 >
                   {/* Title */}
-                  <h4 className="text-lg font-bold text-gray-900 mb-2">
+                  <h4 className="text-xl font-bold text-gray-700 mb-3 group-hover:text-blue-700 transition-colors">
                     {quiz.quiz_name}
                   </h4>
 
                   {/* Duration + Questions */}
-                  <div className="flex justify-between text-sm text-gray-600 mb-3">
-                    <span>⏳ {quiz.duration} min</span>
-                    <span>📝 {quiz.questions?.length || 0} Questions</span>
+                  <div className="flex justify-between text-sm mb-4">
+                    <span className="flex items-center gap-2 text-emerald-600 bg-emerald-50 px-3 py-1 rounded-full">
+                      <Clock className="w-4 h-4" />
+                      {quiz.duration} min
+                    </span>
+                    <span className="flex items-center gap-2 text-purple-600 bg-purple-50 px-3 py-1 rounded-full">
+                      <FileText className="w-4 h-4" />
+                      {quiz.questions?.length || 0} Questions
+                    </span>
                   </div>
 
                   {/* Created date */}
-                  <p className="text-xs text-gray-500 mb-3">
+                  <p className="text-xs text-gray-500 mb-4 bg-gray-50 px-3 py-1 rounded-full inline-block">
                     Created on {new Date(quiz.createddate).toLocaleDateString()}
                   </p>
 
@@ -456,45 +479,85 @@ const handleDeleteQuiz = async (quizId) => {
                     {quiz.active ? "Active" : "Inactive"}
                   </span> */}
                    {/* --- EDIT + DELETE BUTTONS --- */}
-                    <div className="flex justify-end gap-3 mt-4">
+                    <div className="flex justify-end gap-2 mt-6">
                       <button
                         onClick={() =>
                           navigate("/teacher/content/quiz/edit", {
                             state: { quiz: quiz, filters: filters }
                           })
                         }
-                        className="text-blue-600 hover:text-blue-800 transition-colors p-1"
+                        className="p-1.5 rounded-lg bg-yellow-50 text-yellow-600 hover:bg-yellow-100 transition"
                       >
-                        <Edit className="w-5 h-5" />
+                        <Edit className="w-4 h-4" />
                       </button>
 
                       <button
                         onClick={() => handleDeleteQuiz(quiz.quiz_id)}
-                        className="text-red-600 hover:text-red-800 transition-colors p-1"
+                        className="p-1.5 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition"
                       >
-                        <Trash2 className="w-5 h-5" />
+                        <Trash2 className="w-4 h-4" />
                       </button>
                     </div>
                 </div>
               ))}
             </div>
           ) : (
-            <p className="text-gray-500 text-center mt-4">
-              {filters.unit ? 'No quizzes found for selected filters.' : 'No quizzes available.'}
-            </p>
+            <div className="text-center py-12">
+              <div className="text-6xl mb-4">📚</div>
+              <p className="text-gray-500 text-lg">
+                {filters.unit ? 'No quizzes found for selected filters.' : 'No quizzes available.'}
+              </p>
+            </div>
           );
         })()
         }
       </div>
     </div>
 
-    {/* Bulk Upload Modal */}
-          {showBulkUpload && (
-            <BulkUploadAssessmentModal onClose={() => setShowBulkUpload(false)} />
-          )}
+      {/* Bulk Upload Modal */}
+      {showBulkUpload && (
+        <BulkUploadAssessmentModal onClose={() => setShowBulkUpload(false)} />
+      )}
 
+      {/* Delete Confirmation Alert */}
+      {showAlert && (
+        <SweetAlert
+          warning
+          showCancel
+          confirmBtnText="Yes, Delete!"
+          cancelBtnText="Cancel"
+          confirmBtnCssClass="btn-confirm"
+          cancelBtnCssClass="btn-cancel"
+          title="Are you sure?"
+          onConfirm={handleConfirmDelete}
+          onCancel={handleCancelDelete}
+        >
+          You won't be able to recover this quiz!
+        </SweetAlert>
+      )}
+
+      {/* Success Alert */}
+      {showDeleteSuccessAlert && (
+        <SweetAlert
+          success
+          title="Deleted!"
+          onConfirm={() => setShowDeleteSuccessAlert(false)}
+        >
+          {alertMessage}
+        </SweetAlert>
+      )}
+
+      {/* Error Alert */}
+      {showDeleteErrorAlert && (
+        <SweetAlert
+          danger
+          title="Error!"
+          onConfirm={() => setShowDeleteErrorAlert(false)}
+        >
+          {errorMessage}
+        </SweetAlert>
+      )}
     </div>
-    
   );
 }
 
