@@ -1,4 +1,4 @@
-import { authHeader, handleResponse, authHeaderToPost, AcademicAPI, ContentAPI } from '../../../../../_services/api';
+import { authHeader, handleResponse, authHeaderToPost, AcademicAPI, ContentAPI, TeacherLoginAPI } from '../../../../../_services/api';
 
 export const contentService = {
     createContentLevel,
@@ -25,6 +25,7 @@ export const contentService = {
 	getModulesAndUnits,
     getAllQuestionLevel,
     getContentByUnits,
+    getTeacherSubjectsAllocated,
 };
 
 function getAllQuestionLevel() {
@@ -205,7 +206,7 @@ function getModulesbySubject(subjectId) {
         headers: authHeader()
     };
 
-    return fetch(`${AcademicAPI}/api/subjects/${subjectId}/modules-units`, requestOptions)
+    return fetch(`${AcademicAPI}/admin/academic/api/subjects/${subjectId}/modules-units`, requestOptions)
         .then(handleResponse)
         .then(data => {
             return data;
@@ -310,5 +311,21 @@ function getContentByUnits(unitId) {
         .catch(error => {
             console.error('Error fetching unit content:', error);
             throw error;
+        });
+}
+
+// GET /api/teacher/{teacherId}/subjects-allocated
+function getTeacherSubjectsAllocated(teacherId, academicYearId, semesterId) {
+    const requestOptions = {
+        method: 'GET',
+        headers: authHeader(),
+    };
+
+    const url = `${TeacherLoginAPI}/teacher/${teacherId}/subjects-allocated?academicYearId=${academicYearId}&semesterId=${semesterId}`;
+    
+    return fetch(url, requestOptions)
+        .then(handleResponse)
+        .then(data => {
+            return data;
         });
 }

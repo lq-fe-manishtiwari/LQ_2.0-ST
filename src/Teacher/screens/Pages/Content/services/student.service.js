@@ -12,7 +12,7 @@ export function fetchClassesByprogram(programId) {
         method: 'GET',
         headers: authHeader()
     };
-    return fetch(`${AcademicAPI}/programs/${programId}/classes`, requestOptions).then(handleResponse);
+    return fetch(`${AcademicAPI}/admin/academic/program-class-year/program/${programId}`, requestOptions).then(handleResponse);
 }
 
 // GET /api/admin/academic/students/by-class/{classId}

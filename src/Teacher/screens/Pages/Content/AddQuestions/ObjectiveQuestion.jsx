@@ -7,6 +7,7 @@ import { collegeService } from '../services/college.service';
 import { contentService } from '../services/content.service.js';
 import { fetchClassesByprogram } from '../services/student.service.js';
 import { useUserProfile } from '../../../../../contexts/UserProfileContext';
+import { api } from '../../../../../_services/api';
 
 const ObjectiveQuestion = ({
   formData,
@@ -24,11 +25,10 @@ const ObjectiveQuestion = ({
   const dropdownRefs = useRef({});
 
   // Get user profile data
-  const { getUserId, getCollegeId, isLoaded: isProfileLoaded, loading: profileLoading } = useUserProfile();
+  const { getUserId, getCollegeId,getTeacherId , isLoaded: isProfileLoaded, loading: profileLoading } = useUserProfile();
 
   // Data
   const [programOptions, setProgramOptions] = useState([]);
-
   const [classOptions, setClassOptions] = useState([]);
   const [subjectOptions, setSubjectOptions] = useState([]);     // { id, name }
   const [semesterOptions, setSemesterOptions] = useState([]);
@@ -41,6 +41,8 @@ const ObjectiveQuestion = ({
   const [selectedClass, setSelectedClass] = useState(null);
   const [selectedSubjectId, setSelectedSubjectId] = useState(null);
   const [selectedUnitId, setSelectedUnitId] = useState(null);
+  const [selectedAcademicYearId, setSelectedAcademicYearId] = useState(null);
+  const [selectedSemesterId, setSelectedSemesterId] = useState(null);
 
   // Loading
   const [loadingSubjects, setLoadingSubjects] = useState(false);
@@ -69,9 +71,22 @@ const ObjectiveQuestion = ({
   useEffect(() => {
     if (isEdit && formData.class && classOptions.length > 0 && !selectedClass) {
       const classObj = classOptions.find(c => c.name === formData.class);
-      if (classObj) setSelectedClass(classObj);
+      if (classObj) {
+        setSelectedClass(classObj);
+        // Set semester options from class data
+        if (classObj.semester_divisions) {
+          setSemesterOptions(classObj.semester_divisions);
+        }
+      }
     }
   }, [isEdit, formData.class, classOptions, selectedClass]);
+
+  useEffect(() => {
+    if (isEdit && formData.semester && semesterOptions.length > 0 && !selectedSemesterId) {
+      const semester = semesterOptions.find(s => s.semester_name === formData.semester);
+      if (semester) setSelectedSemesterId(semester.semester_id);
+    }
+  }, [isEdit, formData.semester, semesterOptions, selectedSemesterId]);
   
   useEffect(() => {
     if (isEdit && formData.subject && subjectOptions.length > 0 && !selectedSubjectId) {
@@ -95,19 +110,37 @@ const ObjectiveQuestion = ({
     if (fieldName === 'program') {
       const program = programOptions.find(p => p.name === value);
       setSelectedProgramId(program?.id || null);
+      
+      // Extract academic year ID from program data
+      if (program?.academicYearId) {
+        setSelectedAcademicYearId(program.academicYearId);
+      }
+      
       resetFields(['class', 'semester', 'subject', 'chapter', 'topic']);
       setSelectedClass(null);
       setSelectedSubjectId(null);
       setSelectedUnitId(null);
+      setSelectedSemesterId(null);
+      setSemesterOptions([]);
     }
     else if (fieldName === 'class') {
       const classObj = classOptions.find(c => c.name === value);
       setSelectedClass(classObj || null);
+      
+      // Set semester options from class data
+      if (classObj?.semester_divisions) {
+        setSemesterOptions(classObj.semester_divisions);
+      }
+      
       resetFields(['semester', 'subject', 'chapter', 'topic']);
       setSelectedSubjectId(null);
       setSelectedUnitId(null);
+      setSelectedSemesterId(null);
     }
     else if (fieldName === 'semester') {
+      const semester = semesterOptions.find(s => s.semester_name === value);
+      setSelectedSemesterId(semester?.semester_id || null);
+      
       resetFields(['subject', 'chapter', 'topic']);
       setSelectedSubjectId(null);
       setSelectedUnitId(null);
@@ -159,28 +192,38 @@ const ObjectiveQuestion = ({
         return;
       }
 
-      const userId = getUserId();
-      const collegeId = getCollegeId();
+      const teacherId = getTeacherId();
 
-      if (!collegeId || !userId) {
-        console.warn('No college ID or user ID found. Please ensure you are logged in and have an active college selected.');
+      if (!teacherId) {
+        console.warn('No teacher ID found. Please ensure you are logged in.');
         return;
       }
       
       try {
-        console.log('Fetching programs for college ID:', userId, collegeId);
-        const programs = await collegeService.getAllProgramByCollegeId(userId, collegeId);
-        console.log('Programs fetched:', programs);
+        console.log('Fetching programs for teacher ID:', teacherId);
+        const response = await api.getTeacherAllocatedPrograms(teacherId);
+        console.log('Programs response:', response);
         
-        if (Array.isArray(programs)) {
-          const formatted = programs.map(p => ({
-            id: p.program_id,
-            name: p.program_name || p.name
+        if (response.success && response.data) {
+          // Flatten class_teacher_allocation and normal_allocation into single array
+          const classTeacherPrograms = response.data.class_teacher_allocation || [];
+          const normalPrograms = response.data.normal_allocation || [];
+          const allPrograms = [...classTeacherPrograms, ...normalPrograms];
+          
+          const formatted = allPrograms.map(allocation => ({
+            id: allocation.program_id,
+            name: allocation.program?.program_name || allocation.program_name || `Program ${allocation.program_id}`,
+            academicYearId: allocation.academic_year_id,
+            semesterId: allocation.semester_id
           }));
-          setProgramOptions(formatted);
-          console.log('Formatted programs:', formatted);
+          
+          // Remove duplicates based on program_id
+          const uniquePrograms = Array.from(new Map(formatted.map(p => [p.id, p])).values());
+          
+          setProgramOptions(uniquePrograms);
+          console.log('Formatted programs:', uniquePrograms);
         } else {
-          console.error('Programs response is not an array:', programs);
+          console.error('Failed to fetch programs:', response.message);
           setProgramOptions([]);
         }
       } catch (err) {
@@ -189,7 +232,7 @@ const ObjectiveQuestion = ({
       }
     };
     fetchPrograms();
-  }, [isProfileLoaded, profileLoading, getUserId, getCollegeId]);
+  }, [isProfileLoaded, profileLoading, getTeacherId]);
 
     // Fetch Question Levels
     useEffect(() => {
@@ -249,36 +292,44 @@ const ObjectiveQuestion = ({
 
  useEffect(() => {
     const fetchSubjects = async () => {
-      if (!selectedProgramId) {
+      if (!selectedAcademicYearId || !selectedSemesterId) {
         setSubjectOptions([]);
         setSelectedSubjectId(null);
         return;
       }
 
+      if (!isProfileLoaded || profileLoading) {
+        console.log('Profile not loaded yet, waiting...');
+        return;
+      }
+
+      const teacherId = getTeacherId();
+      if (!teacherId) {
+        console.warn('No teacher ID found. Please ensure you are logged in.');
+        return;
+      }
+
       setLoadingSubjects(true);
       try {
-        console.log('Fetching subjects for program ID:', selectedProgramId);
-        const response = await contentService.getSubjectbyProgramId(selectedProgramId);
-        console.log('Subjects by Program ID response:', response);
+        console.log('Fetching subjects for teacher:', teacherId, 'academicYearId:', selectedAcademicYearId, 'semesterId:', selectedSemesterId);
+        const response = await contentService.getTeacherSubjectsAllocated(teacherId, selectedAcademicYearId, selectedSemesterId);
+        console.log('Teacher allocated subjects response:', response);
 
         if (Array.isArray(response)) {
-          const subjects = response
-            .filter(s => !s.is_deleted)
-            .map(s => ({
-              id: s.subject_id,
-              name: s.subject_name || s.name
-            }))
-            .filter(s => s.name && s.id);
+          const subjects = response.map(subjectInfo => ({
+            id: subjectInfo.subject_id || subjectInfo.id,
+            name: subjectInfo.subject_name || subjectInfo.name
+          })).filter(s => s.name && s.id);
 
           const unique = Array.from(new Map(subjects.map(s => [s.name, s])).values());
           setSubjectOptions(unique);
-          console.log('Formatted subjects:', unique);
+          console.log('Formatted allocated subjects:', unique);
         } else {
-          console.error('Subjects response is not an array:', response);
+          console.error('Subjects response is not valid:', response);
           setSubjectOptions([]);
         }
       } catch (err) {
-        console.error('Failed to fetch subjects by program:', err);
+        console.error('Failed to fetch teacher allocated subjects:', err);
         setSubjectOptions([]);
       } finally {
         setLoadingSubjects(false);
@@ -286,7 +337,7 @@ const ObjectiveQuestion = ({
     };
 
     fetchSubjects();
-  }, [selectedProgramId]); // Only depends on Program, NOT semester
+  }, [selectedAcademicYearId, selectedSemesterId, isProfileLoaded, profileLoading, getTeacherId]); // Depends on academicYearId and semesterId
 
 
 
@@ -348,6 +399,8 @@ const ObjectiveQuestion = ({
       showSweetAlert('Warning', 'Please select a Topic (Unit)', 'warning');
       return;
     }
+    const userId = getUserId();
+    console.log("getUserId", userId);
 
     setSaving(true);
     try {
@@ -365,7 +418,9 @@ const ObjectiveQuestion = ({
             unit_id: selectedUnitId,
             question_level_id: level ? level.question_level_id : null,
             questionImages: [], // Add later
-            default_weightage: parseFloat(formData.defaultMarks) || 1.0
+            default_weightage: parseFloat(formData.defaultMarks) || 1.0,
+            is_admin: false,
+            user_id: userId,
       };
 
       console.log('Saving Question Payload:', payload);
@@ -415,8 +470,8 @@ const ObjectiveQuestion = ({
             </div>
             {Array.isArray(options) && options.length > 0 ? (
               options.map((opt, index) => {
-                const display = opt?.module_name || opt?.unit_name || opt?.name || opt?.question_level_type || opt;
-                const key = opt?.module_id || opt?.unit_id || opt?.id || opt?.question_level_id || `${fieldName}-${index}`;
+                const display = opt?.module_name || opt?.unit_name || opt?.semester_name || opt?.name || opt?.question_level_type || opt;
+                const key = opt?.module_id || opt?.unit_id || opt?.semester_id || opt?.id || opt?.question_level_id || `${fieldName}-${index}`;
                 return (
                   <div
                     key={key}
@@ -446,18 +501,27 @@ const ObjectiveQuestion = ({
       </h2>
 
       {/* Program → Class → Semester → Subject */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         <CustomDropdown fieldName="program" label="Program" value={formData.program} options={programOptions.map(p => p.name)} placeholder="Select Program" required disabled={isEdit} />
         <CustomDropdown fieldName="class" label="Class" value={formData.class} options={classOptions.map(c => c.name)} placeholder="Select Class" required disabled={isEdit || !formData.program} />
-        <CustomDropdown 
-          fieldName="subject" 
-          label="Paper" 
-          value={formData.subject} 
-          options={subjectOptions.map(s => s.name)} 
-          placeholder="Select Paper" 
-          required 
-          loading={loadingSubjects} 
-          disabled={isEdit || !formData.program}  // Only needs Program
+        <CustomDropdown
+          fieldName="semester"
+          label="Semester"
+          value={formData.semester}
+          options={semesterOptions}
+          placeholder="Select Semester"
+          required
+          disabled={isEdit || !formData.class}
+        />
+        <CustomDropdown
+          fieldName="subject"
+          label="Paper"
+          value={formData.subject}
+          options={subjectOptions.map(s => s.name)}
+          placeholder="Select Paper"
+          required
+          loading={loadingSubjects}
+          disabled={isEdit || !formData.semester}  // Now needs Semester
         />
       </div>
 

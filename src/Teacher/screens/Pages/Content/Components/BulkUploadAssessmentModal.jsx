@@ -6,6 +6,7 @@ import { collegeService } from '../services/college.service';
 import { contentService } from '../services/content.service.js';
 import { fetchClassesByprogram } from '../services/student.service.js';
 import { useUserProfile } from '../../../../../contexts/UserProfileContext';
+import { api } from '../../../../../_services/api';
 
 export default function BulkUploadAssessmentModal({ onClose }) {
    const [selectedFile, setSelectedFile] = useState(null);
@@ -14,7 +15,7 @@ export default function BulkUploadAssessmentModal({ onClose }) {
    const dropdownRefs = useRef({});
 
    // Get user profile data
-   const { getUserId, getCollegeId, isLoaded: isProfileLoaded, loading: profileLoading } = useUserProfile();
+   const { getUserId, getCollegeId, getTeacherId, isLoaded: isProfileLoaded, loading: profileLoading } = useUserProfile();
 
    // Data
    const [programOptions, setProgramOptions] = useState([]);
@@ -124,28 +125,45 @@ export default function BulkUploadAssessmentModal({ onClose }) {
          return;
        }
 
-       const userId = getUserId();
-       const collegeId = getCollegeId();
+       const teacherId = getTeacherId();
 
-       if (!collegeId || !userId) {
-         console.warn('No college ID or user ID found. Please ensure you are logged in and have an active college selected.');
+       if (!teacherId) {
+         console.warn('No teacher ID found. Please ensure you are logged in.');
          return;
        }
        
        try {
-         console.log('Fetching programs for college ID:', userId, collegeId);
-         const programs = await collegeService.getAllProgramByCollegeId(userId, collegeId);
-         const formatted = programs.map(p => ({
-           id: p.program_id,
-           name: p.program_name || p.name
-         }));
-         setProgramOptions(formatted);
+         console.log('Fetching programs for teacher ID:', teacherId);
+         const response = await api.getTeacherAllocatedPrograms(teacherId);
+         console.log('Programs response:', response);
+         
+         if (response.success && response.data) {
+           // Flatten class_teacher_allocation and normal_allocation into single array
+           const classTeacherPrograms = response.data.class_teacher_allocation || [];
+           const normalPrograms = response.data.normal_allocation || [];
+           const allPrograms = [...classTeacherPrograms, ...normalPrograms];
+           
+           const formatted = allPrograms.map(allocation => ({
+             id: allocation.program_id,
+             name: allocation.program?.program_name || allocation.program_name || `Program ${allocation.program_id}`
+           }));
+           
+           // Remove duplicates based on program_id
+           const uniquePrograms = Array.from(new Map(formatted.map(p => [p.id, p])).values());
+           
+           setProgramOptions(uniquePrograms);
+           console.log('Formatted programs:', uniquePrograms);
+         } else {
+           console.error('Failed to fetch programs:', response.message);
+           setProgramOptions([]);
+         }
        } catch (err) {
          console.error('Failed to fetch programs:', err);
+         setProgramOptions([]);
        }
      };
      fetchPrograms();
-   }, [isProfileLoaded, profileLoading, getUserId, getCollegeId]);
+   }, [isProfileLoaded, profileLoading, getTeacherId]);
 
    // Fetch Classes
    useEffect(() => {
