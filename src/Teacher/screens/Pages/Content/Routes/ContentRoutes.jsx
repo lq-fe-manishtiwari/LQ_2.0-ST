@@ -1,28 +1,34 @@
 import { Routes, Route, Navigate } from "react-router-dom";
+
 import ContentLayout from "../ContentLayout";
 import TabLayout from "../AddContent/TabLayout";
-import Add_Content from "../AddContent/Add_Content";
 import StudentProject from "../AddContent/StudentProject";
 
+import QuizDashboard from "../Quiz/Quizdashboard";
+import AddQuiz from "../Quiz/AddQuiz";
+import EditQuiz from "../Quiz/EditQuiz";
 
 export default function ContentRoutes() {
   return (
     <Routes>
-      {/* ✅ Main dashboard route */}
+      {/* ✅ Default redirect */}
+      <Route path="/" element={<Navigate to="dashboard" replace />} />
+
+      {/* ✅ Main Dashboard */}
       <Route path="dashboard" element={<ContentLayout />} />
-      <Route path="content-dashboard" element={<ContentLayout />} />
-      
-      {/* ✅ Add content route */}
-      <Route path="add-content" element={<TabLayout />}/>
 
+      {/* ✅ Add Content (tabs UI stays here) */}
+      <Route path="add-content" element={<TabLayout />} />
 
-      {/* ✅ Quiz route - placeholder for now */}
-      <Route path="quiz-dashboard" element={<ContentLayout />} />
+      {/* ✅ Quiz Dashboard */}
+      <Route path="quiz-dashboard" element={<QuizDashboard />} />
 
+      {/* ✅ Add Quiz */}
+      <Route path="quiz/add" element={<AddQuiz />} />
+      <Route path="quiz/edit" element={<EditQuiz />} />
+
+      {/* ✅ Student Project */}
       <Route path="student-project" element={<StudentProject />} />
-
-      {/* ✅ Redirect to dashboard when visiting /content */}
-      <Route path="/" element={<Navigate to="content-dashboard" replace />} />
     </Routes>
   );
 }
