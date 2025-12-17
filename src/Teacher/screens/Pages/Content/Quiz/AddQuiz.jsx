@@ -85,6 +85,7 @@ export default function AddQuiz() {
   const [formData, setFormData] = useState({
     program: "",
     semester: "",
+    batch: "",
     paper: "",
     module: "",
     unit: "",
@@ -102,6 +103,7 @@ export default function AddQuiz() {
 
   const [programs, setPrograms] = useState([]);
   const [semesters, setSemesters] = useState([]);
+  const [batches, setBatches] = useState([]);
   const [papers, setPapers] = useState([]);
   const [modules, setModules] = useState([]);
   const [units, setUnits] = useState([]);
@@ -161,6 +163,7 @@ export default function AddQuiz() {
   useEffect(() => {
     if (!formData.program) {
       setSemesters([]);
+      setBatches([]);
       setPapers([]);
       setModules([]);
       setUnits([]);
@@ -171,11 +174,60 @@ export default function AddQuiz() {
     const program = programs.find(p => p.value === formData.program);
     if (program) {
       setSelectedProgramId(program.id);
-      const semesters = [...new Set(program.allocations.map(a => a.semester?.name).filter(Boolean))];
-      const formattedSemesters = semesters.map(sem => ({ label: sem, value: sem }));
-      setSemesters(formattedSemesters);
+      
+      // Create Academic Year - Semester format
+      const academicSemesters = program.allocations.map(allocation => {
+        const academicYear = allocation.academic_year?.name || allocation.academic_year_name || 'Unknown Year';
+        const semester = allocation.semester?.name || allocation.semester_name || 'Unknown Semester';
+        const combinedLabel = `${academicYear} - ${semester}`;
+        
+        return {
+          label: combinedLabel,
+          value: combinedLabel,
+          academicYearId: allocation.academic_year_id,
+          semesterId: allocation.semester_id,
+          allocation: allocation
+        };
+      }).filter(item => item.label !== 'Unknown Year - Unknown Semester');
+      
+      // Remove duplicates based on label
+      const uniqueSemesters = academicSemesters.filter((item, index, self) => 
+        index === self.findIndex(t => t.label === item.label)
+      );
+      
+      setSemesters(uniqueSemesters);
     }
   }, [formData.program, programs]);
+
+  // Load batches when semester changes
+  useEffect(() => {
+    if (!formData.semester) {
+      setBatches([]);
+      return;
+    }
+
+    const selectedSemesterObj = semesters.find(s => s.value === formData.semester);
+    if (selectedSemesterObj) {
+      // Get batches for the selected semester
+      const program = programs.find(p => p.id === selectedProgramId);
+      if (program) {
+        const batchesForSemester = program.allocations
+          .filter(allocation => 
+            allocation.academic_year_id === selectedSemesterObj.academicYearId &&
+            allocation.semester_id === selectedSemesterObj.semesterId
+          )
+          .map(allocation => ({
+            label: allocation.batch?.batch_name || allocation.batch_name || 'Default Batch',
+            value: allocation.batch_id || allocation.batch?.batch_id || 'default'
+          }))
+          .filter((batch, index, self) => 
+            index === self.findIndex(b => b.value === batch.value)
+          );
+        
+        setBatches(batchesForSemester);
+      }
+    }
+  }, [formData.semester, semesters, programs, selectedProgramId]);
 
   // Fetch papers when semester changes
   useEffect(() => {
@@ -187,40 +239,38 @@ export default function AddQuiz() {
         return;
       }
 
-      const program = programs.find(p => p.id === selectedProgramId);
-      if (program) {
-        const semesterAllocation = program.allocations.find(a => a.semester?.name === formData.semester);
-        if (semesterAllocation) {
-          setSelectedSemesterId(semesterAllocation.semester_id);
-          setSelectedAcademicYearId(semesterAllocation.academic_year_id);
+      // Find the selected semester object from the semesters array
+      const selectedSemesterObj = semesters.find(s => s.value === formData.semester);
+      if (selectedSemesterObj) {
+        setSelectedSemesterId(selectedSemesterObj.semesterId);
+        setSelectedAcademicYearId(selectedSemesterObj.academicYearId);
 
-          if (!isProfileLoaded || profileLoading) return;
+        if (!isProfileLoaded || profileLoading) return;
 
-          const teacherId = getTeacherId();
-          if (!teacherId) return;
+        const teacherId = getTeacherId();
+        if (!teacherId) return;
 
-          try {
-            const response = await contentService.getTeacherSubjectsAllocated(teacherId, semesterAllocation.academic_year_id, semesterAllocation.semester_id);
-            
-            if (Array.isArray(response)) {
-              const subjects = response.map(subjectInfo => ({
-                label: subjectInfo.subject_name || subjectInfo.name,
-                value: subjectInfo.subject_id || subjectInfo.id
-              })).filter(s => s.label && s.value);
+        try {
+          const response = await contentService.getTeacherSubjectsAllocated(teacherId, selectedSemesterObj.academicYearId, selectedSemesterObj.semesterId);
+          
+          if (Array.isArray(response)) {
+            const subjects = response.map(subjectInfo => ({
+              label: subjectInfo.subject_name || subjectInfo.name,
+              value: subjectInfo.subject_id || subjectInfo.id
+            })).filter(s => s.label && s.value);
 
-              const unique = Array.from(new Map(subjects.map(s => [s.label, s])).values());
-              setPapers(unique);
-            }
-          } catch (err) {
-            console.error('Failed to fetch teacher allocated subjects:', err);
-            setPapers([]);
+            const unique = Array.from(new Map(subjects.map(s => [s.label, s])).values());
+            setPapers(unique);
           }
+        } catch (err) {
+          console.error('Failed to fetch teacher allocated subjects:', err);
+          setPapers([]);
         }
       }
     };
 
     fetchSubjects();
-  }, [formData.semester, selectedProgramId, programs, isProfileLoaded, profileLoading, getTeacherId]);
+  }, [formData.semester, selectedProgramId, semesters, isProfileLoaded, profileLoading, getTeacherId]);
 
   // Fetch modules
   useEffect(() => {
@@ -287,9 +337,12 @@ export default function AddQuiz() {
     let updated = { ...formData, [name]: value };
 
     if (name === "program") {
-      updated = { ...updated, semester: "", paper: "", module: "", unit: "" };
+      updated = { ...updated, semester: "", batch: "", paper: "", module: "", unit: "" };
     }
     if (name === "semester") {
+      updated = { ...updated, batch: "", paper: "", module: "", unit: "" };
+    }
+    if (name === "batch") {
       updated = { ...updated, paper: "", module: "", unit: "" };
     }
     if (name === "paper") {
@@ -393,7 +446,8 @@ export default function AddQuiz() {
           </div>
 
           <form onSubmit={handleSubmit}>
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Academic Selection */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <CustomSelect
                 label="Program *"
                 value={formData.program}
@@ -401,16 +455,27 @@ export default function AddQuiz() {
                 options={programs}
                 placeholder="Select Program"
               />
-
+              
               <CustomSelect
-                label="Semester *"
+                label="Academic Year - Semester *"
                 value={formData.semester}
                 onChange={(e) => handleChange({ target: { name: 'semester', value: e.target.value } })}
                 options={semesters}
-                placeholder="Select Semester"
+                placeholder="Select Academic Year - Semester"
                 disabled={!formData.program}
               />
+              
+              <CustomSelect
+                label="Batch"
+                value={formData.batch}
+                onChange={(e) => handleChange({ target: { name: 'batch', value: e.target.value } })}
+                options={batches}
+                placeholder="Select Batch"
+                disabled={!formData.semester}
+              />
+            </div>
 
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <CustomSelect
                 label="Paper *"
                 value={formData.paper}
@@ -419,7 +484,7 @@ export default function AddQuiz() {
                 placeholder="Select Paper"
                 disabled={!formData.semester}
               />
-
+              
               <CustomSelect
                 label="Module *"
                 value={formData.module}
@@ -428,7 +493,7 @@ export default function AddQuiz() {
                 placeholder="Select Module"
                 disabled={!formData.paper}
               />
-
+              
               <CustomSelect
                 label="Unit *"
                 value={formData.unit}

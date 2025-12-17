@@ -305,7 +305,8 @@ export default function ContentDashboard() {
         program.semesters.set(allocation.semester_id, {
           id: allocation.semester_id,
           number: allocation.semester.semester_number,
-          name: allocation.semester.name
+          name: allocation.semester.name,
+          academic_year_name: allocation.academic_year?.name
         });
       }
     });
@@ -473,8 +474,25 @@ export default function ContentDashboard() {
               setSelectedSemester('');
             }}
             options={allocatedPrograms.map(p => ({ value: p.name, label: p.name }))}
-            placeholder="select program"
+            placeholder="Select Program"
             disabled={loading}
+          />
+          <CustomSelect
+            label="Academic Year / Semester"
+            value={(() => {
+              const semester = selectedProgramData?.semesters?.find(s => s.id.toString() === selectedSemester);
+              return semester ? (semester.academic_year_name ? `${semester.academic_year_name} - ${semester.name}` : semester.name) : '';
+            })()}
+            onChange={(e) => {
+              const semester = selectedProgramData?.semesters?.find(s => s.name === e.target.value);
+              setSelectedSemester(semester ? semester.id.toString() : '');
+            }}
+            options={selectedProgramData?.semesters?.map(s => ({
+              value: s.name,
+              label: s.academic_year_name ? `${s.academic_year_name} - ${s.name}` : s.name
+            })) || []}
+            placeholder="Select Academic Year / Semester"
+            disabled={!selectedProgram || loading}
           />
           <CustomSelect
             label="Batch"
@@ -484,18 +502,7 @@ export default function ContentDashboard() {
               setSelectedBatch(batch ? batch.id.toString() : '');
             }}
             options={selectedProgramData?.batches?.map(b => ({ value: b.name, label: b.name })) || []}
-            placeholder="select batch"
-            disabled={!selectedProgram || loading}
-          />
-          <CustomSelect
-            label="Semester"
-            value={selectedProgramData?.semesters?.find(s => s.id.toString() === selectedSemester)?.name || ''}
-            onChange={(e) => {
-              const semester = selectedProgramData?.semesters?.find(s => s.name === e.target.value);
-              setSelectedSemester(semester ? semester.id.toString() : '');
-            }}
-            options={selectedProgramData?.semesters?.map(s => ({ value: s.name, label: s.name })) || []}
-            placeholder="select semester"
+            placeholder="Select Batch"
             disabled={!selectedProgram || loading}
           />
         </div>
