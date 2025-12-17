@@ -119,66 +119,14 @@ export default function QuizDashboard() {
   const [selectedSemesterId, setSelectedSemesterId] = useState(null);
   const [allAllocations, setAllAllocations] = useState([]);
 
-  // Dummy data for testing
-  const dummyPrograms = [
-    { label: "Computer Science", value: "1" },
-    { label: "Information Technology", value: "2" }
-  ];
-
-  const dummyClasses = [
-    { label: "First Year", value: "1" },
-    { label: "Second Year", value: "2" }
-  ];
-
-  const dummySemesters = [
-    { label: "Semester 1", value: "1" },
-    { label: "Semester 2", value: "2" }
-  ];
-
-  const dummyPapers = [
-    { label: "Data Structures", value: "1" },
-    { label: "Algorithms", value: "2" }
-  ];
-
-  const dummyModules = [
-    { label: "Arrays & Linked Lists", value: "1", full: { units: [{ unit_name: "Arrays", unit_id: 1 }, { unit_name: "Linked Lists", unit_id: 2 }] } },
-    { label: "Trees & Graphs", value: "2", full: { units: [{ unit_name: "Binary Trees", unit_id: 3 }, { unit_name: "Graph Traversal", unit_id: 4 }] } }
-  ];
-
-  const dummyQuizzes = [
-    {
-      quiz_id: 1,
-      quiz_name: "Array Fundamentals Quiz",
-      duration: 30,
-      unit_id: 1,
-      questions: [{ id: 1 }, { id: 2 }, { id: 3 }],
-      createddate: "2024-01-15T10:00:00Z",
-      active: true
-    },
-    {
-      quiz_id: 2,
-      quiz_name: "Linked List Operations",
-      duration: 45,
-      unit_id: 2,
-      questions: [{ id: 1 }, { id: 2 }, { id: 3 }, { id: 4 }],
-      createddate: "2024-01-20T14:30:00Z",
-      active: true
-    },
-    {
-      quiz_id: 3,
-      quiz_name: "Binary Tree Traversal",
-      duration: 60,
-      unit_id: 3,
-      questions: [{ id: 1 }, { id: 2 }],
-      createddate: "2024-01-25T09:15:00Z",
-      active: false
-    }
-  ];
-
-  // Load initial quizzes
+  // Load quizzes when unit is selected
   useEffect(() => {
-    loadAllQuizzes();
-  }, []);
+    if (filters.unit) {
+      loadQuizzesByUnit(filters.unit);
+    } else {
+      setQuizzes([]); // Clear quizzes when no unit is selected
+    }
+  }, [filters.unit]);
 
   // ---------- FETCH PROGRAMS ----------
   useEffect(() => {
@@ -363,21 +311,22 @@ export default function QuizDashboard() {
   }, [filters.module]);
 
 
-  const loadAllQuizzes = async () => {
+  const loadQuizzesByUnit = async (unitId) => {
     try {
-      const res = await contentQuizService.getAllQuizzes();
+      console.log('Loading quizzes for unit ID:', unitId);
+      const res = await contentQuizService.getQuizzesByUnitIdForTeacher(unitId);
+      console.log('Quizzes response:', res);
       setQuizzes(res || []);
     } catch (err) {
-      console.error("Error loading quizzes:", err);
+      console.error("Error loading quizzes for unit:", err);
       setQuizzes([]);
     }
   };
 
   const getFilteredQuizzes = () => {
-    return quizzes.filter(quiz => {
-      if (filters.unit && String(quiz.unit_id) !== String(filters.unit)) return false;
-      return true;
-    });
+    // Since we're now loading quizzes based on unit selection,
+    // we don't need to filter them again
+    return quizzes;
   };
 
   const handleDeleteQuiz = (quizId) => {
@@ -393,7 +342,10 @@ export default function QuizDashboard() {
       // If no error thrown, deletion was successful
       setAlertMessage('Quiz deleted successfully!');
       setShowDeleteSuccessAlert(true);
-      loadAllQuizzes(); // refresh list
+      // Reload quizzes for current unit if one is selected
+      if (filters.unit) {
+        loadQuizzesByUnit(filters.unit);
+      }
       setQuizToDelete(null);
     } catch (err) {
       console.error('Delete quiz error:', err);
@@ -527,6 +479,9 @@ export default function QuizDashboard() {
                     {/* Created date */}
                     <p className="text-xs text-gray-500 mb-4 bg-gray-50 px-3 py-1 rounded-full inline-block">
                       Created on {new Date(quiz.createddate).toLocaleDateString()}
+                    </p>
+                     <p className="text-xs text-gray-500 mb-4 bg-gray-50 px-3 py-1 rounded-full inline-block">
+                     Status: {quiz.approval_status ? 'Approved' : 'Pending'}
                     </p>
 
                     {/* Active Badge */}

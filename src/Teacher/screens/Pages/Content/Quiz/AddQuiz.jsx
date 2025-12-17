@@ -397,7 +397,7 @@ export default function AddQuiz() {
       duration: parseInt(formData.duration),
       question_ids: selectedQuestions.map(id => parseInt(id)),
       unit_id: parseInt(formData.unit),
-      admin: true,
+      admin: false,
       user_id: userId
     };
 

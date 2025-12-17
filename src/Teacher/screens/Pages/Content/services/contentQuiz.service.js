@@ -7,6 +7,7 @@ export const contentQuizService = {
     updateQuiz,
     softDeleteQuiz,
     updateQuizByQuizId,
+    getQuizzesByUnitIdForTeacher,
 };
 
 // POST /api/quizzes
@@ -90,4 +91,18 @@ function updateQuizByQuizId(quizId, quizData) {
 
     return fetch(`${ContentAPI}/quizzes/${quizId}`, requestOptions)
         .then(handleResponse);
+}
+
+// GET /teacher/unit/{unitId} - Get quizzes by unit ID for teacher
+function getQuizzesByUnitIdForTeacher(unitId) {
+    const requestOptions = {
+        method: 'GET',
+        headers: authHeader()
+    };
+
+    return fetch(`${ContentAPI}/quizzes/teacher/unit/${unitId}`, requestOptions)
+        .then(handleResponse)
+        .then(data => {
+            return data;
+        });
 }
