@@ -18,6 +18,8 @@ export const contentService = {
     deleteQuestion,
     hardDeleteQuestion,
     bulkUploadQuestions,
+    softDeleteContent,
+    hardDeleteContent,
 
 	getSubjectTypesByAcademicYearIdAndSemId,
 	getSubjectsByTab,
@@ -26,6 +28,8 @@ export const contentService = {
     getAllQuestionLevel,
     getContentByUnits,
     getTeacherSubjectsAllocated,
+
+    getAllContentsByUnitIdForTeacher,
 };
 
 function getAllQuestionLevel() {
@@ -314,6 +318,31 @@ function getContentByUnits(unitId) {
         });
 }
 
+function getAllContentsByUnitIdForTeacher(unitId) {
+    const requestOptions = {
+        method: 'GET',
+        headers: authHeader()
+    };
+
+    return fetch(
+        `${ContentAPI}/admin/content/teacher/unit/${unitId}`,
+        requestOptions
+    )
+        .then(async response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            return { success: true, data: data };
+        })
+        .catch(error => {
+            console.error('Error fetching unit content for teacher:', error);
+            throw error;
+        });
+}
+
 // GET /api/teacher/{teacherId}/subjects-allocated
 function getTeacherSubjectsAllocated(teacherId, academicYearId, semesterId) {
     const requestOptions = {
@@ -328,4 +357,22 @@ function getTeacherSubjectsAllocated(teacherId, academicYearId, semesterId) {
         .then(data => {
             return data;
         });
+}
+
+// DELETE /api/content/{contentId} - Soft delete content
+function softDeleteContent(contentId) {
+    const requestOptions = {
+        method: 'DELETE',
+        headers: authHeader()
+    };
+    return fetch(`${ContentAPI}/admin/content/${contentId}`, requestOptions).then(handleResponse);
+}
+
+// DELETE /api/content/{contentId}/force - Hard delete content
+function hardDeleteContent(contentId) {
+    const requestOptions = {
+        method: 'DELETE',
+        headers: authHeader()
+    };
+    return fetch(`${ContentAPI}/admin/content/${contentId}/force`, requestOptions).then(handleResponse);
 }

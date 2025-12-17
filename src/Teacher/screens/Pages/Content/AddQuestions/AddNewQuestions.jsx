@@ -5,7 +5,6 @@ import { Formik, Field, Form } from 'formik';
 import * as Yup from 'yup';
 import { List, Edit3, ArrowLeft, X, HelpCircle } from "lucide-react";
 import ObjectiveQuestion from "./ObjectiveQuestion";
-import SubjectiveQuestion from "./SubjectiveQuestion";
 
 const AddNewQuestion = () => {
   const navigate = useNavigate();
@@ -189,7 +188,6 @@ const AddNewQuestion = () => {
                 <Form onSubmit={handleSubmit} className="space-y-8">
                   {/* Tab Content */}
                   <div className="tab-content">
-                    {activeTabIndex === 0 ? (
                       <ObjectiveQuestion
                         formData={values}
                         handleChange={handleChange}
@@ -200,9 +198,7 @@ const AddNewQuestion = () => {
                         questionData={questionToEdit}
                         onSaveSuccess={handleSuccessConfirm}
                       />
-                    ) : (
-                      <SubjectiveQuestion formData={values} handleChange={handleChange} errors={errors} touched={touched} />
-                    )}
+                
                   </div>
 
                   {/* Submit Button */}

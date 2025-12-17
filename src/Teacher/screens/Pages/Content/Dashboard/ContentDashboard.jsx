@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom'; // Import Link
-import { Filter, ChevronDown, Plus } from 'lucide-react';
+import { Filter, ChevronDown, Plus, Settings } from 'lucide-react';
 import ContentApiService from '../services/contentApi';
 import { useUserProfile } from '../../../../../contexts/UserProfileContext';
 import SubjectsList from '../components/SubjectsList';
@@ -305,7 +305,8 @@ export default function ContentDashboard() {
         program.semesters.set(allocation.semester_id, {
           id: allocation.semester_id,
           number: allocation.semester.semester_number,
-          name: allocation.semester.name
+          name: allocation.semester.name,
+          academic_year_name: allocation.academic_year?.name
         });
       }
     });
@@ -441,21 +442,10 @@ export default function ContentDashboard() {
 
         {/* Right side - Action Buttons */}
         <div className="flex flex-col sm:flex-row gap-3">
-          <Link
-            to="/teacher/student-project"
-            className="w-full sm:w-auto flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-medium px-4 py-3 rounded-lg shadow-md transition-all hover:shadow-lg"
-          >
-            <Plus className="w-5 h-5" />
-            Student Project
-          </Link>
+        
           
-          <Link
-            to="/teacher/content/add-content"
-            className="w-full sm:w-auto flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-medium px-4 py-3 rounded-lg shadow-md transition-all hover:shadow-lg"
-            onClick={onAddContent}
-          >
-            <Plus className="w-5 h-5" />
-            Add Content
+          <Link to="/teacher/content/add-content" className="flex items-center justify-center p-3 rounded-lg transition-all">
+            <Settings className="w-5 h-5 text-gray-600" />
           </Link>
         </div>
       </div>
@@ -473,8 +463,25 @@ export default function ContentDashboard() {
               setSelectedSemester('');
             }}
             options={allocatedPrograms.map(p => ({ value: p.name, label: p.name }))}
-            placeholder="select program"
+            placeholder="Select Program"
             disabled={loading}
+          />
+          <CustomSelect
+            label="Academic Year / Semester"
+            value={(() => {
+              const semester = selectedProgramData?.semesters?.find(s => s.id.toString() === selectedSemester);
+              return semester ? (semester.academic_year_name ? `${semester.academic_year_name} - ${semester.name}` : semester.name) : '';
+            })()}
+            onChange={(e) => {
+              const semester = selectedProgramData?.semesters?.find(s => s.name === e.target.value);
+              setSelectedSemester(semester ? semester.id.toString() : '');
+            }}
+            options={selectedProgramData?.semesters?.map(s => ({
+              value: s.name,
+              label: s.academic_year_name ? `${s.academic_year_name} - ${s.name}` : s.name
+            })) || []}
+            placeholder="Select Academic Year / Semester"
+            disabled={!selectedProgram || loading}
           />
           <CustomSelect
             label="Batch"
@@ -484,18 +491,7 @@ export default function ContentDashboard() {
               setSelectedBatch(batch ? batch.id.toString() : '');
             }}
             options={selectedProgramData?.batches?.map(b => ({ value: b.name, label: b.name })) || []}
-            placeholder="select batch"
-            disabled={!selectedProgram || loading}
-          />
-          <CustomSelect
-            label="Semester"
-            value={selectedProgramData?.semesters?.find(s => s.id.toString() === selectedSemester)?.name || ''}
-            onChange={(e) => {
-              const semester = selectedProgramData?.semesters?.find(s => s.name === e.target.value);
-              setSelectedSemester(semester ? semester.id.toString() : '');
-            }}
-            options={selectedProgramData?.semesters?.map(s => ({ value: s.name, label: s.name })) || []}
-            placeholder="select semester"
+            placeholder="Select Batch"
             disabled={!selectedProgram || loading}
           />
         </div>

@@ -1,4 +1,4 @@
-import { authHeader, handleResponse, authHeaderToPost, ContentAPI, AcademicAPI } from '@/_services/api';
+import { authHeader, handleResponse, authHeaderToPost, ContentAPI, AcademicAPI, TeacherLoginAPI } from '@/_services/api';
 
 export const contentService = {
     AddContent,
@@ -13,6 +13,7 @@ export const contentService = {
     getQuizzesByUnitId,
 
     getContentLevel,
+    getTeacherSubjectsAllocated,
 };
 
 const BaseUrl = `${ContentAPI}/api/admin/content`
@@ -87,7 +88,7 @@ function getModulesAndUnitsBySubjectId(subjectId) {
         method: 'GET',
         headers: authHeader()
     };
-    return fetch(`${AcademicAPI}/api/subjects/${subjectId}/modules-units`, requestOptions)
+    return fetch(`${AcademicAPI}/admin/academic/api/subjects/${subjectId}/modules-units`, requestOptions)
         .then(handleResponse)
         .then(data => {
             return data;
@@ -117,7 +118,7 @@ function uploadFileToS3(file) {
         body: formData
     };
 
-    const url = `${AcademicAPI}/s3/upload`;
+    const url = `https://lq-new-api.learnqoch.com/core/api/admin/academic/s3/upload`;
 
     return fetch(url, requestOptions)
         .then(response => {
@@ -157,6 +158,21 @@ function getContentLevel() {
         headers: authHeader()
     };
     return fetch(`${ContentAPI}/content-level`, requestOptions)
+        .then(handleResponse)
+        .then(data => {
+            return data;
+        });
+}
+
+function getTeacherSubjectsAllocated(teacherId, academicYearId, semesterId) {
+    const requestOptions = {
+        method: 'GET',
+        headers: authHeader(),
+    };
+
+    const url = `${TeacherLoginAPI}/teacher/${teacherId}/subjects-allocated?academicYearId=${academicYearId}&semesterId=${semesterId}`;
+    
+    return fetch(url, requestOptions)
         .then(handleResponse)
         .then(data => {
             return data;

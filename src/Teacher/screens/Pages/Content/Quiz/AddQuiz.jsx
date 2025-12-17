@@ -2,10 +2,11 @@ import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { X, ChevronDown } from "lucide-react";
 import SweetAlert from "react-bootstrap-sweetalert";
-// import { fetchClassesByprogram } from "../../Student/Services/student.service.js";
-// import { contentService } from "../Services/content.service.js";
-// import { contentQuizService } from "../Services/contentQuiz.service.js";
-
+import { fetchClassesByprogram } from '../services/student.service';
+import { contentService } from '../services/content.service';
+import { contentQuizService } from '../services/contentQuiz.service';
+import { useUserProfile } from '../../../../../contexts/UserProfileContext';
+import { api } from '../../../../../_services/api';
 // Custom Select Component
 const CustomSelect = ({ label, value, onChange, options, placeholder, disabled = false }) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -76,11 +77,15 @@ const CustomSelect = ({ label, value, onChange, options, placeholder, disabled =
 
 export default function AddQuiz() {
   const navigate = useNavigate();
+  
+  // Get user profile data
+  const { getUserId, getCollegeId, getTeacherId, isLoaded: isProfileLoaded, loading: profileLoading } = useUserProfile();
+  const userId=getUserId();
 
   const [formData, setFormData] = useState({
     program: "",
-    className: "",
     semester: "",
+    batch: "",
     paper: "",
     module: "",
     unit: "",
@@ -89,9 +94,16 @@ export default function AddQuiz() {
     instructions: "",
   });
 
+  // Additional state for tracking selections
+  const [selectedProgramId, setSelectedProgramId] = useState(null);
+  const [selectedSubjectId, setSelectedSubjectId] = useState(null);
+  const [selectedAcademicYearId, setSelectedAcademicYearId] = useState(null);
+  const [selectedSemesterId, setSelectedSemesterId] = useState(null);
+  const [allAllocations, setAllAllocations] = useState([]);
+
   const [programs, setPrograms] = useState([]);
-  const [classes, setClasses] = useState([]);
   const [semesters, setSemesters] = useState([]);
+  const [batches, setBatches] = useState([]);
   const [papers, setPapers] = useState([]);
   const [modules, setModules] = useState([]);
   const [units, setUnits] = useState([]);
@@ -102,92 +114,192 @@ export default function AddQuiz() {
 
   // Fetch programs
   useEffect(() => {
-    const storedPrograms = localStorage.getItem("college_programs");
-    if (storedPrograms) {
-      const parsedPrograms = JSON.parse(storedPrograms);
-      const formatted = parsedPrograms.map(p => ({
-        label: p.program_name,
-        value: String(p.program_id),
-        full: p,
-      }));
-      setPrograms(formatted);
-    }
-  }, []);
+    const fetchPrograms = async () => {
+      if (!isProfileLoaded || profileLoading) return;
 
-  // Fetch classes
-  useEffect(() => {
-    if (!formData.program) {
-      setClasses([]);
-      setSemesters([]);
-      setPapers([]);
-      setModules([]);
-      setUnits([]);
-      return;
-    }
-
-    fetchClassesByprogram(formData.program)
-      .then(classesRes => {
-        const formatted = classesRes.map(c => ({
-          label: c.class_year_name,
-          value: String(c.class_year_id),
-          full: c,
-        }));
-        setClasses(formatted);
-      })
-      .catch(err => console.error("Error fetching classes:", err));
-  }, [formData.program]);
-
-  // Fetch semesters
-  useEffect(() => {
-    if (!formData.className) {
-      setSemesters([]);
-      setPapers([]);
-      setModules([]);
-      setUnits([]);
-      return;
-    }
-
-    const classData = classes.find(cls => cls.value === formData.className);
-    const semestersData = classData?.full?.semester_divisions?.map(sem => ({
-      label: sem.semester_name,
-      value: sem.semester_id,
-      full: sem,
-    })) || [];
-    setSemesters(semestersData);
-  }, [formData.className, classes]);
-
-  // Fetch papers
-  useEffect(() => {
-    if (!formData.program) {
-      setPapers([]);
-      setModules([]);
-      setUnits([]);
-      return;
-    }
-
-    contentService.getSubjectbyProgramId(formData.program)
-      .then(res => {
-        if (res && Array.isArray(res)) {
-          const formatted = res.map(s => ({
-            label: s.name || s.paper_name || s.subject_name,
-            value: s.subject_id || s.id,
-          }));
-          setPapers(formatted);
+      const teacherId = getTeacherId();
+      if (!teacherId) return;
+      
+      try {
+        const response = await api.getTeacherAllocatedPrograms(teacherId);
+        
+        if (response.success && response.data) {
+          const classTeacherPrograms = response.data.class_teacher_allocation || [];
+          const normalPrograms = response.data.normal_allocation || [];
+          const allPrograms = [...classTeacherPrograms, ...normalPrograms];
+          
+          setAllAllocations(allPrograms);
+          
+          const programMap = new Map();
+          
+          allPrograms.forEach(allocation => {
+            const programId = allocation.program_id;
+            const programName = allocation.program?.program_name || allocation.program_name || `Program ${programId}`;
+            
+            if (!programMap.has(programId)) {
+              programMap.set(programId, {
+                id: programId,
+                label: programName,
+                value: String(programId),
+                allocations: []
+              });
+            }
+            
+            programMap.get(programId).allocations.push(allocation);
+          });
+          
+          const uniquePrograms = Array.from(programMap.values());
+          setPrograms(uniquePrograms);
         }
-      })
-      .catch(err => console.error("Error fetching papers:", err));
-  }, [formData.program]);
+      } catch (err) {
+        console.error('Failed to fetch programs:', err);
+        setPrograms([]);
+      }
+    };
+    fetchPrograms();
+  }, [isProfileLoaded, profileLoading, getTeacherId]);
+
+  // Fetch semesters when program changes
+  useEffect(() => {
+    if (!formData.program) {
+      setSemesters([]);
+      setBatches([]);
+      setPapers([]);
+      setModules([]);
+      setUnits([]);
+      setSelectedProgramId(null);
+      return;
+    }
+
+    const program = programs.find(p => p.value === formData.program);
+    if (program) {
+      setSelectedProgramId(program.id);
+      
+      // Create Academic Year - Semester format
+      const academicSemesters = program.allocations.map(allocation => {
+        const academicYear = allocation.academic_year?.name || allocation.academic_year_name || 'Unknown Year';
+        const semester = allocation.semester?.name || allocation.semester_name || 'Unknown Semester';
+        const combinedLabel = `${academicYear} - ${semester}`;
+        
+        return {
+          label: combinedLabel,
+          value: combinedLabel,
+          academicYearId: allocation.academic_year_id,
+          semesterId: allocation.semester_id,
+          allocation: allocation
+        };
+      }).filter(item => item.label !== 'Unknown Year - Unknown Semester');
+      
+      // Remove duplicates based on label
+      const uniqueSemesters = academicSemesters.filter((item, index, self) => 
+        index === self.findIndex(t => t.label === item.label)
+      );
+      
+      setSemesters(uniqueSemesters);
+    }
+  }, [formData.program, programs]);
+
+  // Load batches when semester changes
+  useEffect(() => {
+    if (!formData.semester) {
+      setBatches([]);
+      return;
+    }
+
+    const selectedSemesterObj = semesters.find(s => s.value === formData.semester);
+    if (selectedSemesterObj) {
+      // Get batches for the selected semester
+      const program = programs.find(p => p.id === selectedProgramId);
+      if (program) {
+        const batchesForSemester = program.allocations
+          .filter(allocation => 
+            allocation.academic_year_id === selectedSemesterObj.academicYearId &&
+            allocation.semester_id === selectedSemesterObj.semesterId
+          )
+          .map(allocation => ({
+            label: allocation.batch?.batch_name || allocation.batch_name || 'Default Batch',
+            value: allocation.batch_id || allocation.batch?.batch_id || 'default'
+          }))
+          .filter((batch, index, self) => 
+            index === self.findIndex(b => b.value === batch.value)
+          );
+        
+        setBatches(batchesForSemester);
+      }
+    }
+  }, [formData.semester, semesters, programs, selectedProgramId]);
+
+  // Fetch papers when semester changes
+  useEffect(() => {
+    const fetchSubjects = async () => {
+      if (!selectedProgramId || !formData.semester) {
+        setPapers([]);
+        setModules([]);
+        setUnits([]);
+        return;
+      }
+
+      // Find the selected semester object from the semesters array
+      const selectedSemesterObj = semesters.find(s => s.value === formData.semester);
+      if (selectedSemesterObj) {
+        setSelectedSemesterId(selectedSemesterObj.semesterId);
+        setSelectedAcademicYearId(selectedSemesterObj.academicYearId);
+
+        if (!isProfileLoaded || profileLoading) return;
+
+        const teacherId = getTeacherId();
+        if (!teacherId) return;
+
+        try {
+          const response = await contentService.getTeacherSubjectsAllocated(teacherId, selectedSemesterObj.academicYearId, selectedSemesterObj.semesterId);
+          
+          if (Array.isArray(response)) {
+            const subjects = response.map(subjectInfo => ({
+              label: subjectInfo.subject_name || subjectInfo.name,
+              value: subjectInfo.subject_id || subjectInfo.id
+            })).filter(s => s.label && s.value);
+
+            const unique = Array.from(new Map(subjects.map(s => [s.label, s])).values());
+            setPapers(unique);
+          }
+        } catch (err) {
+          console.error('Failed to fetch teacher allocated subjects:', err);
+          setPapers([]);
+        }
+      }
+    };
+
+    fetchSubjects();
+  }, [formData.semester, selectedProgramId, semesters, isProfileLoaded, profileLoading, getTeacherId]);
 
   // Fetch modules
   useEffect(() => {
-    if (!formData.paper) return;
-    
-    contentService.getModulesAndUnits(formData.paper)
-      .then(res => {
-        setModules(res.modules || []);
+    if (!formData.paper) {
+      setModules([]);
+      setUnits([]);
+      return;
+    }
+
+    setSelectedSubjectId(formData.paper);
+
+    const loadModules = async () => {
+      try {
+        const response = await contentService.getModulesbySubject(formData.paper);
+        const modulesArray = response?.modules || response || [];
+
+        if (Array.isArray(modulesArray) && modulesArray.length > 0) {
+          setModules(modulesArray);
+        } else {
+          setModules([]);
+        }
         setUnits([]);
-      })
-      .catch(err => console.error("Error loading modules:", err));
+      } catch (err) {
+        console.error("Error fetching modules:", err);
+        setModules([]);
+      }
+    };
+
+    loadModules();
   }, [formData.paper]);
 
   // Fetch units
@@ -225,12 +337,12 @@ export default function AddQuiz() {
     let updated = { ...formData, [name]: value };
 
     if (name === "program") {
-      updated = { ...updated, className: "", semester: "", paper: "", module: "", unit: "" };
-    }
-    if (name === "className") {
-      updated = { ...updated, semester: "", paper: "", module: "", unit: "" };
+      updated = { ...updated, semester: "", batch: "", paper: "", module: "", unit: "" };
     }
     if (name === "semester") {
+      updated = { ...updated, batch: "", paper: "", module: "", unit: "" };
+    }
+    if (name === "batch") {
       updated = { ...updated, paper: "", module: "", unit: "" };
     }
     if (name === "paper") {
@@ -284,7 +396,9 @@ export default function AddQuiz() {
       quiz_name: formData.quizName,
       duration: parseInt(formData.duration),
       question_ids: selectedQuestions.map(id => parseInt(id)),
-      unit_id: parseInt(formData.unit)
+      unit_id: parseInt(formData.unit),
+      admin: false,
+      user_id: userId
     };
 
     try {
@@ -295,8 +409,9 @@ export default function AddQuiz() {
           title="Quiz Created!"
           onConfirm={() => {
             setAlert(null);
-            navigate("/content/quiz-dashboard");
+            navigate(-1);
           }}
+          confirmBtnCssClass="btn-confirm"
         >
           "{formData.quizName}" has been created successfully.
         </SweetAlert>
@@ -317,75 +432,77 @@ export default function AddQuiz() {
   };
 
   return (
-    <div className="stdLayout">
-      <div className="content-wrapper flex justify-center">
-        <div className="w-full max-w-3xl">
-          <div className="bg-white p-6 rounded-xl shadow-lg border">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-[1.75rem] font-semibold text-[#2162c1]">Add Quiz</h3>
-              <button
-                onClick={() => navigate(-1)}
-                className="w-10 h-10 rounded-full bg-blue-600 text-white flex items-center justify-center"
-              >
-                <X className="w-5 h-5" />
-              </button>
+    <div className="min-h-screen bg-gray-50 p-4">
+      <div className="w-full">
+        <div className="bg-white p-6 rounded-xl shadow-lg border border-gray-200">
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="text-[1.75rem] font-semibold text-[#2162c1]">Add Quiz</h3>
+            <button
+              onClick={() => navigate(-1)}
+              className="w-10 h-10 rounded-full bg-blue-600 text-white flex items-center justify-center"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+
+          <form onSubmit={handleSubmit}>
+            {/* Academic Selection */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <CustomSelect
+                label="Program *"
+                value={formData.program}
+                onChange={(e) => handleChange({ target: { name: 'program', value: e.target.value } })}
+                options={programs}
+                placeholder="Select Program"
+              />
+              
+              <CustomSelect
+                label="Academic Year - Semester *"
+                value={formData.semester}
+                onChange={(e) => handleChange({ target: { name: 'semester', value: e.target.value } })}
+                options={semesters}
+                placeholder="Select Academic Year - Semester"
+                disabled={!formData.program}
+              />
+              
+              <CustomSelect
+                label="Batch"
+                value={formData.batch}
+                onChange={(e) => handleChange({ target: { name: 'batch', value: e.target.value } })}
+                options={batches}
+                placeholder="Select Batch"
+                disabled={!formData.semester}
+              />
             </div>
 
-            <form onSubmit={handleSubmit}>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <CustomSelect
-                  label="Program *"
-                  value={formData.program}
-                  onChange={(e) => handleChange({ target: { name: 'program', value: e.target.value } })}
-                  options={programs}
-                  placeholder="Select Program"
-                />
-
-                <CustomSelect
-                  label="Class *"
-                  value={formData.className}
-                  onChange={(e) => handleChange({ target: { name: 'className', value: e.target.value } })}
-                  options={classes}
-                  placeholder="Select Class"
-                  disabled={!formData.program}
-                />
-
-                <CustomSelect
-                  label="Semester *"
-                  value={formData.semester}
-                  onChange={(e) => handleChange({ target: { name: 'semester', value: e.target.value } })}
-                  options={semesters}
-                  placeholder="Select Semester"
-                  disabled={!formData.className}
-                />
-
-                <CustomSelect
-                  label="Paper *"
-                  value={formData.paper}
-                  onChange={(e) => handleChange({ target: { name: 'paper', value: e.target.value } })}
-                  options={papers}
-                  placeholder="Select Paper"
-                  disabled={!formData.program}
-                />
-
-                <CustomSelect
-                  label="Module *"
-                  value={formData.module}
-                  onChange={(e) => handleChange({ target: { name: 'module', value: e.target.value } })}
-                  options={modules.map(m => ({ label: m.module_name, value: m.module_id }))}
-                  placeholder="Select Module"
-                  disabled={!formData.paper}
-                />
-
-                <CustomSelect
-                  label="Unit *"
-                  value={formData.unit}
-                  onChange={(e) => handleChange({ target: { name: 'unit', value: e.target.value } })}
-                  options={units.map(u => ({ label: u.unit_name, value: u.unit_id }))}
-                  placeholder="Select Unit"
-                  disabled={!formData.module}
-                />
-              </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <CustomSelect
+                label="Paper *"
+                value={formData.paper}
+                onChange={(e) => handleChange({ target: { name: 'paper', value: e.target.value } })}
+                options={papers}
+                placeholder="Select Paper"
+                disabled={!formData.semester}
+              />
+              
+              <CustomSelect
+                label="Module *"
+                value={formData.module}
+                onChange={(e) => handleChange({ target: { name: 'module', value: e.target.value } })}
+                options={modules.map(m => ({ label: m.module_name, value: String(m.module_id) }))}
+                placeholder="Select Module"
+                disabled={!formData.paper}
+              />
+              
+              <CustomSelect
+                label="Unit *"
+                value={formData.unit}
+                onChange={(e) => handleChange({ target: { name: 'unit', value: e.target.value } })}
+                options={units.map(u => ({ label: u.unit_name, value: String(u.unit_id) }))}
+                placeholder="Select Unit"
+                disabled={!formData.module}
+              />
+            </div>
 
               <label className="block mt-6 font-medium">Quiz Name *</label>
               <input
@@ -497,8 +614,7 @@ export default function AddQuiz() {
                   Cancel
                 </button>
               </div>
-            </form>
-          </div>
+          </form>
         </div>
       </div>
       {alert}

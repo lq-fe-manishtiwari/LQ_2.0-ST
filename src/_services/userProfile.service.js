@@ -8,6 +8,40 @@ class UserProfileService {
     this.subscribers = new Set();
     this.fetchPromise = null; // Track ongoing fetch promise
     this.hasFetched = false; // Track if we've already fetched once
+    
+    // Initialize from localStorage on startup
+    this._loadFromStorage();
+  }
+
+  // Load profile from localStorage
+  _loadFromStorage() {
+    try {
+      const storedProfile = localStorage.getItem('userProfile');
+      const storedHasFetched = localStorage.getItem('userProfileFetched');
+      
+      if (storedProfile && storedHasFetched === 'true') {
+        this.userProfile = JSON.parse(storedProfile);
+        this.hasFetched = true;
+        console.log('User profile loaded from localStorage:', this.userProfile);
+      }
+    } catch (error) {
+      console.error('Error loading profile from localStorage:', error);
+      // Clear corrupted data
+      localStorage.removeItem('userProfile');
+      localStorage.removeItem('userProfileFetched');
+    }
+  }
+
+  // Save profile to localStorage
+  _saveToStorage() {
+    try {
+      if (this.userProfile) {
+        localStorage.setItem('userProfile', JSON.stringify(this.userProfile));
+        localStorage.setItem('userProfileFetched', 'true');
+      }
+    } catch (error) {
+      console.error('Error saving profile to localStorage:', error);
+    }
   }
 
   // Subscribe to profile changes
@@ -99,6 +133,9 @@ class UserProfileService {
       this.loading = false;
       this.error = null;
       
+      // Save to localStorage
+      this._saveToStorage();
+      
       console.log('User profile fetched successfully:', profileData);
       this.notify();
       
@@ -180,6 +217,11 @@ class UserProfileService {
     this.error = null;
     this.hasFetched = false;
     this.fetchPromise = null;
+    
+    // Clear from localStorage
+    localStorage.removeItem('userProfile');
+    localStorage.removeItem('userProfileFetched');
+    
     this.notify();
   }
 
