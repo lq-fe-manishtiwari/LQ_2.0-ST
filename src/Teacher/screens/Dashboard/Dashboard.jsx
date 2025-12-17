@@ -16,6 +16,7 @@ const Dashboard = () => {
     getMobile,
     getUserType,
     getTeacherId,
+    getUserId,
     isLoaded
   } = useUserProfile();
 
@@ -33,6 +34,7 @@ const Dashboard = () => {
     class_teacher_allocation: [],
     normal_allocation: []
   });
+  const [allocatedMentorClasses, setAllocatedMentorClasses] = useState();
   const [programsLoading, setProgramsLoading] = useState(false);
   const [programsError, setProgramsError] = useState(null);
   
@@ -89,6 +91,96 @@ const Dashboard = () => {
       setProgramsLoading(false);
     }
   };
+
+ const fetchAllocatedMentorClasses = async () => {
+  try {
+    setProgramsLoading(true);
+    setProgramsError(null);
+
+    const userId = getUserId(); // or getTeacherId() — whichever your API uses
+
+    if (!userId) {
+      setProgramsError('User ID not available');
+      return;
+    }
+
+    const response = await api.getTeacherAllocatedMentoringClasses(userId);
+
+    console.log('Raw mentoring response:', response); // Keep this for now
+
+    // Extract the actual array safely
+    let mentorClasses = [];
+
+    if (response && response.success && Array.isArray(response.data)) {
+      mentorClasses = response.data;
+    } else if (Array.isArray(response)) {
+      mentorClasses = response;
+    } else if (response && Array.isArray(response.data)) {
+      mentorClasses = response.data;
+    } else {
+      console.warn('Unexpected mentoring response format:', response);
+      mentorClasses = [];
+    }
+
+    console.log('Setting allocatedMentorClasses to:', mentorClasses); // ← This should show array
+
+    setAllocatedMentorClasses(mentorClasses); // ← ONLY the array!
+
+  } catch (err) {
+    console.error('Error fetching mentoring classes:', err);
+    setProgramsError('Failed to load mentoring classes');
+    setAllocatedMentorClasses([]); // Ensure it's always an array
+  } finally {
+    setProgramsLoading(false);
+  }
+};
+
+const fetchMentoringStudents = async (collectionId) => {
+  try {
+    setStudentsLoading(prev => ({ ...prev, [collectionId]: true }));
+
+    const response = await api.getMentoringAllocationsbyCollectionId(collectionId);
+
+    if (response.success) {
+      // 🔹 Convert mentoring students to existing structure
+      const students = (response.data?.students || []).map(s => ({
+        student: {
+          studentId: s.student_id,
+          firstname: s.firstname,
+          middlename: s.middlename,
+          lastname: s.lastname,
+          rollNumber: s.roll_number,
+          program_name: s.program_name,
+          class_year_name: s.class_year_name,
+          program_id: s.program_id,
+          class_year_id: s.class_year_id
+        }
+      }));
+
+      // 🔹 Set exactly the same way as other student fetches
+      setStudentsData(prev => ({
+        ...prev,
+        [collectionId]: students
+      }));
+
+      setStudentsPagination(prev => ({
+        ...prev,
+        [collectionId]: {
+          currentPage: 1,
+          totalPages: Math.ceil(students.length / STUDENTS_PER_PAGE)
+        }
+      }));
+    } else {
+      console.error('Failed to fetch mentoring students:', response.message);
+    }
+  } catch (err) {
+    console.error('Error fetching mentoring students:', err);
+  } finally {
+    setStudentsLoading(prev => ({ ...prev, [collectionId]: false }));
+  }
+};
+
+
 
   // Function to fetch students for a specific program
   const fetchStudents = async (allocation) => {
@@ -177,6 +269,7 @@ const Dashboard = () => {
     // Fetch allocated programs when user profile is available and profile view is shown
     if (isLoaded && showProfileView) {
       fetchAllocatedPrograms();
+      fetchAllocatedMentorClasses();
     }
   }, [isLoaded, showProfileView]);
   
@@ -221,9 +314,12 @@ const Dashboard = () => {
         designation={designation}
         profileImage={profileImage}
         allocatedPrograms={allocatedPrograms}
+        allocatedMentorClasses={allocatedMentorClasses}
         programsLoading={programsLoading}
         programsError={programsError}
         fetchAllocatedPrograms={fetchAllocatedPrograms}
+        fetchAllocatedMentorClasses={fetchAllocatedMentorClasses}
+        fetchMentoringStudents={fetchMentoringStudents}
         expandedProgram={expandedProgram}
         setExpandedProgram={setExpandedProgram}
         studentsData={studentsData}

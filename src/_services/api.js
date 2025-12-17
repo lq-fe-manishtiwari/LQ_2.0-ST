@@ -223,6 +223,7 @@ export function authHeaderToDownloadReport() {
 // ========== API ENDPOINTS CONFIGURATION ==========
 export const AcademicAPI = import.meta.env.VITE_API_URL_Academic;
 export const TeacherLoginAPI = import.meta.env.VITE_API_URL_TeacherORLogin;
+export const TeacherAcademicAPI = import.meta.env.VITE_API_URL_AcademicAPI;
 export const PMSAPI = import.meta.env.VITE_API_URL_PMS;
 export const PMSNEWAPI = import.meta.env.VITE_API_URL_PMSNEW;
 export const COREAPI = import.meta.env.VITE_API_CORE;
@@ -344,6 +345,37 @@ export function getTeacherAllocatedPrograms(teacherId) {
     }));
 }
 
+export function getTeacherAllocatedMentoringClasses(teacherId) {
+  const requestOptions = {
+    method: 'GET',
+    headers: authHeader(),
+  };
+
+  return fetch(`${TeacherAcademicAPI}/subjects/mentoring-allocations/collections/mentor/${teacherId}`, requestOptions)
+    .then(handleResponse)
+    .then(data => ({
+      success: true,
+      data: data
+    }))
+    .catch(error => ({
+      success: false,
+      message: error.message || 'Failed to fetch teacher allocated programs'
+    }));
+}
+
+function getMentoringAllocationsbyCollectionId(collection_id) {
+	const requestOptions = { method: 'GET', headers: authHeader() };
+	return fetch(`${TeacherAcademicAPI}/subjects/mentoring-allocations/students/collection/${collection_id}`, requestOptions)
+	  .then(handleResponse)
+    .then(data => ({
+      success: true,
+      data: data
+    }))
+    .catch(error => ({
+      success: false,
+      message: error.message || 'Failed to fetch teacher allocated programs'
+    }));
+}
 // ========== GRAPHQL STUDENTS API FUNCTIONS ==========
 export function getStudentsByFilters(programId, academicYearId, semesterId = null, divisionId = null) {
   const query = `
@@ -460,6 +492,8 @@ export const api = {
   getUserProfile,
   updateUserProfile,
   getTeacherAllocatedPrograms,
+  getTeacherAllocatedMentoringClasses,
+  getMentoringAllocationsbyCollectionId,
   getStudentsByFilters,
   uploadFileToS3,
   getTeacherDashboard,
