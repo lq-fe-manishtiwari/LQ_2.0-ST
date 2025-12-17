@@ -179,6 +179,11 @@ export default function QuizDashboard() {
           const uniquePrograms = Array.from(programMap.values());
           setPrograms(uniquePrograms);
           console.log('Formatted programs:', uniquePrograms);
+          
+          // Auto-select first program
+          if (uniquePrograms.length > 0 && !filters.program) {
+            setFilters(prev => ({ ...prev, program: uniquePrograms[0].value }));
+          }
         } else {
           console.error('Failed to fetch programs:', response.message);
           setPrograms([]);
@@ -208,6 +213,11 @@ export default function QuizDashboard() {
       const semesters = [...new Set(program.allocations.map(a => a.semester?.name).filter(Boolean))];
       const formattedSemesters = semesters.map(sem => ({ label: sem, value: sem }));
       setSemesters(formattedSemesters);
+      
+      // Auto-select first semester
+      if (formattedSemesters.length > 0 && !filters.semester) {
+        setFilters(prev => ({ ...prev, semester: formattedSemesters[0].value }));
+      }
     }
   }, [filters.program, programs]);
 
@@ -244,6 +254,11 @@ export default function QuizDashboard() {
 
               const unique = Array.from(new Map(subjects.map(s => [s.label, s])).values());
               setPapers(unique);
+              
+              // Auto-select first paper
+              if (unique.length > 0 && !filters.paper) {
+                setFilters(prev => ({ ...prev, paper: unique[0].value }));
+              }
             }
           } catch (err) {
             console.error('Failed to fetch teacher allocated subjects:', err);
@@ -278,6 +293,11 @@ export default function QuizDashboard() {
             full: { units: mod.units || [] }
           }));
           setModules(formatted);
+          
+          // Auto-select first module
+          if (formatted.length > 0 && !filters.module) {
+            setFilters(prev => ({ ...prev, module: formatted[0].value }));
+          }
         } else {
           setModules([]);
         }
@@ -307,7 +327,13 @@ export default function QuizDashboard() {
     })) || [];
 
     setUnits(formattedUnits);
-    setFilters(prev => ({ ...prev, unit: "" }));
+    
+    // Auto-select first unit
+    if (formattedUnits.length > 0) {
+      setFilters(prev => ({ ...prev, unit: formattedUnits[0].value }));
+    } else {
+      setFilters(prev => ({ ...prev, unit: "" }));
+    }
   }, [filters.module]);
 
 
@@ -476,11 +502,12 @@ export default function QuizDashboard() {
                       </span>
                     </div>
 
-                    {/* Created date */}
-                    <p className="text-xs text-gray-500 mb-4 bg-gray-50 px-3 py-1 rounded-full inline-block">
-                      Created on {new Date(quiz.createddate).toLocaleDateString()}
-                    </p>
-                     <p className="text-xs text-gray-500 mb-4 bg-gray-50 px-3 py-1 rounded-full inline-block">
+
+                     <p className={`text-xs mb-4 px-3 py-1 rounded-full inline-block font-medium ${
+                       quiz.approval_status 
+                         ? 'text-green-700 bg-green-50' 
+                         : 'text-red-700 bg-red-50'
+                     }`}>
                      Status: {quiz.approval_status ? 'Approved' : 'Pending'}
                     </p>
 
