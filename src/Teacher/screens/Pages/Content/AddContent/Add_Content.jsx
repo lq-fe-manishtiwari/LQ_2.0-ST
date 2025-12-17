@@ -6,6 +6,7 @@ import { useQuizManagement } from "./hooks/useQuizManagement.js";
 import CustomSelect from "./components/CustomSelect.jsx";
 import QuizIntegration from "./components/QuizIntegration.jsx";
 import {useUserProfile} from "../../../../../contexts/UserProfileContext.jsx";
+import SweetAlert from 'react-bootstrap-sweetalert';
 
 export default function AddContent() {
     // State management
@@ -18,6 +19,8 @@ export default function AddContent() {
     });
 
     const [showPreviewModal, setShowPreviewModal] = useState(false);
+    const [showAlert, setShowAlert] = useState(false);
+    const [alertConfig, setAlertConfig] = useState({});
     const {getUserId} = useUserProfile();
     const userId = getUserId();
     // Custom hooks
@@ -187,7 +190,20 @@ export default function AddContent() {
 
             console.log("Submitting data:", submitData);
             const result = await contentService.AddContent(submitData);
-            alert("Content added successfully!");
+            
+            setAlertConfig({
+                title: 'Success!',
+                text: 'Content added successfully!',
+                type: 'success',
+                confirmBtnText: 'OK',
+                confirmBtnCssClass: 'btn-confirm',
+                onConfirm: () => {
+                    setShowAlert(false);
+                    window.history.go(-1);
+                }
+            });
+            setShowAlert(true);
+            
             console.log("AddContent result:", result);
             // Reset form
             setFormData({
@@ -415,6 +431,14 @@ export default function AddContent() {
                         </div>
                     </div>
                 </div>
+            )}
+
+            {/* SweetAlert */}
+            {showAlert && (
+                <SweetAlert
+                    {...alertConfig}
+                    onConfirm={alertConfig.onConfirm}
+                />
             )}
         </div>
     );
