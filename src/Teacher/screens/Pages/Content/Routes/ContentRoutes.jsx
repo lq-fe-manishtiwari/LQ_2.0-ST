@@ -3,6 +3,7 @@ import { Routes, Route, Navigate } from "react-router-dom";
 import ContentLayout from "../ContentLayout";
 import TabLayout from "../AddContent/TabLayout";
 
+import ContentDashboard from "../ContentDashboard/ContentDashboard";
 import Add_Content from "../AddContent/Add_Content";
 import StudentProject from "../AddContent/StudentProject";
 
@@ -27,7 +28,8 @@ export default function ContentRoutes() {
         <Route index element={<Navigate to="content" replace />} />
 
         {/* Content */}
-        <Route path="content" element={<Add_Content />} />
+        <Route path="content" element={<ContentDashboard />} />
+        <Route path="content/add" element={<Add_Content />} />
 
         {/* Student Project */}
         <Route path="student-project" element={<StudentProject />} />

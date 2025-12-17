@@ -26,6 +26,8 @@ export const contentService = {
     getAllQuestionLevel,
     getContentByUnits,
     getTeacherSubjectsAllocated,
+
+    getAllContentsByUnitIdForTeacher,
 };
 
 function getAllQuestionLevel() {
@@ -310,6 +312,31 @@ function getContentByUnits(unitId) {
         })
         .catch(error => {
             console.error('Error fetching unit content:', error);
+            throw error;
+        });
+}
+
+function getAllContentsByUnitIdForTeacher(unitId) {
+    const requestOptions = {
+        method: 'GET',
+        headers: authHeader()
+    };
+
+    return fetch(
+        `${ContentAPI}/admin/content/teacher/unit/${unitId}`,
+        requestOptions
+    )
+        .then(async response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            return { success: true, data: data };
+        })
+        .catch(error => {
+            console.error('Error fetching unit content for teacher:', error);
             throw error;
         });
 }

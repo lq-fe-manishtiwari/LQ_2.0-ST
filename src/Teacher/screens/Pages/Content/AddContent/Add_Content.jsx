@@ -5,6 +5,7 @@ import { useContentData } from "./hooks/useContentData.js";
 import { useQuizManagement } from "./hooks/useQuizManagement.js";
 import CustomSelect from "./components/CustomSelect.jsx";
 import QuizIntegration from "./components/QuizIntegration.jsx";
+import {useUserProfile} from "../../../../../contexts/UserProfileContext.jsx";
 
 export default function AddContent() {
     // State management
@@ -17,7 +18,8 @@ export default function AddContent() {
     });
 
     const [showPreviewModal, setShowPreviewModal] = useState(false);
-
+    const {getUserId} = useUserProfile();
+    const userId = getUserId();
     // Custom hooks
     const { options, loading, setLoading, updateUnitsForModule, loadProgramRelatedData, loadBatchesForAcademicSemester } = useContentData(formData);
     const { addQuizSelection, updateQuizSelection, removeQuizSelection } = useQuizManagement(formData, setFormData);
@@ -111,7 +113,7 @@ export default function AddContent() {
     // Form submission
     const handleSubmit = async (e) => {
         e.preventDefault();
-        
+        console.log("Form data on userId:", userId);
         // Validate required fields for new payload structure
         if (!formData.selectedUnit || !formData.contentType || !formData.contentTitle) {
             alert("Please fill in all required fields: Unit, Content Type, and Content Title");
@@ -165,6 +167,10 @@ export default function AddContent() {
                 }))
                 : [];
 
+            // Convert average reading time from minutes to seconds
+            const averageReadingTimeSeconds = formData.averageReadingTime ? 
+                parseInt(formData.averageReadingTime) * 60 : 0;
+
             // Create payload matching CreateContentRequest structure
             const submitData = {
                 content_name: formData.contentTitle,
@@ -173,7 +179,10 @@ export default function AddContent() {
                 unit_id: parseInt(formData.selectedUnit),
                 content_type_id: parseInt(formData.contentType), // Use actual ID from API
                 content_level_id: parseInt(formData.contentLevel), // Use actual ID from API
-                quiz_attachments: quizAttachments.length > 0 ? quizAttachments : null
+                average_reading_time_seconds: averageReadingTimeSeconds,
+                quiz_attachments: quizAttachments.length > 0 ? quizAttachments : null,
+                admin:false,
+                user_id:userId,
             };
 
             console.log("Submitting data:", submitData);
