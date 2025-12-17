@@ -498,7 +498,7 @@ export default function QuizDashboard() {
                       </span>
                       <span className="flex items-center gap-2 text-purple-600 bg-purple-50 px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm">
                         <FileText className="w-3 h-3 sm:w-4 sm:h-4" />
-                        {quiz.question_count?.length || 0} Questions
+                        {quiz.question_count || 0} Questions
                       </span>
                     </div>
 
