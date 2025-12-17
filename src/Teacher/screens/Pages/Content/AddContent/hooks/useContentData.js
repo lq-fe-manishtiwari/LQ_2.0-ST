@@ -215,44 +215,46 @@ export const useContentData = (formData) => {
 
 
     const loadSubjects = useCallback(async () => {
-        if (!formData.selectedProgram || !allocationData) return;
+        if (!formData.selectedAcademicSemester || !allocationData) return;
         try {
             setLoading(prev => ({ ...prev, subjects: true }));
             
-            const selectedProgramId = parseInt(formData.selectedProgram);
-            const allAllocations = [
-                ...(allocationData.class_teacher_allocation || []),
-                ...(allocationData.normal_allocation || [])
-            ];
+            // Parse academic year and semester IDs from selectedAcademicSemester
+            const [academicYearId, semesterId] = formData.selectedAcademicSemester.split('-').map(id => parseInt(id));
+            
+            if (!academicYearId || !semesterId) {
+                setOptions(prev => ({ ...prev, subjects: [] }));
+                return;
+            }
 
-            // Filter allocations for selected program and collect subjects
-            const programAllocations = allAllocations.filter(allocation =>
-                allocation.program && allocation.program.program_id === selectedProgramId
-            );
+            const teacherId = getTeacherId();
+            if (!teacherId) {
+                console.warn('No teacher ID found');
+                return;
+            }
 
-            const subjectMap = new Map();
-            programAllocations.forEach(allocation => {
-                if (allocation.subjects && Array.isArray(allocation.subjects)) {
-                    allocation.subjects.forEach(subject => {
-                        if (!subjectMap.has(subject.subject_id)) {
-                            subjectMap.set(subject.subject_id, {
-                                label: subject.name,
-                                value: String(subject.subject_id),
-                                full: subject
-                            });
-                        }
-                    });
-                }
-            });
+            // Use the same API as ObjectiveQuestion.jsx
+            const response = await contentService.getTeacherSubjectsAllocated(teacherId, academicYearId, semesterId);
+            
+            if (Array.isArray(response)) {
+                const subjects = response.map(subjectInfo => ({
+                    label: subjectInfo.subject_name || subjectInfo.name,
+                    value: String(subjectInfo.subject_id || subjectInfo.id),
+                    full: subjectInfo
+                })).filter(s => s.label && s.value);
 
-            const subjects = Array.from(subjectMap.values());
-            setOptions(prev => ({ ...prev, subjects }));
+                const uniqueSubjects = Array.from(new Map(subjects.map(s => [s.label, s])).values());
+                setOptions(prev => ({ ...prev, subjects: uniqueSubjects }));
+            } else {
+                setOptions(prev => ({ ...prev, subjects: [] }));
+            }
         } catch (err) {
             console.error("Error loading subjects:", err);
+            setOptions(prev => ({ ...prev, subjects: [] }));
         } finally {
             setLoading(prev => ({ ...prev, subjects: false }));
         }
-    }, [formData.selectedProgram, allocationData]);
+    }, [formData.selectedAcademicSemester, allocationData, getTeacherId]);
 
     const loadModulesAndUnits = useCallback(async () => {
         if (!formData.selectedSubject) return;
@@ -327,10 +329,10 @@ export const useContentData = (formData) => {
     }, [formData.selectedAcademicSemester]);
     
     useEffect(() => {
-        if (formData.selectedProgram && allocationData) {
+        if (formData.selectedAcademicSemester && allocationData) {
             loadSubjects();
         }
-    }, [formData.selectedProgram, allocationData]);
+    }, [formData.selectedAcademicSemester, allocationData]);
     
     useEffect(() => {
         if (formData.selectedSubject) {

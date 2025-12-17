@@ -30,7 +30,7 @@ const ObjectiveQuestion = ({
   // Data
   const [programOptions, setProgramOptions] = useState([]);
   const [subjectOptions, setSubjectOptions] = useState([]);     // { id, name }
-  const [semesterOptions, setSemesterOptions] = useState([]);
+  const [academicSemesterOptions, setAcademicSemesterOptions] = useState([]);
   const [chapterOptions, setChapterOptions] = useState([]);     // modules
   const [topicOptions, setTopicOptions] = useState([]);         // units
   const [questionLevelOptions, setQuestionLevelOptions] = useState([]);
@@ -39,6 +39,7 @@ const ObjectiveQuestion = ({
   const [selectedProgramId, setSelectedProgramId] = useState(null);
   const [selectedSubjectId, setSelectedSubjectId] = useState(null);
   const [selectedUnitId, setSelectedUnitId] = useState(null);
+  const [selectedAcademicSemester, setSelectedAcademicSemester] = useState(null);
   const [selectedAcademicYearId, setSelectedAcademicYearId] = useState(null);
   const [selectedSemesterId, setSelectedSemesterId] = useState(null);
 
@@ -70,20 +71,40 @@ const ObjectiveQuestion = ({
     if (isEdit && formData.program && programOptions.length > 0 && selectedProgramId) {
       const program = programOptions.find(p => p.id === selectedProgramId);
       if (program?.allocations) {
-        const semesters = [...new Set(program.allocations.map(a => a.semester?.name).filter(Boolean))];
-        setSemesterOptions(semesters);
+        // Create academic year-semester combinations
+        const academicSemesterMap = new Map();
         
-        // Auto-select semester if available in edit mode
-        if (formData.semester && !selectedSemesterId) {
-          const semesterAllocation = program.allocations.find(a => a.semester?.name === formData.semester);
-          if (semesterAllocation) {
-            setSelectedSemesterId(semesterAllocation.semester_id);
-            setSelectedAcademicYearId(semesterAllocation.academic_year_id);
+        program.allocations.forEach(allocation => {
+          if (allocation.academic_year && allocation.semester) {
+            const displayId = `${allocation.academic_year_id}-${allocation.semester_id}`;
+            if (!academicSemesterMap.has(displayId)) {
+              academicSemesterMap.set(displayId, {
+                label: `${allocation.academic_year.name} - ${allocation.semester.name}`,
+                value: displayId,
+                academicYearId: allocation.academic_year_id,
+                semesterId: allocation.semester_id
+              });
+            }
+          }
+        });
+        
+        const academicSemesters = Array.from(academicSemesterMap.values());
+        setAcademicSemesterOptions(academicSemesters);
+        
+        // Auto-select academic year-semester if available in edit mode
+        if (formData.semester && !selectedAcademicSemester) {
+          const matchingOption = academicSemesters.find(as =>
+            as.label.includes(formData.semester)
+          );
+          if (matchingOption) {
+            setSelectedAcademicSemester(matchingOption.value);
+            setSelectedSemesterId(matchingOption.semesterId);
+            setSelectedAcademicYearId(matchingOption.academicYearId);
           }
         }
       }
     }
-  }, [isEdit, formData.program, formData.semester, programOptions, selectedProgramId, selectedSemesterId]);
+  }, [isEdit, formData.program, formData.semester, programOptions, selectedProgramId, selectedAcademicSemester]);
   
   useEffect(() => {
     if (isEdit && formData.subject && subjectOptions.length > 0 && !selectedSubjectId) {
@@ -108,27 +129,41 @@ const ObjectiveQuestion = ({
       const program = programOptions.find(p => p.name === value);
       setSelectedProgramId(program?.id || null);
       
-      // Get semesters from all allocations for this program
+      // Get academic year-semester combinations from all allocations for this program
       if (program?.allocations) {
-        const semesters = [...new Set(program.allocations.map(a => a.semester?.name).filter(Boolean))];
-        setSemesterOptions(semesters);
+        const academicSemesterMap = new Map();
+        
+        program.allocations.forEach(allocation => {
+          if (allocation.academic_year && allocation.semester) {
+            const displayId = `${allocation.academic_year_id}-${allocation.semester_id}`;
+            if (!academicSemesterMap.has(displayId)) {
+              academicSemesterMap.set(displayId, {
+                label: `${allocation.academic_year.name} - ${allocation.semester.name}`,
+                value: displayId,
+                academicYearId: allocation.academic_year_id,
+                semesterId: allocation.semester_id
+              });
+            }
+          }
+        });
+        
+        const academicSemesters = Array.from(academicSemesterMap.values());
+        setAcademicSemesterOptions(academicSemesters);
       }
       
-      resetFields(['semester', 'subject', 'chapter', 'topic']);
+      resetFields(['academicSemester', 'subject', 'chapter', 'topic']);
       setSelectedSubjectId(null);
       setSelectedUnitId(null);
       setSelectedSemesterId(null);
       setSelectedAcademicYearId(null);
+      setSelectedAcademicSemester(null);
     }
-    else if (fieldName === 'semester') {
-      // Find the program and then the semester allocation
-      const program = programOptions.find(p => p.id === selectedProgramId);
-      if (program) {
-        const semesterAllocation = program.allocations.find(a => a.semester?.name === value);
-        if (semesterAllocation) {
-          setSelectedSemesterId(semesterAllocation.semester_id);
-          setSelectedAcademicYearId(semesterAllocation.academic_year_id);
-        }
+    else if (fieldName === 'academicSemester') {
+      const academicSemester = academicSemesterOptions.find(as => as.label === value);
+      if (academicSemester) {
+        setSelectedAcademicSemester(academicSemester.value);
+        setSelectedSemesterId(academicSemester.semesterId);
+        setSelectedAcademicYearId(academicSemester.academicYearId);
       }
       
       resetFields(['subject', 'chapter', 'topic']);
@@ -471,15 +506,15 @@ const ObjectiveQuestion = ({
         {isEdit ? 'Edit Question' : 'Create New Question'}
       </h2>
 
-      {/* Program → Semester → Subject */}
+      {/* Program → Academic Year-Semester → Subject */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
         <CustomDropdown fieldName="program" label="Program" value={formData.program} options={programOptions.map(p => p.name)} placeholder="Select Program" required disabled={isEdit} />
         <CustomDropdown
-          fieldName="semester"
-          label="Semester"
-          value={formData.semester}
-          options={semesterOptions.map ? semesterOptions.map(s => s) : semesterOptions}
-          placeholder="Select Semester"
+          fieldName="academicSemester"
+          label="Academic Year - Semester"
+          value={formData.academicSemester}
+          options={academicSemesterOptions.map(as => as.label)}
+          placeholder="Select Academic Year - Semester"
           required
           disabled={isEdit || !formData.program}
         />
@@ -491,7 +526,7 @@ const ObjectiveQuestion = ({
           placeholder="Select Paper"
           required
           loading={loadingSubjects}
-          disabled={isEdit || !formData.semester}  // Now needs Semester
+          disabled={isEdit || !formData.academicSemester}  // Now needs Academic Year-Semester
         />
       </div>
 
