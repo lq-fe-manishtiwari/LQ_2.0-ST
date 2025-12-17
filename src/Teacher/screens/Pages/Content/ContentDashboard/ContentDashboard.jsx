@@ -498,7 +498,7 @@ const ContentDashboard = () => {
           const contentToDelete = content.find(c => c.id === contentId || c.content_id === contentId);
           const actualContentId = contentToDelete?.id || contentToDelete?.content_id || contentId;
 
-          await contentService.softDeleteContent(actualContentId);
+          await contentService.hardDeleteContent(actualContentId);
 
           setContent(prevContent => prevContent.filter(c =>
             c.id !== actualContentId && c.content_id !== actualContentId

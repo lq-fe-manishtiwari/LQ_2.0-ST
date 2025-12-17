@@ -18,6 +18,8 @@ export const contentService = {
     deleteQuestion,
     hardDeleteQuestion,
     bulkUploadQuestions,
+    softDeleteContent,
+    hardDeleteContent,
 
 	getSubjectTypesByAcademicYearIdAndSemId,
 	getSubjectsByTab,
@@ -355,4 +357,22 @@ function getTeacherSubjectsAllocated(teacherId, academicYearId, semesterId) {
         .then(data => {
             return data;
         });
+}
+
+// DELETE /api/content/{contentId} - Soft delete content
+function softDeleteContent(contentId) {
+    const requestOptions = {
+        method: 'DELETE',
+        headers: authHeader()
+    };
+    return fetch(`${ContentAPI}/admin/content/${contentId}`, requestOptions).then(handleResponse);
+}
+
+// DELETE /api/content/{contentId}/force - Hard delete content
+function hardDeleteContent(contentId) {
+    const requestOptions = {
+        method: 'DELETE',
+        headers: authHeader()
+    };
+    return fetch(`${ContentAPI}/admin/content/${contentId}/force`, requestOptions).then(handleResponse);
 }
