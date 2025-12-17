@@ -442,13 +442,7 @@ export default function ContentDashboard() {
 
         {/* Right side - Action Buttons */}
         <div className="flex flex-col sm:flex-row gap-3">
-          <Link
-            to="/teacher/student-project"
-            className="w-full sm:w-auto flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-medium px-4 py-3 rounded-lg shadow-md transition-all hover:shadow-lg"
-          >
-            <Plus className="w-5 h-5" />
-            Student Project
-          </Link>
+        
           
           <Link to="/teacher/content/add-content" className="flex items-center justify-center p-3 rounded-lg transition-all">
             <Settings className="w-5 h-5 text-gray-600" />
