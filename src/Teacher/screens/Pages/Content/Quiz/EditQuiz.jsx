@@ -1,6 +1,12 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { X, ChevronDown } from "lucide-react";
+import SweetAlert from "react-bootstrap-sweetalert";
+import { fetchClassesByprogram } from '../services/student.service';
+import { contentService } from '../services/content.service';
+import { contentQuizService } from '../services/contentQuiz.service';
+import { useUserProfile } from '../../../../../contexts/UserProfileContext';
+import { api } from '../../../../../_services/api';
 
 // Custom Select Component
 const CustomSelect = ({ label, value, onChange, options, placeholder, disabled = false }) => {
@@ -73,279 +79,517 @@ const CustomSelect = ({ label, value, onChange, options, placeholder, disabled =
 export default function EditQuiz() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { quiz } = location.state || {};
-
-  // Dummy data
-  const dummyPrograms = [
-    { label: "Computer Science", value: "1" },
-    { label: "Information Technology", value: "2" }
-  ];
+  const editQuizId = location.state?.quizId || null;
+  const [editQuiz, setEditQuiz] = useState(location.state?.quiz || null);
   
-  const dummyClasses = [
-    { label: "First Year", value: "1" },
-    { label: "Second Year", value: "2" }
-  ];
-  
-  const dummySemesters = [
-    { label: "Semester 1", value: "1" },
-    { label: "Semester 2", value: "2" }
-  ];
-  
-  const dummyPapers = [
-    { label: "Data Structures", value: "1" },
-    { label: "Algorithms", value: "2" }
-  ];
-  
-  const dummyModules = [
-    { module_name: "Arrays & Linked Lists", module_id: 1 },
-    { module_name: "Trees & Graphs", module_id: 2 }
-  ];
-  
-  const dummyUnits = [
-    { unit_name: "Arrays", unit_id: 1 },
-    { unit_name: "Linked Lists", unit_id: 2 },
-    { unit_name: "Binary Trees", unit_id: 3 }
-  ];
-  
-  const dummyQuestions = [
-    { question_id: 1, question: "What is an array?", question_text: "What is an array?" },
-    { question_id: 2, question: "How do linked lists work?", question_text: "How do linked lists work?" },
-    { question_id: 3, question: "What is a binary tree?", question_text: "What is a binary tree?" }
-  ];
+  // Get user profile data
+  const { getUserId, getCollegeId, getTeacherId, isLoaded: isProfileLoaded, loading: profileLoading } = useUserProfile();
 
   const [formData, setFormData] = useState({
-    program: "1",
-    className: "1",
-    semester: "1",
-    paper: "1",
-    module: "1",
-    unit: "1",
-    quizName: quiz?.quiz_name || "Sample Quiz",
-    duration: quiz?.duration || "30",
+    program: "",
+    semester: "",
+    paper: "",
+    module: "",
+    unit: "",
+    quizName: "",
+    duration: "",
+    instructions: "",
   });
 
-  const [programs] = useState(dummyPrograms);
-  const [classes] = useState(dummyClasses);
-  const [semesters] = useState(dummySemesters);
-  const [papers] = useState(dummyPapers);
-  const [modules] = useState(dummyModules);
-  const [units] = useState(dummyUnits);
-  const [questionsList] = useState(dummyQuestions);
+  // Additional state for tracking selections
+  const [selectedProgramId, setSelectedProgramId] = useState(null);
+  const [selectedSubjectId, setSelectedSubjectId] = useState(null);
+  const [selectedAcademicYearId, setSelectedAcademicYearId] = useState(null);
+  const [selectedSemesterId, setSelectedSemesterId] = useState(null);
+  const [allAllocations, setAllAllocations] = useState([]);
+
+  const [programs, setPrograms] = useState([]);
+  const [semesters, setSemesters] = useState([]);
+  const [papers, setPapers] = useState([]);
+  const [modules, setModules] = useState([]);
+  const [units, setUnits] = useState([]);
+  const [questionsList, setQuestionsList] = useState([]);
   const [selectedQuestions, setSelectedQuestions] = useState([]);
+  const [alert, setAlert] = useState(null);
   const [loading, setLoading] = useState(false);
 
+  // Fetch quiz data
   useEffect(() => {
-    if (quiz?.questions) {
-      setSelectedQuestions(quiz.questions.map(q => String(q.question_id || q.id)));
+    if (editQuizId && !editQuiz) {
+      contentQuizService.getQuizById(editQuizId)
+        .then(data => {
+          if (data) setEditQuiz(data);
+        })
+        .catch(err => console.error('Error fetching quiz:', err));
     }
-  }, [quiz]);
+  }, [editQuizId, editQuiz]);
+
+  // Set form data from quiz
+  useEffect(() => {
+    if (editQuiz) {
+      setFormData(prev => ({
+        ...prev,
+        quizName: editQuiz.quiz_name || "",
+        duration: String(editQuiz.duration || ""),
+        unit: String(editQuiz.unit_id || "")
+      }));
+
+      if (Array.isArray(editQuiz.questions)) {
+        setSelectedQuestions(editQuiz.questions.map(q => String(q.question_id)));
+      }
+    }
+  }, [editQuiz]);
+
+  // Fetch programs
+  useEffect(() => {
+    const fetchPrograms = async () => {
+      if (!isProfileLoaded || profileLoading) return;
+
+      const teacherId = getTeacherId();
+      if (!teacherId) return;
+      
+      try {
+        const response = await api.getTeacherAllocatedPrograms(teacherId);
+        
+        if (response.success && response.data) {
+          const classTeacherPrograms = response.data.class_teacher_allocation || [];
+          const normalPrograms = response.data.normal_allocation || [];
+          const allPrograms = [...classTeacherPrograms, ...normalPrograms];
+          
+          setAllAllocations(allPrograms);
+          
+          const programMap = new Map();
+          
+          allPrograms.forEach(allocation => {
+            const programId = allocation.program_id;
+            const programName = allocation.program?.program_name || allocation.program_name || `Program ${programId}`;
+            
+            if (!programMap.has(programId)) {
+              programMap.set(programId, {
+                id: programId,
+                label: programName,
+                value: String(programId),
+                allocations: []
+              });
+            }
+            
+            programMap.get(programId).allocations.push(allocation);
+          });
+          
+          const uniquePrograms = Array.from(programMap.values());
+          setPrograms(uniquePrograms);
+        }
+      } catch (err) {
+        console.error('Failed to fetch programs:', err);
+        setPrograms([]);
+      }
+    };
+    fetchPrograms();
+  }, [isProfileLoaded, profileLoading, getTeacherId]);
+
+  // Fetch semesters when program changes
+  useEffect(() => {
+    if (!formData.program) {
+      setSemesters([]);
+      setPapers([]);
+      setModules([]);
+      setUnits([]);
+      setSelectedProgramId(null);
+      return;
+    }
+
+    const program = programs.find(p => p.value === formData.program);
+    if (program) {
+      setSelectedProgramId(program.id);
+      const semesters = [...new Set(program.allocations.map(a => a.semester?.name).filter(Boolean))];
+      const formattedSemesters = semesters.map(sem => ({ label: sem, value: sem }));
+      setSemesters(formattedSemesters);
+    }
+  }, [formData.program, programs]);
+
+  // Fetch papers when semester changes
+  useEffect(() => {
+    const fetchSubjects = async () => {
+      if (!selectedProgramId || !formData.semester) {
+        setPapers([]);
+        setModules([]);
+        setUnits([]);
+        return;
+      }
+
+      const program = programs.find(p => p.id === selectedProgramId);
+      if (program) {
+        const semesterAllocation = program.allocations.find(a => a.semester?.name === formData.semester);
+        if (semesterAllocation) {
+          setSelectedSemesterId(semesterAllocation.semester_id);
+          setSelectedAcademicYearId(semesterAllocation.academic_year_id);
+
+          if (!isProfileLoaded || profileLoading) return;
+
+          const teacherId = getTeacherId();
+          if (!teacherId) return;
+
+          try {
+            const response = await contentService.getTeacherSubjectsAllocated(teacherId, semesterAllocation.academic_year_id, semesterAllocation.semester_id);
+            
+            if (Array.isArray(response)) {
+              const subjects = response.map(subjectInfo => ({
+                label: subjectInfo.subject_name || subjectInfo.name,
+                value: subjectInfo.subject_id || subjectInfo.id
+              })).filter(s => s.label && s.value);
+
+              const unique = Array.from(new Map(subjects.map(s => [s.label, s])).values());
+              setPapers(unique);
+            }
+          } catch (err) {
+            console.error('Failed to fetch teacher allocated subjects:', err);
+            setPapers([]);
+          }
+        }
+      }
+    };
+
+    fetchSubjects();
+  }, [formData.semester, selectedProgramId, programs, isProfileLoaded, profileLoading, getTeacherId]);
+
+  // Fetch modules
+  useEffect(() => {
+    if (!formData.paper) {
+      setModules([]);
+      setUnits([]);
+      return;
+    }
+
+    setSelectedSubjectId(formData.paper);
+
+    const loadModules = async () => {
+      try {
+        const response = await contentService.getModulesbySubject(formData.paper);
+        const modulesArray = response?.modules || response || [];
+
+        if (Array.isArray(modulesArray) && modulesArray.length > 0) {
+          setModules(modulesArray);
+          
+          // If we have a module ID from edit quiz, find and set units
+          if (formData.module && modulesArray.length > 0) {
+            const selectedModule = modulesArray.find(m => String(m.module_id) === String(formData.module));
+            if (selectedModule) {
+              setUnits(selectedModule.units || []);
+            }
+          } else {
+            setUnits([]);
+          }
+        } else {
+          setModules([]);
+          setUnits([]);
+        }
+      } catch (err) {
+        console.error("Error fetching modules:", err);
+        setModules([]);
+        setUnits([]);
+      }
+    };
+
+    loadModules();
+  }, [formData.paper, formData.module]);
+
+  // Fetch units when module changes (for manual selection)
+  useEffect(() => {
+    if (!formData.module || modules.length === 0 || editQuiz) return; // Skip if in edit mode
+    const selectedModule = modules.find(m => String(m.module_id) === String(formData.module));
+    setUnits(selectedModule?.units || []);
+  }, [formData.module, modules, editQuiz]);
+
+  // Fetch questions
+  useEffect(() => {
+    if (!formData.unit || formData.unit === "" || formData.unit === "undefined") {
+      setQuestionsList([]);
+      return;
+    }
+    
+    contentService.getQuestionsByUnitId(formData.unit)
+      .then(res => {
+        let questionsArray = [];
+        if (Array.isArray(res?.data)) {
+          questionsArray = res.data;
+        } else if (Array.isArray(res)) {
+          questionsArray = res;
+        } else if (typeof res === 'object' && res !== null) {
+          questionsArray = Object.values(res);
+        }
+        
+        // Remove duplicates based on question_id
+        const uniqueQuestions = questionsArray.filter((question, index, self) => 
+          index === self.findIndex(q => q.question_id === question.question_id)
+        );
+        
+        setQuestionsList(uniqueQuestions);
+      })
+      .catch(err => {
+        console.error("Error fetching questions:", err);
+        setQuestionsList([]);
+      });
+  }, [formData.unit]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData({ ...formData, [name]: value });
+    
+    let updatedFormData = { ...formData, [name]: value };
+    
+    // Reset dependent dropdowns when parent changes
+    if (name === "program") {
+      updatedFormData = { ...updatedFormData, semester: "", paper: "", module: "", unit: "" };
+      setSemesters([]);
+      setPapers([]);
+      setModules([]);
+      setUnits([]);
+      setQuestionsList([]);
+    } else if (name === "paper") {
+      updatedFormData = { ...updatedFormData, module: "", unit: "" };
+      setModules([]);
+      setUnits([]);
+      setQuestionsList([]);
+    } else if (name === "module") {
+      updatedFormData = { ...updatedFormData, unit: "" };
+      setUnits([]);
+      setQuestionsList([]);
+    } else if (name === "unit") {
+      setQuestionsList([]);
+    }
+    
+    setFormData(updatedFormData);
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!formData.quizName || !formData.duration || selectedQuestions.length === 0) {
-      alert("Please fill all required fields and select at least one question");
+    if (!formData.quizName || !formData.duration || !formData.unit || selectedQuestions.length === 0) {
+      setAlert(
+        <SweetAlert
+          danger
+          title="Validation Error"
+           confirmBtnCssClass="btn-confirm"
+          onConfirm={() => setAlert(null)}
+        >
+          Please fill all required fields and select at least one question
+        </SweetAlert>
+      );
       return;
     }
 
     setLoading(true);
-    // Simple success message
-    setTimeout(() => {
-      alert("Quiz updated successfully!");
-      navigate("/teacher/content/quiz-dashboard");
+    const quizPayload = {
+      quiz_name: formData.quizName,
+      duration: parseInt(formData.duration),
+      question_ids: selectedQuestions.map(id => parseInt(id)),
+      unit_id: parseInt(formData.unit)
+    };
+
+    try {
+      await contentQuizService.updateQuizByQuizId(editQuiz.quiz_id, quizPayload);
+      setAlert(
+        <SweetAlert
+          success
+          title="Quiz Updated!"
+          onConfirm={() => {
+            setAlert(null);
+            navigate(-1);
+          }}
+           confirmBtnCssClass="btn-confirm"
+        >
+          Quiz has been updated successfully.
+        </SweetAlert>
+      );
+    } catch (error) {
+      setAlert(
+        <SweetAlert
+          danger
+          title="Error"
+           confirmBtnCssClass="btn-confirm"
+          onConfirm={() => setAlert(null)}
+        >
+          Failed to update quiz. Please try again.
+        </SweetAlert>
+      );
+    } finally {
       setLoading(false);
-    }, 1000);
+    }
   };
 
   return (
-    <div className="stdLayout">
-      <div className="content-wrapper flex justify-center">
-        <div className="w-full max-w-3xl">
-          <div className="bg-white p-6 rounded-xl shadow-lg border">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-[1.75rem] font-semibold text-[#2162c1]">Edit Quiz</h3>
-              <button
-                onClick={() => navigate(-1)}
-                className="w-10 h-10 rounded-full bg-blue-600 text-white flex items-center justify-center"
-              >
-                <X className="w-5 h-5" />
-              </button>
+    <div className="min-h-screen bg-gray-50 p-4">
+      <div className="w-full">
+        <div className="bg-white p-6 rounded-xl shadow-lg border border-gray-200">
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="text-[1.75rem] font-semibold text-[#2162c1]">Edit Quiz</h3>
+            <button
+              onClick={() => navigate(-1)}
+              className="w-10 h-10 rounded-full bg-blue-600 text-white flex items-center justify-center"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+
+          <form onSubmit={handleSubmit}>
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              <CustomSelect
+                label="Program *"
+                value={formData.program}
+                onChange={(e) => handleChange({ target: { name: 'program', value: e.target.value } })}
+                options={programs}
+                placeholder="Select Program"
+              />
+
+              <CustomSelect
+                label="Semester *"
+                value={formData.semester}
+                onChange={(e) => handleChange({ target: { name: 'semester', value: e.target.value } })}
+                options={semesters}
+                placeholder="Select Semester"
+                disabled={!formData.program}
+              />
+
+              <CustomSelect
+                label="Paper *"
+                value={formData.paper}
+                onChange={(e) => handleChange({ target: { name: 'paper', value: e.target.value } })}
+                options={papers}
+                placeholder="Select Paper"
+                disabled={!formData.semester}
+              />
+
+              <CustomSelect
+                label="Module *"
+                value={formData.module}
+                onChange={(e) => handleChange({ target: { name: 'module', value: e.target.value } })}
+                options={modules.map(m => ({ label: m.module_name, value: String(m.module_id) }))}
+                placeholder="Select Module"
+                disabled={!formData.paper}
+              />
+
+              <CustomSelect
+                label="Unit *"
+                value={formData.unit}
+                onChange={(e) => handleChange({ target: { name: 'unit', value: e.target.value } })}
+                options={units.map(u => ({ label: u.unit_name, value: String(u.unit_id) }))}
+                placeholder="Select Unit"
+                disabled={!formData.module}
+              />
             </div>
 
-            <form onSubmit={handleSubmit}>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <CustomSelect
-                  label="Program *"
-                  value={formData.program}
-                  onChange={(e) => handleChange({ target: { name: 'program', value: e.target.value } })}
-                  options={programs}
-                  placeholder="Select Program"
-                />
+            <label className="block mt-6 font-medium">Quiz Name *</label>
+            <input
+              type="text"
+              name="quizName"
+              value={formData.quizName}
+              onChange={handleChange}
+              className="w-full border px-3 py-2 rounded-lg mb-4"
+              placeholder="Enter Quiz Name"
+            />
 
-                <CustomSelect
-                  label="Class *"
-                  value={formData.className}
-                  onChange={(e) => handleChange({ target: { name: 'className', value: e.target.value } })}
-                  options={classes}
-                  placeholder="Select Class"
-                  disabled={!formData.program}
-                />
+            <label className="block font-medium">Duration (minutes) *</label>
+            <input
+              type="number"
+              name="duration"
+              value={formData.duration}
+              onChange={handleChange}
+              className="w-full border px-3 py-2 rounded-lg mb-6"
+            />
 
-                <CustomSelect
-                  label="Semester *"
-                  value={formData.semester}
-                  onChange={(e) => handleChange({ target: { name: 'semester', value: e.target.value } })}
-                  options={semesters}
-                  placeholder="Select Semester"
-                  disabled={!formData.className}
-                />
-
-                <CustomSelect
-                  label="Paper *"
-                  value={formData.paper}
-                  onChange={(e) => handleChange({ target: { name: 'paper', value: e.target.value } })}
-                  options={papers}
-                  placeholder="Select Paper"
-                  disabled={!formData.program}
-                />
-
-                <CustomSelect
-                  label="Module *"
-                  value={formData.module}
-                  onChange={(e) => handleChange({ target: { name: 'module', value: e.target.value } })}
-                  options={modules.map(m => ({ label: m.module_name, value: String(m.module_id) }))}
-                  placeholder="Select Module"
-                  disabled={!formData.paper}
-                />
-
-                <CustomSelect
-                  label="Unit *"
-                  value={formData.unit}
-                  onChange={(e) => handleChange({ target: { name: 'unit', value: e.target.value } })}
-                  options={units.map(u => ({ label: u.unit_name, value: String(u.unit_id) }))}
-                  placeholder="Select Unit"
-                  disabled={!formData.module}
-                />
+            <div className="mb-6">
+              <div className="flex items-center justify-between mb-4">
+                <label className="block font-medium">Select Questions *</label>
+                {questionsList.length > 0 && (
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      id="selectAll"
+                      checked={selectedQuestions.length === questionsList.length && questionsList.length > 0}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setSelectedQuestions(questionsList.map(q => String(q.question_id)));
+                        } else {
+                          setSelectedQuestions([]);
+                        }
+                      }}
+                      className="w-4 h-4 text-blue-600"
+                    />
+                    <label htmlFor="selectAll" className="text-sm font-medium text-blue-600 cursor-pointer">
+                      Select All ({questionsList.length})
+                    </label>
+                  </div>
+                )}
               </div>
-
-              <label className="block mt-6 font-medium">Quiz Name *</label>
-              <input
-                type="text"
-                name="quizName"
-                value={formData.quizName}
-                onChange={handleChange}
-                className="w-full border px-3 py-2 rounded-lg mb-4"
-                placeholder="Enter Quiz Name"
-              />
-
-              <label className="block font-medium">Duration (minutes) *</label>
-              <input
-                type="number"
-                name="duration"
-                value={formData.duration}
-                onChange={handleChange}
-                className="w-full border px-3 py-2 rounded-lg mb-6"
-              />
-
-              <div className="mb-6">
-                <div className="flex items-center justify-between mb-4">
-                  <label className="block font-medium">Select Questions *</label>
-                  {questionsList.length > 0 && (
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="checkbox"
-                        id="selectAll"
-                        checked={selectedQuestions.length === questionsList.length && questionsList.length > 0}
-                        onChange={(e) => {
-                          if (e.target.checked) {
-                            setSelectedQuestions(questionsList.map(q => String(q.question_id)));
-                          } else {
-                            setSelectedQuestions([]);
-                          }
-                        }}
-                        className="w-4 h-4 text-blue-600"
-                      />
-                      <label htmlFor="selectAll" className="text-sm font-medium text-blue-600 cursor-pointer">
-                        Select All ({questionsList.length})
-                      </label>
-                    </div>
+              {questionsList.length > 0 ? (
+                <div className="max-h-96 overflow-y-auto border rounded-lg p-4 bg-gray-50">
+                  <div className="space-y-3">
+                    {questionsList.map((q, index) => (
+                      <div key={q.question_id} className="flex items-start gap-3 p-3 bg-white rounded border">
+                        <input
+                          type="checkbox"
+                          checked={selectedQuestions.includes(String(q.question_id))}
+                          onChange={(e) => {
+                            const questionId = String(q.question_id);
+                            if (e.target.checked) {
+                              setSelectedQuestions([...selectedQuestions, questionId]);
+                            } else {
+                              setSelectedQuestions(selectedQuestions.filter(id => id !== questionId));
+                            }
+                          }}
+                          className="mt-1 w-4 h-4 text-blue-600"
+                        />
+                        <label className="flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="text-sm font-medium text-gray-600">Q{index + 1}.</span>
+                          </div>
+                          <p className="text-gray-800">{q.question || q.question_text}</p>
+                        </label>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center py-8 text-gray-500 border rounded-lg bg-gray-50">
+                  No questions available
+                </div>
+              )}
+              {selectedQuestions.length > 0 && (
+                <div className="mt-3 flex items-center justify-between text-sm">
+                  <span className="text-blue-600">
+                    {selectedQuestions.length} of {questionsList.length} question(s) selected
+                  </span>
+                  {selectedQuestions.length > 0 && selectedQuestions.length < questionsList.length && (
+                    <button
+                      type="button"
+                      onClick={() => setSelectedQuestions([])}
+                      className="text-red-500 hover:text-red-700 underline"
+                    >
+                      Clear Selection
+                    </button>
                   )}
                 </div>
-                {questionsList.length > 0 ? (
-                  <div className="max-h-96 overflow-y-auto border rounded-lg p-4 bg-gray-50">
-                    <div className="space-y-3">
-                      {questionsList.map((q, index) => (
-                        <div key={q.question_id} className="flex items-start gap-3 p-3 bg-white rounded border">
-                          <input
-                            type="checkbox"
-                            checked={selectedQuestions.includes(String(q.question_id))}
-                            onChange={(e) => {
-                              const questionId = String(q.question_id);
-                              if (e.target.checked) {
-                                setSelectedQuestions([...selectedQuestions, questionId]);
-                              } else {
-                                setSelectedQuestions(selectedQuestions.filter(id => id !== questionId));
-                              }
-                            }}
-                            className="mt-1 w-4 h-4 text-blue-600"
-                          />
-                          <label className="flex-1">
-                            <div className="flex items-center gap-2 mb-1">
-                              <span className="text-sm font-medium text-gray-600">Q{index + 1}.</span>
-                            </div>
-                            <p className="text-gray-800">{q.question || q.question_text}</p>
-                          </label>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                ) : (
-                  <div className="text-center py-8 text-gray-500 border rounded-lg bg-gray-50">
-                    No questions available
-                  </div>
-                )}
-                {selectedQuestions.length > 0 && (
-                  <div className="mt-3 flex items-center justify-between text-sm">
-                    <span className="text-blue-600">
-                      {selectedQuestions.length} of {questionsList.length} question(s) selected
-                    </span>
-                    {selectedQuestions.length > 0 && selectedQuestions.length < questionsList.length && (
-                      <button
-                        type="button"
-                        onClick={() => setSelectedQuestions([])}
-                        className="text-red-500 hover:text-red-700 underline"
-                      >
-                        Clear Selection
-                      </button>
-                    )}
-                  </div>
-                )}
-              </div>
+              )}
+            </div>
 
-              <div className="flex justify-center gap-4">
-                <button 
-                  type="submit" 
-                  disabled={loading}
-                  className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
-                >
-                  {loading ? 'Updating...' : 'Update Quiz'}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => navigate("/teacher/content/quiz-dashboard")}
-                  className="px-6 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300"
-                >
-                  Cancel
-                </button>
-              </div>
-            </form>
-          </div>
+            <div className="flex justify-center gap-4">
+              <button 
+                type="submit" 
+                disabled={loading}
+                className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+              >
+                {loading ? 'Updating...' : 'Update Quiz'}
+              </button>
+              <button
+                type="button"
+                onClick={() => navigate(-1)}
+                className="px-6 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300"
+              >
+                Cancel
+              </button>
+            </div>
+          </form>
         </div>
       </div>
+      {alert}
     </div>
   );
 }
