@@ -66,6 +66,7 @@ export function logout() {
   localStorage.removeItem("refreshToken");
   localStorage.removeItem("show_payment_popup");
   localStorage.removeItem("userProfile"); // Clear profile data
+  localStorage.removeItem("userProfileFetched"); // Clear profile fetch status
   
   currentUserSubject.value = null;
   currentUserToken.value = null;
