@@ -76,34 +76,45 @@ const Questions = () => {
 
 
 
-  // Fetch questions when topic is selected
+  // Fetch questions when any filter is selected
   useEffect(() => {
     const fetchQuestions = async () => {
-      if (!filters.topic) {
+      // Show questions if at least program is selected
+      if (!filters.program.length) {
         setQuestions([]);
         return;
       }
 
-      const selectedTopic = topicOptions.find(t => t.unit_name === filters.topic);
-      if (!selectedTopic?.unit_id) {
+      // If topic is selected, fetch by unit_id
+      if (filters.topic) {
+        const selectedTopic = topicOptions.find(t => t.unit_name === filters.topic);
+        if (selectedTopic?.unit_id) {
+          setLoading(prev => ({ ...prev, questions: true }));
+          try {
+            const response = await contentService.getQuestionsByUnitId(selectedTopic.unit_id);
+            setQuestions(Array.isArray(response) ? response : []);
+          } catch (error) {
+            console.error('Failed to fetch questions:', error);
+            setQuestions([]);
+          } finally {
+            setLoading(prev => ({ ...prev, questions: false }));
+          }
+        }
+        return;
+      }
+
+      // If subject is selected but no topic, show placeholder or fetch all questions for subject
+      if (selectedSubjectId && !filters.topic) {
+        // You can implement fetching all questions for a subject here if needed
         setQuestions([]);
         return;
       }
 
-      setLoading(prev => ({ ...prev, questions: true }));
-      try {
-        const response = await contentService.getQuestionsByUnitId(selectedTopic.unit_id);
-        setQuestions(Array.isArray(response) ? response : []);
-      } catch (error) {
-        console.error('Failed to fetch questions:', error);
-        setQuestions([]);
-      } finally {
-        setLoading(prev => ({ ...prev, questions: false }));
-      }
+      setQuestions([]);
     };
 
     fetchQuestions();
-  }, [filters.topic, topicOptions]);
+  }, [filters.topic, filters.program, selectedSubjectId, topicOptions]);
 
   // Filter questions based on selected filters
   const getFilteredQuestions = () => {
@@ -332,6 +343,30 @@ const Questions = () => {
           
           setProgramOptions(uniquePrograms);
           console.log('Formatted programs:', uniquePrograms);
+          
+          // Auto-select first available program and cascade selections
+          if (uniquePrograms.length > 0 && filters.program.length === 0) {
+            const firstProgram = uniquePrograms[0];
+            setSelectedProgramId(firstProgram.id);
+            const semesters = [...new Set(firstProgram.allocations.map(a => a.semester?.name).filter(Boolean))];
+            setSemesterOptions(semesters);
+            
+            // Auto-select first semester
+            const firstSemester = semesters[0];
+            if (firstSemester) {
+              const semesterAllocation = firstProgram.allocations.find(a => a.semester?.name === firstSemester);
+              if (semesterAllocation) {
+                setSelectedSemesterId(semesterAllocation.semester_id);
+                setSelectedAcademicYearId(semesterAllocation.academic_year_id);
+              }
+            }
+            
+            setFilters(prev => ({ 
+              ...prev, 
+              program: [firstProgram.name],
+              semester: firstSemester || ''
+            }));
+          }
         } else {
           console.error('Failed to fetch programs:', response.message);
           setProgramOptions([]);
@@ -400,6 +435,16 @@ const Questions = () => {
           const unique = Array.from(new Map(subjects.map(s => [s.name, s])).values());
           setSubjectOptions(unique);
           console.log('Formatted allocated subjects:', unique);
+          
+          // Auto-select first subject
+          if (unique.length > 0 && !filters.gradeDivisionId.length) {
+            const firstSubject = unique[0];
+            setSelectedSubjectId(firstSubject.id);
+            setFilters(prev => ({
+              ...prev,
+              gradeDivisionId: [firstSubject.name]
+            }));
+          }
           
 
         } else {
@@ -500,6 +545,22 @@ const Questions = () => {
             units: mod.units || []
           }));
           setChapterOptions(formatted);
+          
+          // Auto-select first module and first unit
+          if (formatted.length > 0 && !filters.chapter) {
+            const firstModule = formatted[0];
+            const units = firstModule.units || [];
+            const formattedUnits = units.map(u => ({ unit_id: u.unit_id, unit_name: u.unit_name }));
+            setTopicOptions(formattedUnits);
+            
+            const firstUnit = formattedUnits[0];
+            setFilters(prev => ({
+              ...prev,
+              chapter: firstModule.module_name,
+              topic: firstUnit ? firstUnit.unit_name : ''
+            }));
+            setSelectedChapter(firstModule);
+          }
         } else {
           setChapterOptions([]);
         }
@@ -603,7 +664,7 @@ const Questions = () => {
               }}
               options={chapterOptions.map(c => c.module_name)}
               placeholder="Select Module"
-              disabled={!selectedSubjectId || chapterOptions.length === 0}
+              disabled={chapterOptions.length === 0}
               loading={loading.chapters}
             />
                   {/* Topic */}
@@ -615,7 +676,7 @@ const Questions = () => {
               }}
               options={topicOptions.map(t => t.unit_name)}
               placeholder="Select Unit"
-              disabled={!filters.chapter || topicOptions.length === 0}
+              disabled={topicOptions.length === 0}
             />
           </div>
 
@@ -680,7 +741,10 @@ const Questions = () => {
             ) : (
               <div className="text-center text-gray-500 py-10">
                 {filters.topic ? 'No questions found for selected unit.' :
-                 filters.program.length > 0 ? 'Select Semester → Paper → Module → Unit to filter further' :
+                 filters.chapter ? 'Select Unit to view questions' :
+                 filters.gradeDivisionId.length > 0 ? 'Select Module to continue' :
+                 filters.semester ? 'Select Paper to continue' :
+                 filters.program.length > 0 ? 'Select Semester to continue' :
                  'Select Program to start filtering questions'}
               </div>
             );
