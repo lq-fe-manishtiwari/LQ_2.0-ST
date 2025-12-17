@@ -123,20 +123,20 @@ const ContentDashboard = () => {
           <div
             className={`w-full px-3 py-2 border ${disabled || loading
               ? 'bg-gray-100 text-gray-500 border-gray-200 cursor-not-allowed'
-              : 'bg-white border-gray-300 cursor-pointer hover:border-[rgb(33,98,193)]'
+              : 'bg-white border-gray-300 cursor-pointer hover:border-blue-400'
               } rounded-lg min-h-[44px] flex items-center justify-between transition-all duration-150`}
             onClick={() => !disabled && !loading && setIsOpen(!isOpen)}
           >
-            <span className={displayValue && !loading ? 'text-gray-900' : 'text-gray-400'}>
+            <span className={`flex-1 truncate ${displayValue && !loading ? 'text-gray-900' : 'text-gray-400'}`}>
               {loading ? 'Loading...' : (displayValue || placeholder)}
             </span>
-            <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+            <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${isOpen ? 'rotate-180' : 'rotate-0'}`} />
           </div>
 
           {isOpen && !disabled && !loading && (
             <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
               <div
-                className="px-4 py-2 text-sm text-gray-700 cursor-pointer hover:bg-blue-50"
+                className="px-4 py-2 text-sm text-gray-700 cursor-pointer hover:bg-blue-50 transition-colors"
                 onClick={() => handleSelect('')}
               >
                 {placeholder}
@@ -149,7 +149,7 @@ const ContentDashboard = () => {
                 return (
                   <div
                     key={optionId}
-                    className="px-4 py-2 text-sm text-gray-700 cursor-pointer hover:bg-blue-50"
+                    className="px-4 py-2 text-sm text-gray-700 cursor-pointer hover:bg-blue-50 transition-colors"
                     onClick={() => handleSelect(option)}
                   >
                     {optionName}
@@ -182,14 +182,14 @@ const ContentDashboard = () => {
         <label className="block text-sm font-semibold text-gray-700 mb-2">{label}</label>
         <div className="relative">
           <div
-            className="flex flex-wrap items-center gap-1 p-2 border border-gray-300 rounded-lg min-h-[44px] bg-white cursor-pointer hover:border-[rgb(33,98,193)]"
+            className="flex flex-wrap items-center gap-1 p-2 border border-gray-300 rounded-lg min-h-[44px] bg-white cursor-pointer hover:border-blue-400"
             onClick={() => setIsOpen(!isOpen)}
           >
             {selectedPrograms.length > 0 ? (
               selectedPrograms.map((prog) => (
                 <span
                   key={prog}
-                  className="inline-flex items-center gap-1 bg-[rgba(33,98,193,0.1)] text-[rgb(33,98,193)] px-2 py-1 rounded-full text-xs font-medium"
+                  className="inline-flex items-center gap-1 bg-blue-50 text-blue-600 px-2 py-1 rounded-full text-xs font-medium"
                   onClick={(e) => e.stopPropagation()}
                 >
                   {prog}
@@ -207,7 +207,7 @@ const ContentDashboard = () => {
             ) : (
               <span className="text-gray-400 text-sm ml-1">Select Program</span>
             )}
-            <ChevronDown className={`w-4 h-4 text-gray-400 absolute right-3 top-1/2 -translate-y-1/2 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+            <ChevronDown className={`w-4 h-4 text-gray-400 absolute right-3 top-1/2 -translate-y-1/2 transition-transform ${isOpen ? 'rotate-180' : 'rotate-0'}`} />
           </div>
 
           {isOpen && (
@@ -216,7 +216,7 @@ const ContentDashboard = () => {
                 availableOptions.map((prog) => (
                   <div
                     key={prog}
-                    className="px-4 py-2 text-sm text-gray-700 cursor-pointer hover:bg-blue-50"
+                    className="px-4 py-2 text-sm text-gray-700 cursor-pointer hover:bg-blue-50 transition-colors"
                     onClick={() => onProgramChange({ target: { value: prog } })}
                   >
                     {prog}
@@ -533,32 +533,37 @@ const ContentDashboard = () => {
   };
 
   return (
-    <div className="p-4 sm:p-6 bg-gray-50 min-h-screen">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
-        <button
-          onClick={() => setFilters(prev => ({ ...prev, filterOpen: !prev.filterOpen }))}
-          className="flex items-center gap-2 bg-white border border-gray-300 hover:bg-gray-50 px-4 py-3 rounded-xl shadow-sm transition-all"
-        >
-          <Filter className="w-5 h-5 text-[rgb(33,98,193)]" />
-          <span className="text-[rgb(33,98,193)] font-medium">Filter</span>
-          <ChevronDown className={`w-4 h-4 text-[rgb(33,98,193)] transition-transform ${filters.filterOpen ? 'rotate-180' : ''}`} />
-        </button>
+    <div className="min-h-screen p-4 md:p-6 lg:p-8">
+      {/* Header: Filter + Create Content Button */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
+        <div className="w-full sm:w-auto">
+          <button
+            onClick={() => setFilters(prev => ({ ...prev, filterOpen: !prev.filterOpen }))}
+            className="flex items-center justify-center gap-2 bg-white border border-gray-300 hover:bg-gray-50 px-4 py-3 rounded-xl shadow-sm transition-all flex-1 sm:flex-none sm:w-auto"
+          >
+            <Filter className="w-4 h-4 text-blue-600" />
+            <span className="text-blue-600 font-medium">Filter</span>
+            <ChevronDown
+              className={`w-4 h-4 text-blue-600 transition-transform ${filters.filterOpen ? 'rotate-180' : 'rotate-0'}`}
+            />
+          </button>
+        </div>
 
-        <div className="flex flex-col sm:flex-row gap-3">
+        <div className="flex gap-2 w-full sm:w-auto">
           <button
             onClick={() => navigate('/teacher/content/add-content/content/add')}
-            className="flex items-center justify-center gap-2 bg-[rgb(33,98,193)] hover:bg-[rgb(28,78,153)] text-white font-medium px-4 py-3 rounded-lg shadow-md transition-all"
+            className="flex items-center gap-2 bg-blue-600 text-white font-medium px-4 py-3 rounded-md shadow-md transition-all hover:shadow-lg flex-1 sm:flex-none justify-center"
           >
-            <Plus className="w-5 h-5" /> Add New Content
+            <Plus className="w-4 h-4" />
+            <span className="sm:inline">Create New Content</span>
           </button>
         </div>
       </div>
 
       {/* Filter Panel */}
       {filters.filterOpen && (
-        <div className="bg-white rounded-xl shadow-md p-5 mb-6 border border-gray-200">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-5 mb-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3 sm:gap-4">
             {/* Program */}
             <MultiSelectProgram
               label="Program"
@@ -650,76 +655,93 @@ const ContentDashboard = () => {
         </div>
       )}
 
-      {/* Content List */}
-      <div className="bg-white rounded-xl shadow-md border border-gray-200">
-        <div className="px-6 py-4 border-b border-gray-200">
-          <h2 className="text-lg font-semibold text-gray-900">Content</h2>
-          <p className="text-sm text-gray-500 mt-1">Manage your educational content</p>
-        </div>
-        <div className="p-6">
-          {loading.content ? (
-            <div className="text-center text-gray-500 py-10">Loading content...</div>
-          ) : (() => {
+      <div className="bg-white/90 backdrop-blur-sm rounded-xl sm:rounded-2xl shadow-xl p-4 sm:p-6 lg:p-8 border border-indigo-100">
+        <div>
+          <h3 className="text-xl sm:text-2xl font-bold text-blue-600 mb-6 sm:mb-8">
+            {filters.topic ? 'Filtered Content' : 'All Content'}
+          </h3>
+
+          {(() => {
             const filteredContent = getFilteredContent();
-            return filteredContent.length > 0 ? (
-              <div className="space-y-4">
+            return loading.content ? (
+              <div className="flex items-center justify-center py-12">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+                <span className="ml-2 text-gray-600">Loading...</span>
+              </div>
+            ) : filteredContent.length > 0 ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6">
                 {filteredContent.map((c, index) => {
                   const contentId = getContentId(c);
-                  console.log(`Content ${index} ID:`, contentId, 'Full object:', c);
 
                   return (
-                    <div key={contentId || index} className="p-4 border border-gray-200 rounded-lg flex items-center justify-between hover:shadow-md transition-shadow">
-                      <div className="flex-grow">
-                        <div className="flex items-center gap-3 mb-2">
-                          <p className="font-semibold text-gray-800">#{index + 1}</p>
-                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${c.approval_status
-                            ? 'bg-green-100 text-green-800 border border-green-200'
-                            : 'bg-yellow-100 text-yellow-800 border border-yellow-200'
-                            }`}>
-                            {c.approval_status ? 'Approved' : 'Pending Approval'}
-                          </span>
-                        </div>
-                        <p className="mt-1 text-gray-600 font-medium">{c.content_name || 'Content name not found.'}</p>
-                        {c.content_description && (
-                          <p className="text-sm text-gray-500 mt-1">{c.content_description}</p>
-                        )}
-                        <div className="flex items-center gap-2 text-xs text-gray-600 mt-2">
-                          <Clock className="w-3 h-3" />
-                          <span>{c.average_reading_time_seconds ? Math.floor(c.average_reading_time_seconds / 60) : 0} min</span>
-                        </div>
-                        <p className="text-xs text-gray-400 mt-1">
-                          Unit: {c.unit_name || 'N/A'} | Subject: {c.subject_name || 'N/A'} | Module: {c.module_name || 'N/A'}
+                    <div
+                      key={contentId || index}
+                      className="group p-4 sm:p-6 bg-gradient-to-br from-white to-indigo-50/50 border border-indigo-100 rounded-xl sm:rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 hover:border-indigo-200"
+                    >
+                      {/* Title */}
+                      <h4 className="text-lg sm:text-xl font-bold text-gray-700 mb-3 group-hover:text-blue-700 transition-colors line-clamp-2">
+                        {c.content_name || 'Untitled Content'}
+                      </h4>
+
+                      {/* Description */}
+                      {c.content_description && (
+                        <p className="text-sm text-gray-600 mb-3 line-clamp-2">
+                          {c.content_description}
                         </p>
+                      )}
+
+                      {/* Reading Time + Type */}
+                      <div className="flex flex-col sm:flex-row justify-between gap-2 sm:gap-0 text-sm mb-4">
+                        <span className="flex items-center gap-2 text-emerald-600 bg-emerald-50 px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm">
+                          <Clock className="w-3 h-3 sm:w-4 sm:h-4" />
+                          {c.average_reading_time_seconds ? Math.floor(c.average_reading_time_seconds / 60) : 0} min
+                        </span>
+                        <span className="flex items-center gap-2 text-purple-600 bg-purple-50 px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm">
+                          <FileText className="w-3 h-3 sm:w-4 sm:h-4" />
+                          Content
+                        </span>
+                      </div>
+
+                      {/* Approval Status */}
+                      <p className={`text-xs mb-4 px-3 py-1 rounded-full inline-block font-medium ${
+                        c.approval_status 
+                          ? 'text-green-700 bg-green-50' 
+                          : 'text-red-700 bg-red-50'
+                      }`}>
+                        Status: {c.approval_status ? 'Approved' : 'Pending'}
+                      </p>
+
+                      {/* Meta Information */}
+                      <div className="text-xs text-gray-500 mb-4 space-y-1">
+                        <div className="flex items-center gap-1">
+                          <span className="font-medium">Unit:</span>
+                          <span>{c.unit_name || 'N/A'}</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <span className="font-medium">Paper:</span>
+                          <span>{c.subject_name || 'N/A'}</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <span className="font-medium">Module:</span>
+                          <span>{c.module_name || 'N/A'}</span>
+                        </div>
                         {c.created_by_full_name && (
-                          <p className="text-xs text-gray-400 mt-1">
-                            Created by: {c.created_by_full_name}
-                          </p>
+                          <div className="flex items-center gap-1">
+                            <span className="font-medium">Created by:</span>
+                            <span>{c.created_by_full_name}</span>
+                          </div>
                         )}
                       </div>
-                      <div className="flex items-center gap-3 ml-4">
-                        <button
-                          onClick={() => {
-                            navigate("/teacher/content/add-content/content/add", {
-                              state: { content: c, filters: filters }
-                            });
-                          }}
-                          className="p-1.5 rounded-lg bg-yellow-50 text-yellow-600 hover:bg-yellow-100 transition"
-                          disabled={loading.delete || !contentId}
-                        >
-                          <Edit className="w-4 h-4" />
-                        </button>
 
+                      {/* Delete Button */}
+                      <div className="flex justify-end mt-4 sm:mt-6">
                         <button
                           onClick={() => handleDeleteContent(contentId)}
                           disabled={loading.delete || !contentId}
-                          className="p-1.5 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                          className="p-2 sm:p-1.5 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition touch-manipulation"
                           title={!contentId ? "Cannot delete: Missing ID" : "Delete content"}
                         >
-                          {loading.delete && deletingId === contentId ? (
-                            <span className="text-sm">Deleting...</span>
-                          ) : (
-                            <Trash2 className="w-5 h-5" />
-                          )}
+                          <Trash2 className="w-4 h-4" />
                         </button>
                       </div>
                     </div>
@@ -727,12 +749,15 @@ const ContentDashboard = () => {
                 })}
               </div>
             ) : (
-              <div className="text-center text-gray-500 py-10">
-                <FileText className="w-12 h-12 mx-auto mb-4 text-gray-300" />
-                <p>No content found. Create your first content item!</p>
+              <div className="text-center py-12">
+                <div className="text-6xl mb-4">📚</div>
+                <p className="text-gray-500 text-lg">
+                  {filters.topic ? 'No content found for selected filters.' : 'No content available.'}
+                </p>
               </div>
             );
-          })()}
+          })()
+          }
         </div>
       </div>
 

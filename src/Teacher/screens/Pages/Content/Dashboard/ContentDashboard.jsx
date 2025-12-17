@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom'; // Import Link
-import { Filter, ChevronDown, Plus } from 'lucide-react';
+import { Filter, ChevronDown, Plus, Settings } from 'lucide-react';
 import ContentApiService from '../services/contentApi';
 import { useUserProfile } from '../../../../../contexts/UserProfileContext';
 import SubjectsList from '../components/SubjectsList';
@@ -450,13 +450,8 @@ export default function ContentDashboard() {
             Student Project
           </Link>
           
-          <Link
-            to="/teacher/content/add-content"
-            className="w-full sm:w-auto flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-medium px-4 py-3 rounded-lg shadow-md transition-all hover:shadow-lg"
-            onClick={onAddContent}
-          >
-            <Plus className="w-5 h-5" />
-            Add Content
+          <Link to="/teacher/content/add-content" className="flex items-center justify-center p-3 rounded-lg transition-all">
+            <Settings className="w-5 h-5 text-gray-600" />
           </Link>
         </div>
       </div>
