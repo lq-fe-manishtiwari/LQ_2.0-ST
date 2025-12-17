@@ -9,7 +9,7 @@ import { api } from '../../../../../_services/api';
 
 const ContentDashboard = () => {
   const navigate = useNavigate();
-  
+
   // Get user profile data
   const { getUserId, getTeacherId, isLoaded: isProfileLoaded, loading: profileLoading } = useUserProfile();
 
@@ -23,15 +23,15 @@ const ContentDashboard = () => {
     activeInactiveStatus: 'all',
   });
 
-  const [loading, setLoading] = useState({ 
-    chapters: false, 
-    topics: false, 
+  const [loading, setLoading] = useState({
+    chapters: false,
+    topics: false,
     content: false,
-    delete: false 
+    delete: false
   });
   const [content, setContent] = useState([]);
   const [deletingId, setDeletingId] = useState(null);
-  
+
   // SweetAlert states
   const [showAlert, setShowAlert] = useState(false);
   const [alertConfig, setAlertConfig] = useState({});
@@ -85,7 +85,7 @@ const ContentDashboard = () => {
       console.log('Loading content for unit ID:', unitId);
       const res = await contentService.getAllContentsByUnitIdForTeacher(unitId);
       console.log('Content response:', res);
-      setContent(res || []);
+      setContent(res.data || []);
     } catch (err) {
       console.error("Error loading content for unit:", err);
       setContent([]);
@@ -143,9 +143,12 @@ const ContentDashboard = () => {
               </div>
               {options.map((option) => {
                 const optionName = typeof option === 'object' && option !== null ? option.name : option;
+                const optionId = typeof option === 'object' && option !== null
+                  ? option.module_id || option.unit_id || option.id || optionName
+                  : option;
                 return (
                   <div
-                    key={optionName}
+                    key={optionId}
                     className="px-4 py-2 text-sm text-gray-700 cursor-pointer hover:bg-blue-50"
                     onClick={() => handleSelect(option)}
                   >
@@ -243,29 +246,29 @@ const ContentDashboard = () => {
         console.warn('No teacher ID found. Please ensure you are logged in.');
         return;
       }
-      
+
       try {
         console.log('Fetching programs for teacher ID:', teacherId);
         const response = await api.getTeacherAllocatedPrograms(teacherId);
         console.log('Programs response:', response);
-        
+
         if (response.success && response.data) {
           // Flatten class_teacher_allocation and normal_allocation into single array
           const classTeacherPrograms = response.data.class_teacher_allocation || [];
           const normalPrograms = response.data.normal_allocation || [];
           const allPrograms = [...classTeacherPrograms, ...normalPrograms];
-          
+
           // Store all allocation data
           setAllAllocations(allPrograms);
-          console.log("allPrograms",allPrograms)
-          
+          console.log("allPrograms", allPrograms)
+
           // Group allocations by program_id and merge them
           const programMap = new Map();
-          
+
           allPrograms.forEach(allocation => {
             const programId = allocation.program_id;
             const programName = allocation.program?.program_name || allocation.program_name || `Program ${programId}`;
-            
+
             if (!programMap.has(programId)) {
               programMap.set(programId, {
                 id: programId,
@@ -273,22 +276,22 @@ const ContentDashboard = () => {
                 allocations: []
               });
             }
-            
+
             programMap.get(programId).allocations.push(allocation);
           });
-          
+
           const uniquePrograms = Array.from(programMap.values());
-          
+
           setProgramOptions(uniquePrograms);
           console.log('Formatted programs:', uniquePrograms);
-          
+
           // Auto-select first available program and cascade selections
           if (uniquePrograms.length > 0 && filters.program.length === 0) {
             const firstProgram = uniquePrograms[0];
             setSelectedProgramId(firstProgram.id);
             const semesters = [...new Set(firstProgram.allocations.map(a => a.semester?.name).filter(Boolean))];
             setSemesterOptions(semesters);
-            
+
             // Auto-select first semester
             const firstSemester = semesters[0];
             if (firstSemester) {
@@ -298,7 +301,7 @@ const ContentDashboard = () => {
                 setSelectedAcademicYearId(semesterAllocation.academic_year_id);
               }
             }
-            
+
             setFilters(prev => ({
               ...prev,
               program: [firstProgram.name],
@@ -351,7 +354,7 @@ const ContentDashboard = () => {
           const unique = Array.from(new Map(subjects.map(s => [s.name, s])).values());
           setSubjectOptions(unique);
           console.log('Formatted allocated subjects:', unique);
-          
+
           // Auto-select first subject
           if (unique.length > 0 && !filters.gradeDivisionId.length) {
             const firstSubject = unique[0];
@@ -361,7 +364,7 @@ const ContentDashboard = () => {
               gradeDivisionId: [firstSubject.name]
             }));
           }
-          
+
 
         } else {
           console.error('Subjects response is not valid:', response);
@@ -399,14 +402,14 @@ const ContentDashboard = () => {
             units: mod.units || []
           }));
           setChapterOptions(formatted);
-          
+
           // Auto-select first module and first unit
           if (formatted.length > 0 && !filters.chapter) {
             const firstModule = formatted[0];
             const units = firstModule.units || [];
             const formattedUnits = units.map(u => ({ unit_id: u.unit_id, unit_name: u.unit_name }));
             setTopicOptions(formattedUnits);
-            
+
             const firstUnit = formattedUnits[0];
             setFilters(prev => ({
               ...prev,
@@ -435,11 +438,11 @@ const ContentDashboard = () => {
     const program = programOptions.find(p => p.name === value);
     if (program) {
       setSelectedProgramId(program.id);
-      
+
       // Get semesters from all allocations for this program
       const semesters = [...new Set(program.allocations.map(a => a.semester?.name).filter(Boolean))];
       setSemesterOptions(semesters);
-      
+
       setFilters(prev => ({
         ...prev,
         program: [value],
@@ -467,7 +470,7 @@ const ContentDashboard = () => {
   // DELETE CONTENT FUNCTION
   const handleDeleteContent = async (contentId) => {
     console.log('Attempting to delete content with ID:', contentId);
-    
+
     if (!contentId) {
       console.error('Content ID is undefined');
       showSweetAlert('Error', 'Cannot delete: Content ID is missing', 'error');
@@ -494,15 +497,15 @@ const ContentDashboard = () => {
         try {
           const contentToDelete = content.find(c => c.id === contentId || c.content_id === contentId);
           const actualContentId = contentToDelete?.id || contentToDelete?.content_id || contentId;
-          
+
           await contentService.softDeleteContent(actualContentId);
-          
-          setContent(prevContent => prevContent.filter(c => 
+
+          setContent(prevContent => prevContent.filter(c =>
             c.id !== actualContentId && c.content_id !== actualContentId
           ));
-          
+
           console.log(`Content ${actualContentId} deleted successfully`);
-          
+
           // Success SweetAlert
           showSweetAlert('Deleted!', 'Content has been deleted successfully.', 'success');
         } catch (error) {
@@ -522,9 +525,8 @@ const ContentDashboard = () => {
 
   // Helper function to get content ID
   const getContentId = (contentItem) => {
-    return contentItem.id || contentItem.content_id || contentItem._id || contentItem.contentId;
+    return contentItem.content_id || contentItem.id || contentItem._id || contentItem.contentId;
   };
-
   // Filter content based on selected filters
   const getFilteredContent = () => {
     return content;
@@ -573,7 +575,7 @@ const ContentDashboard = () => {
               onChange={(e) => {
                 const semesterName = e.target.value;
                 setFilters(prev => ({ ...prev, semester: semesterName, gradeDivisionId: [] }));
-                
+
                 if (semesterName && selectedProgramId) {
                   // Find the program and then the semester allocation
                   const program = programOptions.find(p => p.id === selectedProgramId);
@@ -623,7 +625,7 @@ const ContentDashboard = () => {
                 const chapterObj = chapterOptions.find(c => c.module_name === chapterName);
                 setSelectedChapter(chapterObj || null);
                 setFilters(prev => ({ ...prev, chapter: chapterName, topic: '' }));
-                
+
                 const units = chapterObj?.units || [];
                 const formattedUnits = units.map(u => ({ unit_id: u.unit_id, unit_name: u.unit_name }));
                 setTopicOptions(formattedUnits);
@@ -662,67 +664,66 @@ const ContentDashboard = () => {
             return filteredContent.length > 0 ? (
               <div className="space-y-4">
                 {filteredContent.map((c, index) => {
-                const contentId = getContentId(c);
-                console.log(`Content ${index} ID:`, contentId, 'Full object:', c);
-                
-                return (
-                  <div key={contentId || index} className="p-4 border border-gray-200 rounded-lg flex items-center justify-between hover:shadow-md transition-shadow">
-                    <div className="flex-grow">
-                      <div className="flex items-center gap-3 mb-2">
-                        <p className="font-semibold text-gray-800">#{index + 1}</p>
-                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                          c.approval_status
+                  const contentId = getContentId(c);
+                  console.log(`Content ${index} ID:`, contentId, 'Full object:', c);
+
+                  return (
+                    <div key={contentId || index} className="p-4 border border-gray-200 rounded-lg flex items-center justify-between hover:shadow-md transition-shadow">
+                      <div className="flex-grow">
+                        <div className="flex items-center gap-3 mb-2">
+                          <p className="font-semibold text-gray-800">#{index + 1}</p>
+                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${c.approval_status
                             ? 'bg-green-100 text-green-800 border border-green-200'
                             : 'bg-yellow-100 text-yellow-800 border border-yellow-200'
-                        }`}>
-                          {c.approval_status ? 'Approved' : 'Pending Approval'}
-                        </span>
-                      </div>
-                      <p className="mt-1 text-gray-600 font-medium">{c.content_name || 'Content name not found.'}</p>
-                      {c.content_description && (
-                        <p className="text-sm text-gray-500 mt-1">{c.content_description}</p>
-                      )}
-                      <div className="flex items-center gap-2 text-xs text-gray-600 mt-2">
-                        <Clock className="w-3 h-3" />
-                        <span>{c.average_reading_time_seconds ? Math.floor(c.average_reading_time_seconds / 60) : 0} min</span>
-                        <span>•</span>
-                        <span>{c.content_type_name || c.content_type || 'N/A'}</span>
-                      </div>
-                      <p className="text-xs text-gray-400 mt-1">
-                        Unit: {c.unit_name || 'N/A'} | Subject: {c.subject_name || 'N/A'} | Module: {c.module_name || 'N/A'}
-                      </p>
-                      {c.created_by_full_name && (
-                        <p className="text-xs text-gray-400 mt-1">
-                          Created by: {c.created_by_full_name}
-                        </p>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-3 ml-4">
-                      <button
-                        onClick={() => {
-                          console.log("Navigating with content:", c, "and filters:", filters);
-                          navigate("/teacher/content/add-content/content/add", { state: { content: c, filters: filters } });
-                        }}
-                        className="p-1.5 rounded-lg bg-yellow-50 text-yellow-600 hover:bg-yellow-100 transition"
-                        disabled={loading.delete || !contentId}
-                      >
-                        <Edit className="w-4 h-4" />
-                      </button>
-                      <button
-                        onClick={() => handleDeleteContent(contentId)}
-                        disabled={loading.delete || !contentId}
-                        className="p-1.5 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition disabled:opacity-50 disabled:cursor-not-allowed"
-                        title={!contentId ? "Cannot delete: Missing ID" : "Delete content"}
-                      >
-                        {loading.delete && deletingId === contentId ? (
-                          <span className="text-sm">Deleting...</span>
-                        ) : (
-                          <Trash2 className="w-5 h-5" />
+                            }`}>
+                            {c.approval_status ? 'Approved' : 'Pending Approval'}
+                          </span>
+                        </div>
+                        <p className="mt-1 text-gray-600 font-medium">{c.content_name || 'Content name not found.'}</p>
+                        {c.content_description && (
+                          <p className="text-sm text-gray-500 mt-1">{c.content_description}</p>
                         )}
-                      </button>
+                        <div className="flex items-center gap-2 text-xs text-gray-600 mt-2">
+                          <Clock className="w-3 h-3" />
+                          <span>{c.average_reading_time_seconds ? Math.floor(c.average_reading_time_seconds / 60) : 0} min</span>
+                        </div>
+                        <p className="text-xs text-gray-400 mt-1">
+                          Unit: {c.unit_name || 'N/A'} | Subject: {c.subject_name || 'N/A'} | Module: {c.module_name || 'N/A'}
+                        </p>
+                        {c.created_by_full_name && (
+                          <p className="text-xs text-gray-400 mt-1">
+                            Created by: {c.created_by_full_name}
+                          </p>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-3 ml-4">
+                        <button
+                          onClick={() => {
+                            navigate("/teacher/content/add-content/content/add", {
+                              state: { content: c, filters: filters }
+                            });
+                          }}
+                          className="p-1.5 rounded-lg bg-yellow-50 text-yellow-600 hover:bg-yellow-100 transition"
+                          disabled={loading.delete || !contentId}
+                        >
+                          <Edit className="w-4 h-4" />
+                        </button>
+
+                        <button
+                          onClick={() => handleDeleteContent(contentId)}
+                          disabled={loading.delete || !contentId}
+                          className="p-1.5 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                          title={!contentId ? "Cannot delete: Missing ID" : "Delete content"}
+                        >
+                          {loading.delete && deletingId === contentId ? (
+                            <span className="text-sm">Deleting...</span>
+                          ) : (
+                            <Trash2 className="w-5 h-5" />
+                          )}
+                        </button>
+                      </div>
                     </div>
-                  </div>
-                );
+                  );
                 })}
               </div>
             ) : (
