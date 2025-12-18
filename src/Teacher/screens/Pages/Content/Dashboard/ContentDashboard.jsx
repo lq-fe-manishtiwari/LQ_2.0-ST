@@ -65,10 +65,22 @@ const CustomSelect = ({ label, value, onChange, options, placeholder, disabled =
 
 export default function ContentDashboard() {
   const { profile, getTeacherId, isLoaded, loading: profileLoading } = useUserProfile();
-  const [selectedPaperType, setSelectedPaperType] = useState('Vertical');
-  const [selectedProgram, setSelectedProgram] = useState('');
-  const [selectedBatch, setSelectedBatch] = useState('');
-  const [selectedSemester, setSelectedSemester] = useState('');
+  
+  // Load saved filter values from localStorage
+  const loadSavedFilters = () => {
+    try {
+      const saved = localStorage.getItem('contentDashboardFilters');
+      return saved ? JSON.parse(saved) : {};
+    } catch {
+      return {};
+    }
+  };
+  
+  const savedFilters = loadSavedFilters();
+  const [selectedPaperType, setSelectedPaperType] = useState(savedFilters.paperType || 'Vertical');
+  const [selectedProgram, setSelectedProgram] = useState(savedFilters.program || '');
+  const [selectedBatch, setSelectedBatch] = useState(savedFilters.batch || '');
+  const [selectedSemester, setSelectedSemester] = useState(savedFilters.semester || '');
 
   const [selectedSubTab, setSelectedSubTab] = useState(null); // For sub-tabs (verticals/specializations)
 
@@ -244,8 +256,8 @@ export default function ContentDashboard() {
           const processedPrograms = processAllocationsData(response.data.allocations);
           setAllocatedPrograms(processedPrograms);
 
-          // Auto-select first program, batch, and semester
-          if (processedPrograms.length > 0) {
+          // Auto-select first program, batch, and semester only if no saved values
+          if (processedPrograms.length > 0 && !savedFilters.program) {
             const firstProgram = processedPrograms[0];
             setSelectedProgram(firstProgram.id.toString());
 
@@ -392,6 +404,17 @@ export default function ContentDashboard() {
   }, [availableSubTabs.length, selectedPaperType]);
 
   const selectedProgramData = allocatedPrograms.find(p => p.id.toString() === selectedProgram);
+
+  // Save filter values to localStorage whenever they change
+  useEffect(() => {
+    const filters = {
+      paperType: selectedPaperType,
+      program: selectedProgram,
+      batch: selectedBatch,
+      semester: selectedSemester
+    };
+    localStorage.setItem('contentDashboardFilters', JSON.stringify(filters));
+  }, [selectedPaperType, selectedProgram, selectedBatch, selectedSemester]);
 
   const handleSubjectClick = async (subject) => {
     console.log('Subject clicked:', subject);

@@ -294,15 +294,19 @@ export default function QuizDashboard() {
           }));
           setModules(formatted);
           
-          // Auto-select first module
-          if (formatted.length > 0 && !filters.module) {
+          // Reset units and unit filter first
+          setUnits([]);
+          setFilters(prev => ({ ...prev, module: "", unit: "" }));
+          
+          // Auto-select first module if only one available
+          if (formatted.length === 1) {
             setFilters(prev => ({ ...prev, module: formatted[0].value }));
           }
         } else {
           setModules([]);
+          setUnits([]);
+          setFilters(prev => ({ ...prev, module: "", unit: "" }));
         }
-        setUnits([]);
-        setFilters(prev => ({ ...prev, module: "", unit: "" }));
       } catch (err) {
         console.error("Error fetching modules:", err);
         setModules([]);
@@ -328,13 +332,13 @@ export default function QuizDashboard() {
 
     setUnits(formattedUnits);
     
-    // Auto-select first unit
-    if (formattedUnits.length > 0) {
+    // Auto-select first unit if only one available
+    if (formattedUnits.length === 1) {
       setFilters(prev => ({ ...prev, unit: formattedUnits[0].value }));
     } else {
       setFilters(prev => ({ ...prev, unit: "" }));
     }
-  }, [filters.module]);
+  }, [filters.module, modules]);
 
 
   const loadQuizzesByUnit = async (unitId) => {
