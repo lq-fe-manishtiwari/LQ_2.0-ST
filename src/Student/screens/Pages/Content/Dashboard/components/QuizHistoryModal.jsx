@@ -71,8 +71,14 @@ export default function QuizHistoryModal({
     };
 
     const calculatePercentage = (score, totalMarks) => {
-        if (!totalMarks || totalMarks === 0) return 0;
-        return Math.round((score / totalMarks) * 100);
+        // Handle null, undefined, or zero values properly
+        const validScore = Number(score) || 0;
+        const validTotalMarks = Number(totalMarks) || 0;
+        
+        if (validTotalMarks === 0) return 0;
+        
+        const percentage = (validScore / validTotalMarks) * 100;
+        return Math.round(Math.max(0, Math.min(100, percentage))); // Ensure percentage is between 0-100
     };
 
     const getScoreColor = (percentage) => {
@@ -167,15 +173,37 @@ export default function QuizHistoryModal({
                                         </div>
                                         <div className="bg-green-50 rounded-lg p-4 text-center">
                                             <div className="text-2xl font-bold text-green-600">
-                                                {Math.max(...quizHistory.map(h => calculatePercentage(h.score || 0, h.total_marks || 1)))}%
+                                                {quizHistory.length > 0 ? Math.max(...quizHistory.map(h => h.score || 0)) : 0}
                                             </div>
                                             <div className="text-sm text-gray-600">Best Score</div>
                                         </div>
                                         <div className="bg-purple-50 rounded-lg p-4 text-center">
                                             <div className="text-2xl font-bold text-purple-600">
-                                                {Math.round(quizHistory.reduce((sum, h) => sum + calculatePercentage(h.score || 0, h.total_marks || 1), 0) / quizHistory.length)}%
+                                                {quizHistory.length > 0 ? Math.round(quizHistory.reduce((sum, h) => sum + (h.score || 0), 0) / quizHistory.length) : 0}
                                             </div>
                                             <div className="text-sm text-gray-600">Average Score</div>
+                                        </div>
+                                    </div>
+
+                                    {/* Retake Option - Moved to top */}
+                                    <div className="mb-6 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-blue-200">
+                                        <div className="flex items-center justify-between">
+                                            <div>
+                                                <h4 className="font-semibold text-gray-800 mb-1">
+                                                    Want to improve your score?
+                                                </h4>
+                                                <p className="text-gray-600 text-sm">
+                                                    Retake this quiz to try for a better score.
+                                                </p>
+                                            </div>
+                                            <button
+                                                onClick={onStartQuiz}
+                                                className="flex items-center gap-2 px-6 py-3 text-white rounded-lg hover:opacity-90 transition-colors font-medium ml-4 shadow-md"
+                                                style={{ backgroundColor: colorCode }}
+                                            >
+                                                <RotateCcw className="w-4 h-4" />
+                                                Retake Quiz
+                                            </button>
                                         </div>
                                     </div>
 
@@ -203,8 +231,8 @@ export default function QuizHistoryModal({
                                                         <div className="flex items-center gap-6">
                                                             <div>
                                                                 <div className="text-sm text-gray-500">Score</div>
-                                                                <div className={`text-xl font-bold ${getScoreColor(calculatePercentage(attempt.score || 0, attempt.total_marks || 1))}`}>
-                                                                    {calculatePercentage(attempt.score || 0, attempt.total_marks || 1)}%
+                                                                <div className={`text-xl font-bold ${getScoreColor(calculatePercentage(attempt.score, attempt.total_marks))}`}>
+                                                                    {attempt.score || 0} / {attempt.total_marks || 0}
                                                                 </div>
                                                             </div>
                                                             
@@ -224,37 +252,18 @@ export default function QuizHistoryModal({
                                                         </div>
                                                     </div>
                                                     
-                                                    <div className={`px-3 py-1 rounded-full text-sm font-medium ${getScoreBgColor(calculatePercentage(attempt.score || 0, attempt.total_marks || 1))} ${getScoreColor(calculatePercentage(attempt.score || 0, attempt.total_marks || 1))}`}>
-                                                        {calculatePercentage(attempt.score || 0, attempt.total_marks || 1) >= 80 ? 'Excellent' :
-                                                         calculatePercentage(attempt.score || 0, attempt.total_marks || 1) >= 60 ? 'Good' : 'Needs Improvement'}
+                                                    <div className={`px-3 py-1 rounded-full text-sm font-medium ${getScoreBgColor(calculatePercentage(attempt.score, attempt.total_marks))} ${getScoreColor(calculatePercentage(attempt.score, attempt.total_marks))}`}>
+                                                        {(() => {
+                                                            const percentage = calculatePercentage(attempt.score, attempt.total_marks);
+                                                            return percentage >= 80 ? 'Excellent' : percentage >= 60 ? 'Good' : 'Needs Improvement';
+                                                        })()}
                                                     </div>
                                                 </div>
                                             </div>
                                         ))}
                                     </div>
 
-                                    {/* Retake Option */}
-                                    <div className="mt-8 p-6 bg-gray-50 rounded-lg">
-                                        <div className="flex items-center justify-between">
-                                            <div>
-                                                <h4 className="font-semibold text-gray-800 mb-2">
-                                                    Want to improve your score?
-                                                </h4>
-                                                <p className="text-gray-600 text-sm">
-                                                    You can retake this quiz to try for a better score. 
-                                                    Your best attempt will be considered for evaluation.
-                                                </p>
-                                            </div>
-                                            <button
-                                                onClick={onStartQuiz}
-                                                className="flex items-center gap-2 px-6 py-3 text-white rounded-lg hover:opacity-90 transition-colors font-medium ml-4"
-                                                style={{ backgroundColor: colorCode }}
-                                            >
-                                                <RotateCcw className="w-4 h-4" />
-                                                Retake Quiz
-                                            </button>
-                                        </div>
-                                    </div>
+
                                 </div>
                             )}
                         </>
