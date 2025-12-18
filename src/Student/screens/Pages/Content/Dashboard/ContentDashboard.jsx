@@ -341,12 +341,12 @@ export default function ContentDashboard() {
       {/* Top Bar */}
       <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
         {/* Left side - Paper type buttons */}
-        <div className="flex gap-3 flex-wrap">
+        <div className="flex gap-2 sm:gap-3 flex-wrap w-full lg:w-auto overflow-x-auto pb-2 lg:pb-0 scrollbar-hide">
           {paperTypes.map((type) => (
             <button
               key={type.id}
               onClick={() => setSelectedPaperType(type.label)}
-              className={`px-4 py-2 rounded-xl font-medium transition-all duration-200 border ${selectedPaperType === type.label
+              className={`px-3 sm:px-4 py-2 rounded-xl font-medium transition-all duration-200 border whitespace-nowrap flex-shrink-0 text-sm sm:text-base ${selectedPaperType === type.label
                 ? 'bg-blue-600 text-white border-blue-600 shadow-lg shadow-blue-200/50'
                 : 'bg-white text-gray-700 border-gray-200 hover:border-blue-300 hover:bg-gray-50'
                 }`}
@@ -357,7 +357,7 @@ export default function ContentDashboard() {
         </div>
 
         {/* Right side - Filter and Add Project */}
-        <div className="flex gap-3 w-full lg:w-auto">
+        <div className="grid grid-cols-2 lg:flex gap-3 w-full lg:w-auto">
           <button
             onClick={() => navigate('student-project', {
               state: {
@@ -366,16 +366,16 @@ export default function ContentDashboard() {
                 academicYearId: selectedProgramData?.academicYearId
               }
             })}
-            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white border border-transparent px-4 py-3 rounded-xl shadow-sm transition-all justify-center whitespace-nowrap"
+            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white border border-transparent px-3 sm:px-4 py-2.5 sm:py-3 rounded-xl shadow-sm transition-all justify-center whitespace-nowrap text-sm sm:text-base"
           >
-            <Plus className="w-5 h-5" />
+            <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
             <span className="font-medium">My Projects</span>
           </button>
           <button
             onClick={() => setShowFilters(!showFilters)}
-            className="flex items-center gap-2 bg-white border border-gray-300 hover:bg-gray-50 px-4 py-3 rounded-xl shadow-sm transition-all w-full justify-center whitespace-nowrap"
+            className="flex items-center gap-2 bg-white border border-gray-300 hover:bg-gray-50 px-3 sm:px-4 py-2.5 sm:py-3 rounded-xl shadow-sm transition-all justify-center whitespace-nowrap text-sm sm:text-base"
           >
-            <Filter className="w-5 h-5 text-blue-600" />
+            <Filter className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600" />
             <span className="text-blue-600 font-medium">Filter</span>
             <ChevronDown
               className={`w-4 h-4 text-blue-600 transition-transform ${showFilters ? 'rotate-180' : 'rotate-0'}`}

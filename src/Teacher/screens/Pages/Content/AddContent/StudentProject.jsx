@@ -417,13 +417,13 @@ const StudentProject = () => {
   return (
     <div className="min-h-screen p-4 md:p-6 lg:p-8 bg-gray-50">
       {/* Header */}
-      <div className="flex justify-between items-center mb-6">
+      <div className="flex flex-row justify-between items-center mb-6 gap-4">
         <div className="flex items-center gap-3">
-          <h1 className="text-2xl font-bold text-gray-800">Student Projects Review</h1>
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-800">Student Projects Review</h1>
         </div>
         <button
           onClick={() => navigate(-1)}
-          className="p-2 hover:bg-gray-200 rounded-full transition-colors"
+          className="p-2 hover:bg-gray-200 rounded-full transition-colors shrink-0"
         >
           <X className="w-5 h-5 text-gray-600" />
         </button>
@@ -549,7 +549,7 @@ const StudentProject = () => {
               <div key={project.project_id} className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden">
                 {/* Status Indicator Strip */}
                 <div className={`absolute left-0 top-0 bottom-0 w-1 ${project.approval_status === 'APPROVED' ? 'bg-green-500' :
-                    project.approval_status === 'REJECTED' ? 'bg-red-500' : 'bg-orange-500'
+                  project.approval_status === 'REJECTED' ? 'bg-red-500' : 'bg-orange-500'
                   }`}></div>
 
                 <div className="flex flex-col sm:flex-row justify-between gap-4 pl-3">
@@ -557,7 +557,7 @@ const StudentProject = () => {
                     <div className="flex items-center gap-2 mb-1">
                       <h4 className="text-lg font-bold text-gray-800">{project.project_title}</h4>
                       <span className={`text-xs px-2 py-0.5 rounded-full font-medium border ${project.approval_status === 'APPROVED' ? 'bg-green-50 text-green-700 border-green-200' :
-                          project.approval_status === 'REJECTED' ? 'bg-red-50 text-red-700 border-red-200' : 'bg-orange-50 text-orange-700 border-orange-200'
+                        project.approval_status === 'REJECTED' ? 'bg-red-50 text-red-700 border-red-200' : 'bg-orange-50 text-orange-700 border-orange-200'
                         }`}>
                         {project.approval_status || 'PENDING'}
                       </span>

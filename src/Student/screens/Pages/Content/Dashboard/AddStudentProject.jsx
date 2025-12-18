@@ -32,8 +32,8 @@ const CustomSelect = ({ label, value, onChange, options, placeholder, disabled =
             <div className="relative">
                 <div
                     className={`w-full px-3 py-2 border ${disabled
-                            ? 'bg-gray-100 text-gray-500 border-gray-200 cursor-not-allowed'
-                            : 'bg-white border-gray-300 cursor-pointer hover:border-blue-400'
+                        ? 'bg-gray-100 text-gray-500 border-gray-200 cursor-not-allowed'
+                        : 'bg-white border-gray-300 cursor-pointer hover:border-blue-400'
                         } rounded-lg min-h-[44px] flex items-center justify-between transition-all duration-150`}
                     onClick={() => !disabled && setIsOpen(!isOpen)}
                 >
@@ -229,12 +229,12 @@ const AddStudentProject = () => {
     return (
         <div className="min-h-screen bg-gray-50 p-4">
             <div className="w-full">
-                <div className="bg-white p-6 rounded-xl shadow-lg border border-gray-200">
-                    <div className="flex items-center justify-between mb-6">
-                        <h3 className="text-[1.75rem] font-semibold text-[#2162c1]">Submit Student Project</h3>
+                <div className="bg-white p-4 sm:p-6 rounded-xl shadow-lg border border-gray-200">
+                    <div className="flex items-center justify-between mb-6 gap-4">
+                        <h3 className="text-xl sm:text-2xl font-bold text-[#2162c1]">Submit Project</h3>
                         <button
                             onClick={() => navigate(-1)}
-                            className="w-10 h-10 rounded-full bg-blue-600 text-white flex items-center justify-center"
+                            className="w-10 h-10 rounded-full bg-blue-50 text-blue-600 hover:bg-blue-100 flex items-center justify-center transition-colors shrink-0"
                         >
                             <X className="w-5 h-5" />
                         </button>
@@ -242,18 +242,18 @@ const AddStudentProject = () => {
 
                     <form onSubmit={handleSubmit}>
                         {error && (
-                            <div className="bg-red-50 text-red-700 p-4 rounded-lg border border-red-200 mb-6">
+                            <div className="bg-red-50 text-red-700 p-4 rounded-lg border border-red-200 mb-6 text-sm">
                                 {error}
                             </div>
                         )}
 
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                             <CustomSelect
                                 label="Subject *"
                                 value={formData.subjectId}
                                 onChange={(e) => handleChange({ target: { name: 'subjectId', value: e.target.value } })}
                                 options={options.subjects}
-                                placeholder={loading.subjects ? "Loading Subjects..." : "Select Subject"}
+                                placeholder={loading.subjects ? "Loading..." : "Select Subject"}
                             />
                             <CustomSelect
                                 label="Module *"
@@ -273,53 +273,61 @@ const AddStudentProject = () => {
                             />
                         </div>
 
-                        <label className="block mt-6 font-medium">Project Title *</label>
-                        <input
-                            type="text"
-                            name="projectTitle"
-                            value={formData.projectTitle}
-                            onChange={handleChange}
-                            className="w-full border px-3 py-2 rounded-lg mb-4"
-                            placeholder="Enter Project Title"
-                        />
+                        <div className="space-y-4">
+                            <div>
+                                <label className="block font-medium text-gray-700 mb-1">Project Title *</label>
+                                <input
+                                    type="text"
+                                    name="projectTitle"
+                                    value={formData.projectTitle}
+                                    onChange={handleChange}
+                                    className="w-full border border-gray-300 px-3 py-3 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
+                                    placeholder="Enter Project Title"
+                                />
+                            </div>
 
-                        <label className="block font-medium">Project Description</label>
-                        <textarea
-                            name="projectDescription"
-                            value={formData.projectDescription}
-                            onChange={handleChange}
-                            rows="4"
-                            className="w-full border px-3 py-2 rounded-lg mb-4"
-                            placeholder="Describe your project..."
-                        />
+                            <div>
+                                <label className="block font-medium text-gray-700 mb-1">Project Description</label>
+                                <textarea
+                                    name="projectDescription"
+                                    value={formData.projectDescription}
+                                    onChange={handleChange}
+                                    rows="4"
+                                    className="w-full border border-gray-300 px-3 py-3 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all resize-none"
+                                    placeholder="Describe your project..."
+                                />
+                            </div>
 
-                        <label className="block font-medium">Project Link *</label>
-                        <div className="relative mb-6">
-                            <LinkIcon className="absolute left-3 top-2.5 w-5 h-5 text-gray-400" />
-                            <input
-                                type="url"
-                                name="projectLink"
-                                value={formData.projectLink}
-                                onChange={handleChange}
-                                className="w-full pl-10 border px-3 py-2 rounded-lg"
-                                placeholder="https://github.com/..."
-                            />
+                            <div>
+                                <label className="block font-medium text-gray-700 mb-1">Project Link *</label>
+                                <div className="relative">
+                                    <LinkIcon className="absolute left-3 top-3.5 w-5 h-5 text-gray-400" />
+                                    <input
+                                        type="url"
+                                        name="projectLink"
+                                        value={formData.projectLink}
+                                        onChange={handleChange}
+                                        className="w-full pl-10 border border-gray-300 px-3 py-3 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
+                                        placeholder="https://github.com/..."
+                                    />
+                                </div>
+                            </div>
                         </div>
 
-                        <div className="flex justify-center gap-4">
-                            <button
-                                type="submit"
-                                disabled={loading.submitting}
-                                className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
-                            >
-                                {loading.submitting ? 'Submitting...' : 'Submit Project'}
-                            </button>
+                        <div className="flex flex-col-reverse sm:flex-row justify-center gap-3 sm:gap-4 mt-8">
                             <button
                                 type="button"
                                 onClick={() => navigate(-1)}
-                                className="px-6 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300"
+                                className="w-full sm:w-auto px-6 py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 font-medium transition-colors"
                             >
                                 Cancel
+                            </button>
+                            <button
+                                type="submit"
+                                disabled={loading.submitting}
+                                className="w-full sm:w-auto px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 font-medium transition-colors shadow-sm"
+                            >
+                                {loading.submitting ? 'Submitting...' : 'Submit Project'}
                             </button>
                         </div>
                     </form>
