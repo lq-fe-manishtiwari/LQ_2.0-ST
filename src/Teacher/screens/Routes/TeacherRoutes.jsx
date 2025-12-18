@@ -20,6 +20,7 @@ import AssessmentRoutes from "../Pages/Assessment/Routes/AssessmentRoutes.jsx";
 import ContentRoutes from "../Pages/Content/Routes/ContentRoutes.jsx";
 import FeedbackRoutes from "../Pages/Feedback/Routes/FeedbackRoutes.jsx";
 import PMSRoutes from "../Pages/PerformanceManagementSystem/Routes/PMSRoutes.jsx";
+import ExamManagementRoutes from "../Pages/ExamManageMent/Routes/ExamManagementRoutes.jsx"
 
 export default function TeacherRoutes() {
   return (
@@ -46,6 +47,7 @@ export default function TeacherRoutes() {
       <Route path="content/*" element={<ContentRoutes />} />
       <Route path="feedback/*" element={<FeedbackRoutes />} />
       <Route path="pms/*" element={<PMSRoutes />} />
+      <Route path="exam/*" element={<ExamManagementRoutes />} />
 
     </Routes>
   );

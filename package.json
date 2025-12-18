@@ -10,7 +10,9 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@apollo/client": "^4.0.11",
     "classnames": "^2.5.1",
+    "clsx": "^2.1.1",
     "config": "^4.1.1",
     "devtools-detect": "^4.0.2",
     "firebase": "^12.5.0",
