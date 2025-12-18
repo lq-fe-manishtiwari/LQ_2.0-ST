@@ -3,20 +3,21 @@ import React from "react";
 const ExamDashboard = () => {
   return (
     <div className="p-6 bg-gray-50 min-h-screen">
-      <div className="bg-white rounded-xl shadow overflow-hidden">
+      <div className=" rounded-xl shadow overflow-hidden">
         {/* Table */}
         <table className="w-full border-collapse">
           <thead>
-            <tr className="bg-blue-600 text-white text-left">
-              <th className="px-4 py-3">Exam Name</th>
-              <th className="px-4 py-3">Course</th>
-              <th className="px-4 py-3">Allocated By</th>
-              <th className="px-4 py-3">Start Date</th>
-              <th className="px-4 py-3">End Date</th>
-              <th className="px-4 py-3">Paper</th>
-              <th className="px-4 py-3">Marks Entry</th>
+            <tr className="text-left">
+              <th className="px-4 py-3 bg-[#2162c1] text-white">Exam Name</th>
+              <th className="px-4 py-3 bg-[#2162c1] text-white">Course</th>
+              <th className="px-4 py-3 bg-[#2162c1] text-white">Allocated By</th>
+              <th className="px-4 py-3 bg-[#2162c1] text-white">Start Date</th>
+              <th className="px-4 py-3 bg-[#2162c1] text-white">End Date</th>
+              <th className="px-4 py-3 bg-[#2162c1] text-white">Paper</th>
+              <th className="px-4 py-3 bg-[#2162c1] text-white">Marks Entry</th>
             </tr>
           </thead>
+
 
           <tbody>
             <tr>

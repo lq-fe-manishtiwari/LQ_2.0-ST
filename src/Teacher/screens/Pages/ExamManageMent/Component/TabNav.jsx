@@ -5,14 +5,11 @@ import { Plus, Upload } from "lucide-react";
 
 const tabs = [
   { label: "Dashboard", to: "/teacher/exam/dashboard" },
-  // { label: "Department", to: "/pms/department" },
-//   { label: "Task Assignment", to: "/pms/task-assignment" },
-//   { label: "My Tasks", to: "/pms/my-task" },
-//   { label: "API", to: "/pms/api" },
-//   { label: "Timesheet", to: "/pms/timesheet" },
-//   { label: "Leave", to: "/pms/leave" },
-//    { label: "Document", to: "/pms/document" },
- 
+  { label: "Schedule", to: "/teacher/exam/schedule" },
+  { label: "Paper", to: "/teacher/exam/paper" },
+  { label: "Marks Entry", to: "/teacher/exam/marksEntry" },
+  { label: "Edit Requests", to: "/teacher/exam/EditRequests" },
+  { label: "Re-Evaluation", to: "/teacher/exam/Evaluation" }
 
 ];
 
