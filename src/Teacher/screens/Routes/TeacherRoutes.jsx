@@ -20,7 +20,7 @@ import AssessmentRoutes from "../Pages/Assessment/Routes/AssessmentRoutes.jsx";
 import ContentRoutes from "../Pages/Content/Routes/ContentRoutes.jsx";
 import FeedbackRoutes from "../Pages/Feedback/Routes/FeedbackRoutes.jsx";
 import PMSRoutes from "../Pages/PerformanceManagementSystem/Routes/PMSRoutes.jsx";
-import ExamManagementRoutes from "../Pages/ExamManageMent/Routes/ExamManagementRoutes.jsx"
+import ExamManagementRoutes from "../Pages/ExamManageMent/Routes/ExamManagementRoutes.jsx";
 
 export default function TeacherRoutes() {
   return (

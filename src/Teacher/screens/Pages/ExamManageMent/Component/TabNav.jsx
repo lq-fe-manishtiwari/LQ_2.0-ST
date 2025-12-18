@@ -4,7 +4,7 @@ import { Plus, Upload } from "lucide-react";
 // import Buttons from "./Buttons";
 
 const tabs = [
-  { label: "Dashboard", to: "/exam/exam-dashboard" },
+  { label: "Dashboard", to: "/teacher/exam/dashboard" },
   // { label: "Department", to: "/pms/department" },
 //   { label: "Task Assignment", to: "/pms/task-assignment" },
 //   { label: "My Tasks", to: "/pms/my-task" },
