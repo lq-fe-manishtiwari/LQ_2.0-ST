@@ -1,6 +1,6 @@
 import React from "react";
 import { Outlet } from "react-router-dom";
-// import TabNav from "./Components/TabNav";
+import TabNav from "./Component/TabNav";
 
 export default function ExamManagementLayout() {
   return (

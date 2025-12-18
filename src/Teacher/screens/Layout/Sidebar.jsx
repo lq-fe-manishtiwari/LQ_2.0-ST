@@ -210,7 +210,7 @@ const Sidebar = ({ isOpen, toggle }) => {
         show: reportAccess === "true" || reportAccess === true,
       },
       {
-        to: "/teacher-exam",
+        to: "/teacher/exam",
         label: "Exam Management",
         iconActive: classActive,
         iconInactive: classInactive,
