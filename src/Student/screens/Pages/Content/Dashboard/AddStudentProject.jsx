@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { X, ChevronDown, Link as LinkIcon } from 'lucide-react';
+import { X, ChevronDown, Link as LinkIcon, FileText, Check } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import ContentService from '../Service/Content.service';
 import StudentProjectService from '../Service/StudentProject.service';
+import { useUserProfile } from '../../../../../contexts/UserProfileContext';
 
 const CustomSelect = ({ label, value, onChange, options, placeholder, disabled = false }) => {
     // ... (unchanged)
@@ -74,6 +75,7 @@ const CustomSelect = ({ label, value, onChange, options, placeholder, disabled =
 const AddStudentProject = () => {
     const navigate = useNavigate();
     const location = useLocation();
+    const { getUserId } = useUserProfile();
 
     // Destructure values from state, with fallback to empty object
     const { programId, semesterId, studentId, academicYearId } = location.state || {};
@@ -94,10 +96,10 @@ const AddStudentProject = () => {
         modules: [],
         units: [],
         contentTypes: [
-          
+
         ],
         contentLevels: [
-            
+
         ],
     });
 
@@ -105,8 +107,47 @@ const AddStudentProject = () => {
         modules: false,
         units: false,
         submitting: false,
-        subjects: false
+        subjects: false,
+        uploading: false
     });
+
+    const [fileData, setFileData] = useState({
+        file: null,
+        fileName: '',
+        fileUrl: ''
+    });
+
+    // Load content types and levels
+    useEffect(() => {
+        const fetchData = async () => {
+            try {
+                const [typesRes, levelsRes] = await Promise.all([
+                    ContentService.getContentTypes(),
+                    ContentService.getContentLevel()
+                ]);
+
+                if (typesRes.success) {
+                    const contentTypes = Array.isArray(typesRes.data) ? typesRes.data.map(ct => ({
+                        label: ct.content_type_name,
+                        value: ct.content_type_id,
+                        full: ct
+                    })) : [];
+                    setOptions(prev => ({ ...prev, contentTypes }));
+                }
+
+                if (levelsRes.success) {
+                    const contentLevels = Array.isArray(levelsRes.data) ? levelsRes.data.map(l => ({
+                        label: l.content_level_name || l.name || l.label,
+                        value: l.content_level_id || l.id
+                    })) : [];
+                    setOptions(prev => ({ ...prev, contentLevels }));
+                }
+            } catch (err) {
+                console.error("Error loading types/levels:", err);
+            }
+        };
+        fetchData();
+    }, []);
 
     const [error, setError] = useState(null);
 
@@ -189,21 +230,44 @@ const AddStudentProject = () => {
         }
     }, [formData.moduleId, options.modules]);
 
-    const handleChange = (e) => {
-        const { name, value } = e.target;
-        setFormData(prev => ({
-            ...prev,
-            [name]: value,
-            ...(name === 'subjectId' ? { moduleId: '', unitId: '' } : {}),
-            ...(name === 'moduleId' ? { unitId: '' } : {})
-        }));
+    const handleChange = async (e) => {
+        const { name, value, files } = e.target;
+
+        if (name === 'file' && files && files[0]) {
+            const file = files[0];
+            setFileData(prev => ({ ...prev, file, fileName: file.name }));
+            setLoading(prev => ({ ...prev, uploading: true }));
+
+            try {
+                const url = await ContentService.uploadFileToS3(file);
+                // S3 upload returns plain text URL or JSON depending on impl. Service wrapper handles text.
+                if (url) {
+                    setFileData(prev => ({ ...prev, fileUrl: url }));
+                    setFormData(prev => ({ ...prev, projectLink: url }));
+                }
+            } catch (err) {
+                console.error("File upload failed:", err);
+                setError("Failed to upload file");
+            } finally {
+                setLoading(prev => ({ ...prev, uploading: false }));
+            }
+        } else {
+            setFormData(prev => ({
+                ...prev,
+                [name]: value,
+                ...(name === 'subjectId' ? { moduleId: '', unitId: '' } : {}),
+                ...(name === 'moduleId' ? { unitId: '' } : {})
+            }));
+        }
     };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
         setError(null);
+        const userId = getUserId();
 
-        if (!formData.projectTitle || !formData.unitId || !formData.projectLink || !formData.contentTypeId || !formData.contentLevelId) {
+
+        if (!formData.projectTitle || !formData.unitId || !formData.projectLink || !formData.content_type_id || !formData.content_level_id) {
             setError("Please fill in all required fields.");
             return;
         }
@@ -219,7 +283,8 @@ const AddStudentProject = () => {
                 semester_id: parseInt(semesterId),
                 student_id: parseInt(studentId),
                 content_type_id: parseInt(formData.content_type_id),
-                content_level_id: parseInt(formData.content_level_id)
+                content_level_id: parseInt(formData.content_level_id),
+                created_by_user_id: userId,
             };
 
             const response = await StudentProjectService.submitProject(payload);
@@ -324,18 +389,70 @@ const AddStudentProject = () => {
                             </div>
 
                             <div>
-                                <label className="block font-medium text-gray-700 mb-1">Project Link *</label>
-                                <div className="relative">
-                                    <LinkIcon className="absolute left-3 top-3.5 w-5 h-5 text-gray-400" />
-                                    <input
-                                        type="url"
-                                        name="projectLink"
-                                        value={formData.projectLink}
-                                        onChange={handleChange}
-                                        className="w-full pl-10 border border-gray-300 px-3 py-3 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
-                                        placeholder="https://github.com/..."
-                                    />
-                                </div>
+                                <label className="block font-medium text-gray-700 mb-1">
+                                    {(() => {
+                                        const selectedType = options.contentTypes.find(ct => String(ct.value) === String(formData.content_type_id));
+                                        const isFile = selectedType?.label?.toLowerCase().includes('file');
+                                        return isFile ? 'Upload Project File *' : 'Project Link *';
+                                    })()}
+                                </label>
+
+                                {(() => {
+                                    const selectedType = options.contentTypes.find(ct => String(ct.value) === String(formData.content_type_id));
+                                    // Default to Link input if no type selected or type is not File
+                                    const isFile = selectedType?.label?.toLowerCase().includes('file');
+
+                                    if (isFile) {
+                                        return (
+                                            <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                                                <div className="flex gap-4 items-end">
+                                                    <div className="flex-1">
+                                                        <input
+                                                            type="file"
+                                                            name="file"
+                                                            onChange={handleChange}
+                                                            className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:border-blue-500 bg-white"
+                                                            accept=".pdf,.doc,.docx,.ppt,.pptx,.jpg,.jpeg,.png,.gif,.zip,.rar"
+                                                        />
+                                                    </div>
+                                                </div>
+
+                                                {loading.uploading && (
+                                                    <p className="text-sm text-blue-600 mt-2 flex items-center gap-2">
+                                                        <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-blue-600"></div>
+                                                        Uploading file...
+                                                    </p>
+                                                )}
+
+                                                {fileData.fileUrl && !loading.uploading && (
+                                                    <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded flex items-center gap-2">
+                                                        <Check className="w-5 h-5 text-green-600" />
+                                                        <div>
+                                                            <p className="text-sm text-green-700 font-medium">Uploaded Successfully</p>
+                                                            <a href={fileData.fileUrl} target="_blank" rel="noreferrer" className="text-xs text-blue-600 hover:underline break-all">
+                                                                {fileData.fileName}
+                                                            </a>
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        );
+                                    } else {
+                                        return (
+                                            <div className="relative">
+                                                <LinkIcon className="absolute left-3 top-3.5 w-5 h-5 text-gray-400" />
+                                                <input
+                                                    type="url"
+                                                    name="projectLink"
+                                                    value={formData.projectLink}
+                                                    onChange={handleChange}
+                                                    className="w-full pl-10 border border-gray-300 px-3 py-3 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
+                                                    placeholder="https://github.com/..."
+                                                />
+                                            </div>
+                                        );
+                                    }
+                                })()}
                             </div>
                         </div>
 
