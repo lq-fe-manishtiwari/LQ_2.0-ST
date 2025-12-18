@@ -368,8 +368,8 @@ export default function ContentDashboard() {
             })}
             className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white border border-transparent px-3 sm:px-4 py-2.5 sm:py-3 rounded-xl shadow-sm transition-all justify-center whitespace-nowrap text-sm sm:text-base"
           >
-            <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
-            <span className="font-medium">My Projects</span>
+            {/* <Plus className="w-4 h-4 sm:w-5 sm:h-5" /> */}
+            <span className="font-medium">Projects</span>
           </button>
           <button
             onClick={() => setShowFilters(!showFilters)}

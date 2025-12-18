@@ -188,6 +188,11 @@ const StudentProject = () => {
   });
   const [projects, setProjects] = useState([]);
   const [processingId, setProcessingId] = useState(null);
+  const [showApproveAlert, setShowApproveAlert] = useState(false);
+  const [showRejectAlert, setShowRejectAlert] = useState(false);
+  const [projectToAction, setProjectToAction] = useState(null);
+  const [showSuccessAlert, setShowSuccessAlert] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
 
   // SweetAlert
   const [showAlert, setShowAlert] = useState(false);
@@ -377,40 +382,53 @@ const StudentProject = () => {
   };
 
   const handleApprove = async (projectId) => {
-    setProcessingId(projectId);
+    setProjectToAction(projectId);
+    setShowApproveAlert(true);
+  };
+
+  const handleConfirmApprove = async () => {
+    setShowApproveAlert(false);
+    setProcessingId(projectToAction);
     try {
-      await contentService.approveStudentProject(projectId);
-      showSweetAlert("Approved", "Project has been approved.", "success", "OK", () => {
-        // Refresh list
-        const selectedTopic = topicOptions.find((t) => t.unit_name === filters.topic);
-        if (selectedTopic?.unit_id) {
-          // Trigger effect again or manually fetch
-          contentService.getStudentProjectsByUnit(selectedTopic.unit_id, null).then(res => setProjects(res || []));
-        }
-      });
+      await contentService.approveStudentProject(projectToAction);
+      setSuccessMessage("Project has been successfully approved!");
+      setShowSuccessAlert(true);
+      // Refresh list
+      const selectedTopic = topicOptions.find((t) => t.unit_name === filters.topic);
+      if (selectedTopic?.unit_id) {
+        contentService.getStudentProjectsByUnit(selectedTopic.unit_id, null).then(res => setProjects(res || []));
+      }
     } catch (e) {
       console.error(e);
       showSweetAlert("Error", "Failed to approve project", "error");
     } finally {
       setProcessingId(null);
+      setProjectToAction(null);
     }
   };
 
   const handleReject = async (projectId) => {
-    setProcessingId(projectId);
+    setProjectToAction(projectId);
+    setShowRejectAlert(true);
+  };
+
+  const handleConfirmReject = async () => {
+    setShowRejectAlert(false);
+    setProcessingId(projectToAction);
     try {
-      await contentService.rejectStudentProject(projectId);
-      showSweetAlert("Rejected", "Project has been rejected.", "warning", "OK", () => {
-        const selectedTopic = topicOptions.find((t) => t.unit_name === filters.topic);
-        if (selectedTopic?.unit_id) {
-          contentService.getStudentProjectsByUnit(selectedTopic.unit_id, null).then(res => setProjects(res || []));
-        }
-      });
+      await contentService.rejectStudentProject(projectToAction);
+      setSuccessMessage("Project has been successfully rejected!");
+      setShowSuccessAlert(true);
+      const selectedTopic = topicOptions.find((t) => t.unit_name === filters.topic);
+      if (selectedTopic?.unit_id) {
+        contentService.getStudentProjectsByUnit(selectedTopic.unit_id, null).then(res => setProjects(res || []));
+      }
     } catch (e) {
       console.error(e);
       showSweetAlert("Error", "Failed to reject project", "error");
     } finally {
       setProcessingId(null);
+      setProjectToAction(null);
     }
   };
 
@@ -622,6 +640,59 @@ const StudentProject = () => {
           onConfirm={alertConfig.onConfirm}
           onCancel={alertConfig.onCancel}
         />
+      )}
+
+      {/* Approve Confirmation Alert */}
+      {showApproveAlert && (
+        <SweetAlert
+          warning
+          showCancel
+          confirmBtnText="Yes, Approve"
+          cancelBtnText="Cancel"
+          confirmBtnCssClass="btn-confirm"
+          cancelBtnCssClass="btn-cancel"
+          title="Approve Project?"
+          onConfirm={handleConfirmApprove}
+          onCancel={() => {
+            setShowApproveAlert(false);
+            setProjectToAction(null);
+          }}
+        >
+          Are you sure you want to approve this project? This action will mark it as approved.
+        </SweetAlert>
+      )}
+
+      {/* Reject Confirmation Alert */}
+      {showRejectAlert && (
+        <SweetAlert
+          warning
+          showCancel
+          confirmBtnText="Yes, Reject"
+          cancelBtnText="Cancel"
+          confirmBtnCssClass="btn-confirm"
+          cancelBtnCssClass="btn-cancel"
+          title="Reject Project?"
+          onConfirm={handleConfirmReject}
+          onCancel={() => {
+            setShowRejectAlert(false);
+            setProjectToAction(null);
+          }}
+        >
+          Are you sure you want to reject this project? This action will mark it as rejected.
+        </SweetAlert>
+      )}
+
+      {/* Success Alert */}
+      {showSuccessAlert && (
+        <SweetAlert
+          success
+          title="Success!"
+          onConfirm={() => setShowSuccessAlert(false)}
+          confirmBtnText="OK"
+          confirmBtnCssClass="btn-confirm"
+        >
+          {successMessage}
+        </SweetAlert>
       )}
     </div>
   );

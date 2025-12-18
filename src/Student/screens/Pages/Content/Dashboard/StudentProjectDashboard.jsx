@@ -86,7 +86,7 @@ export default function StudentProjectDashboard() {
     <div className="min-h-screen p-4 md:p-6 lg:p-8">
       {/* Header: Create Project Button */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
-        <h2 className="text-2xl font-bold text-gray-800">My Projects</h2>
+        <h2 className="text-2xl font-bold text-gray-800">Projects</h2>
         <div className="flex gap-2 w-full sm:w-auto">
           <button
             onClick={handleAddProject}
