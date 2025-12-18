@@ -1,12 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Search, Filter, ChevronDown, Plus } from 'lucide-react';
 import ContentService from '../Service/Content.service';
 import { StudentService } from '../../Profile/Student.Service';
 import { useUserProfile } from '../../../../../contexts/UserProfileContext';
 import SubjectsList from './components/SubjectsList';
 import ModulesUnitsList from './components/ModulesUnitsList';
-import AddStudentProject from './AddStudentProject';
 
 const CustomSelect = ({ label, value, onChange, options, placeholder, disabled = false }) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -66,6 +65,7 @@ const CustomSelect = ({ label, value, onChange, options, placeholder, disabled =
 };
 
 export default function ContentDashboard() {
+  const navigate = useNavigate();
   const { profile } = useUserProfile();
   console.log('User profile in ContentDashboard:', profile);
   const [selectedPaperType, setSelectedPaperType] = useState('Vertical');
@@ -78,7 +78,7 @@ export default function ContentDashboard() {
   const [showFilters, setShowFilters] = useState(true);
   const dropdownRef = useRef(null);
   const [allSubjects, setAllSubjects] = useState([]);
-  const [showAddProjectModal, setShowAddProjectModal] = useState(false);
+
 
   // State for API data
   const [allocatedPrograms, setAllocatedPrograms] = useState([]);
@@ -359,11 +359,11 @@ export default function ContentDashboard() {
         {/* Right side - Filter and Add Project */}
         <div className="flex gap-3 w-full lg:w-auto">
           <button
-            onClick={() => setShowAddProjectModal(true)}
+            onClick={() => navigate('/student-project')}
             className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white border border-transparent px-4 py-3 rounded-xl shadow-sm transition-all justify-center whitespace-nowrap"
           >
             <Plus className="w-5 h-5" />
-            <span className="font-medium">Add Project</span>
+            <span className="font-medium">My Projects</span>
           </button>
           <button
             onClick={() => setShowFilters(!showFilters)}
@@ -491,15 +491,7 @@ export default function ContentDashboard() {
           </div>
         )}
       </div>
-      {showAddProjectModal && (
-        <AddStudentProject
-          onClose={() => setShowAddProjectModal(false)}
-          programId={selectedProgram}
-          semesterId={selectedSemester}
-          studentId={profile?.student_id}
-          academicYearId={selectedProgramData?.academicYearId}
-        />
-      )}
+
     </div>
   );
 }

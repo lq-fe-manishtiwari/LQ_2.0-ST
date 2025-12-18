@@ -1,33 +1,85 @@
-import React, { useState, useEffect } from 'react';
-import { X, Upload, Link as LinkIcon } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { X, ChevronDown, Link as LinkIcon } from 'lucide-react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import ContentService from '../Service/Content.service';
 import StudentProjectService from '../Service/StudentProject.service';
 
-const CustomSelect = ({ label, value, onChange, options, placeholder, disabled = false, required = false }) => {
-    return (
-        <div className="w-full">
-            <label className="block text-sm font-semibold text-gray-700 mb-2">
-                {label} {required && <span className="text-red-500">*</span>}
-            </label>
-            <select
-                value={value}
-                onChange={onChange}
-                disabled={disabled}
-                className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${disabled ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : 'bg-white border-gray-300'
-                    }`}
-            >
-                <option value="">{placeholder}</option>
-                {options.map((option) => (
-                    <option key={option.value} value={option.value}>
-                        {option.label}
-                    </option>
-                ))}
-            </select>
+const CustomSelect = ({ label, value, onChange, options, placeholder, disabled = false }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const dropdownRef = useRef(null);
+
+  const handleSelect = (option) => {
+    onChange({ target: { value: option.value } });
+    setIsOpen(false);
+  };
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const selectedOption = options.find(opt => String(opt.value) === String(value));
+
+  return (
+    <div ref={dropdownRef}>
+      <label className="block text-sm font-semibold text-gray-700 mb-2">{label}</label>
+      <div className="relative">
+        <div
+          className={`w-full px-3 py-2 border ${
+            disabled
+              ? 'bg-gray-100 text-gray-500 border-gray-200 cursor-not-allowed'
+              : 'bg-white border-gray-300 cursor-pointer hover:border-blue-400'
+          } rounded-lg min-h-[44px] flex items-center justify-between transition-all duration-150`}
+          onClick={() => !disabled && setIsOpen(!isOpen)}
+        >
+          <span className={selectedOption ? 'text-gray-900' : 'text-gray-400'}>
+            {selectedOption ? selectedOption.label : placeholder}
+          </span>
+          <ChevronDown
+            className={`w-4 h-4 text-gray-400 transition-transform ${
+              isOpen ? 'rotate-180' : 'rotate-0'
+            }`}
+          />
         </div>
-    );
+
+        {isOpen && !disabled && (
+          <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+            <div
+              className="px-4 py-2 text-sm text-gray-700 cursor-pointer hover:bg-blue-50 transition-colors"
+              onClick={() => handleSelect({ value: '', label: placeholder })}
+            >
+              {placeholder}
+            </div>
+            {options.map((option) => (
+              <div
+                key={option.value}
+                className="px-4 py-2 text-sm text-gray-700 cursor-pointer hover:bg-blue-50 transition-colors"
+                onClick={() => handleSelect(option)}
+              >
+                {option.label}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
 };
 
-const AddStudentProject = ({ onClose, programId, semesterId, studentId, academicYearId }) => {
+const AddStudentProject = () => {
+    const navigate = useNavigate();
+    const [searchParams] = useSearchParams();
+    
+    const programId = searchParams.get('programId');
+    const semesterId = searchParams.get('semesterId');
+    const studentId = searchParams.get('studentId');
+    const academicYearId = searchParams.get('academicYearId');
+
     const [formData, setFormData] = useState({
         subjectId: '',
         moduleId: '',
@@ -52,7 +104,6 @@ const AddStudentProject = ({ onClose, programId, semesterId, studentId, academic
 
     const [error, setError] = useState(null);
 
-
     // Load subjects when component mounts
     useEffect(() => {
         const fetchSubjects = async () => {
@@ -64,15 +115,12 @@ const AddStudentProject = ({ onClose, programId, semesterId, studentId, academic
             setLoading(prev => ({ ...prev, subjects: true }));
             try {
                 const response = await ContentService.getSubjectAllocations(academicYearId, semesterId);
-                console.log("response", response);
                 if (response.success && response.data) {
                     const subjectsData = Array.isArray(response.data) ? response.data : [];
-                    console.log("subjectsData", subjectsData);
                     const subjects = subjectsData.map(s => ({
                         label: s.subject?.name || s.name,
                         value: s.subject?.subject_id
                     }));
-                    console.log("subjects", subjects);
                     setOptions(prev => ({ ...prev, subjects }));
                 }
             } catch (err) {
@@ -101,7 +149,7 @@ const AddStudentProject = ({ onClose, programId, semesterId, studentId, academic
                     const modules = response.data.modules.map(m => ({
                         label: m.module_name || m.name,
                         value: m.module_id || m.id,
-                        units: m.units || [] // Store units in module object for easier access
+                        units: m.units || []
                     }));
                     setOptions(prev => ({ ...prev, modules, units: [] }));
                 }
@@ -116,7 +164,7 @@ const AddStudentProject = ({ onClose, programId, semesterId, studentId, academic
         fetchModules();
     }, [formData.subjectId]);
 
-    // Update units when module changes (from local data)
+    // Update units when module changes
     useEffect(() => {
         if (!formData.moduleId) {
             setOptions(prev => ({ ...prev, units: [] }));
@@ -140,7 +188,6 @@ const AddStudentProject = ({ onClose, programId, semesterId, studentId, academic
         setFormData(prev => ({
             ...prev,
             [name]: value,
-            // Reset dependent fields
             ...(name === 'subjectId' ? { moduleId: '', unitId: '' } : {}),
             ...(name === 'moduleId' ? { unitId: '' } : {})
         }));
@@ -150,7 +197,6 @@ const AddStudentProject = ({ onClose, programId, semesterId, studentId, academic
         e.preventDefault();
         setError(null);
 
-        // Validation
         if (!formData.projectTitle || !formData.unitId || !formData.projectLink) {
             setError("Please fill in all required fields.");
             return;
@@ -166,14 +212,14 @@ const AddStudentProject = ({ onClose, programId, semesterId, studentId, academic
                 unit_id: parseInt(formData.unitId),
                 semester_id: parseInt(semesterId),
                 student_id: parseInt(studentId),
-                content_type_id: 1, // Fixed as per requirement
-                content_level_id: 2 // Fixed as per requirement (Intermediate)
+                content_type_id: 1,
+                content_level_id: 2
             };
 
             const response = await StudentProjectService.submitProject(payload);
             if (response.success) {
                 alert("Project submitted successfully!");
-                onClose(); // Close modal on success
+                navigate(-1);
             }
         } catch (err) {
             console.error("Submission error:", err);
@@ -184,117 +230,103 @@ const AddStudentProject = ({ onClose, programId, semesterId, studentId, academic
     };
 
     return (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-                <div className="sticky top-0 bg-white px-6 py-4 border-b border-gray-200 flex justify-between items-center">
-                    <h2 className="text-xl font-bold text-gray-800">Submit Student Project</h2>
-                    <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
-                        <X className="w-5 h-5 text-gray-500" />
-                    </button>
-                </div>
-
-                <form onSubmit={handleSubmit} className="p-6 space-y-6">
-                    {error && (
-                        <div className="bg-red-50 text-red-700 p-4 rounded-lg border border-red-200">
-                            {error}
-                        </div>
-                    )}
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <CustomSelect
-                            label="Subject"
-                            value={formData.subjectId}
-                            onChange={(e) => handleChange({ target: { name: 'subjectId', value: e.target.value } })}
-                            options={options.subjects}
-                            placeholder={loading.subjects ? "Loading Subjects..." : "Select Subject"}
-                            required
-                        />
-                        <CustomSelect
-                            label="Module"
-                            value={formData.moduleId}
-                            onChange={(e) => handleChange({ target: { name: 'moduleId', value: e.target.value } })}
-                            options={options.modules}
-                            placeholder={loading.modules ? "Loading..." : "Select Module"}
-                            disabled={!formData.subjectId || loading.modules}
-                            required
-                        />
-                        <CustomSelect
-                            label="Unit"
-                            value={formData.unitId}
-                            onChange={(e) => handleChange({ target: { name: 'unitId', value: e.target.value } })}
-                            options={options.units}
-                            placeholder="Select Unit"
-                            disabled={!formData.moduleId}
-                            required
-                        />
+        <div className="min-h-screen bg-gray-50 p-4">
+            <div className="w-full">
+                <div className="bg-white p-6 rounded-xl shadow-lg border border-gray-200">
+                    <div className="flex items-center justify-between mb-6">
+                        <h3 className="text-[1.75rem] font-semibold text-[#2162c1]">Submit Student Project</h3>
+                        <button
+                            onClick={() => navigate(-1)}
+                            className="w-10 h-10 rounded-full bg-blue-600 text-white flex items-center justify-center"
+                        >
+                            <X className="w-5 h-5" />
+                        </button>
                     </div>
 
-                    <div className="space-y-4 border-t pt-4">
-                        <div>
-                            <label className="block text-sm font-semibold text-gray-700 mb-1">
-                                Project Title <span className="text-red-500">*</span>
-                            </label>
-                            <input
-                                type="text"
-                                name="projectTitle"
-                                value={formData.projectTitle}
-                                onChange={handleChange}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                placeholder="Solar System Model"
-                                required
-                            />
-                        </div>
-
-                        <div>
-                            <label className="block text-sm font-semibold text-gray-700 mb-1">
-                                Project Description
-                            </label>
-                            <textarea
-                                name="projectDescription"
-                                value={formData.projectDescription}
-                                onChange={handleChange}
-                                rows="4"
-                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                placeholder="Describe your project..."
-                            />
-                        </div>
-
-                        <div>
-                            <label className="block text-sm font-semibold text-gray-700 mb-1">
-                                Project Link <span className="text-red-500">*</span>
-                            </label>
-                            <div className="relative">
-                                <LinkIcon className="absolute left-3 top-2.5 w-5 h-5 text-gray-400" />
-                                <input
-                                    type="url"
-                                    name="projectLink"
-                                    value={formData.projectLink}
-                                    onChange={handleChange}
-                                    className="w-full pl-10 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                    placeholder="https://github.com/..."
-                                    required
-                                />
+                    <form onSubmit={handleSubmit}>
+                        {error && (
+                            <div className="bg-red-50 text-red-700 p-4 rounded-lg border border-red-200 mb-6">
+                                {error}
                             </div>
-                        </div>
-                    </div>
+                        )}
 
-                    <div className="pt-4 flex justify-end gap-3">
-                        <button
-                            type="button"
-                            onClick={onClose}
-                            className="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 font-medium transition-colors"
-                        >
-                            Cancel
-                        </button>
-                        <button
-                            type="submit"
-                            disabled={loading.submitting}
-                            className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium transition-colors flex items-center gap-2"
-                        >
-                            {loading.submitting ? 'Submitting...' : 'Submit Project'}
-                        </button>
-                    </div>
-                </form>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <CustomSelect
+                                label="Subject *"
+                                value={formData.subjectId}
+                                onChange={(e) => handleChange({ target: { name: 'subjectId', value: e.target.value } })}
+                                options={options.subjects}
+                                placeholder={loading.subjects ? "Loading Subjects..." : "Select Subject"}
+                            />
+                            <CustomSelect
+                                label="Module *"
+                                value={formData.moduleId}
+                                onChange={(e) => handleChange({ target: { name: 'moduleId', value: e.target.value } })}
+                                options={options.modules}
+                                placeholder={loading.modules ? "Loading..." : "Select Module"}
+                                disabled={!formData.subjectId || loading.modules}
+                            />
+                            <CustomSelect
+                                label="Unit *"
+                                value={formData.unitId}
+                                onChange={(e) => handleChange({ target: { name: 'unitId', value: e.target.value } })}
+                                options={options.units}
+                                placeholder="Select Unit"
+                                disabled={!formData.moduleId}
+                            />
+                        </div>
+
+                        <label className="block mt-6 font-medium">Project Title *</label>
+                        <input
+                            type="text"
+                            name="projectTitle"
+                            value={formData.projectTitle}
+                            onChange={handleChange}
+                            className="w-full border px-3 py-2 rounded-lg mb-4"
+                            placeholder="Enter Project Title"
+                        />
+
+                        <label className="block font-medium">Project Description</label>
+                        <textarea
+                            name="projectDescription"
+                            value={formData.projectDescription}
+                            onChange={handleChange}
+                            rows="4"
+                            className="w-full border px-3 py-2 rounded-lg mb-4"
+                            placeholder="Describe your project..."
+                        />
+
+                        <label className="block font-medium">Project Link *</label>
+                        <div className="relative mb-6">
+                            <LinkIcon className="absolute left-3 top-2.5 w-5 h-5 text-gray-400" />
+                            <input
+                                type="url"
+                                name="projectLink"
+                                value={formData.projectLink}
+                                onChange={handleChange}
+                                className="w-full pl-10 border px-3 py-2 rounded-lg"
+                                placeholder="https://github.com/..."
+                            />
+                        </div>
+
+                        <div className="flex justify-center gap-4">
+                            <button 
+                                type="submit" 
+                                disabled={loading.submitting}
+                                className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+                            >
+                                {loading.submitting ? 'Submitting...' : 'Submit Project'}
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => navigate(-1)}
+                                className="px-6 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300"
+                            >
+                                Cancel
+                            </button>
+                        </div>
+                    </form>
+                </div>
             </div>
         </div>
     );

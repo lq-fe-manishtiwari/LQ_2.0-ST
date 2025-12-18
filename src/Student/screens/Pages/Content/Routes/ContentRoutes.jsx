@@ -30,23 +30,18 @@
 import { Routes, Route } from "react-router-dom";
 import ContentLayout from "../ContentLayout";
 import ContentDashboard from "../Dashboard/ContentDashboard";
-
-function CalendarView() {
-  return <div>Calendar View</div>;
-}
-
-function TableView() {
-  return <div>Table View</div>;
-}
+import AddStudentProject from "../Dashboard/AddStudentProject";
+import StudentProjectDashboard from "../Dashboard/StudentProjectDashboard";
 
 export default function ContentRoutes() {
   return (
     <Routes>
       <Route path="/" element={<ContentLayout />}>
         <Route index element={<ContentDashboard />} />
-        {/* <Route path="dashboard" element={<TableView />} />
-        <Route path="calendar" element={<CalendarView />} /> */}
+        
       </Route>
+      <Route path="student-project" element={<StudentProjectDashboard/>}/>
+      <Route path="add-project" element={<AddStudentProject/>} />
     </Routes>
   );
 }
