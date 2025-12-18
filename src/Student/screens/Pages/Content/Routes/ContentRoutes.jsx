@@ -38,10 +38,10 @@ export default function ContentRoutes() {
     <Routes>
       <Route path="/" element={<ContentLayout />}>
         <Route index element={<ContentDashboard />} />
-        
+        <Route path="dashboard" element={<ContentDashboard />} />
+        <Route path="student-project" element={<StudentProjectDashboard />} />
+        <Route path="student-project/add-project" element={<AddStudentProject />} />
       </Route>
-      <Route path="student-project" element={<StudentProjectDashboard/>}/>
-      <Route path="add-project" element={<AddStudentProject/>} />
     </Routes>
   );
 }

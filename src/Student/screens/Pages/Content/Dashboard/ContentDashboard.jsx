@@ -359,7 +359,13 @@ export default function ContentDashboard() {
         {/* Right side - Filter and Add Project */}
         <div className="flex gap-3 w-full lg:w-auto">
           <button
-            onClick={() => navigate('/student-project')}
+            onClick={() => navigate('student-project', {
+              state: {
+                programId: selectedProgram,
+                semesterId: selectedSemester,
+                academicYearId: selectedProgramData?.academicYearId
+              }
+            })}
             className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white border border-transparent px-4 py-3 rounded-xl shadow-sm transition-all justify-center whitespace-nowrap"
           >
             <Plus className="w-5 h-5" />

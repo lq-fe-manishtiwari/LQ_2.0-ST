@@ -1,9 +1,9 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Plus, Filter, Edit, Trash2, ChevronDown, Clock, FileText, ExternalLink } from "lucide-react";
 import SweetAlert from 'react-bootstrap-sweetalert';
-// import { useUserProfile } from '../../../../../contexts/UserProfileContext';
-// import ContentService from './Service/Content.service';
+import { useUserProfile } from '../../../../../contexts/UserProfileContext';
+import contentService from '../Service/Content.service';
 // import StudentProjectService from './Service/StudentProject.service';
 
 // Custom Select Component
@@ -34,8 +34,8 @@ const CustomSelect = ({ label, value, onChange, options, placeholder, disabled =
       <div className="relative">
         <div
           className={`w-full px-3 py-2 border ${disabled
-              ? 'bg-gray-100 text-gray-500 border-gray-200 cursor-not-allowed'
-              : 'bg-white border-gray-300 cursor-pointer hover:border-blue-400'
+            ? 'bg-gray-100 text-gray-500 border-gray-200 cursor-not-allowed'
+            : 'bg-white border-gray-300 cursor-pointer hover:border-blue-400'
             } rounded-lg min-h-[44px] flex items-center justify-between transition-all duration-150`}
           onClick={() => !disabled && setIsOpen(!isOpen)}
         >
@@ -75,7 +75,7 @@ const CustomSelect = ({ label, value, onChange, options, placeholder, disabled =
 export default function StudentProjectDashboard() {
   const navigate = useNavigate();
   const { profile } = useUserProfile();
-  
+
   const [subjects, setSubjects] = useState([]);
   const [modules, setModules] = useState([]);
   const [units, setUnits] = useState([]);
@@ -112,7 +112,7 @@ export default function StudentProjectDashboard() {
 
       try {
         // Get student's allocated subjects
-        const response = await ContentService.getStudentSubjects(profile.student_id);
+        const response = await contentService.getStudentSubjects(profile.student_id);
         if (response.success && response.data) {
           const subjectsData = Array.isArray(response.data) ? response.data : [];
           const formattedSubjects = subjectsData.map(s => ({
@@ -140,7 +140,7 @@ export default function StudentProjectDashboard() {
 
     const loadModules = async () => {
       try {
-        const response = await ContentService.getModulesAndUnits(filters.subject);
+        const response = await contentService.getModulesAndUnits(filters.subject);
         if (response.success && response.data?.modules) {
           const formatted = response.data.modules.map(mod => ({
             label: mod.module_name,
@@ -220,11 +220,18 @@ export default function StudentProjectDashboard() {
     setProjectToDelete(null);
   };
 
+  /* Retrieve location state passed from ContentDashboard */
+  const { state } = useLocation();
+
   const handleAddProject = () => {
-    const params = new URLSearchParams({
-      studentId: profile?.student_id || '',
+    navigate(`add-project`, {
+      state: {
+        studentId: profile?.student_id,
+        programId: state?.programId,
+        semesterId: state?.semesterId,
+        academicYearId: state?.academicYearId
+      }
     });
-    navigate(`/add-project?${params.toString()}`);
   };
 
   return (
@@ -329,11 +336,10 @@ export default function StudentProjectDashboard() {
                     </div>
 
                     {/* Status */}
-                    <p className={`text-xs mb-4 px-3 py-1 rounded-full inline-block font-medium ${
-                      project.approval_status 
-                        ? 'text-green-700 bg-green-50' 
-                        : 'text-yellow-700 bg-yellow-50'
-                    }`}>
+                    <p className={`text-xs mb-4 px-3 py-1 rounded-full inline-block font-medium ${project.approval_status
+                      ? 'text-green-700 bg-green-50'
+                      : 'text-yellow-700 bg-yellow-50'
+                      }`}>
                       Status: {project.approval_status ? 'Approved' : 'Pending'}
                     </p>
 

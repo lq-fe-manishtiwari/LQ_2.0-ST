@@ -1,84 +1,81 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { X, ChevronDown, Link as LinkIcon } from 'lucide-react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import ContentService from '../Service/Content.service';
 import StudentProjectService from '../Service/StudentProject.service';
 
 const CustomSelect = ({ label, value, onChange, options, placeholder, disabled = false }) => {
-  const [isOpen, setIsOpen] = useState(false);
-  const dropdownRef = useRef(null);
+    // ... (unchanged)
+    const [isOpen, setIsOpen] = useState(false);
+    const dropdownRef = useRef(null);
 
-  const handleSelect = (option) => {
-    onChange({ target: { value: option.value } });
-    setIsOpen(false);
-  };
-
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+    const handleSelect = (option) => {
+        onChange({ target: { value: option.value } });
         setIsOpen(false);
-      }
     };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
 
-  const selectedOption = options.find(opt => String(opt.value) === String(value));
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+                setIsOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
 
-  return (
-    <div ref={dropdownRef}>
-      <label className="block text-sm font-semibold text-gray-700 mb-2">{label}</label>
-      <div className="relative">
-        <div
-          className={`w-full px-3 py-2 border ${
-            disabled
-              ? 'bg-gray-100 text-gray-500 border-gray-200 cursor-not-allowed'
-              : 'bg-white border-gray-300 cursor-pointer hover:border-blue-400'
-          } rounded-lg min-h-[44px] flex items-center justify-between transition-all duration-150`}
-          onClick={() => !disabled && setIsOpen(!isOpen)}
-        >
-          <span className={selectedOption ? 'text-gray-900' : 'text-gray-400'}>
-            {selectedOption ? selectedOption.label : placeholder}
-          </span>
-          <ChevronDown
-            className={`w-4 h-4 text-gray-400 transition-transform ${
-              isOpen ? 'rotate-180' : 'rotate-0'
-            }`}
-          />
-        </div>
+    const selectedOption = options.find(opt => String(opt.value) === String(value));
 
-        {isOpen && !disabled && (
-          <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
-            <div
-              className="px-4 py-2 text-sm text-gray-700 cursor-pointer hover:bg-blue-50 transition-colors"
-              onClick={() => handleSelect({ value: '', label: placeholder })}
-            >
-              {placeholder}
+    return (
+        <div ref={dropdownRef}>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">{label}</label>
+            <div className="relative">
+                <div
+                    className={`w-full px-3 py-2 border ${disabled
+                            ? 'bg-gray-100 text-gray-500 border-gray-200 cursor-not-allowed'
+                            : 'bg-white border-gray-300 cursor-pointer hover:border-blue-400'
+                        } rounded-lg min-h-[44px] flex items-center justify-between transition-all duration-150`}
+                    onClick={() => !disabled && setIsOpen(!isOpen)}
+                >
+                    <span className={selectedOption ? 'text-gray-900' : 'text-gray-400'}>
+                        {selectedOption ? selectedOption.label : placeholder}
+                    </span>
+                    <ChevronDown
+                        className={`w-4 h-4 text-gray-400 transition-transform ${isOpen ? 'rotate-180' : 'rotate-0'
+                            }`}
+                    />
+                </div>
+
+                {isOpen && !disabled && (
+                    <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                        <div
+                            className="px-4 py-2 text-sm text-gray-700 cursor-pointer hover:bg-blue-50 transition-colors"
+                            onClick={() => handleSelect({ value: '', label: placeholder })}
+                        >
+                            {placeholder}
+                        </div>
+                        {options.map((option) => (
+                            <div
+                                key={option.value}
+                                className="px-4 py-2 text-sm text-gray-700 cursor-pointer hover:bg-blue-50 transition-colors"
+                                onClick={() => handleSelect(option)}
+                            >
+                                {option.label}
+                            </div>
+                        ))}
+                    </div>
+                )}
             </div>
-            {options.map((option) => (
-              <div
-                key={option.value}
-                className="px-4 py-2 text-sm text-gray-700 cursor-pointer hover:bg-blue-50 transition-colors"
-                onClick={() => handleSelect(option)}
-              >
-                {option.label}
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-    </div>
-  );
+        </div>
+    );
 };
 
 const AddStudentProject = () => {
     const navigate = useNavigate();
-    const [searchParams] = useSearchParams();
-    
-    const programId = searchParams.get('programId');
-    const semesterId = searchParams.get('semesterId');
-    const studentId = searchParams.get('studentId');
-    const academicYearId = searchParams.get('academicYearId');
+    const location = useLocation();
+
+    // Destructure values from state, with fallback to empty object
+    const { programId, semesterId, studentId, academicYearId } = location.state || {};
 
     const [formData, setFormData] = useState({
         subjectId: '',
@@ -310,8 +307,8 @@ const AddStudentProject = () => {
                         </div>
 
                         <div className="flex justify-center gap-4">
-                            <button 
-                                type="submit" 
+                            <button
+                                type="submit"
                                 disabled={loading.submitting}
                                 className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
                             >

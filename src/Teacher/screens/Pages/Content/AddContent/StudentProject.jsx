@@ -546,31 +546,31 @@ const StudentProject = () => {
         ) : projects.length > 0 ? (
           <div className="grid grid-cols-1 gap-4">
             {projects.map((project) => (
-              <div key={project.projectId} className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden">
+              <div key={project.project_id} className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden">
                 {/* Status Indicator Strip */}
-                <div className={`absolute left-0 top-0 bottom-0 w-1 ${project.approvalStatus === 'APPROVED' ? 'bg-green-500' :
-                    project.approvalStatus === 'REJECTED' ? 'bg-red-500' : 'bg-orange-500'
+                <div className={`absolute left-0 top-0 bottom-0 w-1 ${project.approval_status === 'APPROVED' ? 'bg-green-500' :
+                    project.approval_status === 'REJECTED' ? 'bg-red-500' : 'bg-orange-500'
                   }`}></div>
 
                 <div className="flex flex-col sm:flex-row justify-between gap-4 pl-3">
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-1">
-                      <h4 className="text-lg font-bold text-gray-800">{project.projectTitle}</h4>
-                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium border ${project.approvalStatus === 'APPROVED' ? 'bg-green-50 text-green-700 border-green-200' :
-                          project.approvalStatus === 'REJECTED' ? 'bg-red-50 text-red-700 border-red-200' : 'bg-orange-50 text-orange-700 border-orange-200'
+                      <h4 className="text-lg font-bold text-gray-800">{project.project_title}</h4>
+                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium border ${project.approval_status === 'APPROVED' ? 'bg-green-50 text-green-700 border-green-200' :
+                          project.approval_status === 'REJECTED' ? 'bg-red-50 text-red-700 border-red-200' : 'bg-orange-50 text-orange-700 border-orange-200'
                         }`}>
-                        {project.approvalStatus}
+                        {project.approval_status || 'PENDING'}
                       </span>
                     </div>
-                    <p className="text-gray-600 mb-2">{project.projectDescription}</p>
+                    <p className="text-gray-600 mb-2">{project.project_description}</p>
 
                     <div className="flex flex-wrap gap-4 text-sm text-gray-500">
                       <div className="flex items-center gap-1">
                         <span className="font-semibold text-gray-700">Student:</span>
-                        <span>{project.studentName || `ID: ${project.studentId}`}</span>
+                        <span>{project.student_name || `ID: ${project.student_id}`}</span>
                       </div>
                       <div className="flex items-center gap-1">
-                        <a href={project.projectLink} target="_blank" rel="noreferrer" className="flex items-center gap-1 text-blue-600 hover:text-blue-800 hover:underline">
+                        <a href={project.project_link} target="_blank" rel="noreferrer" className="flex items-center gap-1 text-blue-600 hover:text-blue-800 hover:underline">
                           <Eye className="w-4 h-4" /> View Project Link
                         </a>
                       </div>
@@ -579,25 +579,25 @@ const StudentProject = () => {
 
                   {/* Action Buttons */}
                   <div className="flex flex-row sm:flex-col gap-2 justify-end sm:border-l sm:pl-4 border-gray-100">
-                    {project.approvalStatus === 'PENDING' && (
+                    {(project.approval_status === 'PENDING' || !project.approval_status) && (
                       <>
                         <button
-                          onClick={() => handleApprove(project.projectId)}
-                          disabled={processingId === project.projectId}
+                          onClick={() => handleApprove(project.project_id)}
+                          disabled={processingId === project.project_id}
                           className="flex items-center justify-center gap-2 bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 transition-colors text-sm font-medium disabled:opacity-50"
                         >
                           <Check className="w-4 h-4" /> Approve
                         </button>
                         <button
-                          onClick={() => handleReject(project.projectId)}
-                          disabled={processingId === project.projectId}
+                          onClick={() => handleReject(project.project_id)}
+                          disabled={processingId === project.project_id}
                           className="flex items-center justify-center gap-2 bg-red-50 text-red-600 border border-red-200 px-4 py-2 rounded-md hover:bg-red-100 transition-colors text-sm font-medium disabled:opacity-50"
                         >
                           <X className="w-4 h-4" /> Reject
                         </button>
                       </>
                     )}
-                    {project.approvalStatus !== 'PENDING' && (
+                    {project.approval_status !== 'PENDING' && project.approval_status && (
                       <div className="text-sm text-gray-400 italic text-center px-4">
                         Action taken
                       </div>

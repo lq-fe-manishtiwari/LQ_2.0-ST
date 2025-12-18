@@ -109,23 +109,23 @@ const StudentRequest = ({ unitId, onUpdate }) => {
 
             <div className="space-y-4">
                 {requests.map((req) => (
-                    <div key={req.projectId} className="bg-white p-4 rounded-lg shadow-sm border border-orange-100 flex flex-col sm:flex-row justify-between gap-4">
+                    <div key={req.project_id} className="bg-white p-4 rounded-lg shadow-sm border border-orange-100 flex flex-col sm:flex-row justify-between gap-4">
                         <div className="flex-1">
                             <div className="flex justify-between items-start">
-                                <h4 className="font-bold text-gray-800 text-lg">{req.projectTitle}</h4>
-                                <span className="text-xs px-2 py-1 bg-orange-100 text-orange-700 rounded-full font-medium">Pending Review</span>
+                                <h4 className="font-bold text-gray-800 text-lg">{req.project_title}</h4>
+                                <span className="text-xs px-2 py-1 bg-orange-100 text-orange-700 rounded-full font-medium">{req.approval_status || 'Pending Review'}</span>
                             </div>
 
-                            <p className="text-sm text-gray-600 mt-1 line-clamp-2">{req.projectDescription}</p>
+                            <p className="text-sm text-gray-600 mt-1 line-clamp-2">{req.project_description}</p>
 
                             <div className="flex flex-wrap gap-x-6 gap-y-2 mt-3 text-sm text-gray-500">
                                 <div className="flex items-center gap-1">
                                     <span className="font-medium">Student:</span>
-                                    <span>{req.studentName || `Student #${req.studentId}`}</span>
+                                    <span>{req.student_name || `Student #${req.student_name}`}</span>
                                 </div>
                                 <div className="flex items-center gap-1">
                                     <span className="font-medium">Link:</span>
-                                    <a href={req.projectLink} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline flex items-center gap-1">
+                                    <a href={req.project_link} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline flex items-center gap-1">
                                         View Project <Eye className="w-3 h-3" />
                                     </a>
                                 </div>
@@ -133,20 +133,24 @@ const StudentRequest = ({ unitId, onUpdate }) => {
                         </div>
 
                         <div className="flex sm:flex-col gap-2 justify-center border-t sm:border-t-0 sm:border-l pt-3 sm:pt-0 sm:pl-4 mt-2 sm:mt-0 border-gray-100">
-                            <button
-                                onClick={() => handleApprove(req.projectId)}
-                                disabled={processingId === req.projectId}
-                                className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-colors text-sm font-medium"
-                            >
-                                <Check className="w-4 h-4" /> Approve
-                            </button>
-                            <button
-                                onClick={() => handleReject(req.projectId)}
-                                disabled={processingId === req.projectId}
-                                className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-white border border-gray-300 hover:bg-red-50 hover:text-red-600 text-gray-700 px-4 py-2 rounded-lg transition-colors text-sm font-medium"
-                            >
-                                <X className="w-4 h-4" /> Reject
-                            </button>
+                            {(req.approval_status === "PENDING" || !req.approval_status) && (
+                                <>
+                                    <button
+                                        onClick={() => handleApprove(req.project_id)}
+                                        disabled={processingId === req.project_id}
+                                        className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-colors text-sm font-medium"
+                                    >
+                                        <Check className="w-4 h-4" /> Approve
+                                    </button>
+                                    <button
+                                        onClick={() => handleReject(req.project_id)}
+                                        disabled={processingId === req.project_id}
+                                        className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-white border border-gray-300 hover:bg-red-50 hover:text-red-600 text-gray-700 px-4 py-2 rounded-lg transition-colors text-sm font-medium"
+                                    >
+                                        <X className="w-4 h-4" /> Reject
+                                    </button>
+                                </>
+                            )}
                         </div>
                     </div>
                 ))}
