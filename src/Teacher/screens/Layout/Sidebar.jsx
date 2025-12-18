@@ -54,10 +54,17 @@ const Sidebar = ({ isOpen, toggle }) => {
 
   // Logout
   const logout = () => {
-    const username = localStorage.getItem("username");
-    // authenticationService.logout(username, "teacher");
-    localStorage.clear();
-    navigate("/login", { replace: true });
+    try {
+      const username = localStorage.getItem("username");
+      // Clear localStorage first
+      localStorage.clear();
+      // Use window.location for clean navigation to avoid React Router issues
+      window.location.href = "/login";
+    } catch (error) {
+      console.error("Logout error:", error);
+      // Fallback: force page reload to login
+      window.location.href = "/login";
+    }
   };
 
   // Active state helper

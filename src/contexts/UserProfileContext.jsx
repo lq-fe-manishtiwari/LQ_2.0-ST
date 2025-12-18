@@ -1,10 +1,10 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import { api } from '@/_services/api';
+import React, { createContext, useContext, useEffect, useState } from 'react';
+import userProfileService from '../_services/userProfile.service.js';
 
 // Create the context
 const UserProfileContext = createContext();
 
-// Custom hook to use the context
+// Custom hook to use the UserProfile context
 export const useUserProfile = () => {
   const context = useContext(UserProfileContext);
   if (!context) {
@@ -13,87 +13,111 @@ export const useUserProfile = () => {
   return context;
 };
 
-// Provider component
+// UserProfile Provider Component
 export const UserProfileProvider = ({ children }) => {
-  const [userProfile, setUserProfile] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
+  const [profileState, setProfileState] = useState({
+    profile: null,
+    loading: false,
+    error: null
+  });
 
-  // Fetch user profile data
-  const fetchProfile = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      
-      // Get the current user from localStorage to determine user type
-      const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
-      const userType = currentUser?.iss; // 'STUDENT' or 'TEACHER'
-      
-      // Call the appropriate API endpoint based on user type
-      const response = await api.getUserProfile(userType);
-      
-      if (response.success) {
-        setUserProfile(response.data);
-      } else {
-        setError(response.message || 'Failed to fetch user profile');
-      }
-    } catch (err) {
-      console.error('Error fetching user profile:', err);
-      setError(err.message || 'An error occurred while fetching profile');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Update user profile data
-  const updateProfile = (newProfileData) => {
-    setUserProfile(prev => ({
-      ...prev,
-      ...newProfileData
-    }));
-  };
-
-  // Clear profile data (useful for logout)
-  const clearProfile = () => {
-    setUserProfile(null);
-    setError(null);
-  };
-
-  // Auto-fetch profile when component mounts and user is logged in
   useEffect(() => {
-    const refreshToken = localStorage.getItem('refreshToken');
-    const currentUser = localStorage.getItem('currentUser');
-    
-    if (refreshToken && currentUser && !userProfile) {
-      fetchProfile();
-    }
-  }, []);
+    // Subscribe to profile service changes
+    const unsubscribe = userProfileService.subscribe((newState) => {
+      setProfileState(newState);
+    });
 
+    // Initialize with current state
+    const currentState = userProfileService.getCurrentProfile();
+    setProfileState(currentState);
+
+    // Check if user is logged in before fetching profile
+    const checkAuthAndFetchProfile = () => {
+      // Check if user has a valid token
+      const refreshToken = localStorage.getItem('refreshToken');
+      const currentUser = localStorage.getItem('currentUser');
+      
+      if (!refreshToken || !currentUser) {
+        console.log('UserProfileProvider: No auth tokens found, skipping profile fetch');
+        return;
+      }
+
+      try {
+        const parsedToken = JSON.parse(refreshToken);
+        const parsedUser = JSON.parse(currentUser);
+        
+        // Basic validation of token structure
+        if (!parsedToken.token || !parsedUser.jti) {
+          console.log('UserProfileProvider: Invalid auth tokens, skipping profile fetch');
+          return;
+        }
+
+        // Only fetch profile if user is authenticated and profile not already loaded
+        if (!userProfileService.isProfileLoaded() && !currentState.loading) {
+          console.log('UserProfileProvider: User authenticated, initiating profile fetch...');
+          userProfileService.fetchProfile();
+        } else if (userProfileService.isProfileLoaded()) {
+          console.log('UserProfileProvider: Profile already loaded, skipping fetch');
+        }
+      } catch (error) {
+        console.log('UserProfileProvider: Error parsing auth tokens, skipping profile fetch:', error);
+      }
+    };
+
+    checkAuthAndFetchProfile();
+
+    return unsubscribe;
+  }, []); // Empty dependency array to ensure this only runs once
+
+  // Context value with all the helper methods
   const contextValue = {
-    userProfile,
-    loading,
-    error,
-    fetchProfile,
-    updateProfile,
-    clearProfile,
-    // Helper getters for common profile fields
-    get fullName() {
-      return userProfile?.firstname + " "+ userProfile?.lastname || userProfile?.name || '';
+    // State
+    profile: profileState.profile,
+    loading: profileState.loading,
+    error: profileState.error,
+    isLoaded: profileState.profile !== null && !profileState.loading,
+
+    // Service methods
+    fetchProfile: () => userProfileService.fetchProfile(),
+    refreshProfile: () => userProfileService.refreshProfile(),
+    clearProfile: () => userProfileService.clearProfile(),
+    initializeAfterLogin: () => userProfileService.initializeAfterLogin(),
+
+    // Helper methods for easy access to user data
+    getUserId: () => userProfileService.getUserId(),
+    getTeacherId: () => userProfileService.getTeacherId(),
+    getCollegeId: () => userProfileService.getCollegeId(),
+    getEmployeeId: () => userProfileService.getEmployeeId(),
+    getFullName: () => userProfileService.getFullName(),
+    getEmail: () => userProfileService.getEmail(),
+    getMobile: () => userProfileService.getMobile(),
+    getUserType: () => userProfileService.getUserType(),
+    getUsername: () => userProfileService.getUsername(),
+    isActive: () => userProfileService.isActive(),
+    getRoles: () => userProfileService.getRoles(),
+    getAuthorities: () => userProfileService.getAuthorities(),
+    getEssentialIds: () => userProfileService.getEssentialIds(),
+
+    // Convenience methods for common use cases
+    getApiIds: () => {
+      const ids = userProfileService.getEssentialIds();
+      return {
+        userId: ids.userId,
+        collegeId: ids.collegeId,
+        teacherId: ids.teacherId
+      };
     },
-    get designation() {
-      return userProfile?.designation || '';
+
+    // Check if user has specific role
+    hasRole: (roleName) => {
+      const roles = userProfileService.getRoles();
+      return roles.some(role => role.name === roleName);
     },
-    get userType() {
-      return userProfile?.userType || JSON.parse(localStorage.getItem('currentUser') || '{}')?.iss || '';
-    },
-    get profileImage() {
-      return userProfile?.profileImage || userProfile?.avatar || '';
-    },
-    get email() {
-      return userProfile?.email || '';
-    },
-    get phone() {
-      return userProfile?.phone || userProfile?.mobile || '';
+
+    // Check if user has specific authority
+    hasAuthority: (authorityName) => {
+      const authorities = userProfileService.getAuthorities();
+      return authorities.some(auth => auth.authority === authorityName);
     }
   };
 
@@ -102,6 +126,14 @@ export const UserProfileProvider = ({ children }) => {
       {children}
     </UserProfileContext.Provider>
   );
+};
+
+// HOC for class components (if needed)
+export const withUserProfile = (Component) => {
+  return function UserProfileComponent(props) {
+    const userProfile = useUserProfile();
+    return <Component {...props} userProfile={userProfile} />;
+  };
 };
 
 export default UserProfileContext;

@@ -37,7 +37,7 @@ export function login(data) {
 
   return fetch(`${TeacherLoginAPI}/auth`, requestOptions)
     .then(handleLoginResponse)
-    .then((user) => {
+    .then(async (user) => {
       const decoded = jwtDecode(user.token);
       localStorage.setItem("currentUser", JSON.stringify(decoded));
       localStorage.setItem("refreshToken", JSON.stringify(user));
@@ -45,6 +45,16 @@ export function login(data) {
       
       currentUserSubject.value = decoded;
       currentUserToken.value = user;
+      
+      // Initialize user profile after successful login
+      try {
+        const { default: userProfileService } = await import('./userProfile.service.js');
+        await userProfileService.initializeAfterLogin();
+        console.log('User profile initialized after login');
+      } catch (error) {
+        console.error('Failed to initialize user profile after login:', error);
+        // Don't throw error as login was successful, profile can be fetched later
+      }
       
       return decoded;
     });
@@ -56,12 +66,15 @@ export function logout() {
   localStorage.removeItem("refreshToken");
   localStorage.removeItem("show_payment_popup");
   localStorage.removeItem("userProfile"); // Clear profile data
+  localStorage.removeItem("userProfileFetched"); // Clear profile fetch status
   
   currentUserSubject.value = null;
   currentUserToken.value = null;
   
-  // Redirect to login
-  window.location.href = '/';
+  // Only redirect if not already on login page to prevent loops
+  if (!window.location.pathname.includes('/login')) {
+    window.location.href = '/login';
+  }
 }
 // ✅ Forgot Password FUNCTION
 export function forgotPassword(data) {
@@ -100,7 +113,10 @@ export function handleResponse(response) {
     const data = text && JSON.parse(text);
     if (!response.ok) {
       if ([401, 403].includes(response.status)) {
-        authenticationService.logout();
+        // Only logout if not already on login page
+        if (!window.location.pathname.includes('/login')) {
+          authenticationService.logout();
+        }
       } else if ([400].includes(response.status)) {
         return data;
       }
@@ -153,7 +169,10 @@ export function handlePostResponse(response) {
 
     if (!response.ok) {
       if ([401, 403].includes(response.status)) {
-        authenticationService.logout();
+        // Only logout if not already on login page
+        if (!window.location.pathname.includes('/login')) {
+          authenticationService.logout();
+        }
       }
       return Promise.reject(data);
     }
@@ -205,9 +224,11 @@ export function authHeaderToDownloadReport() {
 // ========== API ENDPOINTS CONFIGURATION ==========
 export const AcademicAPI = import.meta.env.VITE_API_URL_Academic;
 export const TeacherLoginAPI = import.meta.env.VITE_API_URL_TeacherORLogin;
+export const TeacherAcademicAPI = import.meta.env.VITE_API_URL_AcademicAPI;
 export const PMSAPI = import.meta.env.VITE_API_URL_PMS;
 export const PMSNEWAPI = import.meta.env.VITE_API_URL_PMSNEW;
 export const COREAPI = import.meta.env.VITE_API_CORE;
+export const ContentAPI = import.meta.env.VITE_API_URL_Content;
 
 // Legacy support - defaults to TeacherLoginAPI for backward compatibility
 export const DevAPI = TeacherLoginAPI;
@@ -313,7 +334,7 @@ export function getTeacherAllocatedPrograms(teacherId) {
     headers: authHeader(),
   };
 
-  return fetch(`${TeacherLoginAPI}/user/teacher/${teacherId}`, requestOptions)
+  return fetch(`${TeacherLoginAPI}/teacher/${teacherId}`, requestOptions)
     .then(handleResponse)
     .then(data => ({
       success: true,
@@ -325,6 +346,37 @@ export function getTeacherAllocatedPrograms(teacherId) {
     }));
 }
 
+export function getTeacherAllocatedMentoringClasses(teacherId) {
+  const requestOptions = {
+    method: 'GET',
+    headers: authHeader(),
+  };
+
+  return fetch(`${TeacherAcademicAPI}/subjects/mentoring-allocations/collections/mentor/${teacherId}`, requestOptions)
+    .then(handleResponse)
+    .then(data => ({
+      success: true,
+      data: data
+    }))
+    .catch(error => ({
+      success: false,
+      message: error.message || 'Failed to fetch teacher allocated programs'
+    }));
+}
+
+function getMentoringAllocationsbyCollectionId(collection_id) {
+	const requestOptions = { method: 'GET', headers: authHeader() };
+	return fetch(`${TeacherAcademicAPI}/subjects/mentoring-allocations/students/collection/${collection_id}`, requestOptions)
+	  .then(handleResponse)
+    .then(data => ({
+      success: true,
+      data: data
+    }))
+    .catch(error => ({
+      success: false,
+      message: error.message || 'Failed to fetch teacher allocated programs'
+    }));
+}
 // ========== GRAPHQL STUDENTS API FUNCTIONS ==========
 export function getStudentsByFilters(programId, academicYearId, semesterId = null, divisionId = null) {
   const query = `
@@ -407,13 +459,45 @@ export function uploadFileToS3(file) {
     });
 }
 
+// ========== TEACHER DASHBOARD API FUNCTION ==========
+export function getTeacherDashboard() {
+  const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
+  const teacherId = currentUser?.jti;
+  
+  if (!teacherId) {
+    return Promise.reject({
+      success: false,
+      message: 'Teacher ID not found in token'
+    });
+  }
+
+  const requestOptions = {
+    method: 'GET',
+    headers: authHeader(),
+  };
+
+  return fetch(`${TeacherLoginAPI}/admin/teacher/${teacherId}`, requestOptions)
+    .then(handleResponse)
+    .then(data => ({
+      success: true,
+      data: data
+    }))
+    .catch(error => ({
+      success: false,
+      message: error.message || 'Failed to fetch teacher dashboard'
+    }));
+}
+
 // Enhanced API object with user profile methods
 export const api = {
   getUserProfile,
   updateUserProfile,
   getTeacherAllocatedPrograms,
+  getTeacherAllocatedMentoringClasses,
+  getMentoringAllocationsbyCollectionId,
   getStudentsByFilters,
   uploadFileToS3,
+  getTeacherDashboard,
   // Add other existing functions if needed
   request: apiRequest,
 };
