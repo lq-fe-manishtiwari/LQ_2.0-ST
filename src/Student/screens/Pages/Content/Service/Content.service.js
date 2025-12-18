@@ -329,6 +329,88 @@ export class ContentService {
       throw error;
     }
   }
+  /**
+   * Fetch content types
+   * @returns {Promise} API response with content types
+   */
+  static async getContentTypes() {
+    try {
+      const response = await fetch(`${ContentAPI}/admin/content-types`, {
+        method: 'GET',
+        headers: authHeader()
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      return {
+        success: true,
+        data: data
+      };
+    } catch (error) {
+      console.error('Error fetching content types:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Fetch content levels
+   * @returns {Promise} API response with content levels
+   */
+  static async getContentLevel() {
+    try {
+      const response = await fetch(`${ContentAPI}/content-level`, {
+        method: 'GET',
+        headers: authHeader()
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      return {
+        success: true,
+        data: data
+      };
+    } catch (error) {
+      console.error('Error fetching content levels:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Upload file to S3
+   * @param {File} file - The file to upload
+   * @returns {Promise} The file URL
+   */
+  static async uploadFileToS3(file) {
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      const authHeaders = authHeader();
+
+      const response = await fetch(`https://lq-new-api.learnqoch.com/core/api/admin/academic/s3/upload`, {
+        method: 'POST',
+        headers: {
+          'Authorization': authHeaders.Authorization
+        },
+        body: formData
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.text();
+      return data;
+    } catch (error) {
+      console.error('Error uploading file to S3:', error);
+      throw error;
+    }
+  }
 }
 
 export default ContentService;
