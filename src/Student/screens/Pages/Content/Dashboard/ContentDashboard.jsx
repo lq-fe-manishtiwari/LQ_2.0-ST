@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { Search, Filter, ChevronDown } from 'lucide-react';
 import ContentService from '../Service/Content.service';
 import { StudentService } from '../../Profile/Student.Service';
-import { useUserProfile } from '../../../../../contexts/UserProfileContext';
+import {useUserProfile} from '../../../../../contexts/UserProfileContext';
 import SubjectsList from './components/SubjectsList';
 import ModulesUnitsList from './components/ModulesUnitsList';
 
@@ -65,7 +65,8 @@ const CustomSelect = ({ label, value, onChange, options, placeholder, disabled =
 };
 
 export default function ContentDashboard() {
-  const { userProfile } = useUserProfile();
+  const { profile } = useUserProfile();
+  console.log('User profile in ContentDashboard:', profile);
   const [selectedPaperType, setSelectedPaperType] = useState('Vertical');
   const [selectedProgram, setSelectedProgram] = useState('');
   const [selectedBatch, setSelectedBatch] = useState('');
@@ -132,15 +133,17 @@ export default function ContentDashboard() {
 
   // Fetch allocated programs when user profile is available
   useEffect(() => {
+    console.log('User profile changed:', profile);
     const fetchAllocatedPrograms = async () => {
-      if (!userProfile?.student_id) {
+      if (!profile?.student_id) {
         return;
       }
 
       setLoading(true);
       setError(null);
       try {
-        const response = await StudentService.getStudentHistory(userProfile.student_id);
+        const response = await StudentService.getStudentHistory(profile.student_id);
+        console.log('Student history response:', response);
         
         if (Array.isArray(response)) {
           const processedPrograms = processAllocationsData(response);
@@ -168,7 +171,7 @@ export default function ContentDashboard() {
     };
 
     fetchAllocatedPrograms();
-  }, [userProfile?.student_id]);
+  }, [profile?.student_id]);
 
   // Process student history data
   const processAllocationsData = (students) => {
