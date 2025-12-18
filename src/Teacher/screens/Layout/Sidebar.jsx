@@ -190,8 +190,14 @@ const Sidebar = ({ isOpen, toggle }) => {
         iconActive: classActive,
         iconInactive: classInactive,
       },
+      // {
+      //   to: "/pms",
+      //   label: "HRM",
+      //   iconActive: classActive,
+      //   iconInactive: classInactive,
+      //  },
       {
-        to: "/pms",
+        to: "/hrm",
         label: "HRM",
         iconActive: classActive,
         iconInactive: classInactive,
