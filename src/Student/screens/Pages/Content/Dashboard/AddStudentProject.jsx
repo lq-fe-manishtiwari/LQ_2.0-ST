@@ -24,7 +24,8 @@ const CustomSelect = ({ label, value, onChange, options, placeholder, disabled =
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
-    const selectedOption = options.find(opt => String(opt.value) === String(value));
+    const safeOptions = Array.isArray(options) ? options : [];
+    const selectedOption = safeOptions.find(opt => String(opt.value) === String(value));
 
     return (
         <div ref={dropdownRef}>
@@ -54,7 +55,7 @@ const CustomSelect = ({ label, value, onChange, options, placeholder, disabled =
                         >
                             {placeholder}
                         </div>
-                        {options.map((option) => (
+                        {safeOptions.map((option) => (
                             <div
                                 key={option.value}
                                 className="px-4 py-2 text-sm text-gray-700 cursor-pointer hover:bg-blue-50 transition-colors"
@@ -84,12 +85,20 @@ const AddStudentProject = () => {
         projectTitle: '',
         projectDescription: '',
         projectLink: '',
+        content_type_id: '',
+        content_level_id: '',
     });
 
     const [options, setOptions] = useState({
         subjects: [],
         modules: [],
-        units: []
+        units: [],
+        contentTypes: [
+          
+        ],
+        contentLevels: [
+            
+        ],
     });
 
     const [loading, setLoading] = useState({
@@ -194,7 +203,7 @@ const AddStudentProject = () => {
         e.preventDefault();
         setError(null);
 
-        if (!formData.projectTitle || !formData.unitId || !formData.projectLink) {
+        if (!formData.projectTitle || !formData.unitId || !formData.projectLink || !formData.contentTypeId || !formData.contentLevelId) {
             setError("Please fill in all required fields.");
             return;
         }
@@ -209,8 +218,8 @@ const AddStudentProject = () => {
                 unit_id: parseInt(formData.unitId),
                 semester_id: parseInt(semesterId),
                 student_id: parseInt(studentId),
-                content_type_id: 1,
-                content_level_id: 2
+                content_type_id: parseInt(formData.content_type_id),
+                content_level_id: parseInt(formData.content_level_id)
             };
 
             const response = await StudentProjectService.submitProject(payload);
@@ -270,6 +279,22 @@ const AddStudentProject = () => {
                                 options={options.units}
                                 placeholder="Select Unit"
                                 disabled={!formData.moduleId}
+                            />
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                            <CustomSelect
+                                label="Content Type *"
+                                value={formData.content_type_id}
+                                onChange={(e) => handleChange({ target: { name: 'content_type_id', value: e.target.value } })}
+                                options={options.contentTypes}
+                                placeholder="Select Content Type"
+                            />
+                            <CustomSelect
+                                label="Content Level *"
+                                value={formData.content_level_id}
+                                onChange={(e) => handleChange({ target: { name: 'content_level_id', value: e.target.value } })}
+                                options={options.contentLevels}
+                                placeholder="Select Content Level"
                             />
                         </div>
 
