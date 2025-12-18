@@ -192,7 +192,7 @@ const Sidebar = ({ isOpen, toggle }) => {
       },
       {
         to: "/pms",
-        label: "PMS",
+        label: "HRM",
         iconActive: classActive,
         iconInactive: classInactive,
        },
