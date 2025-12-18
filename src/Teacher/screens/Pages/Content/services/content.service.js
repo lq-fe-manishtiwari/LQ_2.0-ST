@@ -21,15 +21,18 @@ export const contentService = {
     softDeleteContent,
     hardDeleteContent,
 
-	getSubjectTypesByAcademicYearIdAndSemId,
-	getSubjectsByTab,
+    getSubjectTypesByAcademicYearIdAndSemId,
+    getSubjectsByTab,
 
-	getModulesAndUnits,
+    getModulesAndUnits,
     getAllQuestionLevel,
     getContentByUnits,
     getTeacherSubjectsAllocated,
 
     getAllContentsByUnitIdForTeacher,
+    getStudentProjectsByUnit,
+    approveStudentProject,
+    rejectStudentProject
 };
 
 function getAllQuestionLevel() {
@@ -136,7 +139,7 @@ function createContentLevel(values) {
 }
 
 // GET  /api/content-level
-function getAllContentLevels() {    
+function getAllContentLevels() {
     const requestOptions = {
         method: 'GET',
         headers: authHeader()
@@ -232,17 +235,17 @@ function getSubjectbyProgramId(programId) {
 }
 
 function getModulesAndUnits(subjectId) {
-	// GET - /admin/academic/api/subjects/{subjectId}/modules-units
+    // GET - /admin/academic/api/subjects/{subjectId}/modules-units
 
-	const requestOptions = {
-		method: 'GET',
-		headers: authHeader()
-	};
+    const requestOptions = {
+        method: 'GET',
+        headers: authHeader()
+    };
 
-	return fetch(
-		`${AcademicAPI}/api/subjects/${subjectId}/modules-units`,
-		requestOptions
-	).then(handleResponse);
+    return fetch(
+        `${AcademicAPI}/api/subjects/${subjectId}/modules-units`,
+        requestOptions
+    ).then(handleResponse);
 }
 
 async function getSubjectsByTab(tabId, academicYearId, semesterId, tabType) {
@@ -351,7 +354,7 @@ function getTeacherSubjectsAllocated(teacherId, academicYearId, semesterId) {
     };
 
     const url = `${TeacherLoginAPI}/teacher/${teacherId}/subjects-allocated?academicYearId=${academicYearId}&semesterId=${semesterId}`;
-    
+
     return fetch(url, requestOptions)
         .then(handleResponse)
         .then(data => {
@@ -375,4 +378,36 @@ function hardDeleteContent(contentId) {
         headers: authHeader()
     };
     return fetch(`${ContentAPI}/admin/content/${contentId}/force`, requestOptions).then(handleResponse);
+}
+// Student Project Review APIs for Teachers
+
+// GET /api/student-project/unit/{unitId}?status=PENDING
+function getStudentProjectsByUnit(unitId) {
+    const requestOptions = {
+        method: 'GET',
+        headers: authHeader()
+    };
+    return fetch(`${ContentAPI}/student-project/unit/${unitId}?status=PENDING`, requestOptions).then(handleResponse);
+}
+
+// PUT /api/student-project/{projectId}/approve
+function approveStudentProject(projectId) {
+    const requestOptions = {
+        method: 'PUT',
+        headers: authHeaderToPost()
+    };
+    return fetch(`${ContentAPI}/student-project/${projectId}/approve`, requestOptions).then(handleResponse);
+}
+
+// PUT /api/student-project/{projectId}/reject
+function rejectStudentProject(projectId, remark) {
+    const requestOptions = {
+        method: 'PUT',
+        headers: authHeaderToPost()
+    };
+    const url = remark
+        ? `${ContentAPI}/student-project/${projectId}/reject?remark=${encodeURIComponent(remark)}`
+        : `${ContentAPI}/student-project/${projectId}/reject`;
+
+    return fetch(url, requestOptions).then(handleResponse);
 }

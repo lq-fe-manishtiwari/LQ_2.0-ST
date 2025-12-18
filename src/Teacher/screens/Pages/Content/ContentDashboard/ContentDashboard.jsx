@@ -6,6 +6,7 @@ import { contentService } from '../services/content.service.js';
 import SweetAlert from 'react-bootstrap-sweetalert';
 import { useUserProfile } from '../../../../../contexts/UserProfileContext';
 import { api } from '../../../../../_services/api';
+import StudentRequest from './StudentRequest';
 
 const ContentDashboard = () => {
   const navigate = useNavigate();
@@ -656,6 +657,19 @@ const ContentDashboard = () => {
       )}
 
       <div className="bg-white/90 backdrop-blur-sm rounded-xl sm:rounded-2xl shadow-xl p-4 sm:p-6 lg:p-8 border border-indigo-100">
+
+        {/* Student Requests Section - Only show when a unit (topic) is selected */}
+        {filters.topic && topicOptions.find(t => t.unit_name === filters.topic)?.unit_id && (
+          <StudentRequest
+            unitId={topicOptions.find(t => t.unit_name === filters.topic)?.unit_id}
+            onUpdate={() => {
+              // Refresh content list when a project is approved
+              const unitId = topicOptions.find(t => t.unit_name === filters.topic)?.unit_id;
+              if (unitId) loadContentByUnit(unitId);
+            }}
+          />
+        )}
+
         <div>
           <h3 className="text-xl sm:text-2xl font-bold text-blue-600 mb-6 sm:mb-8">
             {filters.topic ? 'Filtered Content' : 'All Content'}
@@ -703,11 +717,10 @@ const ContentDashboard = () => {
                       </div>
 
                       {/* Approval Status */}
-                      <p className={`text-xs mb-4 px-3 py-1 rounded-full inline-block font-medium ${
-                        c.approval_status 
-                          ? 'text-green-700 bg-green-50' 
-                          : 'text-red-700 bg-red-50'
-                      }`}>
+                      <p className={`text-xs mb-4 px-3 py-1 rounded-full inline-block font-medium ${c.approval_status
+                        ? 'text-green-700 bg-green-50'
+                        : 'text-red-700 bg-red-50'
+                        }`}>
                         Status: {c.approval_status ? 'Approved' : 'Pending'}
                       </p>
 

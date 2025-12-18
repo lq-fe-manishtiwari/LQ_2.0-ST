@@ -77,7 +77,7 @@ function App() {
 
         {/* ────── STUDENT ────── */}
         <Route
-          path="/student-dashboard"
+          path="/student-dashboard/*"
           element={
             <ProtectedRoute>
               <StudentHomepage>

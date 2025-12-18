@@ -1,4 +1,4 @@
-import { apiRequest, DevAPI, COREAPI, authHeader ,ContentAPI} from '../../../../../_services/api';
+import { apiRequest, DevAPI, COREAPI, authHeader, ContentAPI } from '../../../../../_services/api';
 
 /**
  * Content API service for handling teacher content dashboard data
@@ -62,6 +62,34 @@ export class ContentService {
   }
 
   /**
+   * Fetch subject allocations for a specific academic year and semester
+   * @param {string} academicYearId - The academic year ID
+   * @param {string} semesterId - The semester ID
+   * @returns {Promise} API response with subject allocations
+   */
+  static async getSubjectAllocations(academicYearId, semesterId) {
+    try {
+      const response = await fetch(`${COREAPI}/admin/academic/subject-allocation/by-academic-year-semester?academicYearId=${academicYearId}&semesterId=${semesterId}`, {
+        method: 'GET',
+        headers: authHeader()
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      return {
+        success: true,
+        data: data
+      };
+    } catch (error) {
+      console.error('Error fetching subject allocations:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Fetch subjects by tab for a specific academic year and semester
    * @param {string} tabId - The tab ID
    * @param {string} academicYearId - The academic year ID
@@ -120,11 +148,11 @@ export class ContentService {
   }
 
 
-    /**
-   * Fetch unit content for a specific unit
-   * @param {string} unitId - The unit ID
-   * @returns {Promise} API response with modules and units
-   */
+  /**
+ * Fetch unit content for a specific unit
+ * @param {string} unitId - The unit ID
+ * @returns {Promise} API response with modules and units
+ */
   static async getContentByUnits(unitId) {
     try {
       const response = await fetch(`${ContentAPI}/admin/content/unit/${unitId}`, {
