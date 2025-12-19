@@ -19,22 +19,24 @@ export default function BulkUploadQuestionModal({ onClose }) {
 
   // Data
   const [programOptions, setProgramOptions] = useState([]);
-  const [classOptions, setClassOptions] = useState([]);
   const [subjectOptions, setSubjectOptions] = useState([]);
+  const [academicSemesterOptions, setAcademicSemesterOptions] = useState([]);
   const [chapterOptions, setChapterOptions] = useState([]);
   const [topicOptions, setTopicOptions] = useState([]);
 
   // Selection
   const [selectedProgramId, setSelectedProgramId] = useState(null);
-  const [selectedClass, setSelectedClass] = useState(null);
   const [selectedSubjectId, setSelectedSubjectId] = useState(null);
   const [selectedUnitId, setSelectedUnitId] = useState(null);
   const [selectedModuleId, setSelectedModuleId] = useState(null);
+  const [selectedAcademicSemester, setSelectedAcademicSemester] = useState(null);
+  const [selectedAcademicYearId, setSelectedAcademicYearId] = useState(null);
+  const [selectedSemesterId, setSelectedSemesterId] = useState(null);
 
   // Selected values for display
   const [selectedProgram, setSelectedProgram] = useState("");
-  const [selectedClassName, setSelectedClassName] = useState("");
   const [selectedSubject, setSelectedSubject] = useState("");
+  const [selectedAcademicSemesterDisplay, setSelectedAcademicSemesterDisplay] = useState("");
   const [selectedChapter, setSelectedChapter] = useState("");
   const [selectedTopic, setSelectedTopic] = useState("");
 
@@ -64,18 +66,43 @@ export default function BulkUploadQuestionModal({ onClose }) {
       const program = programOptions.find(p => p.name === value);
       setSelectedProgramId(program?.id || null);
       setSelectedProgram(value);
-      setSelectedClass(null);
-      setSelectedClassName("");
+      
+      // Get academic year-semester combinations from all allocations for this program
+      if (program?.allocations) {
+        const academicSemesterMap = new Map();
+        program.allocations.forEach(allocation => {
+          if (allocation.academic_year && allocation.semester) {
+            const displayId = `${allocation.academic_year_id}-${allocation.semester_id}`;
+            if (!academicSemesterMap.has(displayId)) {
+              academicSemesterMap.set(displayId, {
+                label: `${allocation.academic_year.name} - ${allocation.semester.name}`,
+                value: displayId,
+                academicYearId: allocation.academic_year_id,
+                semesterId: allocation.semester_id
+              });
+            }
+          }
+        });
+        const academicSemesters = Array.from(academicSemesterMap.values());
+        setAcademicSemesterOptions(academicSemesters);
+      }
+      
+      setSelectedAcademicSemester(null);
+      setSelectedAcademicSemesterDisplay("");
       setSelectedSubjectId(null);
       setSelectedSubject("");
       setSelectedUnitId(null);
       setSelectedChapter("");
       setSelectedTopic("");
     }
-    else if (fieldName === 'class') {
-      const classObj = classOptions.find(c => c.name === value);
-      setSelectedClass(classObj || null);
-      setSelectedClassName(value);
+    else if (fieldName === 'academicSemester') {
+      const academicSemester = academicSemesterOptions.find(as => as.label === value);
+      if (academicSemester) {
+        setSelectedAcademicSemester(academicSemester.value);
+        setSelectedAcademicYearId(academicSemester.academicYearId);
+        setSelectedSemesterId(academicSemester.semesterId);
+      }
+      setSelectedAcademicSemesterDisplay(value);
       setSelectedSubjectId(null);
       setSelectedSubject("");
       setSelectedUnitId(null);
@@ -145,13 +172,21 @@ export default function BulkUploadQuestionModal({ onClose }) {
           const normalPrograms = response.data.normal_allocation || [];
           const allPrograms = [...classTeacherPrograms, ...normalPrograms];
 
-          const formatted = allPrograms.map(allocation => ({
-            id: allocation.program_id,
-            name: allocation.program?.program_name || allocation.program_name || `Program ${allocation.program_id}`
-          }));
-
-          // Remove duplicates based on program_id
-          const uniquePrograms = Array.from(new Map(formatted.map(p => [p.id, p])).values());
+          // Group allocations by program_id and merge them
+          const programMap = new Map();
+          allPrograms.forEach(allocation => {
+            const programId = allocation.program_id;
+            const programName = allocation.program?.program_name || allocation.program_name || `Program ${programId}`;
+            if (!programMap.has(programId)) {
+              programMap.set(programId, {
+                id: programId,
+                name: programName,
+                allocations: []
+              });
+            }
+            programMap.get(programId).allocations.push(allocation);
+          });
+          const uniquePrograms = Array.from(programMap.values());
 
           setProgramOptions(uniquePrograms);
           console.log('Formatted programs:', uniquePrograms);
@@ -167,55 +202,47 @@ export default function BulkUploadQuestionModal({ onClose }) {
     fetchPrograms();
   }, [isProfileLoaded, profileLoading, getTeacherId]);
 
-  // Fetch Classes
-  useEffect(() => {
-    const fetchClasses = async () => {
-      if (!selectedProgramId) {
-        setClassOptions([]);
-        setSelectedClass(null);
-        return;
-      }
-      try {
-        const classes = await fetchClassesByprogram(selectedProgramId);
-        const formatted = classes.map(c => ({
-          id: c.program_class_year_id,
-          name: c.class_year_name,
-          semester_divisions: c.semester_divisions || []
-        }));
-        setClassOptions(formatted);
-      } catch (err) {
-        console.error('Failed to fetch classes:', err);
-      }
-    };
-    fetchClasses();
-  }, [selectedProgramId]);
-
-  // Fetch Subjects
+  // Fetch Subjects using same API as objectivequetions.jsx
   useEffect(() => {
     const fetchSubjects = async () => {
-      if (!selectedProgramId) {
+      if (!selectedAcademicYearId || !selectedSemesterId) {
         setSubjectOptions([]);
         setSelectedSubjectId(null);
         return;
       }
 
+      if (!isProfileLoaded || profileLoading) {
+        console.log('Profile not loaded yet, waiting...');
+        return;
+      }
+
+      const teacherId = getTeacherId();
+      if (!teacherId) {
+        console.warn('No teacher ID found. Please ensure you are logged in.');
+        return;
+      }
+
       setLoadingSubjects(true);
       try {
-        const response = await contentService.getSubjectbyProgramId(selectedProgramId);
+        console.log('Fetching subjects for teacher:', teacherId, 'academicYearId:', selectedAcademicYearId, 'semesterId:', selectedSemesterId);
+        const response = await contentService.getTeacherSubjectsAllocated(teacherId, selectedAcademicYearId, selectedSemesterId);
+        console.log('Teacher allocated subjects response:', response);
+
         if (Array.isArray(response)) {
-          const subjects = response
-            .filter(s => !s.is_deleted)
-            .map(s => ({
-              id: s.subject_id,
-              name: s.subject_name || s.name
-            }))
-            .filter(s => s.name);
+          const subjects = response.map(subjectInfo => ({
+            id: subjectInfo.subject_id || subjectInfo.id,
+            name: subjectInfo.subject_name || subjectInfo.name
+          })).filter(s => s.name && s.id);
 
           const unique = Array.from(new Map(subjects.map(s => [s.name, s])).values());
           setSubjectOptions(unique);
+          console.log('Formatted allocated subjects:', unique);
+        } else {
+          console.error('Subjects response is not valid:', response);
+          setSubjectOptions([]);
         }
       } catch (err) {
-        console.error('Failed to fetch subjects by program:', err);
+        console.error('Failed to fetch teacher allocated subjects:', err);
         setSubjectOptions([]);
       } finally {
         setLoadingSubjects(false);
@@ -223,7 +250,7 @@ export default function BulkUploadQuestionModal({ onClose }) {
     };
 
     fetchSubjects();
-  }, [selectedProgramId]);
+  }, [selectedAcademicYearId, selectedSemesterId, isProfileLoaded, profileLoading, getTeacherId]);
 
   // Fetch Modules & Units by Subject ID
   useEffect(() => {
@@ -347,6 +374,7 @@ export default function BulkUploadQuestionModal({ onClose }) {
 
     setUploading(true);
     try {
+      const userId = getUserId();
       const easyLevel = questionLevelOptions.find(l => l.question_level_type === "Easy");
       const questions = editedData
         .filter(row => row[3] && row[3].trim()) // only rows with question
@@ -365,13 +393,14 @@ export default function BulkUploadQuestionModal({ onClose }) {
             unit_id: selectedUnitId || null,
             module_id: selectedModuleId,
             question_level_id: level ? level.question_level_id : null,
-            default_weightage: parseFloat(row[2]) || 1.0
+            default_weightage: parseFloat(row[2]) || 1.0,
+            user_id: userId,
+            admin: true
           };
         });
 
       await contentService.bulkUploadQuestions(questions);
-      showSweetAlert('Success', 'Questions uploaded successfully!');
-      onClose();
+      showSweetAlert('Success', 'Questions uploaded successfully!', 'success', 'OK');
     } catch (err) {
       console.error(err);
       showSweetAlert('Error', err.response?.data?.message || 'Failed to upload questions', 'error');
@@ -387,7 +416,12 @@ export default function BulkUploadQuestionModal({ onClose }) {
       text,
       type,
       confirmBtnText: confirmText,
-      onConfirm: () => setShowAlert(false)
+      onConfirm: () => {
+        setShowAlert(false);
+        if (type === 'success') {
+          onClose(); // Close modal only after user clicks OK on success
+        }
+      }
     });
     setShowAlert(true);
   };
@@ -455,11 +489,13 @@ export default function BulkUploadQuestionModal({ onClose }) {
         <div className="p-4 sm:p-5 lg:p-6 space-y-4 sm:space-y-5 lg:space-y-6 overflow-y-auto flex-1">
 
           {/* Filters */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-2 mb-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-2 mb-6">
             <CustomDropdown fieldName="program" label="Program" value={selectedProgram} options={programOptions.map(p => p.name)} placeholder="Select Program" required />
-            <CustomDropdown fieldName="class" label="Class" value={selectedClassName} options={classOptions.map(c => c.name)} placeholder="Select Class" required disabled={!selectedProgramId} />
-            <CustomDropdown fieldName="subject" label="Paper" value={selectedSubject} options={subjectOptions.map(s => s.name)} placeholder="Select Paper" required loading={loadingSubjects} disabled={!selectedProgramId} />
+            <CustomDropdown fieldName="academicSemester" label="Academic Year - Semester" value={selectedAcademicSemesterDisplay} options={academicSemesterOptions.map(as => as.label)} placeholder="Select Academic Year - Semester" required disabled={!selectedProgram} />
+            <CustomDropdown fieldName="subject" label="Paper" value={selectedSubject} options={subjectOptions.map(s => s.name)} placeholder="Select Paper" required loading={loadingSubjects} disabled={!selectedAcademicSemesterDisplay} />
             <CustomDropdown fieldName="chapter" label="Module" value={selectedChapter} options={chapterOptions.map(m => m.module_name)} placeholder="Select Module" required loading={loadingModules} disabled={!selectedSubjectId} />
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-1 gap-2 mb-6">
             <CustomDropdown fieldName="topic" label="Unit (Topic)" value={selectedTopic} options={topicOptions.map(u => u.unit_name)} placeholder="Select Unit (Optional)" disabled={!selectedChapter} />
           </div>
 
@@ -597,6 +633,7 @@ export default function BulkUploadQuestionModal({ onClose }) {
           onConfirm={alertConfig.onConfirm}
           type={alertConfig.type}
           confirmBtnText={alertConfig.confirmBtnText}
+          confirmBtnCssClass="btn-confirm"
           showCancel={false}
         >
           {alertConfig.text}

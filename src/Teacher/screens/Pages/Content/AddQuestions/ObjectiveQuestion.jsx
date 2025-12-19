@@ -662,6 +662,7 @@ const ObjectiveQuestion = ({
           showCancel={alertConfig.showCancel}
           onCancel={alertConfig.onCancel}
           confirmBtnCssClass="btn-confirm"
+          cancelBtnCssClass='btn-cancel'
           showLoaderOnConfirm={true}
           closeOnConfirm={false}
         >
