@@ -13,7 +13,7 @@ import { api } from '../../../../../_services/api';
 
 
 import { contentQuizService } from '../services/contentQuiz.service';
-import BulkUploadAssessmentModal from '../Components/BulkUploadAssessmentModal';
+import BulkUploadQuestionModal from '../Components/BulkUploadQuestionModal';
 
 // Custom Select Component
 const CustomSelect = ({ label, value, onChange, options, placeholder, disabled = false }) => {
@@ -43,8 +43,8 @@ const CustomSelect = ({ label, value, onChange, options, placeholder, disabled =
       <div className="relative">
         <div
           className={`w-full px-3 py-2 border ${disabled
-              ? 'bg-gray-100 text-gray-500 border-gray-200 cursor-not-allowed'
-              : 'bg-white border-gray-300 cursor-pointer hover:border-blue-400'
+            ? 'bg-gray-100 text-gray-500 border-gray-200 cursor-not-allowed'
+            : 'bg-white border-gray-300 cursor-pointer hover:border-blue-400'
             } rounded-lg min-h-[44px] flex items-center justify-between transition-all duration-150`}
           onClick={() => !disabled && setIsOpen(!isOpen)}
         >
@@ -83,7 +83,7 @@ const CustomSelect = ({ label, value, onChange, options, placeholder, disabled =
 
 export default function QuizDashboard() {
   const navigate = useNavigate();
-  
+
   // Get user profile data
   const { getUserId, getCollegeId, getTeacherId, isLoaded: isProfileLoaded, loading: profileLoading } = useUserProfile();
   const [programs, setPrograms] = useState([]);
@@ -142,28 +142,28 @@ export default function QuizDashboard() {
         console.warn('No teacher ID found. Please ensure you are logged in.');
         return;
       }
-      
+
       try {
         console.log('Fetching programs for teacher ID:', teacherId);
         const response = await api.getTeacherAllocatedPrograms(teacherId);
         console.log('Programs response:', response);
-        
+
         if (response.success && response.data) {
           // Flatten class_teacher_allocation and normal_allocation into single array
           const classTeacherPrograms = response.data.class_teacher_allocation || [];
           const normalPrograms = response.data.normal_allocation || [];
           const allPrograms = [...classTeacherPrograms, ...normalPrograms];
-          
+
           // Group allocations by program_id and merge them
           const programMap = new Map();
-          
+
           // Store all allocation data
           setAllAllocations(allPrograms);
-          
+
           allPrograms.forEach(allocation => {
             const programId = allocation.program_id;
             const programName = allocation.program?.program_name || allocation.program_name || `Program ${programId}`;
-            
+
             if (!programMap.has(programId)) {
               programMap.set(programId, {
                 id: programId,
@@ -172,14 +172,14 @@ export default function QuizDashboard() {
                 allocations: []
               });
             }
-            
+
             programMap.get(programId).allocations.push(allocation);
           });
-          
+
           const uniquePrograms = Array.from(programMap.values());
           setPrograms(uniquePrograms);
           console.log('Formatted programs:', uniquePrograms);
-          
+
           // Auto-select first program
           if (uniquePrograms.length > 0 && !filters.program) {
             setFilters(prev => ({ ...prev, program: uniquePrograms[0].value }));
@@ -213,7 +213,7 @@ export default function QuizDashboard() {
       const semesters = [...new Set(program.allocations.map(a => a.semester?.name).filter(Boolean))];
       const formattedSemesters = semesters.map(sem => ({ label: sem, value: sem }));
       setSemesters(formattedSemesters);
-      
+
       // Auto-select first semester
       if (formattedSemesters.length > 0 && !filters.semester) {
         setFilters(prev => ({ ...prev, semester: formattedSemesters[0].value }));
@@ -245,7 +245,7 @@ export default function QuizDashboard() {
 
           try {
             const response = await contentService.getTeacherSubjectsAllocated(teacherId, semesterAllocation.academic_year_id, semesterAllocation.semester_id);
-            
+
             if (Array.isArray(response)) {
               const subjects = response.map(subjectInfo => ({
                 label: subjectInfo.subject_name || subjectInfo.name,
@@ -254,7 +254,7 @@ export default function QuizDashboard() {
 
               const unique = Array.from(new Map(subjects.map(s => [s.label, s])).values());
               setPapers(unique);
-              
+
               // Auto-select first paper
               if (unique.length > 0 && !filters.paper) {
                 setFilters(prev => ({ ...prev, paper: unique[0].value }));
@@ -293,11 +293,11 @@ export default function QuizDashboard() {
             full: { units: mod.units || [] }
           }));
           setModules(formatted);
-          
+
           // Reset units and unit filter first
           setUnits([]);
           setFilters(prev => ({ ...prev, module: "", unit: "" }));
-          
+
           // Auto-select first module if only one available
           if (formatted.length === 1) {
             setFilters(prev => ({ ...prev, module: formatted[0].value }));
@@ -331,7 +331,7 @@ export default function QuizDashboard() {
     })) || [];
 
     setUnits(formattedUnits);
-    
+
     // Auto-select first unit if only one available
     if (formattedUnits.length === 1) {
       setFilters(prev => ({ ...prev, unit: formattedUnits[0].value }));
@@ -368,7 +368,7 @@ export default function QuizDashboard() {
     setShowAlert(false);
     try {
       await contentQuizService.softDeleteQuiz(quizToDelete);
-      
+
       // If no error thrown, deletion was successful
       setAlertMessage('Quiz deleted successfully!');
       setShowDeleteSuccessAlert(true);
@@ -507,12 +507,11 @@ export default function QuizDashboard() {
                     </div>
 
 
-                     <p className={`text-xs mb-4 px-3 py-1 rounded-full inline-block font-medium ${
-                       quiz.approval_status 
-                         ? 'text-green-700 bg-green-50' 
-                         : 'text-red-700 bg-red-50'
-                     }`}>
-                     Status: {quiz.approval_status ? 'Approved' : 'Pending'}
+                    <p className={`text-xs mb-4 px-3 py-1 rounded-full inline-block font-medium ${quiz.approval_status
+                        ? 'text-green-700 bg-green-50'
+                        : 'text-red-700 bg-red-50'
+                      }`}>
+                      Status: {quiz.approval_status ? 'Approved' : 'Pending'}
                     </p>
 
                     {/* Active Badge */}
@@ -563,7 +562,7 @@ export default function QuizDashboard() {
 
       {/* Bulk Upload Modal */}
       {showBulkUpload && (
-        <BulkUploadAssessmentModal onClose={() => setShowBulkUpload(false)} />
+        <BulkUploadQuestionModal onClose={() => setShowBulkUpload(false)} />
       )}
 
       {/* Delete Confirmation Alert */}
@@ -588,7 +587,7 @@ export default function QuizDashboard() {
         <SweetAlert
           success
           title="Deleted!"
-           confirmBtnCssClass="btn-confirm"
+          confirmBtnCssClass="btn-confirm"
           onConfirm={() => setShowDeleteSuccessAlert(false)}
         >
           {alertMessage}
