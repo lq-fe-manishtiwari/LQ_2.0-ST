@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { ChevronDown, ChevronRight, FileText, BookOpen, Loader2, Play, File, Eye, X, ExternalLink, HelpCircle, ZoomIn, ZoomOut, RotateCcw } from 'lucide-react';
+import { ChevronDown, ChevronRight, FileText, BookOpen, Loader2, Play, File, Eye, X, ExternalLink, HelpCircle, ZoomIn, ZoomOut, RotateCcw, Clock } from 'lucide-react';
 import { ContentService } from '../../Service/Content.service';
 import PDFViewer from './PDFViewer';
 import QuizModal from './QuizModal';
@@ -22,6 +22,7 @@ export default function ModulesUnitsList({ modules, colorCode }) {
         quizName: null
     });
     const [studentId, setStudentId] = useState(null);
+    const [readingTimer, setReadingTimer] = useState(0);
 
     const toggleModule = (moduleId) => {
         if (expandedModuleId === moduleId) {
@@ -85,10 +86,9 @@ export default function ModulesUnitsList({ modules, colorCode }) {
             const previewableTypes = ['pdf', 'jpg', 'jpeg', 'png', 'gif', 'mp4', 'webm', 'ogg'];
             
             if (previewableTypes.includes(fileExtension)) {
-                // Open in preview modal
+                // Reset timer and open in preview modal
+                setReadingTimer(0);
                 setPreviewModal({ isOpen: true, content });
-                setCurrentPage(1);
-                setTotalPages(1);
             } else {
                 // Open external link in new tab
                 window.open(link, '_blank', 'noopener,noreferrer');
@@ -102,6 +102,30 @@ export default function ModulesUnitsList({ modules, colorCode }) {
     const closePreviewModal = () => {
         setPreviewModal({ isOpen: false, content: null });
         setImageZoom(1); // Reset zoom when closing
+        setReadingTimer(0);
+    };
+
+    // Timer effect for reading time
+    useEffect(() => {
+        let interval;
+        if (previewModal.isOpen) {
+            interval = setInterval(() => {
+                setReadingTimer(prev => prev + 1);
+            }, 1000);
+        }
+        return () => clearInterval(interval);
+    }, [previewModal.isOpen]);
+
+    const formatTime = (seconds) => {
+        const mins = Math.floor(seconds / 60);
+        const secs = seconds % 60;
+        return `${mins}:${secs.toString().padStart(2, '0')}`;
+    };
+
+    const formatReadingTime = (seconds) => {
+        if (!seconds) return null;
+        const minutes = Math.round(seconds / 60);
+        return minutes > 0 ? `${minutes} min` : '< 1 min';
     };
 
     // Image zoom functions
@@ -472,6 +496,16 @@ export default function ModulesUnitsList({ modules, colorCode }) {
                                 <h3 className="text-lg font-semibold text-gray-800">
                                     {previewModal.content?.content_name || 'Content Preview'}
                                 </h3>
+                                {previewModal.content?.average_reading_time_seconds && (
+                                    <div className="flex items-center gap-2 px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm">
+                                        <Clock className="w-4 h-4" />
+                                        <span>Est. {formatReadingTime(previewModal.content.average_reading_time_seconds)} read</span>
+                                    </div>
+                                )}
+                                <div className="flex items-center gap-2 px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm">
+                                    <Clock className="w-4 h-4" />
+                                    <span>Reading: {formatTime(readingTimer)}</span>
+                                </div>
                                 {previewModal.content?.quiz_attachments && previewModal.content.quiz_attachments.length > 0 && (
                                     <span
                                         className="px-3 py-1 text-white text-sm rounded-full"
@@ -481,13 +515,13 @@ export default function ModulesUnitsList({ modules, colorCode }) {
                                     </span>
                                 )}
                             </div>
-                            <div className="flex items-center gap-2">
-                             
+                            <div className="flex items-center gap-2 mr-10">
                                 <button
                                     onClick={closePreviewModal}
-                                    className="p-2 hover:bg-gray-100 rounded-md transition-colors"
+                                    className="p-2 bg-blue-600 hover:bg-blue-700 rounded-full transition-colors"
+                                    title="Close"
                                 >
-                                    <X className="w-5 h-5 text-gray-600" />
+                                    <X className="w-5 h-5 text-white" />
                                 </button>
                             </div>
                         </div>

@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { ChevronDown, ChevronRight, FileText, BookOpen, Loader2, Play, File, Eye, X, ExternalLink } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { ChevronDown, ChevronRight, FileText, BookOpen, Loader2, Play, File, Eye, X, ExternalLink, Clock } from 'lucide-react';
 import { ContentApiService } from '../services/contentApi';
 
 export default function ModulesUnitsList({ modules, colorCode }) {
@@ -9,6 +9,7 @@ export default function ModulesUnitsList({ modules, colorCode }) {
     const [loadingContent, setLoadingContent] = useState(false);
     const [contentError, setContentError] = useState(null);
     const [previewModal, setPreviewModal] = useState({ isOpen: false, content: null });
+    const [readingTimer, setReadingTimer] = useState(0);
 
     const toggleModule = (moduleId) => {
         if (expandedModuleId === moduleId) {
@@ -55,7 +56,8 @@ export default function ModulesUnitsList({ modules, colorCode }) {
             const previewableTypes = ['pdf', 'jpg', 'jpeg', 'png', 'gif', 'mp4', 'webm', 'ogg'];
             
             if (previewableTypes.includes(fileExtension)) {
-                // Open in preview modal
+                // Reset timer and open in preview modal
+                setReadingTimer(0);
                 setPreviewModal({ isOpen: true, content });
             } else {
                 // Open external link in new tab
@@ -69,6 +71,30 @@ export default function ModulesUnitsList({ modules, colorCode }) {
 
     const closePreviewModal = () => {
         setPreviewModal({ isOpen: false, content: null });
+        setReadingTimer(0);
+    };
+
+    // Timer effect for reading time
+    useEffect(() => {
+        let interval;
+        if (previewModal.isOpen) {
+            interval = setInterval(() => {
+                setReadingTimer(prev => prev + 1);
+            }, 1000);
+        }
+        return () => clearInterval(interval);
+    }, [previewModal.isOpen]);
+
+    const formatTime = (seconds) => {
+        const mins = Math.floor(seconds / 60);
+        const secs = seconds % 60;
+        return `${mins}:${secs.toString().padStart(2, '0')}`;
+    };
+
+    const formatReadingTime = (seconds) => {
+        if (!seconds) return null;
+        const minutes = Math.round(seconds / 60);
+        return minutes > 0 ? `${minutes} min` : '< 1 min';
     };
 
     const renderPreviewContent = (content) => {
@@ -314,9 +340,21 @@ export default function ModulesUnitsList({ modules, colorCode }) {
                     <div className="relative w-full h-full max-w-7xl max-h-full m-4 bg-white rounded-lg overflow-hidden">
                         {/* Modal Header */}
                         <div className="flex items-center justify-between p-4 border-b bg-gray-50">
-                            <h3 className="text-lg font-semibold text-gray-800">
-                                {previewModal.content?.content_name || 'Content Preview'}
-                            </h3>
+                            <div className="flex items-center gap-4">
+                                <h3 className="text-lg font-semibold text-gray-800">
+                                    {previewModal.content?.content_name || 'Content Preview'}
+                                </h3>
+                                {previewModal.content?.average_reading_time_seconds && (
+                                    <div className="flex items-center gap-2 px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm">
+                                        <Clock className="w-4 h-4" />
+                                        <span>Est. {formatReadingTime(previewModal.content.average_reading_time_seconds)} read</span>
+                                    </div>
+                                )}
+                                <div className="flex items-center gap-2 px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm">
+                                    <Clock className="w-4 h-4" />
+                                    <span>Reading: {formatTime(readingTimer)}</span>
+                                </div>
+                            </div>
                             <div className="flex items-center gap-2">
                                 <button
                                     onClick={() => window.open(previewModal.content?.content_link, '_blank', 'noopener,noreferrer')}
@@ -327,9 +365,9 @@ export default function ModulesUnitsList({ modules, colorCode }) {
                                 </button>
                                 <button
                                     onClick={closePreviewModal}
-                                    className="p-2 hover:bg-gray-200 rounded-md transition-colors"
+                                    className="p-2 bg-blue-600 hover:bg-blue-700 rounded-full transition-colors"
                                 >
-                                    <X className="w-5 h-5 text-gray-600" />
+                                    <X className="w-5 h-5 text-white" />
                                 </button>
                             </div>
                         </div>
