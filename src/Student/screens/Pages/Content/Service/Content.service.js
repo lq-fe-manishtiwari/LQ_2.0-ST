@@ -411,6 +411,32 @@ export class ContentService {
       throw error;
     }
   }
+  /**
+   * Fetch approved module level content
+   * @param {string} moduleId - The module ID
+   * @returns {Promise} API response with module level content
+   */
+  static async getApprovedModuleLevelContent(moduleId) {
+    try {
+      const response = await fetch(`${ContentAPI}/admin/content/module/${moduleId}`, {
+        method: 'GET',
+        headers: authHeader()
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      return {
+        success: true,
+        data: data
+      };
+    } catch (error) {
+      console.error('Error fetching module content:', error);
+      throw error;
+    }
+  }
 }
 
 export default ContentService;

@@ -36,7 +36,8 @@ export const contentService = {
     getAllContentsByUnitIdForTeacher,
     getStudentProjectsByUnit,
     approveStudentProject,
-    rejectStudentProject
+    rejectStudentProject,
+    getApprovedModuleLevelContent,
 };
 
 function getAllQuestionLevel() {
@@ -462,4 +463,29 @@ function rejectStudentProject(projectId, remark) {
         : `${ContentAPI}/student-project/${projectId}/reject`;
 
     return fetch(url, requestOptions).then(handleResponse);
+}
+
+function getApprovedModuleLevelContent(moduleId) {
+    const requestOptions = {
+        method: 'GET',
+        headers: authHeader()
+    };
+
+    return fetch(
+        `${ContentAPI}/admin/content/module/${moduleId}`,
+        requestOptions
+    )
+        .then(async response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            return { success: true, data: data };
+        })
+        .catch(error => {
+            console.error('Error fetching module content:', error);
+            throw error;
+        });
 }

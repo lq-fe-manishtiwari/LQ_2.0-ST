@@ -10,7 +10,9 @@ export default function ModulesUnitsList({ modules, colorCode }) {
     const [expandedModuleId, setExpandedModuleId] = useState(null);
     const [selectedUnitId, setSelectedUnitId] = useState(null);
     const [unitContent, setUnitContent] = useState(null);
+    const [moduleContent, setModuleContent] = useState(null);
     const [loadingContent, setLoadingContent] = useState(false);
+    const [loadingModule, setLoadingModule] = useState(false);
     const [contentError, setContentError] = useState(null);
     const [previewModal, setPreviewModal] = useState({ isOpen: false, content: null });
     const [imageZoom, setImageZoom] = useState(1);
@@ -24,11 +26,27 @@ export default function ModulesUnitsList({ modules, colorCode }) {
     const [studentId, setStudentId] = useState(null);
     const [readingTimer, setReadingTimer] = useState(0);
 
-    const toggleModule = (moduleId) => {
+    const toggleModule = async (moduleId) => {
         if (expandedModuleId === moduleId) {
             setExpandedModuleId(null);
+            setModuleContent(null);
         } else {
             setExpandedModuleId(moduleId);
+            setLoadingModule(true);
+            setModuleContent(null);
+            setUnitContent(null);
+            setSelectedUnitId(null);
+
+            try {
+                const response = await ContentService.getApprovedModuleLevelContent(moduleId);
+                if (response.success) {
+                    setModuleContent(response.data);
+                }
+            } catch (error) {
+                console.error('Error fetching module content:', error);
+            } finally {
+                setLoadingModule(false);
+            }
         }
     };
 
@@ -78,13 +96,13 @@ export default function ModulesUnitsList({ modules, colorCode }) {
 
     const handleViewContent = (content) => {
         const link = content.content_link;
-        
+
         // Check if it's an external link (starts with http/https)
         if (link && (link.startsWith('http://') || link.startsWith('https://'))) {
             // Check if it's a file that can be previewed
             const fileExtension = link.split('.').pop()?.toLowerCase();
             const previewableTypes = ['pdf', 'jpg', 'jpeg', 'png', 'gif', 'mp4', 'webm', 'ogg'];
-            
+
             if (previewableTypes.includes(fileExtension)) {
                 // Reset timer and open in preview modal
                 setReadingTimer(0);
@@ -143,7 +161,7 @@ export default function ModulesUnitsList({ modules, colorCode }) {
 
     const handleQuizClick = (quizAttachment, contentId, quizName = null) => {
         console.log('Quiz clicked:', quizAttachment, 'Content ID:', contentId);
-        
+
         // First show quiz history modal to check previous attempts
         setQuizHistoryModal({
             isOpen: true,
@@ -203,7 +221,7 @@ export default function ModulesUnitsList({ modules, colorCode }) {
                                 maxHeight: imageZoom > 1 ? 'none' : '100%'
                             }}
                         />
-                        
+
                         {/* Image Zoom Controls */}
                         <div className="absolute top-4 right-4 flex items-center gap-2 bg-white shadow-lg border border-gray-200 px-3 py-2 rounded-lg z-20">
                             <button
@@ -214,11 +232,11 @@ export default function ModulesUnitsList({ modules, colorCode }) {
                             >
                                 <ZoomOut className="w-4 h-4" />
                             </button>
-                            
+
                             <span className="text-sm font-medium text-gray-700 min-w-[3rem] text-center">
                                 {Math.round(imageZoom * 100)}%
                             </span>
-                            
+
                             <button
                                 onClick={handleImageZoomIn}
                                 disabled={imageZoom >= 3.0}
@@ -227,7 +245,7 @@ export default function ModulesUnitsList({ modules, colorCode }) {
                             >
                                 <ZoomIn className="w-4 h-4" />
                             </button>
-                            
+
                             <button
                                 onClick={handleImageResetZoom}
                                 className="p-1 text-gray-600 hover:bg-gray-100 rounded transition-colors"
@@ -236,7 +254,7 @@ export default function ModulesUnitsList({ modules, colorCode }) {
                                 <RotateCcw className="w-4 h-4" />
                             </button>
                         </div>
-                        
+
                         {/* Quiz Buttons for Images */}
                         {content.quiz_attachments && content.quiz_attachments.length > 0 && (
                             <div className="absolute top-4 left-4 space-y-2">
@@ -266,7 +284,7 @@ export default function ModulesUnitsList({ modules, colorCode }) {
                             className="max-w-full max-h-full"
                             title={content.content_name}
                         />
-                        
+
                         {/* Quiz Buttons for Videos */}
                         {content.quiz_attachments && content.quiz_attachments.length > 0 && (
                             <div className="absolute top-4 right-4 space-y-2">
@@ -317,7 +335,7 @@ export default function ModulesUnitsList({ modules, colorCode }) {
         return (
             <div key={content.content_id || index} className="flex items-center justify-between gap-3 p-3 bg-gray-50 rounded-md border">
                 <div className="flex items-center gap-3 flex-1">
-                    <div 
+                    <div
                         className="p-2 rounded-full bg-white"
                         style={{ color: colorCode }}
                     >
@@ -405,24 +423,49 @@ export default function ModulesUnitsList({ modules, colorCode }) {
                             {/* Units List (Expanded Content) */}
                             {expandedModuleId === module.module_id && (
                                 <div className="bg-white p-4 animate-in slide-in-from-top-2 duration-200">
+                                    {/* Module Level Content */}
+                                    {loadingModule ? (
+                                        <div className="flex items-center gap-2 py-2 text-gray-500 mb-4">
+                                            <Loader2 className="w-4 h-4 animate-spin" />
+                                            <span className="text-sm">Loading module content...</span>
+                                        </div>
+                                    ) : moduleContent && moduleContent.length > 0 && (
+                                        <div className="mb-6 space-y-3">
+                                            <h4 className="font-semibold text-gray-800 text-sm flex items-center gap-2">
+                                                <div className="w-1 h-4 rounded-full" style={{ backgroundColor: colorCode }}></div>
+                                                Module Resources
+                                            </h4>
+                                            <div className="space-y-2 px-1">
+                                                {moduleContent.map((content, index) => renderContentItem(content, index))}
+                                            </div>
+                                            <div className="border-b border-gray-100 my-4"></div>
+                                        </div>
+                                    )}
+
+                                    {/* Units Header */}
+                                    {module.units && module.units.length > 0 && (
+                                        <h4 className="font-semibold text-gray-800 text-sm mb-3 flex items-center gap-2">
+                                            <div className="w-1 h-4 rounded-full" style={{ backgroundColor: colorCode }}></div>
+                                            Learning Units
+                                        </h4>
+                                    )}
+
                                     {module.units && module.units.length > 0 ? (
                                         <ul className="space-y-2">
                                             {module.units.map((unit, idx) => (
                                                 <li key={unit.unit_id || idx} className="space-y-2">
                                                     <div
                                                         onClick={() => handleUnitClick(unit.unit_id)}
-                                                        className={`flex items-center gap-3 p-3 rounded-md border transition-colors cursor-pointer group ${
-                                                            selectedUnitId === unit.unit_id 
-                                                                ? 'bg-blue-50 border-blue-200' 
-                                                                : 'hover:bg-gray-50 border-gray-100'
-                                                        }`}
+                                                        className={`flex items-center gap-3 p-3 rounded-md border transition-colors cursor-pointer group ${selectedUnitId === unit.unit_id
+                                                            ? 'bg-blue-50 border-blue-200'
+                                                            : 'hover:bg-gray-50 border-gray-100'
+                                                            }`}
                                                     >
                                                         <div
-                                                            className={`p-2 rounded-full transition-colors ${
-                                                                selectedUnitId === unit.unit_id
-                                                                    ? 'bg-white'
-                                                                    : 'bg-gray-100 group-hover:bg-white'
-                                                            }`}
+                                                            className={`p-2 rounded-full transition-colors ${selectedUnitId === unit.unit_id
+                                                                ? 'bg-white'
+                                                                : 'bg-gray-100 group-hover:bg-white'
+                                                                }`}
                                                             style={{ color: colorCode }}
                                                         >
                                                             <FileText className="w-4 h-4" />
@@ -537,8 +580,8 @@ export default function ModulesUnitsList({ modules, colorCode }) {
                                 <h4 className="font-semibold mb-2 text-gray-800 text-sm">Available Quizzes:</h4>
                                 <div className="space-y-1 text-xs">
                                     {previewModal.content.quiz_attachments.map((quiz, index) => (
-                                        <div key={quiz.attachment_id || index} className="flex items-center justify-between">
-                                            <span className="text-gray-700">Quiz {quiz.quiz_id}</span>
+                                        <div key={quiz.attachment_id || index} className="flex items-center justify-center">
+                                            {/* <span className="text-gray-700">Quiz {quiz.quiz_id}</span> */}
                                             <span
                                                 className="text-white px-2 py-0.5 rounded text-xs"
                                                 style={{ backgroundColor: colorCode }}
