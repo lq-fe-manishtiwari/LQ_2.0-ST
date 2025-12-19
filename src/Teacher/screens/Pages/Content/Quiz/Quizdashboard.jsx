@@ -531,8 +531,8 @@ export default function QuizDashboard() {
               {filters.module ? (filters.unit ? 'Filtered Quizzes' : 'Module Quizzes') : 'All Quizzes'}
             </h3>
             {total_elements > 0 && (
-              <div className="flex items-center gap-4">
-                <span className="text-sm text-gray-600">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4 w-full sm:w-auto">
+                <span className="text-xs sm:text-sm text-gray-600">
                   Showing {quizzes.length} of {total_elements} quizzes
                 </span>
                 <select
@@ -541,7 +541,7 @@ export default function QuizDashboard() {
                     setPageSize(Number(e.target.value));
                     setCurrentPage(0);
                   }}
-                  className="px-3 py-1 border border-gray-300 rounded-md text-sm"
+                  className="px-2 sm:px-3 py-1 border border-gray-300 rounded-md text-xs sm:text-sm w-full sm:w-auto"
                 >
                   <option value={5}>5 per page</option>
                   <option value={10}>10 per page</option>
@@ -619,9 +619,9 @@ export default function QuizDashboard() {
                 ))}
               </div>
             ) : (
-              <div className="text-center py-12">
-                <div className="text-6xl mb-4">📚</div>
-                <p className="text-gray-500 text-lg">
+              <div className="text-center py-8 sm:py-12">
+                <div className="text-4xl sm:text-6xl mb-4">📚</div>
+                <p className="text-gray-500 text-sm sm:text-lg px-4">
                   {filters.module ? 'No quizzes found for selected filters.' : 'Please select a module to view quizzes.'}
                 </p>
               </div>
@@ -631,69 +631,72 @@ export default function QuizDashboard() {
 
           {/* Pagination Controls */}
           {total_elements > 0 && (
-            <div className="mt-6 flex items-center justify-between border-t pt-4">
-              <div className="text-sm text-gray-600">
-                Page {currentPage + 1} of {total_pages}
-              </div>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => handlePageChange(0)}
-                  disabled={currentPage === 0}
-                  className="px-3 py-1 border border-gray-300 rounded-md text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
-                >
-                  First
-                </button>
-                <button
-                  onClick={() => handlePageChange(currentPage - 1)}
-                  disabled={currentPage === 0}
-                  className="px-3 py-1 border border-gray-300 rounded-md text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
-                >
-                  Previous
-                </button>
-
-                {/* Page numbers */}
-                <div className="flex gap-1">
-                  {Array.from({ length: Math.min(5, total_pages) }, (_, i) => {
-                    let pageNum;
-                    if (total_pages <= 5) {
-                      pageNum = i;
-                    } else if (currentPage < 3) {
-                      pageNum = i;
-                    } else if (currentPage > total_pages - 3) {
-                      pageNum = total_pages - 5 + i;
-                    } else {
-                      pageNum = currentPage - 2 + i;
-                    }
-
-                    return (
-                      <button
-                        key={pageNum}
-                        onClick={() => handlePageChange(pageNum)}
-                        className={`px-3 py-1 border rounded-md text-sm ${currentPage === pageNum
-                          ? 'bg-blue-600 text-white border-blue-600'
-                          : 'border-gray-300 hover:bg-gray-50'
-                          }`}
-                      >
-                        {pageNum + 1}
-                      </button>
-                    );
-                  })}
+            <div className="mt-4 sm:mt-6 border-t pt-4">
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
+                <div className="text-xs sm:text-sm text-gray-600">
+                  Page {currentPage + 1} of {total_pages}
                 </div>
+                <div className="flex items-center gap-1 sm:gap-2 flex-wrap justify-center">
+                  <button
+                    onClick={() => handlePageChange(0)}
+                    disabled={currentPage === 0}
+                    className="px-2 sm:px-3 py-1 border border-gray-300 rounded-md text-xs sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                  >
+                    First
+                  </button>
+                  <button
+                    onClick={() => handlePageChange(currentPage - 1)}
+                    disabled={currentPage === 0}
+                    className="px-2 sm:px-3 py-1 border border-gray-300 rounded-md text-xs sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                  >
+                    Prev
+                  </button>
 
-                <button
-                  onClick={() => handlePageChange(currentPage + 1)}
-                  disabled={currentPage >= total_pages - 1}
-                  className="px-3 py-1 border border-gray-300 rounded-md text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
-                >
-                  Next
-                </button>
-                <button
-                  onClick={() => handlePageChange(total_pages - 1)}
-                  disabled={currentPage >= total_pages - 1}
-                  className="px-3 py-1 border border-gray-300 rounded-md text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
-                >
-                  Last
-                </button>
+                  {/* Page numbers - show fewer on mobile */}
+                  <div className="flex gap-1">
+                    {Array.from({ length: Math.min(window.innerWidth < 640 ? 3 : 5, total_pages) }, (_, i) => {
+                      let pageNum;
+                      const maxPages = window.innerWidth < 640 ? 3 : 5;
+                      if (total_pages <= maxPages) {
+                        pageNum = i;
+                      } else if (currentPage < Math.floor(maxPages/2)) {
+                        pageNum = i;
+                      } else if (currentPage > total_pages - Math.ceil(maxPages/2)) {
+                        pageNum = total_pages - maxPages + i;
+                      } else {
+                        pageNum = currentPage - Math.floor(maxPages/2) + i;
+                      }
+
+                      return (
+                        <button
+                          key={pageNum}
+                          onClick={() => handlePageChange(pageNum)}
+                          className={`px-2 sm:px-3 py-1 border rounded-md text-xs sm:text-sm ${currentPage === pageNum
+                            ? 'bg-blue-600 text-white border-blue-600'
+                            : 'border-gray-300 hover:bg-gray-50'
+                            }`}
+                        >
+                          {pageNum + 1}
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  <button
+                    onClick={() => handlePageChange(currentPage + 1)}
+                    disabled={currentPage >= total_pages - 1}
+                    className="px-2 sm:px-3 py-1 border border-gray-300 rounded-md text-xs sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                  >
+                    Next
+                  </button>
+                  <button
+                    onClick={() => handlePageChange(total_pages - 1)}
+                    disabled={currentPage >= total_pages - 1}
+                    className="px-2 sm:px-3 py-1 border border-gray-300 rounded-md text-xs sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                  >
+                    Last
+                  </button>
+                </div>
               </div>
             </div>
           )}
