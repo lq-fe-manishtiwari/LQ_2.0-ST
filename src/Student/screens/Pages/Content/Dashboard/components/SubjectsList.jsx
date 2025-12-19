@@ -16,17 +16,34 @@ export default function SubjectsList({
   const [subjects, setSubjects] = useState([]);
   const [loading, setLoading] = useState(false);
 
-  // ---- GET TAB BASED ON selectedSubTab ----
+  // ---- GET TAB BASED ON selectedSubTab OR type_info ----
   const getAvailableTabs = () => {
-    if (!selectedSubTab) return [];
-    return [
-      {
-        id: selectedSubTab.id,        // vertical_id or specialization_id
-        name: selectedSubTab.name,
-        type: selectedSubTab.type,    // "vertical" / "specialization"
-        code: selectedSubTab.code
-      }
-    ];
+    // If selectedSubTab exists (vertical/specialization), use it
+    if (selectedSubTab) {
+      return [
+        {
+          id: selectedSubTab.id,        // vertical_id or specialization_id
+          name: selectedSubTab.name,
+          type: selectedSubTab.type,    // "vertical" / "specialization"
+          code: selectedSubTab.code
+        }
+      ];
+    }
+
+    // If no selectedSubTab but type_info exists (no sub-tabs case), use type_info
+    const currentType = subjectTypes[selectedPaperType.toLowerCase()];
+    if (currentType?.type_info) {
+      return [
+        {
+          id: currentType.type_info.type_id,
+          name: currentType.type_info.type_name,
+          type: "type_info",
+          code: currentType.type_info.type_code
+        }
+      ];
+    }
+
+    return [];
   };
 
   const availableTabs = getAvailableTabs();
@@ -60,19 +77,23 @@ export default function SubjectsList({
       if (response.success && Array.isArray(response.data)) {
         console.log("API Response Data:", response.data);
         console.log("Filtering by tab:", tab);
-        
-        // Filter subjects based on selected vertical/specialization
-        const filteredData = response.data.filter(subject => {
-          if (tab.type === 'vertical') {
+
+        // Only filter if it's a vertical/specialization tab, not type_info
+        let filteredData = response.data;
+
+        if (tab.type === 'vertical') {
+          filteredData = response.data.filter(subject => {
             const hasVertical = subject.verticals?.some(v => v.vertical_id === tab.id);
             console.log(`Subject "${subject.name}" has vertical ${tab.id}:`, hasVertical);
             return hasVertical;
-          } else if (tab.type === 'specialization') {
-            return subject.specializations?.some(s => s.specialization_id === tab.id);
-          }
-          return true;
-        });
-        
+          });
+        } else if (tab.type === 'specialization') {
+          filteredData = response.data.filter(subject =>
+            subject.specializations?.some(s => s.specialization_id === tab.id)
+          );
+        }
+        // For type_info, use all subjects without filtering
+
         console.log("Filtered subjects:", filteredData);
         setSubjects(filteredData);
         setAllSubjects && setAllSubjects(filteredData);
@@ -87,10 +108,12 @@ export default function SubjectsList({
     }
   };
 
-  // Fetch subjects automatically when subTab changes
+  // Fetch subjects automatically when subTab changes OR when type changes
   useEffect(() => {
     if (availableTabs.length > 0) {
       fetchSubjects(availableTabs[0]);
+    } else {
+      setSubjects([]);
     }
   }, [selectedSubTab?.id, academicYearId, semesterId, selectedPaperType]);
 
@@ -119,11 +142,10 @@ export default function SubjectsList({
               <button
                 key={subject.subject_id}
                 onClick={() => onSubjectClick(subject)}
-                className={`w-full py-2 px-3 rounded-md text-white text-sm font-medium shadow transition-all duration-200 ${
-                  selectedSubjectId === subject.subject_id
-                    ? "ring-2 ring-offset-2 scale-[1.02]"
-                    : "hover:scale-[1.01]"
-                }`}
+                className={`w-full py-2 px-3 rounded-md text-white text-sm font-medium shadow transition-all duration-200 ${selectedSubjectId === subject.subject_id
+                  ? "ring-2 ring-offset-2 scale-[1.02]"
+                  : "hover:scale-[1.01]"
+                  }`}
                 style={{
                   backgroundColor: subject.color_code || "#3b82f6",
                   "--tw-ring-color": subject.color_code || "#3b82f6"
