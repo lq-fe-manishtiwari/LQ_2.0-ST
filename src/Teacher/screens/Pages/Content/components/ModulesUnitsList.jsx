@@ -350,10 +350,10 @@ export default function ModulesUnitsList({ modules, colorCode }) {
                                         <span>Est. {formatReadingTime(previewModal.content.average_reading_time_seconds)} read</span>
                                     </div>
                                 )}
-                                <div className="flex items-center gap-2 px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm">
+                                {/* <div className="flex items-center gap-2 px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm">
                                     <Clock className="w-4 h-4" />
                                     <span>Reading: {formatTime(readingTimer)}</span>
-                                </div>
+                                </div> */}
                             </div>
                             <div className="flex items-center gap-2">
                                 <button
