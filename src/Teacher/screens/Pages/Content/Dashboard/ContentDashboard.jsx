@@ -65,7 +65,7 @@ const CustomSelect = ({ label, value, onChange, options, placeholder, disabled =
 
 export default function ContentDashboard() {
   const { profile, getTeacherId, isLoaded, loading: profileLoading } = useUserProfile();
-  
+
   // Load saved filter values from localStorage
   const loadSavedFilters = () => {
     try {
@@ -75,7 +75,7 @@ export default function ContentDashboard() {
       return {};
     }
   };
-  
+
   const savedFilters = loadSavedFilters();
   const [selectedPaperType, setSelectedPaperType] = useState(savedFilters.paperType || 'Vertical');
   const [selectedProgram, setSelectedProgram] = useState(savedFilters.program || '');
@@ -133,15 +133,26 @@ export default function ContentDashboard() {
 
     if (selectedPaperType.toLowerCase() === 'vertical') {
       // For vertical, use verticals as sub-tabs
-      return currentType.verticals?.map(vertical => ({
-        id: vertical.id, // Fix: API uses 'id' for verticals in subjectTypes
+      const verticals = currentType.verticals?.map(vertical => ({
+        id: vertical.id,
         name: vertical.name,
         code: vertical.code,
         type: 'vertical'
       })) || [];
+
+      // Only return verticals if they exist, otherwise return empty
+      return verticals;
     } else {
-      // For non-vertical types, use specializations from subjects
-      return getSpecializationsFromSubjects();
+      // For non-vertical types, check if specializations exist in API response
+      const apiSpecializations = currentType.type_info?.sub_tabs?.specializations || [];
+
+      // If API has specializations in sub_tabs, use them
+      if (apiSpecializations.length > 0) {
+        return getSpecializationsFromSubjects();
+      }
+
+      // If no specializations in API, return empty (no sub-tabs)
+      return [];
     }
   };
 
@@ -370,7 +381,7 @@ export default function ContentDashboard() {
             // Process the new API response structure
             const processedTypes = processSubjectTypesData(response.data);
             setSubjectTypes(processedTypes);
-            
+
             // Auto-select first available paper type
             if (response.data.type_buttons && response.data.type_buttons.length > 0) {
               setSelectedPaperType(response.data.type_buttons[0].type_name);
@@ -465,8 +476,8 @@ export default function ContentDashboard() {
 
         {/* Right side - Action Buttons */}
         <div className="flex flex-col sm:flex-row gap-3">
-        
-          
+
+
           <Link to="/teacher/content/add-content" className="flex items-center justify-center p-3 rounded-lg transition-all">
             <Settings className="w-5 h-5 text-gray-600" />
           </Link>
@@ -526,11 +537,10 @@ export default function ContentDashboard() {
           <button
             key={type.id}
             onClick={() => setSelectedPaperType(type.label)}
-            className={`px-4 py-2 rounded-xl font-medium transition-all duration-200 border ${
-              selectedPaperType === type.label 
-                ? 'bg-blue-600 text-white border-blue-600 shadow-lg shadow-blue-200/50' 
+            className={`px-4 py-2 rounded-xl font-medium transition-all duration-200 border ${selectedPaperType === type.label
+                ? 'bg-blue-600 text-white border-blue-600 shadow-lg shadow-blue-200/50'
                 : 'bg-white text-gray-700 border-gray-200 hover:border-blue-300 hover:bg-gray-50'
-            }`}
+              }`}
           >
             {type.label}
           </button>
@@ -544,11 +554,10 @@ export default function ContentDashboard() {
             <button
               key={`${subTab.type || 'tab'}-${subTab.id ?? 'general'}-${index}`}
               onClick={() => setSelectedSubTab(subTab)}
-              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 ${
-                selectedSubTab?.id === subTab.id && selectedSubTab?.type === subTab.type 
-                  ? 'bg-blue-600 text-white shadow-md' 
+              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 ${selectedSubTab?.id === subTab.id && selectedSubTab?.type === subTab.type
+                  ? 'bg-blue-600 text-white shadow-md'
                   : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-200'
-              }`}
+                }`}
             >
               {subTab.name}
             </button>
@@ -603,8 +612,8 @@ export default function ContentDashboard() {
             </div>
             <h3 className="text-lg font-medium text-gray-900 mb-2">Content Dashboard</h3>
             <p className="text-gray-600 mb-4">
-              {selectedProgram && selectedSemester && !subjectTypes[selectedPaperType.toLowerCase()] 
-                ? 'Content not available' 
+              {selectedProgram && selectedSemester && !subjectTypes[selectedPaperType.toLowerCase()]
+                ? 'Content not available'
                 : 'Select Program and Semester to view available content.'}
             </p>
             {selectedProgram && selectedSemester && subjectTypes[selectedPaperType.toLowerCase()] && (

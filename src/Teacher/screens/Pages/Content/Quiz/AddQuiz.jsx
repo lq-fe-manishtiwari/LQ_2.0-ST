@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { X, ChevronDown } from "lucide-react";
 import SweetAlert from "react-bootstrap-sweetalert";
 import { fetchClassesByprogram } from '../services/student.service';
@@ -34,20 +34,18 @@ const CustomSelect = ({ label, value, onChange, options, placeholder, disabled =
       <label className="block text-sm font-semibold text-gray-700 mb-2">{label}</label>
       <div className="relative">
         <div
-          className={`w-full px-3 py-2 border ${
-            disabled
-              ? 'bg-gray-100 text-gray-500 border-gray-200 cursor-not-allowed'
-              : 'bg-white border-gray-300 cursor-pointer hover:border-blue-400'
-          } rounded-lg min-h-[44px] flex items-center justify-between transition-all duration-150`}
+          className={`w-full px-3 py-2 border ${disabled
+            ? 'bg-gray-100 text-gray-500 border-gray-200 cursor-not-allowed'
+            : 'bg-white border-gray-300 cursor-pointer hover:border-blue-400'
+            } rounded-lg min-h-[44px] flex items-center justify-between transition-all duration-150`}
           onClick={() => !disabled && setIsOpen(!isOpen)}
         >
           <span className={selectedOption ? 'text-gray-900' : 'text-gray-400'}>
             {selectedOption ? selectedOption.label : placeholder}
           </span>
           <ChevronDown
-            className={`w-4 h-4 text-gray-400 transition-transform ${
-              isOpen ? 'rotate-180' : 'rotate-0'
-            }`}
+            className={`w-4 h-4 text-gray-400 transition-transform ${isOpen ? 'rotate-180' : 'rotate-0'
+              }`}
           />
         </div>
 
@@ -77,18 +75,20 @@ const CustomSelect = ({ label, value, onChange, options, placeholder, disabled =
 
 export default function AddQuiz() {
   const navigate = useNavigate();
-  
+  const location = useLocation();
+  const passedFilters = location.state?.filters || {};
+
   // Get user profile data
   const { getUserId, getCollegeId, getTeacherId, isLoaded: isProfileLoaded, loading: profileLoading } = useUserProfile();
-  const userId=getUserId();
+  const userId = getUserId();
 
   const [formData, setFormData] = useState({
-    program: "",
-    semester: "",
-    batch: "",
-    paper: "",
-    module: "",
-    unit: "",
+    program: passedFilters.program || "",
+    semester: passedFilters.semester || "",
+    batch: passedFilters.batch || "",
+    paper: passedFilters.paper || "",
+    module: "",  // Don't pre-populate module
+    unit: "",     // Don't pre-populate unit
     quizName: "",
     duration: "",
     instructions: "",
@@ -111,6 +111,7 @@ export default function AddQuiz() {
   const [selectedQuestions, setSelectedQuestions] = useState([]);
   const [alert, setAlert] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [isInitialized, setIsInitialized] = useState(false);
 
   // Fetch programs
   useEffect(() => {
@@ -119,23 +120,23 @@ export default function AddQuiz() {
 
       const teacherId = getTeacherId();
       if (!teacherId) return;
-      
+
       try {
         const response = await api.getTeacherAllocatedPrograms(teacherId);
-        
+
         if (response.success && response.data) {
           const classTeacherPrograms = response.data.class_teacher_allocation || [];
           const normalPrograms = response.data.normal_allocation || [];
           const allPrograms = [...classTeacherPrograms, ...normalPrograms];
-          
+
           setAllAllocations(allPrograms);
-          
+
           const programMap = new Map();
-          
+
           allPrograms.forEach(allocation => {
             const programId = allocation.program_id;
             const programName = allocation.program?.program_name || allocation.program_name || `Program ${programId}`;
-            
+
             if (!programMap.has(programId)) {
               programMap.set(programId, {
                 id: programId,
@@ -144,10 +145,10 @@ export default function AddQuiz() {
                 allocations: []
               });
             }
-            
+
             programMap.get(programId).allocations.push(allocation);
           });
-          
+
           const uniquePrograms = Array.from(programMap.values());
           setPrograms(uniquePrograms);
         }
@@ -174,13 +175,13 @@ export default function AddQuiz() {
     const program = programs.find(p => p.value === formData.program);
     if (program) {
       setSelectedProgramId(program.id);
-      
+
       // Create Academic Year - Semester format
       const academicSemesters = program.allocations.map(allocation => {
         const academicYear = allocation.academic_year?.name || allocation.academic_year_name || 'Unknown Year';
         const semester = allocation.semester?.name || allocation.semester_name || 'Unknown Semester';
         const combinedLabel = `${academicYear} - ${semester}`;
-        
+
         return {
           label: combinedLabel,
           value: combinedLabel,
@@ -189,12 +190,12 @@ export default function AddQuiz() {
           allocation: allocation
         };
       }).filter(item => item.label !== 'Unknown Year - Unknown Semester');
-      
+
       // Remove duplicates based on label
-      const uniqueSemesters = academicSemesters.filter((item, index, self) => 
+      const uniqueSemesters = academicSemesters.filter((item, index, self) =>
         index === self.findIndex(t => t.label === item.label)
       );
-      
+
       setSemesters(uniqueSemesters);
     }
   }, [formData.program, programs]);
@@ -212,7 +213,7 @@ export default function AddQuiz() {
       const program = programs.find(p => p.id === selectedProgramId);
       if (program) {
         const batchesForSemester = program.allocations
-          .filter(allocation => 
+          .filter(allocation =>
             allocation.academic_year_id === selectedSemesterObj.academicYearId &&
             allocation.semester_id === selectedSemesterObj.semesterId
           )
@@ -220,10 +221,10 @@ export default function AddQuiz() {
             label: allocation.batch?.batch_name || allocation.batch_name || 'Default Batch',
             value: allocation.batch_id || allocation.batch?.batch_id || 'default'
           }))
-          .filter((batch, index, self) => 
+          .filter((batch, index, self) =>
             index === self.findIndex(b => b.value === batch.value)
           );
-        
+
         setBatches(batchesForSemester);
       }
     }
@@ -252,7 +253,7 @@ export default function AddQuiz() {
 
         try {
           const response = await contentService.getTeacherSubjectsAllocated(teacherId, selectedSemesterObj.academicYearId, selectedSemesterObj.semesterId);
-          
+
           if (Array.isArray(response)) {
             const subjects = response.map(subjectInfo => ({
               label: subjectInfo.subject_name || subjectInfo.name,
@@ -305,32 +306,52 @@ export default function AddQuiz() {
   // Fetch units
   useEffect(() => {
     if (!formData.module || modules.length === 0) return;
-    
+
     const selectedModule = modules.find(m => String(m.module_id) === String(formData.module));
     setUnits(selectedModule?.units || []);
   }, [formData.module, modules]);
 
-  // Fetch questions
+  // Fetch questions when module or unit changes
   useEffect(() => {
-    if (!formData.unit) {
+    if (!formData.module || modules.length === 0) {
       setQuestionsList([]);
       return;
     }
 
-    contentService.getQuestionsByUnitId(formData.unit)
+    const selectedModule = modules.find(m => String(m.module_id) === String(formData.module));
+    if (!selectedModule) {
+      setQuestionsList([]);
+      return;
+    }
+
+    let unitIds = [];
+    if (formData.unit) {
+      // Specific unit selected
+      unitIds = [formData.unit];
+    } else {
+      // No unit selected - get all units from module
+      unitIds = selectedModule.units?.map(u => String(u.unit_id)) || [];
+    }
+
+    if (unitIds.length === 0) {
+      setQuestionsList([]);
+      return;
+    }
+
+    contentService.getQuestionsByModuleAndUnits(formData.module, unitIds, 0, 1000)
       .then(res => {
         let questionsArray = [];
-        if (Array.isArray(res?.data)) {
+        if (res?.content && Array.isArray(res.content)) {
+          questionsArray = res.content;
+        } else if (Array.isArray(res?.data)) {
           questionsArray = res.data;
         } else if (Array.isArray(res)) {
           questionsArray = res;
-        } else if (typeof res === 'object' && res !== null) {
-          questionsArray = Object.values(res);
         }
         setQuestionsList(questionsArray);
       })
       .catch(err => console.error("Error fetching questions:", err));
-  }, [formData.unit]);
+  }, [formData.module, formData.unit, modules]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -356,7 +377,7 @@ export default function AddQuiz() {
   };
 
   const validateForm = () => {
-    const required = ["quizName", "duration", "unit"];
+    const required = ["quizName", "duration", "module"];
     for (let f of required) {
       if (!formData[f]) {
         setAlert(
@@ -396,7 +417,8 @@ export default function AddQuiz() {
       quiz_name: formData.quizName,
       duration: parseInt(formData.duration),
       question_ids: selectedQuestions.map(id => parseInt(id)),
-      unit_id: parseInt(formData.unit),
+      unit_id: formData.unit ? parseInt(formData.unit) : null,
+      module_id: parseInt(formData.module),
       admin: false,
       user_id: userId
     };
@@ -407,13 +429,27 @@ export default function AddQuiz() {
         <SweetAlert
           success
           title="Quiz Created!"
+          confirmBtnText="Yes"
+          cancelBtnText="No"
+          showCancel
+          confirmBtnCssClass="btn-confirm"
           onConfirm={() => {
+            setAlert(null);
+            // Reset form but keep filters
+            setFormData(prev => ({
+              ...prev,
+              quizName: "",
+              duration: "",
+              instructions: ""
+            }));
+            setSelectedQuestions([]);
+          }}
+          onCancel={() => {
             setAlert(null);
             navigate(-1);
           }}
-          confirmBtnCssClass="btn-confirm"
         >
-          "{formData.quizName}" has been created successfully.
+          "{formData.quizName}" has been created successfully. Do you want to add another quiz?
         </SweetAlert>
       );
     } catch (error) {
@@ -455,7 +491,7 @@ export default function AddQuiz() {
                 options={programs}
                 placeholder="Select Program"
               />
-              
+
               <CustomSelect
                 label="Academic Year - Semester *"
                 value={formData.semester}
@@ -464,7 +500,7 @@ export default function AddQuiz() {
                 placeholder="Select Academic Year - Semester"
                 disabled={!formData.program}
               />
-              
+
               <CustomSelect
                 label="Batch"
                 value={formData.batch}
@@ -484,7 +520,7 @@ export default function AddQuiz() {
                 placeholder="Select Paper"
                 disabled={!formData.semester}
               />
-              
+
               <CustomSelect
                 label="Module *"
                 value={formData.module}
@@ -493,127 +529,128 @@ export default function AddQuiz() {
                 placeholder="Select Module"
                 disabled={!formData.paper}
               />
-              
+
               <CustomSelect
-                label="Unit *"
+                label="Unit (Topic)"
                 value={formData.unit}
                 onChange={(e) => handleChange({ target: { name: 'unit', value: e.target.value } })}
                 options={units.map(u => ({ label: u.unit_name, value: String(u.unit_id) }))}
-                placeholder="Select Unit"
+                placeholder="Select Unit (Optional)"
                 disabled={!formData.module}
               />
             </div>
 
-              <label className="block mt-6 font-medium">Quiz Name *</label>
-              <input
-                type="text"
-                name="quizName"
-                value={formData.quizName}
-                onChange={handleChange}
-                className="w-full border px-3 py-2 rounded-lg mb-4"
-                placeholder="Enter Quiz Name"
-              />
+            <label className="block mt-6 font-medium">Quiz Name *</label>
+            <input
+              type="text"
+              name="quizName"
+              value={formData.quizName}
+              onChange={handleChange}
+              className="w-full border px-3 py-2 rounded-lg mb-4"
+              placeholder="Enter Quiz Name"
+            />
 
-              <label className="block font-medium">Duration (minutes) *</label>
-              <input
-                type="number"
-                name="duration"
-                value={formData.duration}
-                onChange={handleChange}
-                className="w-full border px-3 py-2 rounded-lg mb-6"
-              />
+            <label className="block font-medium">Duration (minutes) *</label>
+            <input
+              type="number"
+              name="duration"
+              value={formData.duration}
+              onChange={handleChange}
+              className="w-full border px-3 py-2 rounded-lg mb-6"
+            />
 
-              <div className="mb-6">
-                <div className="flex items-center justify-between mb-4">
-                  <label className="block font-medium">Select Questions *</label>
-                  {questionsList.length > 0 && (
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="checkbox"
-                        id="selectAll"
-                        checked={selectedQuestions.length === questionsList.length && questionsList.length > 0}
-                        onChange={(e) => {
-                          if (e.target.checked) {
-                            setSelectedQuestions(questionsList.map(q => String(q.question_id)));
-                          } else {
-                            setSelectedQuestions([]);
-                          }
-                        }}
-                        className="w-4 h-4 text-blue-600"
-                      />
-                      <label htmlFor="selectAll" className="text-sm font-medium text-blue-600 cursor-pointer">
-                        Select All ({questionsList.length})
-                      </label>
-                    </div>
+            <div className="mb-6">
+              <div className="flex items-center justify-between mb-4">
+                <label className="block font-medium">Select Questions *</label>
+                {questionsList.length > 0 && (
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      id="selectAll"
+                      checked={selectedQuestions.length === questionsList.length && questionsList.length > 0}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setSelectedQuestions(questionsList.map(q => String(q.question_id)));
+                        } else {
+                          setSelectedQuestions([]);
+                        }
+                      }}
+                      className="w-4 h-4 text-blue-600"
+                    />
+                    <label htmlFor="selectAll" className="text-sm font-medium text-blue-600 cursor-pointer">
+                      Select All ({questionsList.length})
+                    </label>
+                  </div>
+                )}
+              </div>
+              {questionsList.length > 0 ? (
+                <div className="max-h-96 overflow-y-auto border rounded-lg p-4 bg-gray-50">
+                  <div className="space-y-3">
+                    {questionsList.map((q, index) => (
+                      <div key={q.question_id} className="flex items-start gap-3 p-3 bg-white rounded border">
+                        <input
+                          type="checkbox"
+                          checked={selectedQuestions.includes(String(q.question_id))}
+                          onChange={(e) => {
+                            const questionId = String(q.question_id);
+                            if (e.target.checked) {
+                              setSelectedQuestions([...selectedQuestions, questionId]);
+                            } else {
+                              setSelectedQuestions(selectedQuestions.filter(id => id !== questionId));
+                            }
+                          }}
+                          className="mt-1 w-4 h-4 text-blue-600"
+                        />
+                        <label className="flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="text-sm font-medium text-gray-600">Q{index + 1}.</span>
+                          </div>
+                          <p className="text-gray-800">{q.question || q.question_text}</p>
+                        </label>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center py-8 text-gray-500 border rounded-lg bg-gray-50">
+                  {formData.unit ? "No questions available for this unit" : "Please select a unit to view questions"}
+                </div>
+              )}
+              {selectedQuestions.length > 0 && (
+                <div className="mt-3 flex items-center justify-between text-sm">
+                  <span className="text-blue-600">
+                    {selectedQuestions.length} of {questionsList.length} question(s) selected
+                  </span>
+                  {selectedQuestions.length > 0 && selectedQuestions.length < questionsList.length && (
+                    <button
+                      type="button"
+                      onClick={() => setSelectedQuestions([])}
+                      className="text-red-500 hover:text-red-700 underline"
+                    >
+                      Clear Selection
+                    </button>
                   )}
                 </div>
-                {questionsList.length > 0 ? (
-                  <div className="max-h-96 overflow-y-auto border rounded-lg p-4 bg-gray-50">
-                    <div className="space-y-3">
-                      {questionsList.map((q, index) => (
-                        <div key={q.question_id} className="flex items-start gap-3 p-3 bg-white rounded border">
-                          <input
-                            type="checkbox"
-                            checked={selectedQuestions.includes(String(q.question_id))}
-                            onChange={(e) => {
-                              const questionId = String(q.question_id);
-                              if (e.target.checked) {
-                                setSelectedQuestions([...selectedQuestions, questionId]);
-                              } else {
-                                setSelectedQuestions(selectedQuestions.filter(id => id !== questionId));
-                              }
-                            }}
-                            className="mt-1 w-4 h-4 text-blue-600"
-                          />
-                          <label className="flex-1">
-                            <div className="flex items-center gap-2 mb-1">
-                              <span className="text-sm font-medium text-gray-600">Q{index + 1}.</span>
-                            </div>
-                            <p className="text-gray-800">{q.question || q.question_text}</p>
-                          </label>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                ) : (
-                  <div className="text-center py-8 text-gray-500 border rounded-lg bg-gray-50">
-                    {formData.unit ? "No questions available for this unit" : "Please select a unit to view questions"}
-                  </div>
-                )}
-                {selectedQuestions.length > 0 && (
-                  <div className="mt-3 flex items-center justify-between text-sm">
-                    <span className="text-blue-600">
-                      {selectedQuestions.length} of {questionsList.length} question(s) selected
-                    </span>
-                    {selectedQuestions.length > 0 && selectedQuestions.length < questionsList.length && (
-                      <button
-                        type="button"
-                        onClick={() => setSelectedQuestions([])}
-                        className="text-red-500 hover:text-red-700 underline"
-                      >
-                        Clear Selection
-                      </button>
-                    )}
-                  </div>
-                )}
-              </div>
+              )}
+            </div>
 
-              <div className="flex justify-center gap-4">
-                <button 
-                  type="submit" 
-                  disabled={loading}
-                  className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
-                >
-                  {loading ? 'Creating...' : 'Submit'}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => navigate(-1)}
-                  className="px-6 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300"
-                >
-                  Cancel
-                </button>
-              </div>
+
+            <div className="flex justify-center gap-4">
+              <button
+                type="submit"
+                disabled={loading}
+                className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+              >
+                {loading ? 'Creating...' : 'Submit'}
+              </button>
+              <button
+                type="button"
+                onClick={() => navigate(-1)}
+                className="px-6 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300"
+              >
+                Cancel
+              </button>
+            </div>
           </form>
         </div>
       </div>

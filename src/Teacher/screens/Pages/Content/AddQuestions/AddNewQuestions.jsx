@@ -139,14 +139,14 @@ const AddNewQuestion = () => {
                 <h1 className="text-xl sm:text-2xl font-semibold mb-6 text-center sm:text-left text-blue-700">{questionToEdit ? 'Edit Question' : 'Add New Question'}</h1>
               </div>
 
-             {/* Right Circular Close Button */}
-             <button
-              onClick={goBack}
-              className="w-10 h-10 mt-3 sm:mt-0 flex items-center justify-center rounded-full text-white transition-all shadow-sm hover:shadow-md"
-              style={{ backgroundColor: "rgb(33 98 193 / var(--tw-bg-opacity, 1))" }}
-            >
-              <X className="w-5 h-5" />
-            </button>
+              {/* Right Circular Close Button */}
+              <button
+                onClick={goBack}
+                className="w-10 h-10 mt-3 sm:mt-0 flex items-center justify-center rounded-full text-white transition-all shadow-sm hover:shadow-md"
+                style={{ backgroundColor: "rgb(33 98 193 / var(--tw-bg-opacity, 1))" }}
+              >
+                <X className="w-5 h-5" />
+              </button>
             </div>
 
             {/* Tabs: Objective / Subjective */}
@@ -188,21 +188,22 @@ const AddNewQuestion = () => {
                 <Form onSubmit={handleSubmit} className="space-y-8">
                   {/* Tab Content */}
                   <div className="tab-content">
-                      <ObjectiveQuestion
-                        formData={values}
-                        handleChange={handleChange}
-                        errors={errors}
-                        touched={touched}
-                        isEdit={!!questionToEdit}
-                        question_id={questionToEdit?.question_id}
-                        questionData={questionToEdit}
-                        onSaveSuccess={handleSuccessConfirm}
-                      />
-                
+                    <ObjectiveQuestion
+                      formData={values}
+                      handleChange={handleChange}
+                      errors={errors}
+                      touched={touched}
+                      isEdit={!!questionToEdit}
+                      question_id={questionToEdit?.question_id}
+                      questionData={questionToEdit}
+                      questionFilters={questionFilters}
+                      onSaveSuccess={handleSuccessConfirm}
+                    />
+
                   </div>
 
                   {/* Submit Button */}
-               
+
                 </Form>
               )}
             </Formik>

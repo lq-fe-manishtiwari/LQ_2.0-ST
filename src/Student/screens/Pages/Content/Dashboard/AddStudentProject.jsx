@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { X, ChevronDown, Link as LinkIcon, FileText, Check } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import SweetAlert from 'react-bootstrap-sweetalert';
 import ContentService from '../Service/Content.service';
 import StudentProjectService from '../Service/StudentProject.service';
 import { useUserProfile } from '../../../../../contexts/UserProfileContext';
@@ -150,6 +151,9 @@ const AddStudentProject = () => {
     }, []);
 
     const [error, setError] = useState(null);
+    const [showSubmitAlert, setShowSubmitAlert] = useState(false);
+    const [showSuccessAlert, setShowSuccessAlert] = useState(false);
+    const [successMessage, setSuccessMessage] = useState('');
 
     // Load subjects when component mounts
     useEffect(() => {
@@ -186,10 +190,12 @@ const AddStudentProject = () => {
         const fetchModules = async () => {
             if (!formData.subjectId) {
                 setOptions(prev => ({ ...prev, modules: [], units: [] }));
+                setError(null);
                 return;
             }
 
             setLoading(prev => ({ ...prev, modules: true }));
+            setError(null);
             try {
                 const response = await ContentService.getModulesAndUnits(formData.subjectId);
                 if (response.success && response.data?.modules) {
@@ -199,10 +205,12 @@ const AddStudentProject = () => {
                         units: m.units || []
                     }));
                     setOptions(prev => ({ ...prev, modules, units: [] }));
+                } else {
+                    setOptions(prev => ({ ...prev, modules: [], units: [] }));
                 }
             } catch (err) {
                 console.error("Error loading modules:", err);
-                setError("Failed to load modules");
+                setOptions(prev => ({ ...prev, modules: [], units: [] }));
             } finally {
                 setLoading(prev => ({ ...prev, modules: false }));
             }
@@ -264,13 +272,18 @@ const AddStudentProject = () => {
     const handleSubmit = async (e) => {
         e.preventDefault();
         setError(null);
-        const userId = getUserId();
-
 
         if (!formData.projectTitle || !formData.unitId || !formData.projectLink || !formData.content_type_id || !formData.content_level_id) {
             setError("Please fill in all required fields.");
             return;
         }
+
+        setShowSubmitAlert(true);
+    };
+
+    const handleConfirmSubmit = async () => {
+        setShowSubmitAlert(false);
+        const userId = getUserId();
 
         setLoading(prev => ({ ...prev, submitting: true }));
 
@@ -289,8 +302,9 @@ const AddStudentProject = () => {
 
             const response = await StudentProjectService.submitProject(payload);
             if (response.success) {
-                alert("Project submitted successfully!");
-                navigate(-1);
+                setSuccessMessage('Project submitted successfully!');
+                setShowSuccessAlert(true);
+                setTimeout(() => navigate(-1), 1500);
             }
         } catch (err) {
             console.error("Submission error:", err);
@@ -308,7 +322,7 @@ const AddStudentProject = () => {
                         <h3 className="text-xl sm:text-2xl font-bold text-[#2162c1]">Submit Project</h3>
                         <button
                             onClick={() => navigate(-1)}
-                            className="w-10 h-10 rounded-full bg-blue-50 text-blue-600 hover:bg-blue-100 flex items-center justify-center transition-colors shrink-0"
+                            className="w-10 h-10 rounded-full bg-blue-600 text-white hover:bg-blue-700 flex items-center justify-center transition-colors shrink-0"
                         >
                             <X className="w-5 h-5" />
                         </button>
@@ -475,6 +489,34 @@ const AddStudentProject = () => {
                     </form>
                 </div>
             </div>
+
+            {/* Submit Confirmation Alert */}
+            {showSubmitAlert && (
+                <SweetAlert
+                    warning
+                    showCancel
+                    confirmBtnCssClass="btn-confirm"
+                    cancelBtnCssClass="btn-cancel"
+                    title="Confirm Submission"
+                    onConfirm={handleConfirmSubmit}
+                    onCancel={() => setShowSubmitAlert(false)}
+                >
+                    Are you sure you want to submit this project?
+                </SweetAlert>
+            )}
+
+            {/* Success Alert */}
+            {showSuccessAlert && (
+                <SweetAlert
+                    success
+                    title="Success!"
+                    onConfirm={() => setShowSuccessAlert(false)}
+                    confirmBtnText="OK"
+                    confirmBtnCssClass="btn-confirm"
+                >
+                    {successMessage}
+                </SweetAlert>
+            )}
         </div>
     );
 };

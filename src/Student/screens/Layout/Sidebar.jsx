@@ -47,8 +47,16 @@ const StudentSidebar = ({ isOpen, toggle }) => {
 
   // Logout
   const logout = () => {
-    localStorage.clear();
-    navigate("/", { replace: true });
+    try {
+      // Clear localStorage first
+      localStorage.clear();
+      // Use window.location for clean navigation to avoid React Router issues
+      window.location.href = "/";
+    } catch (error) {
+      console.error("Logout error:", error);
+      // Fallback: force page reload to login
+      window.location.href = "/";
+    }
   };
 
   // Active state helper

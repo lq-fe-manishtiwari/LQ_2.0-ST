@@ -13,7 +13,7 @@ import { api } from '../../../../../_services/api';
 
 
 import { contentQuizService } from '../services/contentQuiz.service';
-import BulkUploadAssessmentModal from '../Components/BulkUploadAssessmentModal';
+import BulkUploadQuestionModal from '../Components/BulkUploadQuestionModal';
 
 // Custom Select Component
 const CustomSelect = ({ label, value, onChange, options, placeholder, disabled = false }) => {
@@ -43,8 +43,8 @@ const CustomSelect = ({ label, value, onChange, options, placeholder, disabled =
       <div className="relative">
         <div
           className={`w-full px-3 py-2 border ${disabled
-              ? 'bg-gray-100 text-gray-500 border-gray-200 cursor-not-allowed'
-              : 'bg-white border-gray-300 cursor-pointer hover:border-blue-400'
+            ? 'bg-gray-100 text-gray-500 border-gray-200 cursor-not-allowed'
+            : 'bg-white border-gray-300 cursor-pointer hover:border-blue-400'
             } rounded-lg min-h-[44px] flex items-center justify-between transition-all duration-150`}
           onClick={() => !disabled && setIsOpen(!isOpen)}
         >
@@ -83,7 +83,7 @@ const CustomSelect = ({ label, value, onChange, options, placeholder, disabled =
 
 export default function QuizDashboard() {
   const navigate = useNavigate();
-  
+
   // Get user profile data
   const { getUserId, getCollegeId, getTeacherId, isLoaded: isProfileLoaded, loading: profileLoading } = useUserProfile();
   const [programs, setPrograms] = useState([]);
@@ -95,6 +95,12 @@ export default function QuizDashboard() {
   const [units, setUnits] = useState([]);
   const [quizzes, setQuizzes] = useState([]);
   const [showBulkUpload, setShowBulkUpload] = useState(false);
+
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(0);
+  const [pageSize, setPageSize] = useState(10);
+  const [total_pages, setTotalPages] = useState(0);
+  const [total_elements, setTotalElements] = useState(0);
 
   // Delete Alert States
   const [showAlert, setShowAlert] = useState(false);
@@ -119,14 +125,60 @@ export default function QuizDashboard() {
   const [selectedSemesterId, setSelectedSemesterId] = useState(null);
   const [allAllocations, setAllAllocations] = useState([]);
 
-  // Load quizzes when unit is selected
+  // Fetch quizzes when filters or pagination changes
   useEffect(() => {
-    if (filters.unit) {
-      loadQuizzesByUnit(filters.unit);
-    } else {
-      setQuizzes([]); // Clear quizzes when no unit is selected
-    }
-  }, [filters.unit]);
+    const fetchQuizzes = async () => {
+      // Need module to fetch quizzes
+      if (!filters.module) {
+        setQuizzes([]);
+        setTotalPages(0);
+        setTotalElements(0);
+        return;
+      }
+
+      try {
+        const selectedModule = modules.find(m => m.value === filters.module);
+        if (!selectedModule) return;
+
+        const moduleId = selectedModule.value;
+
+        // Get unit IDs: if specific unit selected, use only that; otherwise use all units
+        let unitIds = [];
+        if (filters.unit) {
+          unitIds = [filters.unit];
+        } else {
+          // Get all unit IDs for this module
+          unitIds = selectedModule.full?.units?.map(u => String(u.unit_id)) || [];
+        }
+
+        if (unitIds.length === 0) {
+          setQuizzes([]);
+          setTotalPages(0);
+          setTotalElements(0);
+          return;
+        }
+
+        const response = await contentQuizService.getQuizzesByModuleAndUnitsForTeacher(
+          moduleId,
+          unitIds,
+          currentPage,
+          pageSize,
+          'DESC'
+        );
+
+        setQuizzes((response.content || []).reverse());  // Reverse to show latest first
+        setTotalPages(response.total_pages || 0);
+        setTotalElements(response.total_elements || 0);
+      } catch (err) {
+        console.error('Error fetching quizzes:', err);
+        setQuizzes([]);
+        setTotalPages(0);
+        setTotalElements(0);
+      }
+    };
+
+    fetchQuizzes();
+  }, [filters.module, filters.unit, currentPage, pageSize, modules]);
 
   // ---------- FETCH PROGRAMS ----------
   useEffect(() => {
@@ -142,28 +194,28 @@ export default function QuizDashboard() {
         console.warn('No teacher ID found. Please ensure you are logged in.');
         return;
       }
-      
+
       try {
         console.log('Fetching programs for teacher ID:', teacherId);
         const response = await api.getTeacherAllocatedPrograms(teacherId);
         console.log('Programs response:', response);
-        
+
         if (response.success && response.data) {
           // Flatten class_teacher_allocation and normal_allocation into single array
           const classTeacherPrograms = response.data.class_teacher_allocation || [];
           const normalPrograms = response.data.normal_allocation || [];
           const allPrograms = [...classTeacherPrograms, ...normalPrograms];
-          
+
           // Group allocations by program_id and merge them
           const programMap = new Map();
-          
+
           // Store all allocation data
           setAllAllocations(allPrograms);
-          
+
           allPrograms.forEach(allocation => {
             const programId = allocation.program_id;
             const programName = allocation.program?.program_name || allocation.program_name || `Program ${programId}`;
-            
+
             if (!programMap.has(programId)) {
               programMap.set(programId, {
                 id: programId,
@@ -172,14 +224,14 @@ export default function QuizDashboard() {
                 allocations: []
               });
             }
-            
+
             programMap.get(programId).allocations.push(allocation);
           });
-          
+
           const uniquePrograms = Array.from(programMap.values());
           setPrograms(uniquePrograms);
           console.log('Formatted programs:', uniquePrograms);
-          
+
           // Auto-select first program
           if (uniquePrograms.length > 0 && !filters.program) {
             setFilters(prev => ({ ...prev, program: uniquePrograms[0].value }));
@@ -213,7 +265,7 @@ export default function QuizDashboard() {
       const semesters = [...new Set(program.allocations.map(a => a.semester?.name).filter(Boolean))];
       const formattedSemesters = semesters.map(sem => ({ label: sem, value: sem }));
       setSemesters(formattedSemesters);
-      
+
       // Auto-select first semester
       if (formattedSemesters.length > 0 && !filters.semester) {
         setFilters(prev => ({ ...prev, semester: formattedSemesters[0].value }));
@@ -245,7 +297,7 @@ export default function QuizDashboard() {
 
           try {
             const response = await contentService.getTeacherSubjectsAllocated(teacherId, semesterAllocation.academic_year_id, semesterAllocation.semester_id);
-            
+
             if (Array.isArray(response)) {
               const subjects = response.map(subjectInfo => ({
                 label: subjectInfo.subject_name || subjectInfo.name,
@@ -254,7 +306,7 @@ export default function QuizDashboard() {
 
               const unique = Array.from(new Map(subjects.map(s => [s.label, s])).values());
               setPapers(unique);
-              
+
               // Auto-select first paper
               if (unique.length > 0 && !filters.paper) {
                 setFilters(prev => ({ ...prev, paper: unique[0].value }));
@@ -293,11 +345,11 @@ export default function QuizDashboard() {
             full: { units: mod.units || [] }
           }));
           setModules(formatted);
-          
+
           // Reset units and unit filter first
           setUnits([]);
           setFilters(prev => ({ ...prev, module: "", unit: "" }));
-          
+
           // Auto-select first module if only one available
           if (formatted.length === 1) {
             setFilters(prev => ({ ...prev, module: formatted[0].value }));
@@ -331,32 +383,21 @@ export default function QuizDashboard() {
     })) || [];
 
     setUnits(formattedUnits);
-    
-    // Auto-select first unit if only one available
-    if (formattedUnits.length === 1) {
-      setFilters(prev => ({ ...prev, unit: formattedUnits[0].value }));
-    } else {
-      setFilters(prev => ({ ...prev, unit: "" }));
-    }
+
+    // Don't auto-select unit - make it optional
+    setFilters(prev => ({ ...prev, unit: "" }));
   }, [filters.module, modules]);
 
 
-  const loadQuizzesByUnit = async (unitId) => {
-    try {
-      console.log('Loading quizzes for unit ID:', unitId);
-      const res = await contentQuizService.getQuizzesByUnitIdForTeacher(unitId);
-      console.log('Quizzes response:', res);
-      setQuizzes(res || []);
-    } catch (err) {
-      console.error("Error loading quizzes for unit:", err);
-      setQuizzes([]);
-    }
-  };
+  // Reset to first page when module or unit filter changes
+  useEffect(() => {
+    setCurrentPage(0);
+  }, [filters.module, filters.unit]);
 
-  const getFilteredQuizzes = () => {
-    // Since we're now loading quizzes based on unit selection,
-    // we don't need to filter them again
-    return quizzes;
+  const handlePageChange = (newPage) => {
+    if (newPage >= 0 && newPage < total_pages) {
+      setCurrentPage(newPage);
+    }
   };
 
   const handleDeleteQuiz = (quizId) => {
@@ -368,13 +409,22 @@ export default function QuizDashboard() {
     setShowAlert(false);
     try {
       await contentQuizService.softDeleteQuiz(quizToDelete);
-      
+
       // If no error thrown, deletion was successful
       setAlertMessage('Quiz deleted successfully!');
       setShowDeleteSuccessAlert(true);
-      // Reload quizzes for current unit if one is selected
-      if (filters.unit) {
-        loadQuizzesByUnit(filters.unit);
+
+      // Refresh current page
+      if (filters.module) {
+        const selectedModule = modules.find(m => m.value === filters.module);
+        const unitIds = filters.unit ? [filters.unit] : selectedModule?.full?.units?.map(u => String(u.unit_id)) || [];
+        const response = await contentQuizService.getQuizzesByModuleAndUnitsForTeacher(
+          filters.module,
+          unitIds,
+          currentPage,
+          pageSize
+        );
+        setQuizzes(response.content || []);
       }
       setQuizToDelete(null);
     } catch (err) {
@@ -411,7 +461,7 @@ export default function QuizDashboard() {
 
         <div className="flex gap-2 w-full sm:w-auto">
           <button
-            onClick={() => navigate('/teacher/content/add-content/quiz/add')}
+            onClick={() => navigate('/teacher/content/add-content/quiz/add', { state: { filters } })}
             className="flex items-center gap-2 bg-blue-600 text-white font-medium px-4 py-3 rounded-md shadow-md transition-all hover:shadow-lg flex-1 sm:flex-none justify-center"
           >
             <Plus className="w-4 h-4" />
@@ -462,11 +512,11 @@ export default function QuizDashboard() {
             />
 
             <CustomSelect
-              label="Unit"
+              label="Unit (Topic)"
               value={filters.unit}
               onChange={(e) => setFilters(prev => ({ ...prev, unit: e.target.value }))}
               options={units}
-              placeholder="Select Unit"
+              placeholder="Select Unit (Optional)"
               disabled={!filters.module}
             />
           </div>
@@ -476,15 +526,36 @@ export default function QuizDashboard() {
       <div className="bg-white/90 backdrop-blur-sm rounded-xl sm:rounded-2xl shadow-xl p-4 sm:p-6 lg:p-8 border border-indigo-100">
 
         <div>
-          <h3 className="text-xl sm:text-2xl font-bold text-blue-600 mb-6 sm:mb-8">
-            {filters.unit ? 'Filtered Quizzes' : 'All Quizzes'}
-          </h3>
+          <div className="flex justify-between items-center mb-6">
+            <h3 className="text-xl sm:text-2xl font-bold text-blue-600">
+              {filters.module ? (filters.unit ? 'Filtered Quizzes' : 'Module Quizzes') : 'All Quizzes'}
+            </h3>
+            {total_elements > 0 && (
+              <div className="flex items-center gap-4">
+                <span className="text-sm text-gray-600">
+                  Showing {quizzes.length} of {total_elements} quizzes
+                </span>
+                <select
+                  value={pageSize}
+                  onChange={(e) => {
+                    setPageSize(Number(e.target.value));
+                    setCurrentPage(0);
+                  }}
+                  className="px-3 py-1 border border-gray-300 rounded-md text-sm"
+                >
+                  <option value={5}>5 per page</option>
+                  <option value={10}>10 per page</option>
+                  <option value={20}>20 per page</option>
+                  <option value={50}>50 per page</option>
+                </select>
+              </div>
+            )}
+          </div>
 
           {(() => {
-            const filteredQuizzes = getFilteredQuizzes();
-            return filteredQuizzes.length > 0 ? (
+            return quizzes.length > 0 ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6">
-                {filteredQuizzes.map((quiz) => (
+                {quizzes.map((quiz) => (
                   <div
                     key={quiz.quiz_id}
                     className="group p-4 sm:p-6 bg-gradient-to-br from-white to-indigo-50/50 border border-indigo-100 rounded-xl sm:rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 hover:border-indigo-200"
@@ -507,12 +578,11 @@ export default function QuizDashboard() {
                     </div>
 
 
-                     <p className={`text-xs mb-4 px-3 py-1 rounded-full inline-block font-medium ${
-                       quiz.approval_status 
-                         ? 'text-green-700 bg-green-50' 
-                         : 'text-red-700 bg-red-50'
-                     }`}>
-                     Status: {quiz.approval_status ? 'Approved' : 'Pending'}
+                    <p className={`text-xs mb-4 px-3 py-1 rounded-full inline-block font-medium ${quiz.approval_status
+                      ? 'text-green-700 bg-green-50'
+                      : 'text-red-700 bg-red-50'
+                      }`}>
+                      Status: {quiz.approval_status ? 'Approved' : 'Pending'}
                     </p>
 
                     {/* Active Badge */}
@@ -552,18 +622,87 @@ export default function QuizDashboard() {
               <div className="text-center py-12">
                 <div className="text-6xl mb-4">📚</div>
                 <p className="text-gray-500 text-lg">
-                  {filters.unit ? 'No quizzes found for selected filters.' : 'No quizzes available.'}
+                  {filters.module ? 'No quizzes found for selected filters.' : 'Please select a module to view quizzes.'}
                 </p>
               </div>
             );
           })()
           }
+
+          {/* Pagination Controls */}
+          {total_elements > 0 && (
+            <div className="mt-6 flex items-center justify-between border-t pt-4">
+              <div className="text-sm text-gray-600">
+                Page {currentPage + 1} of {total_pages}
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => handlePageChange(0)}
+                  disabled={currentPage === 0}
+                  className="px-3 py-1 border border-gray-300 rounded-md text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                >
+                  First
+                </button>
+                <button
+                  onClick={() => handlePageChange(currentPage - 1)}
+                  disabled={currentPage === 0}
+                  className="px-3 py-1 border border-gray-300 rounded-md text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                >
+                  Previous
+                </button>
+
+                {/* Page numbers */}
+                <div className="flex gap-1">
+                  {Array.from({ length: Math.min(5, total_pages) }, (_, i) => {
+                    let pageNum;
+                    if (total_pages <= 5) {
+                      pageNum = i;
+                    } else if (currentPage < 3) {
+                      pageNum = i;
+                    } else if (currentPage > total_pages - 3) {
+                      pageNum = total_pages - 5 + i;
+                    } else {
+                      pageNum = currentPage - 2 + i;
+                    }
+
+                    return (
+                      <button
+                        key={pageNum}
+                        onClick={() => handlePageChange(pageNum)}
+                        className={`px-3 py-1 border rounded-md text-sm ${currentPage === pageNum
+                          ? 'bg-blue-600 text-white border-blue-600'
+                          : 'border-gray-300 hover:bg-gray-50'
+                          }`}
+                      >
+                        {pageNum + 1}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                <button
+                  onClick={() => handlePageChange(currentPage + 1)}
+                  disabled={currentPage >= total_pages - 1}
+                  className="px-3 py-1 border border-gray-300 rounded-md text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                >
+                  Next
+                </button>
+                <button
+                  onClick={() => handlePageChange(total_pages - 1)}
+                  disabled={currentPage >= total_pages - 1}
+                  className="px-3 py-1 border border-gray-300 rounded-md text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                >
+                  Last
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
       {/* Bulk Upload Modal */}
       {showBulkUpload && (
-        <BulkUploadAssessmentModal onClose={() => setShowBulkUpload(false)} />
+        <BulkUploadQuestionModal onClose={() => setShowBulkUpload(false)} />
       )}
 
       {/* Delete Confirmation Alert */}
@@ -588,7 +727,7 @@ export default function QuizDashboard() {
         <SweetAlert
           success
           title="Deleted!"
-           confirmBtnCssClass="btn-confirm"
+          confirmBtnCssClass="btn-confirm"
           onConfirm={() => setShowDeleteSuccessAlert(false)}
         >
           {alertMessage}

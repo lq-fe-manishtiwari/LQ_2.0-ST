@@ -12,8 +12,12 @@ export const contentService = {
     getSubjectbyProgramId,
     createQuestion,
     getAllQuestions,
+    getAllQuestionsPaginated,
     getQuestionById,
     getQuestionsByUnitId,
+    getQuestionsByUnitIdPaginated,
+    getQuestionsByModuleAndUnits,
+    getQuestionsByModuleAndUnitsPaginated,
     updateQuestion,
     deleteQuestion,
     hardDeleteQuestion,
@@ -53,18 +57,29 @@ function createQuestion(request) {
     return fetch(`${ContentAPI}/questions`, requestOptions).then(handleResponse);
 }
 
-// GET /api/questions
-function getAllQuestions() {
+// GET /api/questions (always paginated)
+function getAllQuestions(page = 0, size = 10, sortDirection = 'DESC') {
+    const params = new URLSearchParams();
+    params.append('page', page);
+    params.append('size', size);
+    if (sortDirection) params.append('sortDirection', sortDirection);
+
     const requestOptions = {
         method: 'GET',
         headers: authHeader()
     };
 
-    return fetch(`${ContentAPI}/questions`, requestOptions)
+    return fetch(`${ContentAPI}/questions?${params.toString()}`, requestOptions)
         .then(handleResponse)
         .then(data => {
+            // Return the full PagedResponse
             return data;
         });
+}
+
+// Alias for clarity
+function getAllQuestionsPaginated(page = 0, size = 10, sortDirection = 'DESC') {
+    return getAllQuestions(page, size, sortDirection);
 }
 
 // GET /api/questions/{questionId}
@@ -76,13 +91,50 @@ function getQuestionById(questionId) {
     return fetch(`${ContentAPI}/questions/${questionId}`, requestOptions).then(handleResponse);
 }
 
-// GET /api/questions/unit/{unitId}
-function getQuestionsByUnitId(unitId) {
+// GET /api/questions/teacher/unit/{unitId} (always paginated)
+function getQuestionsByUnitId(unitId, page = 0, size = 10, sortDirection = 'DESC') {
+    const params = new URLSearchParams();
+    params.append('page', page);
+    params.append('size', size);
+    if (sortDirection) params.append('sortDirection', sortDirection);
+
     const requestOptions = {
         method: 'GET',
         headers: authHeader()
     };
-    return fetch(`${ContentAPI}/questions/teacher/unit/${unitId}`, requestOptions).then(handleResponse);
+
+    return fetch(`${ContentAPI}/questions/teacher/unit/${unitId}?${params.toString()}`, requestOptions)
+        .then(handleResponse);
+}
+
+// Alias for clarity
+function getQuestionsByUnitIdPaginated(unitId, page = 0, size = 10, sortDirection = 'DESC') {
+    return getQuestionsByUnitId(unitId, page, size, sortDirection);
+}
+
+// GET /api/questions/teacher/module/{moduleId}/units (always paginated)
+function getQuestionsByModuleAndUnits(moduleId, unitIds = [], page = 0, size = 10, sortDirection = 'DESC') {
+    const params = new URLSearchParams();
+
+    // Add unitIds as multiple parameters
+    unitIds.forEach(id => params.append('unitIds', id));
+
+    params.append('page', page);
+    params.append('size', size);
+    if (sortDirection) params.append('sortDirection', sortDirection);
+
+    const requestOptions = {
+        method: 'GET',
+        headers: authHeader()
+    };
+
+    return fetch(`${ContentAPI}/questions/teacher/module/${moduleId}/units?${params.toString()}`, requestOptions)
+        .then(handleResponse);
+}
+
+// Alias for clarity
+function getQuestionsByModuleAndUnitsPaginated(moduleId, unitIds = [], page = 0, size = 10, sortDirection = 'DESC') {
+    return getQuestionsByModuleAndUnits(moduleId, unitIds, page, size, sortDirection);
 }
 
 // PUT /api/questions/{questionId}
@@ -213,7 +265,7 @@ function getModulesbySubject(subjectId) {
         headers: authHeader()
     };
 
-    return fetch(`${AcademicAPI}/admin/academic/api/subjects/${subjectId}/modules-units`, requestOptions)
+    return fetch(`${AcademicAPI}/admin/academic/api/subjects/${subjectId}/modules-units/can-view`, requestOptions)
         .then(handleResponse)
         .then(data => {
             return data;
@@ -243,7 +295,7 @@ function getModulesAndUnits(subjectId) {
     };
 
     return fetch(
-        `${AcademicAPI}/api/subjects/${subjectId}/modules-units`,
+        `${AcademicAPI}/api/subjects/${subjectId}/modules-units/can-view`,
         requestOptions
     ).then(handleResponse);
 }

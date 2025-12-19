@@ -17,6 +17,7 @@ const ObjectiveQuestion = ({
   isEdit = false,
   question_id,
   questionData,
+  questionFilters,
   onSaveSuccess
 }) => {
   const [openDropdown, setOpenDropdown] = useState(null);
@@ -25,7 +26,7 @@ const ObjectiveQuestion = ({
   const dropdownRefs = useRef({});
 
   // Get user profile data
-  const { getUserId, getCollegeId,getTeacherId , isLoaded: isProfileLoaded, loading: profileLoading } = useUserProfile();
+  const { getUserId, getCollegeId, getTeacherId, isLoaded: isProfileLoaded, loading: profileLoading } = useUserProfile();
 
   // Data
   const [programOptions, setProgramOptions] = useState([]);
@@ -39,6 +40,7 @@ const ObjectiveQuestion = ({
   const [selectedProgramId, setSelectedProgramId] = useState(null);
   const [selectedSubjectId, setSelectedSubjectId] = useState(null);
   const [selectedUnitId, setSelectedUnitId] = useState(null);
+  const [selectedModuleId, setSelectedModuleId] = useState(null);
   const [selectedAcademicSemester, setSelectedAcademicSemester] = useState(null);
   const [selectedAcademicYearId, setSelectedAcademicYearId] = useState(null);
   const [selectedSemesterId, setSelectedSemesterId] = useState(null);
@@ -49,15 +51,24 @@ const ObjectiveQuestion = ({
   const [saving, setSaving] = useState(false);
 
 
-  // Effect to initialize state in edit mode
+  // Effect to initialize state in edit mode OR from filters
   useEffect(() => {
     if (isEdit && questionData) {
-      // Set unit ID from question data to enable save button
+      // Set unit ID and module ID from question data to enable save button
       if (questionData.unit_id) {
         setSelectedUnitId(questionData.unit_id);
       }
+      if (questionData.module_id) {
+        setSelectedModuleId(questionData.module_id);
+      }
     }
-  }, [isEdit, questionData]);
+
+    // If filters are passed (from Questions list), use them to set IDs
+    if (questionFilters && !isEdit) {
+      // These will be set by the useEffect hooks below when options are loaded
+      console.log('Question filters received:', questionFilters);
+    }
+  }, [isEdit, questionData, questionFilters]);
 
   // Effects to set selected IDs when options and formData are ready
   useEffect(() => {
@@ -73,7 +84,7 @@ const ObjectiveQuestion = ({
       if (program?.allocations) {
         // Create academic year-semester combinations
         const academicSemesterMap = new Map();
-        
+
         program.allocations.forEach(allocation => {
           if (allocation.academic_year && allocation.semester) {
             const displayId = `${allocation.academic_year_id}-${allocation.semester_id}`;
@@ -87,10 +98,10 @@ const ObjectiveQuestion = ({
             }
           }
         });
-        
+
         const academicSemesters = Array.from(academicSemesterMap.values());
         setAcademicSemesterOptions(academicSemesters);
-        
+
         // Auto-select academic year-semester if available in edit mode
         if (formData.semester && !selectedAcademicSemester) {
           const matchingOption = academicSemesters.find(as =>
@@ -105,7 +116,7 @@ const ObjectiveQuestion = ({
       }
     }
   }, [isEdit, formData.program, formData.semester, programOptions, selectedProgramId, selectedAcademicSemester]);
-  
+
   useEffect(() => {
     if (isEdit && formData.subject && subjectOptions.length > 0 && !selectedSubjectId) {
       const subject = subjectOptions.find(s => s.name === formData.subject);
@@ -128,11 +139,11 @@ const ObjectiveQuestion = ({
     if (fieldName === 'program') {
       const program = programOptions.find(p => p.name === value);
       setSelectedProgramId(program?.id || null);
-      
+
       // Get academic year-semester combinations from all allocations for this program
       if (program?.allocations) {
         const academicSemesterMap = new Map();
-        
+
         program.allocations.forEach(allocation => {
           if (allocation.academic_year && allocation.semester) {
             const displayId = `${allocation.academic_year_id}-${allocation.semester_id}`;
@@ -146,11 +157,11 @@ const ObjectiveQuestion = ({
             }
           }
         });
-        
+
         const academicSemesters = Array.from(academicSemesterMap.values());
         setAcademicSemesterOptions(academicSemesters);
       }
-      
+
       resetFields(['academicSemester', 'subject', 'chapter', 'topic']);
       setSelectedSubjectId(null);
       setSelectedUnitId(null);
@@ -165,7 +176,7 @@ const ObjectiveQuestion = ({
         setSelectedSemesterId(academicSemester.semesterId);
         setSelectedAcademicYearId(academicSemester.academicYearId);
       }
-      
+
       resetFields(['subject', 'chapter', 'topic']);
       setSelectedSubjectId(null);
       setSelectedUnitId(null);
@@ -180,6 +191,7 @@ const ObjectiveQuestion = ({
       const module = chapterOptions.find(m => m.module_name === value);
       const units = module?.units || [];
       setTopicOptions(units);
+      setSelectedModuleId(module?.module_id || null);
       setSelectedUnitId(null);
       handleChange({ target: { name: 'topic', value: '' } });
     }
@@ -223,25 +235,25 @@ const ObjectiveQuestion = ({
         console.warn('No teacher ID found. Please ensure you are logged in.');
         return;
       }
-      
+
       try {
         console.log('Fetching programs for teacher ID:', teacherId);
         const response = await api.getTeacherAllocatedPrograms(teacherId);
         console.log('Programs response:', response);
-        
+
         if (response.success && response.data) {
           // Flatten class_teacher_allocation and normal_allocation into single array
           const classTeacherPrograms = response.data.class_teacher_allocation || [];
           const normalPrograms = response.data.normal_allocation || [];
           const allPrograms = [...classTeacherPrograms, ...normalPrograms];
-          
+
           // Group allocations by program_id and merge them
           const programMap = new Map();
-          
+
           allPrograms.forEach(allocation => {
             const programId = allocation.program_id;
             const programName = allocation.program?.program_name || allocation.program_name || `Program ${programId}`;
-            
+
             if (!programMap.has(programId)) {
               programMap.set(programId, {
                 id: programId,
@@ -249,12 +261,12 @@ const ObjectiveQuestion = ({
                 allocations: []
               });
             }
-            
+
             programMap.get(programId).allocations.push(allocation);
           });
-          
+
           const uniquePrograms = Array.from(programMap.values());
-          
+
           setProgramOptions(uniquePrograms);
           console.log('Formatted programs:', uniquePrograms);
         } else {
@@ -269,31 +281,31 @@ const ObjectiveQuestion = ({
     fetchPrograms();
   }, [isProfileLoaded, profileLoading, getTeacherId]);
 
-    // Fetch Question Levels
-    useEffect(() => {
-        const fetchQuestionLevels = async () => {
-            try {
-                console.log('Fetching question levels...');
-                const levels = await contentService.getAllQuestionLevel();
-                console.log('Question levels response:', levels);
-                
-                if (Array.isArray(levels)) {
-                    setQuestionLevelOptions(levels);
-                    console.log('Question levels set:', levels);
-                } else {
-                    console.error('Question levels response is not an array:', levels);
-                    setQuestionLevelOptions([]);
-                }
-            } catch (error) {
-                console.error("Failed to fetch question levels:", error);
-                setQuestionLevelOptions([]);
-            }
-        };
-        fetchQuestionLevels();
-    }, []);
+  // Fetch Question Levels
+  useEffect(() => {
+    const fetchQuestionLevels = async () => {
+      try {
+        console.log('Fetching question levels...');
+        const levels = await contentService.getAllQuestionLevel();
+        console.log('Question levels response:', levels);
+
+        if (Array.isArray(levels)) {
+          setQuestionLevelOptions(levels);
+          console.log('Question levels set:', levels);
+        } else {
+          console.error('Question levels response is not an array:', levels);
+          setQuestionLevelOptions([]);
+        }
+      } catch (error) {
+        console.error("Failed to fetch question levels:", error);
+        setQuestionLevelOptions([]);
+      }
+    };
+    fetchQuestionLevels();
+  }, []);
 
 
- useEffect(() => {
+  useEffect(() => {
     const fetchSubjects = async () => {
       if (!selectedAcademicYearId || !selectedSemesterId) {
         setSubjectOptions([]);
@@ -358,7 +370,7 @@ const ObjectiveQuestion = ({
         console.log('Fetching modules for subject ID:', selectedSubjectId);
         const response = await contentService.getModulesbySubject(selectedSubjectId);
         console.log('Modules response:', response);
-        
+
         const modules = response?.modules || response || [];
 
         if (Array.isArray(modules)) {
@@ -385,21 +397,54 @@ const ObjectiveQuestion = ({
   }, [selectedSubjectId]);
 
   // Show SweetAlert
-  const showSweetAlert = (title, text, type = 'success', confirmText = 'OK') => {
+  const showSweetAlert = (title, text, type = 'success', confirmText = 'OK', showCancel = false, onCancelCallback = null) => {
     setAlertConfig({
       title,
       text,
       type,
       confirmBtnText: confirmText,
-      onConfirm: () => setShowAlert(false)
+      cancelBtnText: 'No',
+      showCancel,
+      onConfirm: () => {
+        if (type === 'success' && showCancel) {
+          // "Yes" clicked for adding more
+          setShowAlert(false);
+          // Reset only question fields, keep filters
+          handleChange({ target: { name: 'question', value: '' } });
+          handleChange({ target: { name: 'option1', value: '' } });
+          handleChange({ target: { name: 'option2', value: '' } });
+          handleChange({ target: { name: 'option3', value: '' } });
+          handleChange({ target: { name: 'option4', value: '' } });
+          handleChange({ target: { name: 'option5', value: '' } });
+          handleChange({ target: { name: 'answer', value: '' } });
+          // Keep: Program, Academic Year-Semester, Subject, Chapter, Topic, Level, NoOfOptions, DefaultMarks
+        } else {
+          // Normal success or error
+          setShowAlert(false);
+          if (type === 'success') {
+            setTimeout(() => {
+              onSaveSuccess?.();
+            }, 100);
+          }
+        }
+      },
+      onCancel: () => {
+        setShowAlert(false);
+        if (onCancelCallback) onCancelCallback();
+
+        // If "No" clicked for adding more, go back
+        if (type === 'success' && showCancel) {
+          onSaveSuccess?.();
+        }
+      }
     });
     setShowAlert(true);
   };
 
   // Save / Update Question
   const handleSave = async () => {
-    if (!selectedUnitId) {
-      showSweetAlert('Warning', 'Please select a Topic (Unit)', 'warning');
+    if (!selectedModuleId) {
+      showSweetAlert('Warning', 'Please select a Module', 'warning');
       return;
     }
     const userId = getUserId();
@@ -407,39 +452,37 @@ const ObjectiveQuestion = ({
 
     setSaving(true);
     try {
-        const level = questionLevelOptions.find(l => l.question_level_type === formData.questionLevel);
-        const payload = {
-            question: formData.question?.trim(),
-            answer: formData.answer?.replace('Option ', ''), // "Option 1" → "1"
-            option1: formData.option1 || null,
-            option2: formData.option2 || null,
-            option3: formData.option3 || null,
-            option4: formData.option4 || null,
-            option5: formData.option5 || null,
-            option6: null,
-            option_count: parseInt(formData.noOfOptions) || 4,
-            unit_id: selectedUnitId,
-            question_level_id: level ? level.question_level_id : null,
-            questionImages: [], // Add later
-            default_weightage: parseFloat(formData.defaultMarks) || 1.0,
-            admin: false,
-            user_id: userId,
+      const level = questionLevelOptions.find(l => l.question_level_type === formData.questionLevel);
+      const payload = {
+        question: formData.question?.trim(),
+        answer: formData.answer?.replace('Option ', ''), // "Option 1" → "1"
+        option1: formData.option1 || null,
+        option2: formData.option2 || null,
+        option3: formData.option3 || null,
+        option4: formData.option4 || null,
+        option5: formData.option5 || null,
+        option6: null,
+        option_count: parseInt(formData.noOfOptions) || 4,
+        unit_id: selectedUnitId || null,
+        module_id: selectedModuleId,
+        question_level_id: level ? level.question_level_id : null,
+        questionImages: [], // Add later
+        default_weightage: parseFloat(formData.defaultMarks) || 1.0,
+        admin: false,
+        user_id: userId,
       };
 
       console.log('Saving Question Payload:', payload);
 
       if (isEdit && question_id) {
         await contentService.updateQuestion(question_id, payload);
+        // On Edit, just success and back
         showSweetAlert('Success', 'Question updated successfully!');
       } else {
         await contentService.createQuestion(payload);
-        showSweetAlert('Success', 'Question created successfully!');
+        // Ask to add more
+        showSweetAlert('Success', 'Question created successfully! Do you want to add another question?', 'success', 'Yes', true);
       }
-
-      // Call onSaveSuccess after a delay to allow SweetAlert to show
-      setTimeout(() => {
-        onSaveSuccess?.();
-      }, 2000);
     } catch (err) {
       console.error('Save failed:', err);
       showSweetAlert('Error', err.response?.data?.message || "Failed to save question", 'error');
@@ -450,7 +493,7 @@ const ObjectiveQuestion = ({
 
   // Custom Dropdown
   const CustomDropdown = ({ fieldName, label, value, options, placeholder, required = false, loading = false, disabled = false }) => {
-    
+
     return (
       <div ref={el => dropdownRefs.current[fieldName] = el} className="relative">
         <label className="block font-medium mb-1 text-gray-700 text-sm">
@@ -533,7 +576,7 @@ const ObjectiveQuestion = ({
       {/* Chapter → Topic → Question Type */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
         <CustomDropdown fieldName="chapter" label="Module" value={formData.chapter} options={chapterOptions.map(m => m.module_name)} placeholder="Select Module" required loading={loadingModules} disabled={!formData.subject} />
-        <CustomDropdown fieldName="topic" label="Unit" value={formData.topic} options={topicOptions.map(u => u.unit_name)} placeholder="Select Unit" required disabled={!formData.chapter} />
+        <CustomDropdown fieldName="topic" label="Unit (Topic)" value={formData.topic} options={topicOptions.map(u => u.unit_name)} placeholder="Select Unit (Optional)" disabled={!formData.chapter} />
         <CustomDropdown fieldName="questionLevel" label="Level" value={formData.questionLevel} options={questionLevelOptions.map(l => l.question_level_type || l.name)} placeholder="Select Level" required />
       </div>
 
@@ -597,10 +640,10 @@ const ObjectiveQuestion = ({
       <div className="flex justify-center">
         <button
           onClick={handleSave}
-          disabled={saving || !selectedUnitId}
+          disabled={saving || !selectedModuleId}
           className={`px-10 py-4 rounded-lg font-semibold text-white transition-all text-lg
-            ${saving || !selectedUnitId 
-              ? 'bg-gray-400 cursor-not-allowed' 
+            ${saving || !selectedModuleId
+              ? 'bg-gray-400 cursor-not-allowed'
               : 'bg-blue-600 hover:bg-blue-700 shadow-lg'
             }`}
         >
@@ -615,8 +658,12 @@ const ObjectiveQuestion = ({
           onConfirm={alertConfig.onConfirm}
           type={alertConfig.type}
           confirmBtnText={alertConfig.confirmBtnText}
+          cancelBtnText={alertConfig.cancelBtnText}
+          showCancel={alertConfig.showCancel}
+          onCancel={alertConfig.onCancel}
           confirmBtnCssClass="btn-confirm"
-          showCancel={false}
+          showLoaderOnConfirm={true}
+          closeOnConfirm={false}
         >
           {alertConfig.text}
         </SweetAlert>

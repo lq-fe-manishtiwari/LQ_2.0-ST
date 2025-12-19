@@ -1,6 +1,6 @@
 'use client';
 import React, { useState, useRef, useEffect } from 'react';
-import BulkUploadAssessmentModal from '../Components/BulkUploadAssessmentModal';
+import BulkUploadQuestionModal from '../Components/BulkUploadQuestionModal';
 import { Plus, Filter, ChevronDown, X, Upload, Edit, Trash2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { collegeService } from '../services/college.service';
@@ -13,7 +13,7 @@ import { api } from '../../../../../_services/api';
 
 const Questions = () => {
   const navigate = useNavigate();
-  
+
   // Get user profile data
   const { getUserId, getCollegeId, getTeacherId, isLoaded: isProfileLoaded, loading: profileLoading } = useUserProfile();
 
@@ -28,15 +28,15 @@ const Questions = () => {
   });
 
   const [showBulkUpload, setShowBulkUpload] = useState(false);
-  const [loading, setLoading] = useState({ 
-    chapters: false, 
-    topics: false, 
+  const [loading, setLoading] = useState({
+    chapters: false,
+    topics: false,
     questions: false,
-    delete: false 
+    delete: false
   });
   const [questions, setQuestions] = useState([]);
   const [deletingId, setDeletingId] = useState(null);
-  
+
   // SweetAlert states
   const [showAlert, setShowAlert] = useState(false);
   const [alertConfig, setAlertConfig] = useState({});
@@ -55,6 +55,12 @@ const Questions = () => {
   const [selectedAcademicYearId, setSelectedAcademicYearId] = useState(null);
   const [selectedSemesterId, setSelectedSemesterId] = useState(null);
   const [allAllocations, setAllAllocations] = useState([]);
+
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(0);
+  const [pageSize, setPageSize] = useState(10);
+  const [totalPages, setTotalPages] = useState(0);
+  const [totalElements, setTotalElements] = useState(0);
 
   // SweetAlert function
   const showSweetAlert = (title, text, type = 'success', confirmText = 'OK', onConfirm = null) => {
@@ -76,45 +82,81 @@ const Questions = () => {
 
 
 
-  // Fetch questions when any filter is selected
+  // Fetch questions based on filters with pagination
   useEffect(() => {
     const fetchQuestions = async () => {
-      // Show questions if at least program is selected
-      if (!filters.program.length) {
+      // Only fetch if module is selected
+      if (!selectedChapter?.module_id) {
         setQuestions([]);
+        setTotalPages(0);
+        setTotalElements(0);
         return;
       }
 
-      // If topic is selected, fetch by unit_id
-      if (filters.topic) {
-        const selectedTopic = topicOptions.find(t => t.unit_name === filters.topic);
-        if (selectedTopic?.unit_id) {
-          setLoading(prev => ({ ...prev, questions: true }));
-          try {
-            const response = await contentService.getQuestionsByUnitId(selectedTopic.unit_id);
-            setQuestions(Array.isArray(response) ? response : []);
-          } catch (error) {
-            console.error('Failed to fetch questions:', error);
-            setQuestions([]);
-          } finally {
-            setLoading(prev => ({ ...prev, questions: false }));
-          }
+      setLoading(prev => ({ ...prev, questions: true }));
+      try {
+        // Get unit IDs - if specific unit selected, use only that, else use all
+        const unitIds = filters.topic
+          ? [topicOptions.find(t => t.unit_name === filters.topic)?.unit_id].filter(Boolean)
+          : topicOptions.map(u => u.unit_id).filter(Boolean);
+
+        console.log('Fetching questions for module:', selectedChapter.module_id, 'with units:', unitIds, 'page:', currentPage);
+
+        // Fetch questions by module and units with pagination
+        const response = await contentService.getQuestionsByModuleAndUnits(
+          selectedChapter.module_id,
+          unitIds,
+          currentPage,
+          pageSize
+        );
+
+        console.log('Questions API Response:', response);
+
+        // Handle paginated response structure
+        if (response && response.content && Array.isArray(response.content)) {
+          setQuestions(response.content);
+          setTotalPages(response.total_pages || 0);
+          setTotalElements(response.total_elements || 0);
+          console.log(`Loaded ${response.content.length} questions (Page ${response.page + 1}/${response.total_pages}, Total: ${response.total_elements})`);
+        } else if (Array.isArray(response)) {
+          // Fallback for non-paginated response
+          setQuestions(response);
+          setTotalPages(1);
+          setTotalElements(response.length);
+        } else {
+          setQuestions([]);
+          setTotalPages(0);
+          setTotalElements(0);
         }
-        return;
-      }
-
-      // If subject is selected but no topic, show placeholder or fetch all questions for subject
-      if (selectedSubjectId && !filters.topic) {
-        // You can implement fetching all questions for a subject here if needed
+      } catch (error) {
+        console.error('Failed to fetch questions:', error);
         setQuestions([]);
-        return;
+        setTotalPages(0);
+        setTotalElements(0);
+      } finally {
+        setLoading(prev => ({ ...prev, questions: false }));
       }
-
-      setQuestions([]);
     };
 
     fetchQuestions();
-  }, [filters.topic, filters.program, selectedSubjectId, topicOptions]);
+  }, [selectedChapter?.module_id, filters.topic, topicOptions, currentPage, pageSize]);
+
+  // Reset to page 0 when filters change
+  useEffect(() => {
+    setCurrentPage(0);
+  }, [selectedChapter?.module_id, filters.topic]);
+
+  // Pagination handlers
+  const handlePageChange = (newPage) => {
+    if (newPage >= 0 && newPage < totalPages) {
+      setCurrentPage(newPage);
+    }
+  };
+
+  const handlePageSizeChange = (newSize) => {
+    setPageSize(newSize);
+    setCurrentPage(0); // Reset to first page when page size changes
+  };
 
   // Filter questions based on selected filters
   const getFilteredQuestions = () => {
@@ -127,11 +169,11 @@ const Questions = () => {
     const program = programOptions.find(p => p.name === value);
     if (program) {
       setSelectedProgramId(program.id);
-      
+
       // Get semesters from all allocations for this program
       const semesters = [...new Set(program.allocations.map(a => a.semester?.name).filter(Boolean))];
       setSemesterOptions(semesters);
-      
+
       setFilters(prev => ({
         ...prev,
         program: [value],
@@ -305,29 +347,29 @@ const Questions = () => {
         console.warn('No teacher ID found. Please ensure you are logged in.');
         return;
       }
-      
+
       try {
         console.log('Fetching programs for teacher ID:', teacherId);
         const response = await api.getTeacherAllocatedPrograms(teacherId);
         console.log('Programs response:', response);
-        
+
         if (response.success && response.data) {
           // Flatten class_teacher_allocation and normal_allocation into single array
           const classTeacherPrograms = response.data.class_teacher_allocation || [];
           const normalPrograms = response.data.normal_allocation || [];
           const allPrograms = [...classTeacherPrograms, ...normalPrograms];
-          
+
           // Store all allocation data
           setAllAllocations(allPrograms);
-          console.log("allPrograms",allPrograms)
-          
+          console.log("allPrograms", allPrograms)
+
           // Group allocations by program_id and merge them
           const programMap = new Map();
-          
+
           allPrograms.forEach(allocation => {
             const programId = allocation.program_id;
             const programName = allocation.program?.program_name || allocation.program_name || `Program ${programId}`;
-            
+
             if (!programMap.has(programId)) {
               programMap.set(programId, {
                 id: programId,
@@ -335,22 +377,22 @@ const Questions = () => {
                 allocations: []
               });
             }
-            
+
             programMap.get(programId).allocations.push(allocation);
           });
-          
+
           const uniquePrograms = Array.from(programMap.values());
-          
+
           setProgramOptions(uniquePrograms);
           console.log('Formatted programs:', uniquePrograms);
-          
+
           // Auto-select first available program and cascade selections
           if (uniquePrograms.length > 0 && filters.program.length === 0) {
             const firstProgram = uniquePrograms[0];
             setSelectedProgramId(firstProgram.id);
             const semesters = [...new Set(firstProgram.allocations.map(a => a.semester?.name).filter(Boolean))];
             setSemesterOptions(semesters);
-            
+
             // Auto-select first semester
             const firstSemester = semesters[0];
             if (firstSemester) {
@@ -360,9 +402,9 @@ const Questions = () => {
                 setSelectedAcademicYearId(semesterAllocation.academic_year_id);
               }
             }
-            
-            setFilters(prev => ({ 
-              ...prev, 
+
+            setFilters(prev => ({
+              ...prev,
               program: [firstProgram.name],
               semester: firstSemester || ''
             }));
@@ -383,7 +425,7 @@ const Questions = () => {
   const handleSemesterChange = (e) => {
     const semesterName = e.target.value;
     setFilters(prev => ({ ...prev, semester: semesterName, gradeDivisionId: [] }));
-    
+
     if (semesterName && selectedProgramId) {
       // Find the program and then the semester allocation
       const program = programOptions.find(p => p.id === selectedProgramId);
@@ -435,7 +477,7 @@ const Questions = () => {
           const unique = Array.from(new Map(subjects.map(s => [s.name, s])).values());
           setSubjectOptions(unique);
           console.log('Formatted allocated subjects:', unique);
-          
+
           // Auto-select first subject
           if (unique.length > 0 && !filters.gradeDivisionId.length) {
             const firstSubject = unique[0];
@@ -445,7 +487,7 @@ const Questions = () => {
               gradeDivisionId: [firstSubject.name]
             }));
           }
-          
+
 
         } else {
           console.error('Subjects response is not valid:', response);
@@ -464,7 +506,7 @@ const Questions = () => {
   // DELETE QUESTION FUNCTION WITH SWEETALERT CONFIRMATION
   const handleDeleteQuestion = async (questionId) => {
     console.log('Attempting to delete question with ID:', questionId);
-    
+
     if (!questionId) {
       console.error('Question ID is undefined');
       showSweetAlert('Error', 'Cannot delete: Question ID is missing', 'error');
@@ -491,15 +533,15 @@ const Questions = () => {
         try {
           const questionToDelete = questions.find(q => q.id === questionId || q.question_id === questionId);
           const actualQuestionId = questionToDelete?.id || questionToDelete?.question_id || questionId;
-          
+
           await contentService.deleteQuestion(actualQuestionId);
-          
-          setQuestions(prevQuestions => prevQuestions.filter(q => 
+
+          setQuestions(prevQuestions => prevQuestions.filter(q =>
             q.id !== actualQuestionId && q.question_id !== actualQuestionId
           ));
-          
+
           console.log(`Question ${actualQuestionId} deleted successfully`);
-          
+
           // Success SweetAlert
           showSweetAlert('Deleted!', 'Question has been deleted successfully.', 'success');
         } catch (error) {
@@ -545,19 +587,18 @@ const Questions = () => {
             units: mod.units || []
           }));
           setChapterOptions(formatted);
-          
-          // Auto-select first module and first unit
+
+          // Auto-select first module but DON'T auto-select unit
           if (formatted.length > 0 && !filters.chapter) {
             const firstModule = formatted[0];
             const units = firstModule.units || [];
             const formattedUnits = units.map(u => ({ unit_id: u.unit_id, unit_name: u.unit_name }));
             setTopicOptions(formattedUnits);
-            
-            const firstUnit = formattedUnits[0];
+
             setFilters(prev => ({
               ...prev,
               chapter: firstModule.module_name,
-              topic: firstUnit ? firstUnit.unit_name : ''
+              topic: '' // Keep unit empty
             }));
             setSelectedChapter(firstModule);
           }
@@ -657,7 +698,7 @@ const Questions = () => {
                 const chapterObj = chapterOptions.find(c => c.module_name === chapterName);
                 setSelectedChapter(chapterObj || null);
                 setFilters(prev => ({ ...prev, chapter: chapterName, topic: '' }));
-                
+
                 const units = chapterObj?.units || [];
                 const formattedUnits = units.map(u => ({ unit_id: u.unit_id, unit_name: u.unit_name }));
                 setTopicOptions(formattedUnits);
@@ -667,7 +708,7 @@ const Questions = () => {
               disabled={chapterOptions.length === 0}
               loading={loading.chapters}
             />
-                  {/* Topic */}
+            {/* Topic */}
             <CustomSelect
               label="Unit"
               value={filters.topic}
@@ -675,7 +716,7 @@ const Questions = () => {
                 setFilters(prev => ({ ...prev, topic: e.target.value }));
               }}
               options={topicOptions.map(t => t.unit_name)}
-              placeholder="Select Unit"
+              placeholder="Select Unit (Optional)"
               disabled={topicOptions.length === 0}
             />
           </div>
@@ -686,9 +727,28 @@ const Questions = () => {
 
       {/* Questions List */}
       <div className="bg-white rounded-xl shadow-md border border-gray-200">
-        <div className="px-6 py-4 border-b border-gray-200">
-          <h2 className="text-lg font-semibold text-gray-900">Questions</h2>
-          <p className="text-sm text-gray-500 mt-1">Manage your assessment questions</p>
+        <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+          <div>
+            <h2 className="text-lg font-semibold text-gray-900">Questions</h2>
+            <p className="text-sm text-gray-500 mt-1">
+              {totalElements > 0 ? `Showing ${questions.length} of ${totalElements} questions` : 'Manage your assessment questions'}
+            </p>
+          </div>
+          {totalElements > 0 && (
+            <div className="flex items-center gap-2">
+              <label className="text-sm text-gray-600">Per page:</label>
+              <select
+                value={pageSize}
+                onChange={(e) => handlePageSizeChange(Number(e.target.value))}
+                className="border border-gray-300 rounded-md px-2 py-1 text-sm"
+              >
+                <option value={5}>5</option>
+                <option value={10}>10</option>
+                <option value={20}>20</option>
+                <option value={50}>50</option>
+              </select>
+            </div>
+          )}
         </div>
         <div className="p-6">
           {loading.questions ? (
@@ -698,64 +758,133 @@ const Questions = () => {
             return filteredQuestions.length > 0 ? (
               <div className="space-y-4">
                 {filteredQuestions.map((q, index) => {
-                const questionId = getQuestionId(q);
-                console.log(`Question ${index} ID:`, questionId, 'Full object:', q);
-                
-                return (
-                  <div key={questionId || index} className="p-4 border border-gray-200 rounded-lg flex items-center justify-between hover:shadow-md transition-shadow">
-                    <div className="flex-grow">
-                      <p className="font-semibold text-gray-800">Q{index + 1}.</p>
-                      <p className="mt-1 text-gray-600">{q.question || q.question_text || 'Question text not found.'}</p>
-                      <p className="text-xs text-gray-400 mt-1">
-                        Unit: {q.unit_name || 'N/A'} | Subject: {q.subject_name || 'N/A'} | Status: <span className={q.approval_status ? 'text-green-600' : 'text-red-600'}>{q.approval_status ? 'Approved' : 'Pending'}</span>
-                      </p>
+                  const questionId = getQuestionId(q);
+                  console.log(`Question ${index} ID:`, questionId, 'Full object:', q);
+
+                  return (
+                    <div key={questionId || index} className="p-4 border border-gray-200 rounded-lg flex items-center justify-between hover:shadow-md transition-shadow">
+                      <div className="flex-grow">
+                        <p className="font-semibold text-gray-800">Q{index + 1}.</p>
+                        <p className="mt-1 text-gray-600">{q.question || q.question_text || 'Question text not found.'}</p>
+                        <p className="text-xs text-gray-400 mt-1">
+                          Unit: {q.unit_name || 'N/A'} | Subject: {q.subject_name || 'N/A'} | Status: <span className={q.approval_status ? 'text-green-600' : 'text-red-600'}>{q.approval_status ? 'Approved' : 'Pending'}</span>
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-3 ml-4">
+                        <button
+                          onClick={() => {
+                            console.log("Navigating with question:", q, "and filters:", filters);
+                            navigate("/teacher/content/add-content/question/add-question", { state: { question: q, filters: filters } });
+                          }}
+                          className="p-1.5 rounded-lg bg-yellow-50 text-yellow-600 hover:bg-yellow-100 transition"
+                          disabled={loading.delete || !questionId}
+                        >
+                          <Edit className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => handleDeleteQuestion(questionId)}
+                          disabled={loading.delete || !questionId}
+                          className="p-1.5 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                          title={!questionId ? "Cannot delete: Missing ID" : "Delete question"}
+                        >
+                          {loading.delete && deletingId === questionId ? (
+                            <span className="text-sm">Deleting...</span>
+                          ) : (
+                            <Trash2 className="w-5 h-5" />
+                          )}
+                        </button>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-3 ml-4">
-                      <button
-                        onClick={() => {
-                          console.log("Navigating with question:", q, "and filters:", filters);
-                          navigate("/teacher/content/add-content/question/add-question", { state: { question: q, filters: filters } });
-                        }}
-                        className="p-1.5 rounded-lg bg-yellow-50 text-yellow-600 hover:bg-yellow-100 transition"
-                        disabled={loading.delete || !questionId}
-                      >
-                        <Edit className="w-4 h-4" />
-                      </button>
-                      <button
-                        onClick={() => handleDeleteQuestion(questionId)}
-                        disabled={loading.delete || !questionId}
-                        className="p-1.5 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition disabled:opacity-50 disabled:cursor-not-allowed"
-                        title={!questionId ? "Cannot delete: Missing ID" : "Delete question"}
-                      >
-                        {loading.delete && deletingId === questionId ? (
-                          <span className="text-sm">Deleting...</span>
-                        ) : (
-                          <Trash2 className="w-5 h-5" />
-                        )}
-                      </button>
-                    </div>
-                  </div>
-                );
+                  );
                 })}
               </div>
             ) : (
               <div className="text-center text-gray-500 py-10">
                 {filters.topic ? 'No questions found for selected unit.' :
-                 filters.chapter ? 'Select Unit to view questions' :
-                 filters.gradeDivisionId.length > 0 ? 'Select Module to continue' :
-                 filters.semester ? 'Select Paper to continue' :
-                 filters.program.length > 0 ? 'Select Semester to continue' :
-                 'Select Program to start filtering questions'}
+                  filters.chapter ? 'Select Unit to view questions' :
+                    filters.gradeDivisionId.length > 0 ? 'Select Module to continue' :
+                      filters.semester ? 'Select Paper to continue' :
+                        filters.program.length > 0 ? 'Select Semester to continue' :
+                          'Select Program to start filtering questions'}
               </div>
             );
           })()
-        }
+          }
         </div>
+
+        {/* Pagination Controls */}
+        {totalPages > 1 && (
+          <div className="px-6 py-4 border-t border-gray-200 flex items-center justify-between">
+            <div className="text-sm text-gray-600">
+              Page {currentPage + 1} of {totalPages}
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => handlePageChange(0)}
+                disabled={currentPage === 0}
+                className="px-3 py-1 border border-gray-300 rounded-md text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+              >
+                First
+              </button>
+              <button
+                onClick={() => handlePageChange(currentPage - 1)}
+                disabled={currentPage === 0}
+                className="px-3 py-1 border border-gray-300 rounded-md text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+              >
+                Previous
+              </button>
+
+              {/* Page numbers */}
+              <div className="flex gap-1">
+                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                  let pageNum;
+                  if (totalPages <= 5) {
+                    pageNum = i;
+                  } else if (currentPage < 3) {
+                    pageNum = i;
+                  } else if (currentPage > totalPages - 3) {
+                    pageNum = totalPages - 5 + i;
+                  } else {
+                    pageNum = currentPage - 2 + i;
+                  }
+
+                  return (
+                    <button
+                      key={pageNum}
+                      onClick={() => handlePageChange(pageNum)}
+                      className={`px-3 py-1 border rounded-md text-sm ${currentPage === pageNum
+                        ? 'bg-blue-600 text-white border-blue-600'
+                        : 'border-gray-300 hover:bg-gray-50'
+                        }`}
+                    >
+                      {pageNum + 1}
+                    </button>
+                  );
+                })}
+              </div>
+
+              <button
+                onClick={() => handlePageChange(currentPage + 1)}
+                disabled={currentPage >= totalPages - 1}
+                className="px-3 py-1 border border-gray-300 rounded-md text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+              >
+                Next
+              </button>
+              <button
+                onClick={() => handlePageChange(totalPages - 1)}
+                disabled={currentPage >= totalPages - 1}
+                className="px-3 py-1 border border-gray-300 rounded-md text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+              >
+                Last
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Bulk Upload Modal */}
       {showBulkUpload && (
-        <BulkUploadAssessmentModal onClose={() => setShowBulkUpload(false)} />
+        <BulkUploadQuestionModal onClose={() => setShowBulkUpload(false)} />
       )}
 
       {/* SweetAlert */}
