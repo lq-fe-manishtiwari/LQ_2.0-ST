@@ -5,7 +5,7 @@ import { useContentData } from "./hooks/useContentData.js";
 import { useQuizManagement } from "./hooks/useQuizManagement.js";
 import CustomSelect from "./components/CustomSelect.jsx";
 import QuizIntegration from "./components/QuizIntegration.jsx";
-import {useUserProfile} from "../../../../../contexts/UserProfileContext.jsx";
+import { useUserProfile } from "../../../../../contexts/UserProfileContext.jsx";
 import SweetAlert from 'react-bootstrap-sweetalert';
 
 export default function AddContent() {
@@ -21,7 +21,7 @@ export default function AddContent() {
     const [showPreviewModal, setShowPreviewModal] = useState(false);
     const [showAlert, setShowAlert] = useState(false);
     const [alertConfig, setAlertConfig] = useState({});
-    const {getUserId} = useUserProfile();
+    const { getUserId } = useUserProfile();
     const userId = getUserId();
     // Custom hooks
     const { options, loading, setLoading, updateUnitsForModule, loadProgramRelatedData, loadBatchesForAcademicSemester } = useContentData(formData);
@@ -66,12 +66,12 @@ export default function AddContent() {
     // Handle input changes
     const handleInputChange = async (e) => {
         const { name, value, files } = e.target;
-        
+
         if (files && files[0]) {
             // Handle file upload immediately
             const file = files[0];
             setFormData(prev => ({ ...prev, [name]: file, fileName: file.name }));
-            
+
             // Get page count for PDF files
             let pageCount = 0;
             if (file.type === 'application/pdf') {
@@ -86,7 +86,7 @@ export default function AddContent() {
             } else if (file.type.startsWith('image/')) {
                 pageCount = 1; // Images are always 1 page
             }
-            
+
             // Upload to S3 immediately
             try {
                 setLoading(prev => ({ ...prev, uploading: true }));
@@ -109,8 +109,34 @@ export default function AddContent() {
 
     // Handle module selection to update units
     const handleModuleChange = (moduleId) => {
-        setFormData(prev => ({ ...prev, selectedModule: moduleId, selectedUnit: "" }));
+        setFormData(prev => {
+            let newState = { ...prev, selectedModule: moduleId, selectedUnit: "" };
+
+            // Auto-fill title based on Module selection (Live Update)
+            if (options.modules) {
+                const selectedMod = options.modules.find(m => m.value == moduleId);
+                if (selectedMod) {
+                    newState.contentTitle = selectedMod.label;
+                }
+            }
+            return newState;
+        });
         updateUnitsForModule(moduleId);
+    };
+
+    const handleUnitChange = (unitId) => {
+        setFormData(prev => {
+            let newState = { ...prev, selectedUnit: unitId };
+
+            // Auto-fill title based on Unit selection (Live Update)
+            if (options.units) {
+                const selectedUnitOption = options.units.find(u => u.value == unitId);
+                if (selectedUnitOption) {
+                    newState.contentTitle = selectedUnitOption.label;
+                }
+            }
+            return newState;
+        });
     };
 
     // Form submission
@@ -118,8 +144,8 @@ export default function AddContent() {
         e.preventDefault();
         console.log("Form data on userId:", userId);
         // Validate required fields for new payload structure
-        if (!formData.selectedUnit || !formData.contentType || !formData.contentTitle) {
-            alert("Please fill in all required fields: Unit, Content Type, and Content Title");
+        if (!formData.contentType || !formData.contentTitle) {
+            alert("Please fill in all required fields: Content Type, and Content Title");
             return;
         }
 
@@ -171,7 +197,7 @@ export default function AddContent() {
                 : [];
 
             // Convert average reading time from minutes to seconds
-            const averageReadingTimeSeconds = formData.averageReadingTime ? 
+            const averageReadingTimeSeconds = formData.averageReadingTime ?
                 parseInt(formData.averageReadingTime) * 60 : 0;
 
             // Create payload matching CreateContentRequest structure
@@ -179,18 +205,19 @@ export default function AddContent() {
                 content_name: formData.contentTitle,
                 content_description: formData.description || "",
                 content_link: contentLink,
-                unit_id: parseInt(formData.selectedUnit),
+                unit_id: formData.selectedUnit ? parseInt(formData.selectedUnit) : null,
+                module_id: formData.selectedModule ? parseInt(formData.selectedModule) : null,
                 content_type_id: parseInt(formData.contentType), // Use actual ID from API
-                content_level_id: parseInt(formData.contentLevel), // Use actual ID from API
+                content_level_id: formData.contentLevel ? parseInt(formData.contentLevel) : null, // Use actual ID from API
                 average_reading_time_seconds: averageReadingTimeSeconds,
                 quiz_attachments: quizAttachments.length > 0 ? quizAttachments : null,
-                admin:false,
-                user_id:userId,
+                admin: false,
+                user_id: userId,
             };
 
             console.log("Submitting data:", submitData);
             const result = await contentService.AddContent(submitData);
-            
+
             setAlertConfig({
                 title: 'Success!',
                 text: 'Content added successfully!',
@@ -203,7 +230,7 @@ export default function AddContent() {
                 }
             });
             setShowAlert(true);
-            
+
             console.log("AddContent result:", result);
             // Reset form
             setFormData({
@@ -280,12 +307,11 @@ export default function AddContent() {
                     <CustomSelect
                         label="Unit"
                         value={formData.selectedUnit}
-                        onChange={(value) => setFormData(prev => ({ ...prev, selectedUnit: value }))}
+                        onChange={handleUnitChange}
                         options={options.units}
                         placeholder="Select Unit"
                         disabled={!formData.selectedModule}
                         loading={loading.units}
-                        required
                     />
                 </div>
 
@@ -325,60 +351,60 @@ export default function AddContent() {
                     const contentTypeName = selectedContentType?.full?.content_type_name || selectedContentType?.label || "";
                     return contentTypeName.toLowerCase().includes("file");
                 })() && (
-                    <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
-                        <h3 className="text-lg font-medium text-gray-800 mb-3">File Upload</h3>
-                        <div className="flex gap-4 items-end">
-                            <div className="flex-1">
-                                <label className="block font-medium mb-1 text-gray-700">Upload File <span className="text-red-500">*</span></label>
-                                <input
-                                    type="file"
-                                    name="file"
-                                    onChange={handleInputChange}
-                                    className="flex-1 border border-gray-300 rounded px-3 py-2 focus:outline-none focus:border-blue-500"
-                                    accept=".pdf,.doc,.docx,.ppt,.pptx,.jpg,.jpeg,.png,.gif"
-                                    required={!formData.fileUrl}
-                                />
-                            </div>
-                            {formData.fileUrl && (
-                                <button
-                                    type="button"
-                                    onClick={() => setShowPreviewModal(true)}
-                                    className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition-colors"
-                                >
-                                    Preview
-                                </button>
-                            )}
-                        </div>
-                        
-                        {loading.uploading && (
-                            <p className="text-sm text-blue-600 mt-2">⏳ Uploading file...</p>
-                        )}
-                        
-                        {formData.fileUrl && formData.fileName && (
-                            <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded">
-                                <p className="text-sm text-green-700">
-                                    ✅ <strong>{formData.fileName}</strong> uploaded successfully
-                                </p>
-                                {formData.filePageCount > 0 && (
-                                    <p className="text-sm text-green-600 mt-1">
-                                        📄 Detected {formData.filePageCount} page{formData.filePageCount !== 1 ? 's' : ''}
-                                    </p>
+                        <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                            <h3 className="text-lg font-medium text-gray-800 mb-3">File Upload</h3>
+                            <div className="flex gap-4 items-end">
+                                <div className="flex-1">
+                                    <label className="block font-medium mb-1 text-gray-700">Upload File <span className="text-red-500">*</span></label>
+                                    <input
+                                        type="file"
+                                        name="file"
+                                        onChange={handleInputChange}
+                                        className="flex-1 border border-gray-300 rounded px-3 py-2 focus:outline-none focus:border-blue-500"
+                                        accept=".pdf,.doc,.docx,.ppt,.pptx,.jpg,.jpeg,.png,.gif"
+                                        required={!formData.fileUrl}
+                                    />
+                                </div>
+                                {formData.fileUrl && (
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowPreviewModal(true)}
+                                        className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition-colors"
+                                    >
+                                        Preview
+                                    </button>
                                 )}
                             </div>
-                        )}
-                    </div>
-                )}
+
+                            {loading.uploading && (
+                                <p className="text-sm text-blue-600 mt-2">⏳ Uploading file...</p>
+                            )}
+
+                            {formData.fileUrl && formData.fileName && (
+                                <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded">
+                                    <p className="text-sm text-green-700">
+                                        ✅ <strong>{formData.fileName}</strong> uploaded successfully
+                                    </p>
+                                    {formData.filePageCount > 0 && (
+                                        <p className="text-sm text-green-600 mt-1">
+                                            📄 Detected {formData.filePageCount} page{formData.filePageCount !== 1 ? 's' : ''}
+                                        </p>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+                    )}
 
                 {(() => {
                     const selectedContentType = options.contentTypes.find(ct => ct.value === formData.contentType);
                     const contentTypeName = selectedContentType?.full?.content_type_name || selectedContentType?.label || "";
                     return contentTypeName.toLowerCase().includes("link");
                 })() && (
-                    <div>
-                        <label className="block font-medium mb-1 text-gray-700">External Link <span className="text-red-500">*</span></label>
-                        <input type="url" name="externalLink" value={formData.externalLink} onChange={handleInputChange} placeholder="https://example.com" className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:border-blue-500" required />
-                    </div>
-                )}
+                        <div>
+                            <label className="block font-medium mb-1 text-gray-700">External Link <span className="text-red-500">*</span></label>
+                            <input type="url" name="externalLink" value={formData.externalLink} onChange={handleInputChange} placeholder="https://example.com" className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:border-blue-500" required />
+                        </div>
+                    )}
 
 
                 {/* Quiz Integration Component */}

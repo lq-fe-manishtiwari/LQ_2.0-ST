@@ -11,6 +11,7 @@ export const contentService = {
     getContentTypes,
     uploadFileToS3,
     getQuizzesByUnitId,
+    getQuizzesByModuleAndUnits,
 
     getContentLevel,
     getTeacherSubjectsAllocated,
@@ -177,4 +178,17 @@ function getTeacherSubjectsAllocated(teacherId, academicYearId, semesterId) {
         .then(data => {
             return data;
         });
+}
+function getQuizzesByModuleAndUnits(moduleId, unitIds = [], page = 0, size = 1000) {
+    const params = new URLSearchParams();
+    unitIds.forEach(id => params.append('unitIds', id));
+    params.append('page', page);
+    params.append('size', size);
+
+    const requestOptions = {
+        method: 'GET',
+        headers: authHeader()
+    };
+    return fetch(`${ContentAPI}/quizzes/module/${moduleId}/units?${params.toString()}`, requestOptions)
+        .then(handleResponse);
 }
