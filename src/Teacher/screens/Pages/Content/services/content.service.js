@@ -213,7 +213,7 @@ function getModulesbySubject(subjectId) {
         headers: authHeader()
     };
 
-    return fetch(`${AcademicAPI}/admin/academic/api/subjects/${subjectId}/modules-units`, requestOptions)
+    return fetch(`${AcademicAPI}/admin/academic/api/subjects/${subjectId}/modules-units/can-view`, requestOptions)
         .then(handleResponse)
         .then(data => {
             return data;
@@ -243,7 +243,7 @@ function getModulesAndUnits(subjectId) {
     };
 
     return fetch(
-        `${AcademicAPI}/api/subjects/${subjectId}/modules-units`,
+        `${AcademicAPI}/api/subjects/${subjectId}/modules-units/can-view`,
         requestOptions
     ).then(handleResponse);
 }

@@ -88,7 +88,7 @@ function getModulesAndUnitsBySubjectId(subjectId) {
         method: 'GET',
         headers: authHeader()
     };
-    return fetch(`${AcademicAPI}/admin/academic/api/subjects/${subjectId}/modules-units`, requestOptions)
+    return fetch(`${AcademicAPI}/admin/academic/api/subjects/${subjectId}/modules-units/can-view`, requestOptions)
         .then(handleResponse)
         .then(data => {
             return data;
@@ -171,7 +171,7 @@ function getTeacherSubjectsAllocated(teacherId, academicYearId, semesterId) {
     };
 
     const url = `${TeacherLoginAPI}/teacher/${teacherId}/subjects-allocated?academicYearId=${academicYearId}&semesterId=${semesterId}`;
-    
+
     return fetch(url, requestOptions)
         .then(handleResponse)
         .then(data => {

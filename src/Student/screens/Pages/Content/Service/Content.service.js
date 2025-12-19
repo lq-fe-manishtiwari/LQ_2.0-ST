@@ -127,7 +127,7 @@ export class ContentService {
    */
   static async getModulesAndUnits(subjectId) {
     try {
-      const response = await fetch(`${COREAPI}/admin/academic/api/subjects/${subjectId}/modules-units`, {
+      const response = await fetch(`${COREAPI}/admin/academic/api/subjects/${subjectId}/modules-units/can-view`, {
         method: 'GET',
         headers: authHeader()
       });

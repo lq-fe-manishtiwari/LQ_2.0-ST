@@ -1,4 +1,4 @@
-import { apiRequest, DevAPI, COREAPI, authHeader ,ContentAPI} from '../../../../../_services/api';
+import { apiRequest, DevAPI, COREAPI, authHeader, ContentAPI } from '../../../../../_services/api';
 
 /**
  * Content API service for handling teacher content dashboard data
@@ -98,7 +98,7 @@ export class ContentApiService {
    */
   static async getModulesAndUnits(subjectId) {
     try {
-      const response = await fetch(`${COREAPI}/admin/academic/api/subjects/${subjectId}/modules-units`, {
+      const response = await fetch(`${COREAPI}/admin/academic/api/subjects/${subjectId}/modules-units/can-view`, {
         method: 'GET',
         headers: authHeader()
       });
@@ -119,11 +119,11 @@ export class ContentApiService {
   }
 
 
-    /**
-   * Fetch unit content for a specific unit
-   * @param {string} unitId - The unit ID
-   * @returns {Promise} API response with modules and units
-   */
+  /**
+ * Fetch unit content for a specific unit
+ * @param {string} unitId - The unit ID
+ * @returns {Promise} API response with modules and units
+ */
   static async getContentByUnits(unitId) {
     try {
       const response = await fetch(`${ContentAPI}/admin/content/unit/${unitId}`, {
