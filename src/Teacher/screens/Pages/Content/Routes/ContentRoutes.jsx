@@ -13,7 +13,7 @@ import AddNewQuestion from "../AddQuestions/AddNewQuestions.jsx";
 import QuizDashboard from "../Quiz/Quizdashboard";
 import AddQuiz from "../Quiz/AddQuiz";
 import EditQuiz from "../Quiz/EditQuiz";
-
+import BulkAddContent from "../ContentDashboard/ContentBulkUpload/BulkAddContent.jsx";
 export default function ContentRoutes() {
   return (
     <Routes>
@@ -30,7 +30,7 @@ export default function ContentRoutes() {
         {/* Content */}
         <Route path="content" element={<ContentDashboard />} />
         <Route path="content/add" element={<Add_Content />} />
-
+        <Route path="content/bulk-upload" element={<BulkAddContent />} />
         {/* Student Project */}
         <Route path="student-project" element={<StudentProject />} />
 
@@ -42,6 +42,7 @@ export default function ContentRoutes() {
         <Route path="quiz" element={<QuizDashboard />} />
         <Route path="quiz/add" element={<AddQuiz />} />
         <Route path="quiz/edit" element={<EditQuiz />} />
+
       </Route>
     </Routes>
   );
