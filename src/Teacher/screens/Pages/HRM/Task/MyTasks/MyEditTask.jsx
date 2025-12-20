@@ -2,6 +2,8 @@ import React, { useState, useEffect, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Edit, X, ChevronDown } from "lucide-react";
 import SweetAlert from 'react-bootstrap-sweetalert';
+import { TaskManagement } from '../../Services/TaskManagement.service';
+import { Settings } from '../../Settings/Settings.service';
 
 // Custom Select Component inside EditTask.js
 const CustomSelect = ({ label, value, onChange, options, placeholder, disabled = false }) => {
@@ -69,23 +71,69 @@ export default function MyTaskEdit() {
     title: "",
     description: "",
     taskType: "",
+    taskTypeId: "",
     assignedDate: "",
     dueDate: "",
     priority: "",
+    priorityId: "",
+    status: "",
+    statusId: "",
   });
 
+  const [priorities, setPriorities] = useState([]);
+  const [taskTypes, setTaskTypes] = useState([]);
+  const [statuses, setStatuses] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  // Fetch dropdown data
   useEffect(() => {
-    // Load task data based on ID
-    const mockTask = {
-      title: "Sample Task",
-      description: "This is a sample task description",
-      taskType: "Development",
-      assignedDate: "2024-01-15T10:00",
-      dueDate: "2024-01-20T17:00",
-      priority: "High",
+    const fetchData = async () => {
+      try {
+        const [prioritiesData, taskTypesData, statusesData] = await Promise.all([
+          Settings.getAllPriority(),
+          Settings.getAllTaskType(),
+          Settings.getAllTaskStatus()
+        ]);
+        
+        setPriorities(prioritiesData || []);
+        setTaskTypes(taskTypesData || []);
+        setStatuses(statusesData || []);
+      } catch (error) {
+        console.error('Error fetching dropdown data:', error);
+      } finally {
+        setLoading(false);
+      }
     };
-    setForm(mockTask);
-  }, [id]);
+    
+    fetchData();
+  }, []);
+
+  useEffect(() => {
+    if (id && !loading) {
+      TaskManagement.getMyTaskbyID(id)
+        .then(response => {
+          if (response) {
+            setForm({
+              title: response.title || "",
+              description: response.description || "",
+              taskType: response.task_type?.task_type_name || "",
+              taskTypeId: response.task_type?.task_type_id || "",
+              assignedDate: response.assigned_date_time ? response.assigned_date_time.slice(0, 16) : "",
+              dueDate: response.due_date_time ? response.due_date_time.slice(0, 16) : "",
+              priority: response.priority?.priority_name || "",
+              priorityId: response.priority?.priority_id || "",
+              status: response.status?.name || "",
+              statusId: response.status?.task_status_id || "",
+            });
+          }
+        })
+        .catch(error => {
+          console.error('Error fetching task:', error);
+          setAlertMessage('Failed to load task data.');
+          setShowErrorAlert(true);
+        });
+    }
+  }, [id, loading]);
 
   const [showSuccessAlert, setShowSuccessAlert] = useState(false);
   const [showErrorAlert, setShowErrorAlert] = useState(false);
@@ -96,7 +144,7 @@ export default function MyTaskEdit() {
   const labelClass = "block text-sm font-semibold text-blue-700 mb-2";
 
   const handleSubmit = () => {
-    if (!form.title || !form.description || !form.taskType || !form.assignedDate || !form.dueDate || !form.priority) {
+    if (!form.title || !form.description || !form.taskTypeId || !form.dueDate || !form.priorityId || !form.statusId) {
       setAlertMessage('Please fill in all required fields.');
       setShowErrorAlert(true);
       return;
@@ -104,18 +152,28 @@ export default function MyTaskEdit() {
 
     setIsSubmitting(true);
 
-    setTimeout(() => {
-      setIsSubmitting(false);
-      const isSuccess = Math.random() > 0.1;
-      
-      if (isSuccess) {
+    const payload = {
+      user_id: 2,
+      title: form.title,
+      description: form.description,
+      priority_id: parseInt(form.priorityId),
+      due_date_time: new Date(form.dueDate).toISOString(),
+      task_type_id: parseInt(form.taskTypeId),
+      status_id: parseInt(form.statusId)
+    };
+
+    TaskManagement.updateMyTask(payload, id)
+      .then(response => {
+        setIsSubmitting(false);
         setAlertMessage('Task updated successfully!');
         setShowSuccessAlert(true);
-      } else {
+      })
+      .catch(error => {
+        setIsSubmitting(false);
+        console.error('Error updating task:', error);
         setAlertMessage('Failed to update task. Please try again.');
         setShowErrorAlert(true);
-      }
-    }, 1500);
+      });
   };
 
   const handleCancel = () => {
@@ -172,9 +230,17 @@ export default function MyTaskEdit() {
             <CustomSelect
               label="Priority"
               value={form.priority}
-              onChange={(e) => setForm({ ...form, priority: e.target.value })}
-              options={['High', 'Medium', 'Low']}
+              onChange={(e) => {
+                const selectedPriority = priorities.find(p => p.priority_name === e.target.value);
+                setForm({ 
+                  ...form, 
+                  priority: e.target.value,
+                  priorityId: selectedPriority?.priority_id || ''
+                });
+              }}
+              options={priorities.map(p => p.priority_name)}
               placeholder="select priority"
+              disabled={loading}
             />
           </div>
 
@@ -204,9 +270,35 @@ export default function MyTaskEdit() {
             <CustomSelect
               label="Task Type"
               value={form.taskType}
-              onChange={(e) => setForm({ ...form, taskType: e.target.value })}
-              options={['Development', 'Testing', 'Design', 'Documentation', 'Review', 'Meeting']}
+              onChange={(e) => {
+                const selectedTaskType = taskTypes.find(t => t.task_type_name === e.target.value);
+                setForm({ 
+                  ...form, 
+                  taskType: e.target.value,
+                  taskTypeId: selectedTaskType?.task_type_id || ''
+                });
+              }}
+              options={taskTypes.map(t => t.task_type_name)}
               placeholder="select task type"
+              disabled={loading}
+            />
+          </div>
+
+          <div className="w-full">
+            <CustomSelect
+              label="Status"
+              value={form.status}
+              onChange={(e) => {
+                const selectedStatus = statuses.find(s => s.name === e.target.value);
+                setForm({ 
+                  ...form, 
+                  status: e.target.value,
+                  statusId: selectedStatus?.task_status_id || ''
+                });
+              }}
+              options={statuses.map(s => s.name)}
+              placeholder="select status"
+              disabled={loading}
             />
           </div>
         </div>
@@ -265,3 +357,4 @@ export default function MyTaskEdit() {
     </div>
   );
 }
+

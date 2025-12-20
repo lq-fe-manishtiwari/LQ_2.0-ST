@@ -21,6 +21,11 @@ import {
 } from 'lucide-react';
 
 import { useNavigate } from "react-router-dom";
+import SweetAlert from 'react-bootstrap-sweetalert';
+import { TaskManagement } from '../../Services/TaskManagement.service';
+// import { DepartmentService } from '../../../Academics/Services/Department.service';
+import { Settings } from '../../Settings/Settings.service';
+// import Loader from '../Components/Loader';
 
 // Custom Select Components
 const CustomSelect = ({ label, value, onChange, options, placeholder, disabled = false }) => {
@@ -241,7 +246,7 @@ const TaskAssignmentTable = ({
                 <tr>
                   <td colSpan={9} className="table-td text-center py-12">
                     <div className="flex flex-col items-center justify-center">
-                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mb-4"></div>
+                      {/* <Loader  size="lg" className="mb-4" /> */}
                       <p className="text-gray-500">Loading tasks...</p>
                     </div>
                   </td>
@@ -293,14 +298,18 @@ const TaskAssignmentTable = ({
                       <td className="px-2 py-4 text-center">
                         <button
                           onClick={() => onToggleActive(task.id)}
-                          disabled={statusChanging[task.id]}
-                          className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium transition-all ${
+                          disabled={true}
+                          className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium transition-all cursor-not-allowed ${
                             statusChanging[task.id]
                               ? 'bg-gray-100 text-gray-500 cursor-not-allowed'
                               : task.status === 'Complete'
                               ? 'bg-green-100 text-green-800 hover:bg-green-200'
                               : task.status === 'Pending'
                               ? 'bg-blue-100 text-blue-800 hover:bg-blue-200'
+                              : task.status === 'InProgress'
+                              ? 'bg-orange-100 text-orange-800 hover:bg-orange-200'
+                              : task.status === 'Incomplete'
+                              ? 'bg-red-100 text-red-800 hover:bg-red-200'
                               : task.status === 'Incomplete'
                               ? 'bg-orange-100 text-orange-800 hover:bg-orange-200'
                               : 'bg-red-100 text-red-800 hover:bg-red-200'
@@ -308,7 +317,7 @@ const TaskAssignmentTable = ({
                         >
                           {statusChanging[task.id] ? (
                             <>
-                              <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-blue-600 mr-1"></div>
+                              {/* <Loader size="sm" className="mr-1" /> */}
                               Updating...
                             </>
                           ) : (
@@ -389,7 +398,7 @@ const TaskAssignmentTable = ({
         {loading ? (
           <div className="bg-white rounded-xl shadow-md p-8 text-center border border-gray-200">
             <div className="flex flex-col items-center justify-center">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mb-4"></div>
+              {/* <Loader  size="lg" className="mb-4" /> */}
               <p className="text-gray-500">Loading tasks...</p>
             </div>
           </div>
@@ -426,21 +435,23 @@ const TaskAssignmentTable = ({
 
                   <button
                     onClick={() => onToggleActive(task.id)}
-                    disabled={statusChanging[task.id]}
-                    className={`flex items-center px-2.5 py-1.5 rounded-full text-xs font-medium transition-all ${statusChanging[task.id]
+                    disabled={true}
+                    className={`flex items-center px-2.5 py-1.5 rounded-full text-xs font-medium transition-all cursor-not-allowed ${statusChanging[task.id]
                       ? 'bg-gray-100 text-gray-500 cursor-not-allowed'
                       : task.status === 'Complete'
                         ? 'bg-green-100 text-green-800'
                         : task.status === 'Pending'
                         ? 'bg-blue-100 text-blue-800'
-                        : task.status === 'Incomplete'
+                        : task.status === 'InProgress'
                         ? 'bg-orange-100 text-orange-800'
-                        : 'bg-red-100 text-red-800'
+                        : task.status === 'Incomplete'
+                        ? 'bg-red-100 text-red-800'
+                        : 'bg-gray-100 text-gray-800'
                       }`}
                   >
                     {statusChanging[task.id] ? (
                       <>
-                        <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-blue-600 mr-1"></div>
+                        {/* <Loader size="sm" className="mr-1" /> */}
                         Updating...
                       </>
                     ) : (
@@ -541,84 +552,11 @@ const TaskAssignmentTable = ({
 };
 
 export default function TaskAssignment() {
-  const navigate = useNavigate();
-  const [loading, setLoading] = useState(false);
-  
-  // Sample static data for demonstration
-  const sampleTasks = [
-    {
-      id: '1',
-      name: 'John Doe',
-      taskTitle: 'Complete Project Documentation',
-      taskType: 'Documentation',
-      assignedBy: 'Manager',
-      assignedOn: '2024-01-15T10:30:00',
-      dueOn: '2024-01-20T18:00:00',
-      priority: 'High',
-      status: 'Pending',
-      email: 'john.doe@example.com',
-      phone: '+1234567890',
-      department: 'IT'
-    },
-    {
-      id: '2',
-      name: 'Jane Smith',
-      taskTitle: 'Design User Interface',
-      taskType: 'Design',
-      assignedBy: 'Team Lead',
-      assignedOn: '2024-01-10T14:00:00',
-      dueOn: '2024-01-25T17:00:00',
-      priority: 'Medium',
-      status: 'Complete',
-      email: 'jane.smith@example.com',
-      phone: '+1987654321',
-      department: 'Design'
-    },
-    {
-      id: '3',
-      name: 'Robert Johnson',
-      taskTitle: 'Code Review',
-      taskType: 'Development',
-      assignedBy: 'Senior Developer',
-      assignedOn: '2024-01-12T09:15:00',
-      dueOn: '2024-01-18T16:00:00',
-      priority: 'Low',
-      status: 'Incomplete',
-      email: 'robert.j@example.com',
-      phone: '+1122334455',
-      department: 'IT'
-    },
-    {
-      id: '4',
-      name: 'Sarah Williams',
-      taskTitle: 'Client Meeting Preparation',
-      taskType: 'Meeting',
-      assignedBy: 'Project Manager',
-      assignedOn: '2024-01-14T11:45:00',
-      dueOn: '2024-01-16T14:30:00',
-      priority: 'High',
-      status: 'Pending',
-      email: 'sarah.w@example.com',
-      phone: '+1555666777',
-      department: 'Marketing'
-    },
-    {
-      id: '5',
-      name: 'Michael Brown',
-      taskTitle: 'Budget Analysis',
-      taskType: 'Finance',
-      assignedBy: 'Finance Head',
-      assignedOn: '2024-01-05T13:20:00',
-      dueOn: '2024-01-30T18:00:00',
-      priority: 'Medium',
-      status: 'Pending',
-      email: 'michael.b@example.com',
-      phone: '+1444333222',
-      department: 'Finance'
-    }
-  ];
 
-  const [tasks, setTasks] = useState(sampleTasks);
+  const navigate = useNavigate();
+  const [loading, setLoading] = useState(true);
+  const [tasks, setTasks] = useState([]);
+
   const [searchQuery, setSearchQuery] = useState("");
   const [filters, setFilters] = useState({
     filterOpen: false,
@@ -635,7 +573,12 @@ export default function TaskAssignment() {
   });
   const [mobileTabStart, setMobileTabStart] = useState(0);
 
-  const departments = ['HR', 'IT', 'Finance', 'Marketing', 'Operations'];
+  const [departments, setDepartments] = useState([]);
+  const [deptLoading, setDeptLoading] = useState(false);
+  const [priorities, setPriorities] = useState([]);
+  const [priorityLoading, setPriorityLoading] = useState(false);
+  const [statuses, setStatuses] = useState([]);
+  const [statusLoading, setStatusLoading] = useState(false);
   const years = ['2022', '2023', '2024', '2025'];
 
   const monthTabs = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -719,6 +662,8 @@ export default function TaskAssignment() {
   const filteredTasks = useMemo(() => {
     let list = tasks;
     
+    console.log("Filtering tasks:", list.length, "filters:", filters);
+    
     // Search filter
     if (searchQuery) {
       list = list.filter(
@@ -744,43 +689,285 @@ export default function TaskAssignment() {
       list = list.filter(task => task.department === filters.department);
     }
     
+    // Date-based filtering for view types
+    if (filters.view === 'monthly' && filters.activeSubTab && filters.year) {
+      const monthIndex = monthTabs.indexOf(filters.activeSubTab);
+      if (monthIndex !== -1) {
+        list = list.filter(task => {
+          try {
+            if (!task.assignedOn) return false;
+            const date = new Date(task.assignedOn);
+            if (isNaN(date.getTime())) return false;
+            return date.getMonth() === monthIndex && date.getFullYear() === parseInt(filters.year);
+          } catch (error) {
+            console.error('Error filtering by month:', error);
+            return false;
+          }
+        });
+      }
+    }
+    
+    if (filters.view === 'weekly' && filters.activeSubTab && filters.month && filters.year) {
+      list = list.filter(task => {
+        try {
+          if (!task.assignedOn) return false;
+          const date = new Date(task.assignedOn);
+          if (isNaN(date.getTime())) return false;
+          return date.getMonth() === ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'].indexOf(filters.month);
+        } catch (error) {
+          console.error('Error filtering by week:', error);
+          return false;
+        }
+      });
+    }
+    
+    if (filters.view === 'period' && filters.fromDate && filters.toDate) {
+      const fromDate = new Date(filters.fromDate);
+      const toDate = new Date(filters.toDate);
+      list = list.filter(task => {
+        try {
+          if (!task.assignedOn) return false;
+          const taskDate = new Date(task.assignedOn);
+          if (isNaN(taskDate.getTime())) return false;
+          return taskDate >= fromDate && taskDate <= toDate;
+        } catch (error) {
+          console.error('Error filtering by period:', error);
+          return false;
+        }
+      });
+    }
+    
+    console.log("Filtered tasks count:", list.length);
     return list;
-  }, [tasks, searchQuery, filters.priority, filters.status, filters.department]);
+  }, [tasks, searchQuery, filters.priority, filters.status, filters.department, filters.view, filters.activeSubTab, filters.year, filters.month, filters.fromDate, filters.toDate]);
 
   const [selectedTask, setSelectedTask] = useState(null);
   const [statusChanging, setStatusChanging] = useState({});
 
-  // Alert States
+  // Delete Alert States
   const [showAlert, setShowAlert] = useState(false);
   const [taskToDelete, setTaskToDelete] = useState(null);
+  const [passwordAlert, setPasswordAlert] = useState(false);
+  const [password, setPassword] = useState('');
   
   // Success/Error Alert States
   const [showDeleteSuccessAlert, setShowDeleteSuccessAlert] = useState(false);
   const [showDeleteErrorAlert, setShowDeleteErrorAlert] = useState(false);
+  const [showStatusSuccessAlert, setShowStatusSuccessAlert] = useState(false);
+  const [showStatusErrorAlert, setShowStatusErrorAlert] = useState(false);
   const [alertMessage, setAlertMessage] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
 
-  // DELETE HANDLERS - Local state only
+  // Fetch tasks from API - IMPROVED
+  useEffect(() => {
+    async function fetchTasks() {
+      try {
+        setLoading(true);
+        console.log("Fetching tasks from API...");
+  
+        const response = await TaskManagement.getAllPMSTasks();
+        console.log("API Response:", response);
+  
+        // Check if response is an array
+        let taskList = [];
+        if (Array.isArray(response)) {
+          taskList = response;
+        } else if (response && response.data && Array.isArray(response.data)) {
+          taskList = response.data;
+        } else if (response && Array.isArray(response.tasks)) {
+          taskList = response.tasks;
+        } else {
+          console.error("Unexpected API response format:", response);
+          taskList = [];
+        }
+  
+        console.log("Task list:", taskList);
+  
+        // Map tasks with better error handling
+        const formatted = taskList.map((item, index) => {
+          try {
+            // Extract employee name from user object
+            const firstName = item.user?.teacher_info?.firstname || item.user?.other_staff_info?.firstname || "";
+            const lastName = item.user?.teacher_info?.lastname || item.user?.other_staff_info?.lastname || "";
+            const employeeName = `${firstName} ${lastName}`.trim() || item.user?.username || "Unknown";
+            
+            return {
+              id: item.task_assignment_id || item.id || `task-${index}`,
+            
+              name: employeeName,
+            
+              taskTitle: item.task?.task_name || item.taskName || item.title || "No Title",
+            
+              taskType: item.task?.task_type?.task_type_name || "N/A",
+            
+              assignedBy: item.assignedByName || item.assigned_by || item.assignedBy || "-",
+            
+              assignedOn: item.task?.assigned_date_time || item.assigned_date_time,
+            
+              dueOn: item.task?.due_date_time || item.due_date_time,
+            
+              priority: item.task?.priority?.priority_name 
+       || item.priority?.priority_name 
+       || "Medium",
+
+            
+              status: item.task?.task_status_name || item.assignment_status || "ASSIGNED",
+            
+              email: item.user?.email || "",
+            
+              phone: item.user?.phone || "",
+            
+              department: item.departmentName || item.department || "",
+            
+              _raw: item
+            };
+            
+          } catch (error) {
+            console.error("Error formatting task:", error, item);
+            return {
+              id: `error-${index}`,
+              name: "Error",
+              taskTitle: "Error formatting task",
+              taskType: "N/A",
+              assignedBy: "-",
+              assignedOn: "",
+              dueOn: "",
+              priority: "Medium",
+              status: "Error",
+              email: "",
+              phone: "",
+              department: ""
+            };
+          }
+        });
+  
+        console.log("Formatted tasks:", formatted);
+        setTasks(formatted);
+      } catch (error) {
+        console.error("Error fetching tasks:", error);
+        // Set empty array instead of throwing
+        setTasks([]);
+      } finally {
+        setLoading(false);
+      }
+    }
+  
+    fetchTasks();
+  }, []);
+  
+  // DELETE HANDLERS
   const handleDelete = (id) => {
     console.log("Delete requested for task ID:", id);
     setTaskToDelete(id);
     setShowAlert(true);
   };
   
-  const handleConfirmDelete = () => {
+  const handleConfirmDelete = async () => {
     console.log("Confirming delete for task ID:", taskToDelete);
     setShowAlert(false);
 
-    // Remove from local state
-    setTasks(prev => prev.filter(t => t.id !== taskToDelete));
-    
-    setAlertMessage("Task deleted successfully!");
-    setShowDeleteSuccessAlert(true);
-    setTaskToDelete(null);
+    try {
+        setLoading(true);
+
+        // Check if delete method exists in service
+        if (!TaskManagement.deletePMSTaskAssignment) {
+          throw new Error("Delete method not found in service");
+        }
+
+        const response = await TaskManagement.deletePMSTaskAssignment(taskToDelete);
+        console.log("Delete response:", response);
+
+        setLoading(false);
+        setAlertMessage("Task deleted successfully!");
+        setShowDeleteSuccessAlert(true);
+
+        // Remove from UI
+        setTasks(prev => prev.filter(t => t.id !== taskToDelete));
+
+        setTaskToDelete(null);
+    } catch (error) {
+        setLoading(false);
+        console.error("Delete Error:", error);
+
+        let message = "Failed to delete task. Please try again.";
+        if (error?.message) message = error.message;
+        if (error?.response?.data?.message) message = error.response.data.message;
+
+        setErrorMessage(message);
+        setShowDeleteErrorAlert(true);
+    }
   };
   
   const handleCancelDelete = () => {
     setShowAlert(false);
+    setTaskToDelete(null);
+  };
+
+  const handlePasswordConfirm = async () => {
+    try {
+      const currentUser = JSON.parse(localStorage.getItem("currentUser"));
+      const adminUserId = Number(currentUser?.jti);
+
+      if (!password) {
+        SweetAlert({
+          title: "Error!",
+          text: "Please enter your admin password.",
+          type: "error",
+          confirmButtonText: "OK"
+        });
+        return;
+      }
+
+      const payload = {
+        task_id: Number(taskToDelete),
+        admin_user_id: adminUserId,
+        admin_password: password,
+      };
+
+      // Call the API
+      const response = await TaskManagement.deleteTaskAssignment(payload);
+
+      // If API returns 400 inside try
+      if (response?.status === 400) {
+        const message = response?.message || response?.error || "Invalid admin password. Please try again.";
+        setErrorMessage(message);
+        setShowDeleteErrorAlert(true);
+        return;
+      }
+
+      // If successful
+      setPasswordAlert(false);
+      setPassword("");
+      setTaskToDelete(null);
+      setAlertMessage('Task deleted successfully!');
+      setShowDeleteSuccessAlert(true);
+      
+      // Remove task from local state
+      setTasks(prevTasks => prevTasks.filter(task => task.id !== taskToDelete));
+
+    } catch (error) {
+      console.log("Full error object:", error);
+      console.log("Error response:", error.response);
+      console.log("Error data:", error.response?.data);
+
+      // Extract proper message
+      let apiErrorMessage = "Something went wrong. Try again.";
+      const status = error?.response?.status;
+
+      if (status === 400) {
+        apiErrorMessage = error?.response?.data?.message || error?.response?.data?.error || "Invalid admin password. Please try again.";
+      } else if (error?.message) {
+        apiErrorMessage = error.message;
+      }
+
+      setErrorMessage(apiErrorMessage);
+      setShowDeleteErrorAlert(true);
+    }
+  };
+  
+  const handleCancelPassword = () => {
+    setPasswordAlert(false);
+    setPassword("");
     setTaskToDelete(null);
   };
 
@@ -790,16 +977,6 @@ export default function TaskAssignment() {
 
   const handleToggleActive = (id) => {
     setStatusChanging(prev => ({ ...prev, [id]: true }));
-    
-    // Update task status in local state
-    setTasks(prev => prev.map(task => {
-      if (task.id === id) {
-        const newStatus = task.status === 'Complete' ? 'Pending' : 'Complete';
-        return { ...task, status: newStatus };
-      }
-      return task;
-    }));
-    
     setTimeout(() => {
       setStatusChanging(prev => ({ ...prev, [id]: false }));
     }, 1000);
@@ -814,6 +991,85 @@ export default function TaskAssignment() {
   };
 
   const handleShowDetails = (task) => console.log('Show details:', task);
+
+  useEffect(() => {
+    if (filters.view === 'period' && filters.fromDate && filters.toDate) {
+      const periodTabs = getPeriodTabs(filters.fromDate, filters.toDate);
+      setFilters(prev => ({ ...prev, activeSubTab: periodTabs[0] }));
+    }
+  }, [filters.fromDate, filters.toDate, filters.view]);
+
+  useEffect(() => {
+    if (filters.view === 'weekly' && filters.week) {
+      const weeklyTabs = getWeekTabs(parseInt(filters.year), filters.month, filters.week);
+      const firstTab = weeklyTabs[0]?.label || weeklyTabs[0];
+      setFilters(prev => ({ ...prev, activeSubTab: firstTab }));
+    }
+    setMobileTabStart(0);
+  }, [filters.month, filters.year, filters.week, filters.view]);
+
+  const activeCollege = JSON.parse(localStorage.getItem("activeCollege"));
+  const collegeId = activeCollege?.id || null;
+
+  // Fetch departments from API
+  useEffect(() => {
+    const fetchDepartments = async () => {
+      if (!collegeId) return;
+      setDeptLoading(true);
+      try {
+        const data = await DepartmentService.getDepartmentByCollegeId(collegeId);
+        const deptNames = data.map(dept => dept.department_name || dept.name || 'Unknown');
+        setDepartments(deptNames);
+      } catch (err) {
+        console.error('Error fetching departments:', err);
+        setDepartments([]);
+      } finally {
+        setDeptLoading(false);
+      }
+    };
+    fetchDepartments();
+  }, [collegeId]);
+
+  // Fetch priorities from API
+  useEffect(() => {
+    const fetchPriorities = async () => {
+      setPriorityLoading(true);
+      try {
+        const data = await Settings.getAllPriority();
+        const priorityNames = ['All', ...data.map(priority => priority.priority_name || 'Unknown')];
+        setPriorities(priorityNames);
+      } catch (err) {
+        console.error('Error fetching priorities:', err);
+        setPriorities(['All', 'High', 'Medium', 'Low']);
+      } finally {
+        setPriorityLoading(false);
+      }
+    };
+    fetchPriorities();
+  }, []);
+
+  // Fetch task statuses from API
+  useEffect(() => {
+    const fetchStatuses = async () => {
+      setStatusLoading(true);
+      try {
+        const data = await Settings.getAllTaskStatus();
+        const statusNames = ['All', ...data.map(status => status.name || 'Unknown')];
+        setStatuses(statusNames);
+      } catch (err) {
+        console.error('Error fetching statuses:', err);
+        setStatuses(['All', 'Pending', 'Complete', 'Incomplete']);
+      } finally {
+        setStatusLoading(false);
+      }
+    };
+    fetchStatuses();
+  }, []);
+
+  // Debug
+  console.log("Total tasks:", tasks.length);
+  console.log("Filtered tasks:", filteredTasks.length);
+  console.log("Loading:", loading);
 
   return (
     <div className="p-6">
@@ -866,23 +1122,26 @@ export default function TaskAssignment() {
               value={filters.department}
               onChange={(e) => setFilters(prev => ({ ...prev, department: e.target.value }))}
               options={departments}
-              placeholder="Select Department"
+              placeholder={deptLoading ? "Loading departments..." : "Select Department"}
+              disabled={deptLoading}
             />
             
             <CustomSelect
               label="Priority"
               value={filters.priority || ''}
               onChange={(e) => setFilters(prev => ({ ...prev, priority: e.target.value }))}
-              options={['All', 'High', 'Medium', 'Low']}
-              placeholder="Select Priority"
+              options={priorities}
+              placeholder={priorityLoading ? "Loading priorities..." : "Select Priority"}
+              disabled={priorityLoading}
             />
             
             <CustomSelect
               label="Status"
               value={filters.status || ''}
               onChange={(e) => setFilters(prev => ({ ...prev, status: e.target.value }))}
-              options={['All', 'Pending', 'Complete', 'Incomplete']}
-              placeholder="Select Status"
+              options={statuses}
+              placeholder={statusLoading ? "Loading statuses..." : "Select Status"}
+              disabled={statusLoading}
             />
 
             <CustomSelect
@@ -1071,76 +1330,114 @@ export default function TaskAssignment() {
       
       {/* Delete Confirmation Alert */}
       {showAlert && (
+        <SweetAlert
+          warning
+          showCancel
+          confirmBtnCssClass="btn-confirm"
+          cancelBtnCssClass="btn-cancel"
+          title="Are you sure?"
+          onConfirm={handleConfirmDelete}
+          onCancel={handleCancelDelete}
+        >
+          Do you want to delete this Task?
+        </SweetAlert>
+      )}
+      
+      {/* Password Protected Delete Confirmation */}
+      {passwordAlert && (
         <div className="fixed inset-0 flex items-center justify-center bg-black/40 z-50 px-4 sm:px-0">
           <div className="bg-white p-5 sm:p-6 rounded-2xl shadow-xl w-full max-w-sm sm:max-w-md animate-fadeIn">
             <h3 className="text-lg sm:text-xl font-semibold mb-3 text-center text-gray-800">
-              Are you sure?
+              Admin Verification Required
             </h3>
             <p className="text-gray-600 mb-4 text-center text-sm sm:text-base">
-              Do you want to delete this Task?
+              Enter your admin password to confirm deletion.
             </p>
-            <div className="flex flex-col sm:flex-row justify-center gap-3 sm:gap-4">
-              <button
-                onClick={handleCancelDelete}
-                className="w-full sm:w-auto px-5 py-2 rounded-md bg-blue-600 text-white hover:bg-blue-700 transition text-sm sm:text-base"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleConfirmDelete}
-                className="w-full sm:w-auto px-5 py-2 rounded-md bg-orange-500 text-white hover:bg-orange-600 transition text-sm sm:text-base"
-              >
-                Delete
-              </button>
-            </div>
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                handlePasswordConfirm();
+              }}
+              className="flex flex-col"
+            >
+              <input
+                type="password"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg mb-6 text-center text-sm sm:text-base focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                placeholder="Enter your admin password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+              />
+              <div className="flex flex-col sm:flex-row justify-center gap-3 sm:gap-4">
+                <button
+                  type="button"
+                  onClick={handleCancelPassword}
+                  className="w-full sm:w-auto px-5 py-2 rounded-md bg-blue-600 text-white hover:bg-blue-700 transition text-sm sm:text-base"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="w-full sm:w-auto px-5 py-2 rounded-md bg-orange-500 text-white hover:bg-orange-600 transition text-sm sm:text-base"
+                >
+                  Delete
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
       
-      {/* Success Alert */}
+      {/* Success/Error Alerts */}
       {showDeleteSuccessAlert && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black/40 z-50 px-4 sm:px-0">
-          <div className="bg-white p-5 sm:p-6 rounded-2xl shadow-xl w-full max-w-sm sm:max-w-md animate-fadeIn">
-            <div className="text-center">
-              <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-green-100 mb-4">
-                <svg className="h-6 w-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
-                </svg>
-              </div>
-              <h3 className="text-lg sm:text-xl font-semibold mb-2 text-gray-800">Success!</h3>
-              <p className="text-gray-600 mb-4 text-sm sm:text-base">{alertMessage}</p>
-              <button
-                onClick={() => setShowDeleteSuccessAlert(false)}
-                className="w-full px-5 py-2 rounded-md bg-blue-600 text-white hover:bg-blue-700 transition text-sm sm:text-base"
-              >
-                OK
-              </button>
-            </div>
-          </div>
-        </div>
+        <SweetAlert
+          success
+          title="Success!"
+          onConfirm={() => setShowDeleteSuccessAlert(false)}
+          confirmBtnText="OK"
+          confirmBtnCssClass="btn-confirm"
+        >
+          {alertMessage}
+        </SweetAlert>
       )}
       
-      {/* Error Alert */}
       {showDeleteErrorAlert && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black/40 z-50 px-4 sm:px-0">
-          <div className="bg-white p-5 sm:p-6 rounded-2xl shadow-xl w-full max-w-sm sm:max-w-md animate-fadeIn">
-            <div className="text-center">
-              <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 mb-4">
-                <svg className="h-6 w-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </div>
-              <h3 className="text-lg sm:text-xl font-semibold mb-2 text-gray-800">Error!</h3>
-              <p className="text-gray-600 mb-4 text-sm sm:text-base">{errorMessage}</p>
-              <button
-                onClick={() => setShowDeleteErrorAlert(false)}
-                className="w-full px-5 py-2 rounded-md bg-blue-600 text-white hover:bg-blue-700 transition text-sm sm:text-base"
-              >
-                OK
-              </button>
-            </div>
-          </div>
-        </div>
+        <SweetAlert
+          error
+          title="Error!"
+          onConfirm={() => {
+            setShowDeleteErrorAlert(false);
+            setErrorMessage('');
+          }}
+          confirmBtnText="OK"
+          confirmBtnCssClass="btn-confirm"
+        >
+          {errorMessage}
+        </SweetAlert>
+      )}
+      
+      {showStatusSuccessAlert && (
+        <SweetAlert
+          success
+          title="Success!"
+          onConfirm={() => setShowStatusSuccessAlert(false)}
+          confirmBtnText="OK"
+          confirmBtnCssClass="btn-confirm"
+        >
+          {alertMessage}
+        </SweetAlert>
+      )}
+      
+      {showStatusErrorAlert && (
+        <SweetAlert
+          error
+          title="Error!"
+          onConfirm={() => setShowStatusErrorAlert(false)}
+          confirmBtnText="OK"
+          confirmBtnCssClass="btn-confirm"
+        >
+          {alertMessage}
+        </SweetAlert>
       )}
     </div>
   );

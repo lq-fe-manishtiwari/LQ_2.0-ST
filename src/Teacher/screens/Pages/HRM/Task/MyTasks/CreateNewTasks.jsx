@@ -1,17 +1,32 @@
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { Plus, X, ChevronDown } from "lucide-react";
+import SweetAlert from 'react-bootstrap-sweetalert';
+import { Settings } from '../../Settings/Settings.service';
+import { TaskManagement } from '../../Services/TaskManagement.service';
 
-// Custom Select Component (UI only)
+// Custom Select Component (unchanged)
 const CustomSelect = ({ label, value, onChange, options, placeholder, disabled = false, loading = false }) => {
   const [isOpen, setIsOpen] = useState(false);
+  const dropdownRef = useRef(null);
 
   const handleSelect = (selectedValue) => {
     onChange({ target: { value: selectedValue } });
     setIsOpen(false);
   };
 
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
   return (
-    <div>
+    <div ref={dropdownRef}>
       <label className="block text-sm font-semibold text-blue-700 mb-2">{label}</label>
       <div className="relative">
         <div
@@ -49,60 +64,203 @@ const CustomSelect = ({ label, value, onChange, options, placeholder, disabled =
 };
 
 export default function CreateTask() {
-  // Mock form state
+  const navigate = useNavigate();
+
   const [form, setForm] = useState({
     title: "",
     description: "",
     taskType: "",
     assignedDate: "",
     dueDate: "",
-    priority: "",
+    priority: "", // Now stores priority_id (number/string)
   });
 
-  // Mock data
-  const mockTaskTypes = [
-    { value: "1", name: "Development" },
-    { value: "2", name: "Design" },
-    { value: "3", name: "Testing" },
-    { value: "4", name: "Documentation" },
-    { value: "5", name: "Meeting" }
-  ];
-
-  const mockPriorities = [
-    { value: "1", name: "High" },
-    { value: "2", name: "Medium" },
-    { value: "3", name: "Low" }
-  ];
-
+  const [taskTypes, setTaskTypes] = useState([]);
+  const [priorities, setPriorities] = useState([]); // New state for priorities
+  const [loadingTaskTypes, setLoadingTaskTypes] = useState(true);
+  const [loadingPriorities, setLoadingPriorities] = useState(true);
+  const [showSuccessAlert, setShowSuccessAlert] = useState(false);
+  const [showErrorAlert, setShowErrorAlert] = useState(false);
+  const [alertMessage, setAlertMessage] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [currentUserId, setCurrentUserId] = useState(null);
 
   const inputClass = "w-full border rounded px-3 py-2 focus:outline-none transition-colors border-gray-300 focus:border-blue-500";
   const labelClass = "block text-sm font-semibold text-blue-700 mb-2";
 
-  // Mock handlers
-  const handleSubmit = () => {
-    console.log("Form submitted:", form);
-    setIsSubmitting(true);
-    
-    // Simulate API call
-    setTimeout(() => {
-      setIsSubmitting(false);
-      alert("Task created successfully! (UI Demo)");
-      // Reset form
-      setForm({
-        title: "",
-        description: "",
-        taskType: "",
-        assignedDate: "",
-        dueDate: "",
-        priority: "",
+  useEffect(() => {
+    // Get current user ID (same robust logic)
+    const getUserIdFromStorage = () => {
+      // ... (your existing robust user ID extraction logic remains unchanged)
+      let userId = localStorage.getItem("currentUserId") || 
+                   localStorage.getItem("userId") || 
+                   localStorage.getItem("user_id") || 
+                   localStorage.getItem("id") ||
+                   localStorage.getItem("UserID") ||
+                   localStorage.getItem("uid");
+
+      if (!userId) {
+        userId = sessionStorage.getItem("currentUserId") || 
+                 sessionStorage.getItem("userId") || 
+                 sessionStorage.getItem("user_id") || 
+                 sessionStorage.getItem("id") ||
+                 sessionStorage.getItem("UserID") ||
+                 sessionStorage.getItem("uid");
+      }
+
+      if (!userId) {
+        const userStr = localStorage.getItem("user") || sessionStorage.getItem("user");
+        if (userStr) {
+          try {
+            const user = JSON.parse(userStr);
+            userId = user.id || user.userId || user.user_id || user.UserID || user.uid;
+          } catch (e) {
+            console.error("Error parsing user object:", e);
+          }
+        }
+      }
+
+      if (!userId) {
+        const token = localStorage.getItem("token") || localStorage.getItem("access_token");
+        if (token) {
+          try {
+            const base64Url = token.split('.')[1];
+            const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+            const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
+              return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+            }).join(''));
+            const payload = JSON.parse(jsonPayload);
+            userId = payload.userId || payload.user_id || payload.id || payload.sub;
+          } catch (e) {
+            console.error("Error decoding token:", e);
+          }
+        }
+      }
+
+      return userId ? parseInt(userId, 10) : null;
+    };
+
+    const userId = getUserIdFromStorage();
+    if (userId && !isNaN(userId)) {
+      setCurrentUserId(userId);
+    } else {
+      setAlertMessage("User not authenticated. Please login again.");
+      setShowErrorAlert(true);
+    }
+
+    // Fetch task types
+    Settings.getAllTaskType()
+      .then(response => {
+        const types = response.data || response || [];
+        const uniqueTypes = [];
+        const seenIds = new Set();
+        
+        types.forEach(type => {
+          const typeId = type.task_type_id || type.id;
+          const typeName = type.task_type_name || type.name || type.title;
+          
+          if (typeId && !seenIds.has(typeId)) {
+            seenIds.add(typeId);
+            uniqueTypes.push({ value: typeId, name: typeName });
+          } else if (!typeId && typeName) {
+            uniqueTypes.push({ value: typeName, name: typeName });
+          }
+        });
+        
+        setTaskTypes(uniqueTypes);
+        setLoadingTaskTypes(false);
+      })
+      .catch(err => {
+        console.error("Error fetching task types:", err);
+        setTaskTypes([]);
+        setLoadingTaskTypes(false);
+        setAlertMessage("Failed to load task types.");
+        setShowErrorAlert(true);
       });
-    }, 1000);
+
+    // Fetch priorities
+    Settings.getAllPriority()
+      .then(response => {
+        const priorityList = response || [];
+        const formattedPriorities = priorityList.map(p => ({
+          value: p.priority_id,
+          name: p.priority_name
+        }));
+        setPriorities(formattedPriorities);
+        setLoadingPriorities(false);
+      })
+      .catch(err => {
+        console.error("Error fetching priorities:", err);
+        setPriorities([]);
+        setLoadingPriorities(false);
+        setAlertMessage("Failed to load priorities.");
+        setShowErrorAlert(true);
+      });
+
+  }, []);
+
+  const formatDateTimeForAPI = (datetimeLocal) => {
+    if (!datetimeLocal) return '';
+    return datetimeLocal.length === 16 ? `${datetimeLocal}:00` : datetimeLocal;
+  };
+
+  const handleSubmit = async () => {
+    if (!currentUserId) {
+      setAlertMessage('User not authenticated. Please login again.');
+      setShowErrorAlert(true);
+      return;
+    }
+
+    // Validation
+    if (!form.title.trim()) { setAlertMessage('Please enter a task title.'); setShowErrorAlert(true); return; }
+    if (!form.description.trim()) { setAlertMessage('Please enter a task description.'); setShowErrorAlert(true); return; }
+    if (!form.taskType) { setAlertMessage('Please select a task type.'); setShowErrorAlert(true); return; }
+    if (!form.assignedDate) { setAlertMessage('Please select an assigned date and time.'); setShowErrorAlert(true); return; }
+    if (!form.dueDate) { setAlertMessage('Please select a due date and time.'); setShowErrorAlert(true); return; }
+    if (!form.priority) { setAlertMessage('Please select a priority.'); setShowErrorAlert(true); return; }
+
+    if (new Date(form.dueDate) <= new Date(form.assignedDate)) {
+      setAlertMessage('Due date must be after assigned date.');
+      setShowErrorAlert(true);
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      const taskData = [{
+        user_id: currentUserId,
+        title: form.title.trim(),
+        description: form.description.trim(),
+        priority_id: parseInt(form.priority), // Now sending priority_id
+        assigned_date_time: formatDateTimeForAPI(form.assignedDate),
+        due_date_time: formatDateTimeForAPI(form.dueDate),
+        task_type_id: parseInt(form.taskType),
+        status: 3
+      }];
+
+      const response = await TaskManagement.postMyTask(taskData);
+
+      setIsSubmitting(false);
+      setAlertMessage('Task created successfully!');
+      setShowSuccessAlert(true);
+
+    } catch (error) {
+      setIsSubmitting(false);
+      console.error('Error creating task:', error);
+
+      let errorMsg = 'Failed to create task. Please try again.';
+      if (error.response?.data?.message) errorMsg = error.response.data.message;
+      else if (error.message?.includes('401') || error.message?.includes('403')) errorMsg = 'Authentication failed. Please login again.';
+      else if (error.message?.includes('400')) errorMsg = 'Invalid data. Please check your inputs.';
+
+      setAlertMessage(errorMsg);
+      setShowErrorAlert(true);
+    }
   };
 
   const handleCancel = () => {
-    console.log("Cancel clicked");
-    alert("Navigate to tasks list (UI Demo)");
+    navigate("/hrm/tasks/my-tasks");
   };
 
   const getCurrentDateTime = () => {
@@ -117,23 +275,23 @@ export default function CreateTask() {
 
   const getSelectedTaskTypeName = () => {
     if (!form.taskType) return '';
-    const selected = mockTaskTypes.find(t => t.value == form.taskType);
+    const selected = taskTypes.find(t => t.value == form.taskType);
     return selected ? selected.name : '';
   };
 
   const getSelectedPriorityName = () => {
     if (!form.priority) return '';
-    const selected = mockPriorities.find(p => p.value == form.priority);
+    const selected = priorities.find(p => p.value == form.priority);
     return selected ? selected.name : '';
   };
 
   return (
-    <div className="w-full flex flex-col gap-8 p-4 sm:p-6 md:p-8 bg-gradient-to-br from-slate-50 to-blue-50 min-h-screen">
+    <div className="w-full flex flex-col gap-8 p-4 sm:p-6 md:p-8">
       {/* Header */}
       <div className="flex items-center justify-between mb-4 sm:mb-6">
         <div className="flex items-center gap-2">
           <Plus className="w-6 h-6 text-[#2162C1]" />
-          <h2 className="text-lg sm:text-xl md:text-2xl font-bold text-gray-800">Add Task</h2>
+          <h2 className="pageheading text-lg sm:text-xl md:text-2xl">Add Task</h2>
         </div>
         <button
           className="bg-blue-600 hover:bg-blue-700 text-white w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center rounded-full shadow-md transition-all"
@@ -144,154 +302,112 @@ export default function CreateTask() {
       </div>
 
       {/* Form Card */}
-      <div className="bg-white rounded-xl p-4 sm:p-6 shadow-lg border border-gray-200">
-        <h2 className="text-lg sm:text-xl font-semibold mb-4 sm:mb-6 text-gray-800">Task Information</h2>
+      <div className="bg-white rounded-xl p-4 sm:p-6 shadow-sm border">
+        <h2 className="text-lg sm:text-xl font-semibold mb-4 sm:mb-6">Task Information</h2>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
-          {/* Title */}
           <div>
             <label className={labelClass}>Title *</label>
-            <input 
-              type="text" 
-              placeholder="Enter task title" 
-              className={inputClass} 
-              value={form.title}
-              onChange={(e) => setForm({ ...form, title: e.target.value })} 
-              maxLength={100} 
-            />
+            <input type="text" placeholder="Enter task title" className={inputClass} value={form.title}
+              onChange={(e) => setForm({ ...form, title: e.target.value })} maxLength={100} />
             <p className="text-xs text-gray-500 mt-1">Max 100 characters</p>
           </div>
 
-          {/* Description */}
-          <div className="lg:col-span-2">
+          <div>
             <label className={labelClass}>Description *</label>
-            <textarea 
-              placeholder="Enter task description" 
-              className={`${inputClass} min-h-[120px] resize-none`}
-              value={form.description} 
-              onChange={(e) => setForm({ ...form, description: e.target.value })} 
-              maxLength={500} 
-            />
+            <textarea placeholder="Enter task description" className={`${inputClass} min-h-[100px] resize-none`}
+              value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} maxLength={500} />
             <p className="text-xs text-gray-500 mt-1">Max 500 characters</p>
           </div>
 
-          {/* Priority */}
           <div>
             <CustomSelect 
               label="Priority *" 
               value={form.priority} 
               onChange={(e) => setForm({ ...form, priority: e.target.value })}
-              options={mockPriorities} 
-              placeholder="Select priority"
+              options={priorities} 
+              placeholder={loadingPriorities ? "Loading..." : "Select priority"}
+              disabled={loadingPriorities}
+              loading={loadingPriorities}
             />
           </div>
 
-          {/* Task Type */}
+          <div>
+            <label className={labelClass}>Assigned Date & Time *</label>
+            <input type="datetime-local" className={inputClass} value={form.assignedDate}
+              onChange={(e) => setForm({ ...form, assignedDate: e.target.value })} min={getCurrentDateTime()} />
+          </div>
+
+          <div>
+            <label className={labelClass}>Due Date & Time *</label>
+            <input type="datetime-local" className={inputClass} value={form.dueDate}
+              onChange={(e) => setForm({ ...form, dueDate: e.target.value })} min={form.assignedDate || getCurrentDateTime()} />
+          </div>
+
           <div>
             <CustomSelect 
               label="Task Type *" 
               value={form.taskType} 
               onChange={(e) => setForm({ ...form, taskType: e.target.value })}
-              options={mockTaskTypes} 
-              placeholder="Select task type"
-            />
-          </div>
-
-          {/* Assigned Date */}
-          <div>
-            <label className={labelClass}>Assigned Date & Time *</label>
-            <input 
-              type="datetime-local" 
-              className={inputClass} 
-              value={form.assignedDate}
-              onChange={(e) => setForm({ ...form, assignedDate: e.target.value })} 
-              min={getCurrentDateTime()} 
-            />
-          </div>
-
-          {/* Due Date */}
-          <div>
-            <label className={labelClass}>Due Date & Time *</label>
-            <input 
-              type="datetime-local" 
-              className={inputClass} 
-              value={form.dueDate}
-              onChange={(e) => setForm({ ...form, dueDate: e.target.value })} 
-              min={form.assignedDate || getCurrentDateTime()} 
+              options={taskTypes} 
+              placeholder={loadingTaskTypes ? "Loading..." : "Select task type"}
+              disabled={loadingTaskTypes} 
+              loading={loadingTaskTypes} 
             />
           </div>
         </div>
 
         {/* Preview */}
-        <div className="mt-8 p-4 bg-blue-50 rounded-lg border border-blue-100">
-          <h3 className="text-sm font-semibold text-blue-800 mb-3">Task Preview:</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
-            <div className="flex">
-              <span className="font-medium text-gray-700 w-32">Title:</span>
-              <span className="text-gray-900">{form.title || "Not set"}</span>
-            </div>
-            <div className="flex">
-              <span className="font-medium text-gray-700 w-32">Priority:</span>
-              <span className={`px-2 py-1 rounded text-xs font-medium ${
-                form.priority === "1" ? "bg-red-100 text-red-800" :
-                form.priority === "2" ? "bg-yellow-100 text-yellow-800" :
-                form.priority === "3" ? "bg-green-100 text-green-800" :
-                "text-gray-500"
-              }`}>
-                {getSelectedPriorityName() || "Not set"}
-              </span>
-            </div>
-            <div className="flex">
-              <span className="font-medium text-gray-700 w-32">Task Type:</span>
-              <span className="text-gray-900">{getSelectedTaskTypeName() || "Not set"}</span>
-            </div>
-            <div className="flex">
-              <span className="font-medium text-gray-700 w-32">Assigned:</span>
-              <span className="text-gray-900">{form.assignedDate ? new Date(form.assignedDate).toLocaleString() : "Not set"}</span>
-            </div>
-            <div className="flex">
-              <span className="font-medium text-gray-700 w-32">Due:</span>
-              <span className="text-gray-900">{form.dueDate ? new Date(form.dueDate).toLocaleString() : "Not set"}</span>
-            </div>
-            <div className="md:col-span-2 flex">
-              <span className="font-medium text-gray-700 w-32">Description:</span>
-              <span className="text-gray-900 flex-1">{form.description || "Not set"}</span>
-            </div>
+        <div className="mt-6 p-4 bg-blue-50 rounded-lg">
+          <h3 className="text-sm font-semibold text-blue-800 mb-2">Task Preview:</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
+            <div><span className="font-medium">Title:</span> {form.title || "Not set"}</div>
+            <div><span className="font-medium">Priority:</span> {getSelectedPriorityName() || "Not set"}</div>
+            <div><span className="font-medium">Task Type:</span> {getSelectedTaskTypeName() || "Not set"}</div>
+            <div><span className="font-medium">Assigned:</span> {form.assignedDate || "Not set"}</div>
+            <div><span className="font-medium">Due:</span> {form.dueDate || "Not set"}</div>
+            <div className="md:col-span-2"><span className="font-medium">Description:</span> {form.description || "Not set"}</div>
           </div>
-        </div>
-
-        {/* Demo Notice */}
-        <div className="mt-6 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-          <p className="text-sm text-yellow-700 text-center">
-            This is a UI-only demonstration. All form data is stored locally and not sent to any server.
-          </p>
         </div>
 
         {/* Buttons */}
         <div className="flex justify-center gap-4 mt-8">
-          <button 
-            onClick={handleSubmit} 
-            disabled={isSubmitting}
-            className="px-8 py-3 rounded-lg shadow-md text-white bg-blue-600 hover:bg-blue-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed font-medium min-w-[140px] flex items-center justify-center gap-2"
-          >
+          <button onClick={handleSubmit} disabled={isSubmitting || !currentUserId}
+            className="px-8 py-3 rounded-lg shadow-md text-white bg-blue-600 hover:bg-blue-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed font-medium min-w-[120px]">
             {isSubmitting ? (
-              <>
+              <div className="flex items-center justify-center gap-2">
                 <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                <span>Creating...</span>
-              </>
+                <span>Submitting...</span>
+              </div>
             ) : 'Create Task'}
           </button>
 
-          <button 
-            onClick={handleCancel}
-            className="px-8 py-3 rounded-lg shadow-md text-white bg-gray-600 hover:bg-gray-700 transition-all font-medium min-w-[120px]"
-          >
+          <button onClick={handleCancel} disabled={isSubmitting}
+            className="px-8 py-3 rounded-lg shadow-md text-white bg-orange-500 hover:bg-orange-600 transition-all font-medium disabled:opacity-50 disabled:cursor-not-allowed">
             Cancel
           </button>
         </div>
       </div>
 
+      {/* Success Alert */}
+      {showSuccessAlert && (
+        <SweetAlert success title="Success!" confirmBtnCssClass="btn-confirm"
+          cancelBtnCssClass="btn-cancel" onConfirm={() => { setShowSuccessAlert(false); navigate("/hrm/tasks/my-tasks"); }}
+          confirmBtnText="Go to Tasks" showCancel={true} cancelBtnText="Create Another"
+          onCancel={() => {
+            setShowSuccessAlert(false);
+            setForm({ title: "", description: "", taskType: "", assignedDate: "", dueDate: "", priority: "" });
+          }}>
+          {alertMessage}
+        </SweetAlert>
+      )}
 
+      {/* Error Alert */}
+      {showErrorAlert && (
+        <SweetAlert error title="Error!" onConfirm={() => setShowErrorAlert(false)} confirmBtnText="Try Again">
+          {alertMessage}
+        </SweetAlert>
+      )}
     </div>
   );
 }

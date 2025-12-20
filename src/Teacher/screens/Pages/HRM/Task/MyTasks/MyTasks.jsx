@@ -11,11 +11,20 @@ import {
   Edit,
   Trash2,
   User,
+  Mail,
+  Phone,
+  ClipboardList,
   ToggleLeft,
   ToggleRight,
   X,
   Plus,
+  Calendar,
 } from 'lucide-react';
+import SweetAlert from 'react-bootstrap-sweetalert';
+// import Loader from '../../Components/Loader';
+import { TaskManagement } from '../../Services/TaskManagement.service';
+// import { DepartmentService } from '../../../Academics/Services/Department.service';
+import { Settings } from '../../Settings/Settings.service';
 
 // Custom Select Components
 const CustomSelect = ({ label, value, onChange, options, placeholder, disabled = false }) => {
@@ -145,7 +154,7 @@ const MyTaskTable = ({
   onTaskSelect,
   onToggleActive,
   searchQuery,
-  filters,   
+    filters,   
   onView,
   onEdit,
   onDelete,
@@ -185,6 +194,7 @@ const MyTaskTable = ({
             <thead className="table-header">
               <tr>
                 <th className="table-th">Name</th>
+                <th className="table-th">Department</th>
                 <th className="table-th">Task Title</th>
                 <th className="table-th">Task Type</th>
                 <th className="table-th">Assigned By</th>
@@ -199,7 +209,7 @@ const MyTaskTable = ({
                 <tr>
                   <td colSpan={9} className="table-td text-center py-12">
                     <div className="flex flex-col items-center justify-center">
-                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mb-4"></div>
+                      {/* <Loader size="lg" className="mb-4" /> */}
                       <p className="text-gray-500">Loading tasks...</p>
                     </div>
                   </td>
@@ -221,14 +231,15 @@ const MyTaskTable = ({
                   <tr key={task.id} className="hover:bg-gray-50 transition-colors">
                     <td className="px-6 py-4">
                       <div className="flex items-center">
-                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-100 to-blue-200 flex items-center justify-center">
+                        {/* <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-100 to-blue-200 flex items-center justify-center">
                           <User className="w-6 h-6 text-blue-600" />
-                        </div>
+                        </div> */}
                         <div className="ml-3">
-                          <p className="font-semibold text-gray-900 whitespace-nowrap">{task.name}</p>
+                          <p className="font-semibold text-gray-900 whitespace-nowrap">{task.firstname} {task.lastname}</p>
                         </div>
                       </div>
                     </td>
+                    <td className="px-6 py-4 text-sm text-gray-700">{task.department}</td>
                     <td className="px-6 py-4 text-sm text-gray-900">{task.taskTitle}</td>
                     <td className="px-6 py-4 text-sm text-gray-700">{task.taskType}</td>
                     <td className="px-6 py-4 text-sm text-gray-700">{task.assignedBy}</td>
@@ -247,7 +258,8 @@ const MyTaskTable = ({
                     <td className="px-6 py-4 text-center">
                       <button
                         onClick={() => onToggleActive(task.id)}
-                        disabled={statusChanging[task.id]}
+                        // disabled={statusChanging[task.id]}
+                        disabled
                         className={`inline-flex items-center px-3 py-1.5 rounded-full text-xs font-medium transition-all ${statusChanging[task.id]
                           ? 'bg-gray-100 text-gray-500 cursor-not-allowed'
                           : task.status === 'Complete'
@@ -261,7 +273,7 @@ const MyTaskTable = ({
                       >
                         {statusChanging[task.id] ? (
                           <>
-                            <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-blue-600 mr-1"></div>
+                            {/* <Loader size="sm" className="mr-1" /> */}
                             Updating...
                           </>
                         ) : (
@@ -337,7 +349,7 @@ const MyTaskTable = ({
         {loading ? (
           <div className="bg-white rounded-xl shadow-md p-8 text-center border border-gray-200">
             <div className="flex flex-col items-center justify-center">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mb-4"></div>
+              {/* <Loader size="lg" className="mb-4" /> */}
               <p className="text-gray-500">Loading tasks...</p>
             </div>
           </div>
@@ -364,7 +376,8 @@ const MyTaskTable = ({
                     <User className="w-7 h-7 text-blue-600" />
                   </div>
                   <div className="ml-3">
-                    <p className="font-semibold text-gray-900">{task.name}</p>
+                    <p className="font-semibold text-gray-900">{task.firstname} {task.lastname}</p>
+                    <p className="text-sm text-gray-500">{task.department}</p>
                     <p className="text-sm text-gray-500">{task.taskTitle}</p>
                   </div>
                 </div>
@@ -401,7 +414,7 @@ const MyTaskTable = ({
                     >
                       {statusChanging[task.id] ? (
                         <>
-                          <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-blue-600 mr-1"></div>
+                          {/* <Loader size="sm" className="mr-1" /> */}
                           Updating...
                         </>
                       ) : (
@@ -506,89 +519,9 @@ const formatDate = (isoString) => {
 // Main component
 export default function MyTasks() {
   const navigate = useNavigate();
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [mobileTabStart, setMobileTabStart] = useState(0);
-  
-  // Static sample data
-  const sampleTasks = [
-    {
-      id: '1',
-      name: 'John Doe',
-      taskTitle: 'Complete Project Documentation',
-      taskType: 'Documentation',
-      assignedBy: 'Manager',
-      assignedOn: '2024-01-15T10:30:00',
-      dueOn: '2024-01-20T18:00:00',
-      dueDate: '2024-01-20T18:00:00',
-      priority: 'High',
-      status: 'Pending',
-      email: 'john.doe@example.com',
-      phone: '+1234567890',
-      department: 'IT'
-    },
-    {
-      id: '2',
-      name: 'Jane Smith',
-      taskTitle: 'Design User Interface',
-      taskType: 'Design',
-      assignedBy: 'Team Lead',
-      assignedOn: '2024-01-10T14:00:00',
-      dueOn: '2024-01-25T17:00:00',
-      dueDate: '2024-01-25T17:00:00',
-      priority: 'Medium',
-      status: 'Complete',
-      email: 'jane.smith@example.com',
-      phone: '+1987654321',
-      department: 'Design'
-    },
-    {
-      id: '3',
-      name: 'Robert Johnson',
-      taskTitle: 'Code Review',
-      taskType: 'Development',
-      assignedBy: 'Senior Developer',
-      assignedOn: '2024-01-12T09:15:00',
-      dueOn: '2024-01-18T16:00:00',
-      dueDate: '2024-01-18T16:00:00',
-      priority: 'Low',
-      status: 'Incomplete',
-      email: 'robert.j@example.com',
-      phone: '+1122334455',
-      department: 'IT'
-    },
-    {
-      id: '4',
-      name: 'Sarah Williams',
-      taskTitle: 'Client Meeting Preparation',
-      taskType: 'Meeting',
-      assignedBy: 'Project Manager',
-      assignedOn: '2024-01-14T11:45:00',
-      dueOn: '2024-01-16T14:30:00',
-      dueDate: '2024-01-16T14:30:00',
-      priority: 'High',
-      status: 'Pending',
-      email: 'sarah.w@example.com',
-      phone: '+1555666777',
-      department: 'Marketing'
-    },
-    {
-      id: '5',
-      name: 'Michael Brown',
-      taskTitle: 'Budget Analysis',
-      taskType: 'Finance',
-      assignedBy: 'Finance Head',
-      assignedOn: '2024-01-05T13:20:00',
-      dueOn: '2024-01-30T18:00:00',
-      dueDate: '2024-01-30T18:00:00',
-      priority: 'Medium',
-      status: 'Pending',
-      email: 'michael.b@example.com',
-      phone: '+1444333222',
-      department: 'Finance'
-    }
-  ];
-
-  const [tasks, setTasks] = useState(sampleTasks);
+  const [tasks, setTasks] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedTask, setSelectedTask] = useState(null);
   const [statusChanging, setStatusChanging] = useState({});
@@ -605,14 +538,20 @@ export default function MyTasks() {
     toDate: '',
     activeSubTab: ''
   });
-  
   // Alert States
-  const [showAlert, setShowAlert] = useState(false);
-  const [alertMessage, setAlertMessage] = useState('');
-  const [alertType, setAlertType] = useState('success'); // 'success' or 'error'
-  const [taskToDelete, setTaskToDelete] = useState(null);
+  const [alert, setAlert] = useState(null);
+const currentUser = JSON.parse(localStorage.getItem("userProfile"));
+const userId = currentUser?.userId || null;
 
-  const departments = ['HR', 'IT', 'Finance', 'Marketing', 'Operations', 'General', 'Chemistry'];
+  const activeCollege = JSON.parse(localStorage.getItem("activeCollege"));
+  const collegeId = activeCollege?.id || null;
+
+  const [departments, setDepartments] = useState([]);
+  const [deptLoading, setDeptLoading] = useState(false);
+  const [priorities, setPriorities] = useState([]);
+  const [priorityLoading, setPriorityLoading] = useState(false);
+  const [statuses, setStatuses] = useState([]);
+  const [statusLoading, setStatusLoading] = useState(false);
   const years = ['2022', '2023', '2024', '2025'];
   const monthTabs = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
   const fullMonthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
@@ -732,27 +671,38 @@ export default function MyTasks() {
     setSelectedTask(selectedTask === id ? null : id);
   };
   
-  const handleToggleActive = (id) => {
+  const handleToggleActive = async (id) => {
     setStatusChanging(prev => ({ ...prev, [id]: true }));
+    const task = tasks.find(t => t.id === id);
+    const newStatus = task.status === 'Pending' || task.status === 'Incomplete' ? 'Complete' : 'Pending';
+    const updateValues = { status: newStatus };
     
-    // Update task status in local state
-    setTasks(prev => prev.map(task => {
-      if (task.id === id) {
-        const newStatus = task.status === 'Complete' ? 'Pending' : 'Complete';
-        return { ...task, status: newStatus };
-      }
-      return task;
-    }));
-    
-    setTimeout(() => {
+    try {
+      await TaskManagement.updateMyTask(updateValues, parseInt(id));
+      setTasks(prev => prev.map(t => t.id === id ? { ...t, status: newStatus } : t));
+      setAlert(
+        <SweetAlert
+          success
+          title="Success!"
+          onConfirm={() => setAlert(null)}
+        >
+          Status updated successfully!
+        </SweetAlert>
+      );
+    } catch (err) {
+      console.error(err);
+      setAlert(
+        <SweetAlert
+          danger
+          title="Error!"
+          onConfirm={() => setAlert(null)}
+        >
+          Failed to update status.
+        </SweetAlert>
+      );
+    } finally {
       setStatusChanging(prev => ({ ...prev, [id]: false }));
-      setAlertMessage('Status updated successfully!');
-      setAlertType('success');
-      setShowAlert(true);
-      
-      // Auto hide alert after 3 seconds
-      setTimeout(() => setShowAlert(false), 3000);
-    }, 1000);
+    }
   };
   
   const handleView = (task) => {
@@ -765,22 +715,48 @@ export default function MyTasks() {
  
   // Delete functionality
   const handleDelete = (id) => {
-    setTaskToDelete(id);
-    setAlertMessage('Are you sure you want to delete this task?');
-    setAlertType('warning');
-    setShowAlert(true);
+    setAlert(
+      <SweetAlert
+        warning
+        showCancel
+        confirmBtnText="Yes, delete it!"
+        confirmBtnCssClass="btn-confirm"
+        cancelBtnCssClass="btn-cancel"
+        title="Are you sure?"
+        onConfirm={() => confirmDelete(id)}
+        onCancel={() => setAlert(null)}
+        focusCancelBtn
+      >
+        You will not be able to recover this record!
+      </SweetAlert>
+    );
   };
 
-  const confirmDelete = () => {
-    if (taskToDelete) {
-      setTasks(prev => prev.filter(t => t.id !== taskToDelete));
-      setAlertMessage('Task deleted successfully.');
-      setAlertType('success');
-      setShowAlert(true);
-      setTaskToDelete(null);
-      
-      // Auto hide alert after 3 seconds
-      setTimeout(() => setShowAlert(false), 3000);
+  const confirmDelete = async (id) => {
+    try {
+      await TaskManagement.deleteMyTask(parseInt(id), userId);
+      setTasks(prev => prev.filter(t => t.id !== id));
+      setAlert(
+        <SweetAlert
+          success
+          title="Deleted!"
+          onConfirm={() => setAlert(null)}
+          confirmBtnCssClass="btn-confirm"
+        >
+          Task deleted successfully.
+        </SweetAlert>
+      );
+    } catch (error) {
+      setAlert(
+        <SweetAlert
+          danger
+          title="Error!"
+          onConfirm={() => setAlert(null)}
+          confirmBtnCssClass="btn-confirm"
+        >
+          Failed to delete task.
+        </SweetAlert>
+      );
     }
   };
  
@@ -788,7 +764,7 @@ export default function MyTasks() {
   
   // Pagination state
   const [currentPage, setCurrentPage] = useState(0);
-  const entriesPerPage = 10;
+const entriesPerPage = 10;
   const totalTasks = filteredTasks.length;
   const totalPages = Math.ceil(totalTasks / entriesPerPage);
   
@@ -821,69 +797,227 @@ export default function MyTasks() {
     setMobileTabStart(0);
   }, [filters.month, filters.year, filters.week, filters.view]);
 
+  // Fetch departments from API
+  useEffect(() => {
+    const fetchDepartments = async () => {
+      if (!collegeId) return;
+      setDeptLoading(true);
+      try {
+        const data = await DepartmentService.getDepartmentByCollegeId(collegeId);
+        const deptNames = data.map(dept => dept.department_name || dept.name || 'Unknown');
+        setDepartments(deptNames);
+      } catch (err) {
+        console.error('Error fetching departments:', err);
+        setDepartments([]);
+      } finally {
+        setDeptLoading(false);
+      }
+    };
+    fetchDepartments();
+  }, [collegeId]);
+
+  // Fetch priorities from API
+  useEffect(() => {
+    const fetchPriorities = async () => {
+      setPriorityLoading(true);
+      try {
+        const data = await Settings.getAllPriority();
+        const priorityNames = ['All', ...data.map(priority => priority.priority_name || 'Unknown')];
+        setPriorities(priorityNames);
+      } catch (err) {
+        console.error('Error fetching priorities:', err);
+        setPriorities(['All', 'High', 'Medium', 'Low']);
+      } finally {
+        setPriorityLoading(false);
+      }
+    };
+    fetchPriorities();
+  }, []);
+
+  // Fetch task statuses from API
+  useEffect(() => {
+    const fetchStatuses = async () => {
+      setStatusLoading(true);
+      try {
+        const data = await Settings.getAllTaskStatus();
+        const statusNames = ['All', ...data.map(status => status.name || 'Unknown')];
+        setStatuses(statusNames);
+      } catch (err) {
+        console.error('Error fetching statuses:', err);
+        setStatuses(['All', 'Pending', 'Complete', 'Incomplete']);
+      } finally {
+        setStatusLoading(false);
+      }
+    };
+    fetchStatuses();
+  }, []);
+
+  // Fetch tasks from API - UPDATED TO USE getAllSelfTasks
+//  useEffect(() => {
+//   console.log("userId",userId);
+//   if (!userId) return;
+
+//   const fetchTasks = async () => {
+//     try {
+//       setLoading(true);
+
+//       const params = {
+//         page: currentPage,
+//         size: entriesPerPage,
+//         department: filters.department || undefined,
+//         priority: filters.priority && filters.priority !== 'All' ? filters.priority : undefined,
+//         status: filters.status && filters.status !== 'All' ? filters.status : undefined,
+//         view: filters.view || undefined,
+//         year: filters.year || undefined,
+//         month: filters.month || undefined,
+//         week: filters.week || undefined,
+//         fromDate: filters.fromDate || undefined,
+//         toDate: filters.toDate || undefined,
+//         search: searchQuery || undefined
+//       };
+
+//       const response = await TaskManagement.getAllSelfTasks(userId, params);
+
+//       /**
+//        * Expected API response:
+//        * {
+//        *   content: [],
+//        *   totalElements: number,
+//        *   totalPages: number,
+//        *   number: page
+//        * }
+//        */
+
+//       const data = response?.content || [];
+
+//       const mappedTasks = data.map(task => ({
+//         id: task.self_task_id?.toString(),
+//         firstname: task.user?.other_staff_info?.firstname || "N/A",
+//         lastname: task.user?.other_staff_info?.lastname || "N/A",
+//         name: task.user?.username || "Current User",
+//         taskTitle: task.title || "No Title",
+//         taskType: task.task_type?.task_type_name || 'General',
+//         assignedBy: task.assigned_by?.other_staff_info
+//           ? `${task.assigned_by.other_staff_info.firstname} ${task.assigned_by.other_staff_info.lastname}`
+//           : "System",
+//         assignedOn: formatDate(task.assigned_date_time),
+//         dueOn: formatDate(task.due_date_time),
+//         dueDate: task.due_date_time,
+//         priority: task.priority?.priority_name || 'Medium',
+//         status: task.status?.name || 'Pending',
+//         email: task.user?.username || "",
+//         department: task.user?.other_staff_info?.department?.department_name || ""
+//       }));
+
+//       setTasks(mappedTasks);
+//       setTotalTasks(response.totalElements || 0);
+//       setTotalPages(response.totalPages || 0);
+//     } catch (err) {
+//       console.error(err);
+//       setTasks([]);
+//     } finally {
+//       setLoading(false);
+//     }
+//   };
+
+//   fetchTasks();
+// }, [
+//   userId,
+//   currentPage,
+//   filters.department,
+//   filters.priority,
+//   filters.status,
+//   filters.view,
+//   filters.year,
+//   filters.month,
+//   filters.week,
+//   filters.fromDate,
+//   filters.toDate,
+//   searchQuery
+// ]);
+
+useEffect(() => {
+  console.log("userId:", userId);
+  if (!userId) return;
+
+  const fetchTasks = async () => {
+    try {
+      setLoading(true);
+
+      // ✅ Simple API call – ONLY userId
+      const response = await TaskManagement.getAllSelfTasksByUserId(userId);
+
+      /**
+       * Expected response:
+       * {
+       *   user: {...},
+       *   tasks: [...]
+       * }
+       */
+
+      const tasksData = Array.isArray(response?.tasks)
+        ? response.tasks
+        : [];
+
+      const mappedTasks = tasksData.map(task => ({
+        id: task.self_task_id?.toString(),
+
+        firstname: response.user?.other_staff_info?.firstname || "N/A",
+        lastname: response.user?.other_staff_info?.lastname || "N/A",
+
+        name: response.user?.username || "",
+        email: response.user?.username || "",
+
+        taskTitle: task.title || "No Title",
+        taskType: task.task_type?.task_type_name || "General",
+
+        assignedBy: task.assigned_by?.other_staff_info
+          ? `${task.assigned_by.other_staff_info.firstname} ${task.assigned_by.other_staff_info.lastname}`
+          : "System",
+
+        assignedOn: formatDate(task.assigned_date_time),
+        dueOn: formatDate(task.due_date_time),
+        dueDate: task.due_date_time,
+
+        priority: task.priority?.priority_name || "Medium",
+        status: task.status?.name || "Pending",
+
+        department:
+          response.user?.other_staff_info?.department?.department_name || ""
+      }));
+
+      setTasks(mappedTasks);
+
+      // ✅ Client-side pagination only
+      // setTotalTasks(mappedTasks.length);
+      // setTotalPages(Math.ceil(mappedTasks.length / entriesPerPage));
+    } catch (err) {
+      console.error("Error fetching tasks:", err);
+      setTasks([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  fetchTasks();
+}, [userId]);
+
+
+
+ useEffect(() => {
+  setCurrentPage(0);
+}, [
+  filters.department,
+  filters.priority,
+  filters.status,
+  filters.view,
+  searchQuery
+]);
+
+
   return (
     <div className="p-0 md:p-0">
-      {/* Custom Alert */}
-      {showAlert && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black/40 z-50 px-4 sm:px-0">
-          <div className="bg-white p-5 sm:p-6 rounded-2xl shadow-xl w-full max-w-sm sm:max-w-md animate-fadeIn">
-            <div className="text-center">
-              <div className={`mx-auto flex items-center justify-center h-12 w-12 rounded-full mb-4 ${
-                alertType === 'success' ? 'bg-green-100' : 
-                alertType === 'error' ? 'bg-red-100' : 'bg-yellow-100'
-              }`}>
-                {alertType === 'success' ? (
-                  <svg className="h-6 w-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
-                  </svg>
-                ) : alertType === 'error' ? (
-                  <svg className="h-6 w-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                ) : (
-                  <svg className="h-6 w-6 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.998-.833-2.732 0L4.23 16.5c-.77.833.192 2.5 1.732 2.5z" />
-                  </svg>
-                )}
-              </div>
-              <h3 className="text-lg sm:text-xl font-semibold mb-2 text-gray-800">
-                {alertType === 'success' ? 'Success!' : 
-                 alertType === 'error' ? 'Error!' : 'Warning!'}
-              </h3>
-              <p className="text-gray-600 mb-4 text-sm sm:text-base">{alertMessage}</p>
-              <div className="flex flex-col sm:flex-row justify-center gap-3 sm:gap-4">
-                {alertType === 'warning' ? (
-                  <>
-                    <button
-                      onClick={() => {
-                        setShowAlert(false);
-                        setTaskToDelete(null);
-                      }}
-                      className="w-full sm:w-auto px-5 py-2 rounded-md bg-blue-600 text-white hover:bg-blue-700 transition text-sm sm:text-base"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      onClick={confirmDelete}
-                      className="w-full sm:w-auto px-5 py-2 rounded-md bg-red-600 text-white hover:bg-red-700 transition text-sm sm:text-base"
-                    >
-                      Delete
-                    </button>
-                  </>
-                ) : (
-                  <button
-                    onClick={() => setShowAlert(false)}
-                    className="w-full px-5 py-2 rounded-md bg-blue-600 text-white hover:bg-blue-700 transition text-sm sm:text-base"
-                  >
-                    OK
-                  </button>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-      
+      {alert}
       {/* Search + Filter + Create Task */}
       <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-4 mb-4">
         {/* SEARCH */}
@@ -930,23 +1064,26 @@ export default function MyTasks() {
               value={filters.department}
               onChange={(e) => setFilters(prev => ({ ...prev, department: e.target.value }))}
               options={departments}
-              placeholder="Select Department"
+              placeholder={deptLoading ? "Loading departments..." : "Select Department"}
+              disabled={deptLoading}
             />
            
             <CustomSelect
               label="Priority"
               value={filters.priority || ''}
               onChange={(e) => setFilters(prev => ({ ...prev, priority: e.target.value }))}
-              options={['All', 'High', 'Medium', 'Low']}
-              placeholder="Select Priority"
+              options={priorities}
+              placeholder={priorityLoading ? "Loading priorities..." : "Select Priority"}
+              disabled={priorityLoading}
             />
            
             <CustomSelect
               label="Status"
               value={filters.status || ''}
               onChange={(e) => setFilters(prev => ({ ...prev, status: e.target.value }))}
-              options={['All', 'Pending', 'Complete', 'Incomplete']}
-              placeholder="Select Status"
+              options={statuses}
+              placeholder={statusLoading ? "Loading statuses..." : "Select Status"}
+              disabled={statusLoading}
             />
             <CustomSelect
               label="Select View"
@@ -1127,8 +1264,9 @@ export default function MyTasks() {
         statusChanging={statusChanging}
         loading={loading}
         searchQuery={searchQuery}
-        filters={filters}
+         filters={filters}
       />
+
     </div>
   );
 }

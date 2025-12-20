@@ -1,61 +1,62 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { useNavigate, useParams } from "react-router-dom";
 import { Eye, X } from "lucide-react";
-import RoleModal from '../../Components/RoleModal';
+import { TaskManagement } from '../../Services/TaskManagement.service';
 
-export default function ViewMyTasks({ task }) {
-  // Modal state
-  const [showRoleModal, setShowRoleModal] = useState(false);
-  const [selectedEmployee, setSelectedEmployee] = useState(null);
+export default function ViewMyTasks() {
+  const navigate = useNavigate();
+  const { id } = useParams();
+  const [task, setTask] = useState(null);
+  const [loading, setLoading] = useState(true);
 
-  // Sample employee data
-  const employees = [
-    {
-      id: 1,
-      name: 'Tejas Chaudhari',
-      employee: 'Tejas Chaudhari',
-      designation: 'Graphic Designer',
-      role: 'Employee',
-      department: 'Digital Marketing',
-      responsibility: 'Design and creative work, Brand identity development, Visual content creation'
-    },
-    {
-      id: 2,
-      name: 'Ranee Nikure',
-      employee: 'Ranee Nikure',
-      designation: 'Digital Marketing Head',
-      role: 'Team Leader',
-      department: 'Digital Marketing',
-      responsibility: 'Team management and strategy, Campaign planning, Performance monitoring'
-    },
-    {
-      id: 3,
-      name: 'Janhvi Wanmali',
-      employee: 'Janhvi Wanmali',
-      designation: 'Associate Software Engineer',
-      role: 'Employee',
-      department: 'Digital Marketing',
-      responsibility: 'Software development and maintenance, Code review, Testing and deployment'
+
+  // Fetch task data
+  useEffect(() => {
+    if (id) {
+      TaskManagement.getMyTaskbyID(id)
+        .then(response => {
+          if (response) {
+            setTask(response);
+          }
+        })
+        .catch(error => {
+          console.error('Error fetching task:', error);
+        })
+        .finally(() => {
+          setLoading(false);
+        });
     }
-  ];
+  }, [id]);
 
-  // View roles and responsibility
-  const handleViewRoles = (employee) => {
-    setSelectedEmployee(employee);
-    setShowRoleModal(true);
+  // Format date helper
+  const formatDate = (isoString) => {
+    if (!isoString) return 'N/A';
+    const date = new Date(isoString);
+    if (isNaN(date.getTime())) return 'Invalid Date';
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const year = date.getFullYear();
+    let hours = date.getHours();
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    const ampm = hours >= 12 ? 'PM' : 'AM';
+    hours = hours % 12;
+    hours = hours ? hours : 12;
+    const strTime = `${hours}:${minutes} ${ampm}`;
+    return `${day}-${month}-${year} , ${strTime}`;
   };
 
-  // Example fallback data
-  const data = task || {
-    title: "Creative of Diwali",
-    description: "I have to make a creative on a Diwali",
-    assignedDate: "20-09-2025 , 12:10 PM",
-    dueDate: "20-09-2025 , 12:10 PM",
+  // Map API data to display format
+  const data = task ? {
+    title: task.title || "No Title",
+    description: task.description || "No Description",
+    assignedDate: formatDate(task.assigned_date_time),
+    dueDate: formatDate(task.due_date_time),
     assignedBy: "Self",
-    taskType: "Scheduled",
-    priority: "High",
-    status: "In-Progress",
-    overdue: "5 Days 21 Hrs 25 Min",
-  };
+    taskType: task.task_type?.task_type_name || "General",
+    priority: task.priority?.priority_name || "Medium",
+    status: task.status?.name || "Pending",
+    overdue: task.overdue ? `${task.days_until_due} Days` : null,
+  } : null;
 
   // Helper function to check if task is overdue
   const isTaskOverdue = (task) => {
@@ -67,6 +68,26 @@ export default function ViewMyTasks({ task }) {
     currentDate.setHours(0, 0, 0, 0);
     return dueDate < currentDate;
   };
+
+  if (loading) {
+    return (
+      <div className="w-full flex flex-col gap-6 p-4 sm:p-6 md:p-8">
+        <div className="bg-white rounded-2xl p-6 sm:p-8 shadow-sm border w-full text-center">
+          <p className="text-gray-500">Loading task details...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!data) {
+    return (
+      <div className="w-full flex flex-col gap-6 p-4 sm:p-6 md:p-8">
+        <div className="bg-white rounded-2xl p-6 sm:p-8 shadow-sm border w-full text-center">
+          <p className="text-red-500">Task not found</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="w-full flex flex-col gap-6 p-4 sm:p-6 md:p-8">
@@ -81,7 +102,7 @@ export default function ViewMyTasks({ task }) {
 
         {/* RIGHT: BACK BUTTON */}
         <button
-          onClick={() => window.history.back()}
+          onClick={() => navigate("/hrm/tasks/my-tasks")}
           className="bg-blue-600 hover:bg-blue-700 text-white w-9 h-9 sm:w-10 sm:h-10 
                      flex items-center justify-center rounded-full shadow-md transition-all"
         >
@@ -176,97 +197,7 @@ export default function ViewMyTasks({ task }) {
         </div>
       </div>
 
-      {/* ⭐ TASK ASSIGNMENTS TABLE - Desktop */}
-      <div className="hidden lg:block bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[900px]">
-            <thead className="table-header">
-              <tr>
-                <th className="table-th text-center">Name</th>
-                <th className="table-th text-center">Designation</th>
-                <th className="table-th text-center">Role</th>
-                <th className="table-th text-center">Department</th>
-                {/* <th className="table-th text-center">Roles & Responsibility</th> */}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200">
-              {employees.map((employee) => (
-                <tr key={employee.id} className="hover:bg-gray-50 transition-colors">
-                  <td className="px-6 py-4 text-sm text-gray-900 text-center">{employee.name}</td>
-                  <td className="px-6 py-4 text-sm text-gray-700 text-center">{employee.designation}</td>
-                  <td className="px-6 py-4 text-sm text-gray-700 text-center">{employee.role}</td>
-                  <td className="px-6 py-4 text-sm text-gray-700 text-center">{employee.department}</td>
-                  {/* <td className="px-6 py-4 text-center">
-                    <button 
-                      onClick={() => handleViewRoles(employee)}
-                      className="p-2 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition"
-                    >
-                      <Eye className="w-4 h-4" />
-                    </button>
-                  </td> */}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
 
-        {/* ────────────────────── Pagination ────────────────────── */}
-        <div className="flex justify-between items-center px-6 py-4 border-t border-gray-200 bg-white">
-          {/* Previous Button */}
-          <button
-            disabled={true}
-            className="flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-white transition-all bg-blue-200 text-gray-400 cursor-not-allowed"
-          >
-            Previous
-          </button>
-
-          {/* Showing X-Y of Z */}
-          <span className="text-sm font-medium text-gray-700">
-            Showing <strong>1</strong>–<strong>3</strong> of <strong>3</strong> entries
-          </span>
-
-          {/* Next Button */}
-          <button
-            disabled={true}
-            className="flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-white transition-all bg-blue-200 text-gray-400 cursor-not-allowed"
-          >
-            Next
-          </button>
-        </div>
-      </div>
-
-      {/* Mobile Cards */}
-      <div className="lg:hidden space-y-4">
-        {employees.map((employee) => (
-          <div key={employee.id} className="bg-white rounded-xl shadow-md border border-gray-200 p-5 hover:shadow-lg transition-all">
-            <div className="flex justify-between items-start mb-3">
-              <div>
-                <p className="font-semibold text-gray-900">{employee.name}</p>
-                <p className="text-sm text-gray-500">{employee.designation}</p>
-              </div>
-            </div>
-            <div className="space-y-2 text-sm text-gray-700 mb-4">
-              <div><span className="font-medium">Role:</span> {employee.role}</div>
-              <div><span className="font-medium">Department:</span> {employee.department}</div>
-            </div>
-            <div className="flex justify-end items-center">
-              <button 
-                onClick={() => handleViewRoles(employee)}
-                className="p-2.5 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition"
-              >
-                <Eye className="w-4 h-4" />
-              </button>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {/* Roles & Responsibility Modal */}
-      {/* <RoleModal 
-        isOpen={showRoleModal}
-        onClose={() => setShowRoleModal(false)}
-        employee={selectedEmployee}
-      /> */}
     </div>
   );
 }

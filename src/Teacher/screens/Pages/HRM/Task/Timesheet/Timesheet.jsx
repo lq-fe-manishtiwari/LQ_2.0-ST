@@ -2,10 +2,12 @@ import React, { useState, useEffect, useRef, useMemo } from "react";
 import { Download, Search, Filter, ChevronDown, ChevronLeft, ChevronRight } from "lucide-react";
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
+import { TaskManagement } from '../../Services/TaskManagement.service';
+// import { DepartmentService } from '../../../Academics/Services/Department.service';
 // import Loader from '../Components/Loader';
 
 // Custom Select Components
-const CustomSelect = ({ label, value, onChange, options, placeholder, disabled = false }) => {
+const CustomSelect = ({ label, value, onChange, options, placeholder, disabled = false, getLabel }) => {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef(null);
 
@@ -46,15 +48,16 @@ const CustomSelect = ({ label, value, onChange, options, placeholder, disabled =
             >
               {placeholder}
             </div>
-            {options.map(option => (
+           {options.map(option => (
               <div
-                key={option}
-                className="px-4 py-2 text-sm text-gray-700 cursor-pointer hover:bg-blue-50 transition-colors"
+                key={option.user_id}
+                className="px-4 py-2 text-sm cursor-pointer hover:bg-blue-50"
                 onClick={() => handleSelect(option)}
               >
-                {option}
+                {getLabel ? getLabel(option) : option}
               </div>
             ))}
+
           </div>
         )}
       </div>
@@ -85,8 +88,18 @@ export default function TimeSheetDashboard() {
   const [filteredData, setFilteredData] = useState({ days: [], summary: {} });
   const [downloadOpen, setDownloadOpen] = useState(false);
   const downloadRef = useRef(null);
+  const [departments, setDepartments] = useState([]);
+  const [deptLoading, setDeptLoading] = useState(false);
+  const [empLoading, setEmpLoading] = useState(false);
+  const activeCollege = JSON.parse(localStorage.getItem("activeCollege"));
+  const collegeId = activeCollege?.id || null;
 
-  const departments = ['HR', 'IT', 'Finance', 'Marketing', 'Operations'];
+  const [employees, setEmployees] = useState([]);
+const [selectedEmployee, setSelectedEmployee] = useState(null);
+const [userId, setUserId] = useState(null);
+const [employeeId, setEmployeeId] = useState('');
+
+
   const years = ['2022', '2023', '2024', '2025'];
 
   const monthTabs = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -167,330 +180,91 @@ export default function TimeSheetDashboard() {
     setFilters(prev => ({ ...prev, view: viewValue, activeSubTab: firstTab }));
   };
 
-  // Mock data for different scenarios
-  const mockData = {
-    "Manish Tiwari": {
-      daily: {
-        "2025-02-25": {
-          summary: { working: 1, present: 1, absent: 0, leave: 0 },
-          tasks: [
-            {
-              title: "Creative of Diwali",
-              description: "I have to make a creative for Diwali",
-              priority: "High",
-              status: "In-Progress",
-              assignedBy: "Riane Nikure",
-              taskType: "Scheduled",
-              dueDate: "20-09-2025, 12:10 PM",
-              time: "30 Min",
-            },
-            {
-              title: "Website Redesign",
-              description: "Redesign company website homepage",
-              priority: "Medium",
-              status: "Completed",
-              assignedBy: "Riane Nikure",
-              taskType: "Scheduled",
-              dueDate: "25-02-2025, 05:00 PM",
-              time: "2 Hours",
-            }
-          ]
+
+
+  const transformApiResponse = (apiResponse) => {
+    console.log('API Response:', apiResponse);
+    
+    if (!apiResponse || !apiResponse.date_wise_data) {
+      return { days: [], summary: { working: 0, present: 0, absent: 0, leave: 0 } };
+    }
+
+    const days = apiResponse.date_wise_data
+      .filter(dayData => dayData.total_task_count > 0)
+      .map(dayData => {
+        const allTasks = [...(dayData.assigned_tasks || []), ...(dayData.self_tasks || [])];
+        
+        return {
+          date: dayData.date,
+          dayName: new Date(dayData.date).toLocaleDateString('en-US', { weekday: 'long' }),
+          tasks: allTasks.map(task => ({
+            title: task.task_name || 'Untitled Task',
+            description: task.description || '',
+            priority: task.priority_name || 'Medium',
+            status: task.task_status_name || 'UNKNOWN',
+            taskType: task.task_type_name || 'General',
+            assignedBy: task.assigned_by_user ? `${task.assigned_by_user.other_staff_info?.firstname || ''} ${task.assigned_by_user.other_staff_info?.lastname || ''}`.trim() || task.assigned_by_user.username : 'N/A',
+            dueDate: task.due_date_time ? new Date(task.due_date_time).toLocaleDateString() : 'N/A',
+            time: task.estimated_time || 'N/A'
+          }))
+        };
+      });
+
+    const finalDays = days.length > 0 ? days : apiResponse.date_wise_data.map(dayData => ({
+      date: dayData.date,
+      dayName: new Date(dayData.date).toLocaleDateString('en-US', { weekday: 'long' }),
+      tasks: []
+    }));
+
+    const summary = {
+      working: apiResponse.summary?.total_days_with_tasks || finalDays.length,
+      present: apiResponse.summary?.total_days_with_tasks || finalDays.length,
+      absent: 0,
+      leave: 0
+    };
+
+    console.log('Transformed Data:', { days: finalDays, summary });
+    return { days: finalDays, summary };
+  };
+
+  const fetchTimesheetData = async () => {
+    try {
+      setLoading(true);
+      let response;
+      
+      if (!filters.view) {
+        response = await TaskManagement.getUserTimesheetCurrentMonth(userId);
+      } else if (filters.view === 'monthly') {
+        if (!filters.year) return;
+        
+        if (filters.activeSubTab && monthTabs.includes(filters.activeSubTab)) {
+          const monthIndex = monthTabs.indexOf(filters.activeSubTab) + 1;
+          response = await TaskManagement.getUserTimesheetMonthly(userId, filters.year, monthIndex);
+        } else {
+          response = await TaskManagement.getUserTimesheetCurrentMonth(userId);
         }
-      },
-      monthly: {
-        "2025-08": {
-          summary: { working: 22, present: 20, absent: 1, leave: 1 },
-          days: [
-            {
-              date: "2025-08-01",
-              dayName: "Friday",
-              tasks: [
-                {
-                  title: "August Campaign Design",
-                  description: "Design marketing campaign for August",
-                  priority: "High",
-                  status: "Completed",
-                  assignedBy: "Riane Nikure",
-                  taskType: "Scheduled",
-                  dueDate: "01-08-2025, 06:00 PM",
-                  time: "4 Hours",
-                }
-              ]
-            },
-            {
-              date: "2025-08-02",
-              dayName: "Saturday",
-              tasks: []
-            },
-            {
-              date: "2025-08-05",
-              dayName: "Tuesday",
-              tasks: [
-                {
-                  title: "Client Presentation",
-                  description: "Prepare slides for client meeting",
-                  priority: "High",
-                  status: "In-Progress",
-                  assignedBy: "Tejas Chaudhari",
-                  taskType: "Ad-hoc",
-                  dueDate: "05-08-2025, 03:00 PM",
-                  time: "1.5 Hours",
-                }
-              ]
-            }
-          ]
-        },
-        "2025-11": {
-          summary: { working: 21, present: 19, absent: 1, leave: 1 },
-          days: [
-            {
-              date: "2025-11-03",
-              dayName: "Monday",
-              tasks: [
-                {
-                  title: "November Planning Session",
-                  description: "Monthly planning and goal setting",
-                  priority: "High",
-                  status: "Completed",
-                  assignedBy: "Riane Nikure",
-                  taskType: "Scheduled",
-                  dueDate: "03-11-2025, 10:00 AM",
-                  time: "2 Hours",
-                }
-              ]
-            },
-            {
-              date: "2025-11-05",
-              dayName: "Wednesday",
-              tasks: [
-                {
-                  title: "Holiday Campaign Design",
-                  description: "Design marketing materials for holiday season",
-                  priority: "High",
-                  status: "In-Progress",
-                  assignedBy: "Tejas Chaudhari",
-                  taskType: "Scheduled",
-                  dueDate: "15-11-2025, 05:00 PM",
-                  time: "3 Hours",
-                }
-              ]
-            },
-            {
-              date: "2025-11-10",
-              dayName: "Monday",
-              tasks: [
-                {
-                  title: "Team Review Meeting",
-                  description: "Weekly team performance review",
-                  priority: "Medium",
-                  status: "Completed",
-                  assignedBy: "Riane Nikure",
-                  taskType: "Recurring",
-                  dueDate: "10-11-2025, 02:00 PM",
-                  time: "1 Hour",
-                }
-              ]
-            },
-            {
-              date: "2025-11-20",
-              dayName: "Thursday",
-              tasks: [
-                {
-                  title: "Product Launch Preparation",
-                  description: "Prepare materials for upcoming product launch",
-                  priority: "High",
-                  status: "In-Progress",
-                  assignedBy: "Tejas Chaudhari",
-                  taskType: "Scheduled",
-                  dueDate: "25-11-2025, 06:00 PM",
-                  time: "4 Hours",
-                }
-              ]
-            }
-          ]
-        }
-      },
-      period: {
-        "2025-02-20_to_2025-02-25": {
-          summary: { working: 4, present: 4, absent: 0, leave: 0 },
-          days: [
-            {
-              date: "2025-02-20",
-              dayName: "Thursday",
-              tasks: [
-                {
-                  title: "Project Planning",
-                  description: "Weekly project planning session",
-                  priority: "Medium",
-                  status: "Completed",
-                  assignedBy: "Riane Nikure",
-                  taskType: "Scheduled",
-                  dueDate: "20-02-2025, 11:00 AM",
-                  time: "1 Hour",
-                }
-              ]
-            },
-            {
-              date: "2025-02-21",
-              dayName: "Friday",
-              tasks: [
-                {
-                  title: "Team Meeting",
-                  description: "Weekly team sync meeting",
-                  priority: "Medium",
-                  status: "Completed",
-                  assignedBy: "Tejas Chaudhari",
-                  taskType: "Recurring",
-                  dueDate: "21-02-2025, 10:00 AM",
-                  time: "45 Min",
-                }
-              ]
-            },
-            {
-              date: "2025-02-25",
-              dayName: "Tuesday",
-              tasks: [
-                {
-                  title: "Creative of Diwali",
-                  description: "I have to make a creative for Diwali",
-                  priority: "High",
-                  status: "In-Progress",
-                  assignedBy: "Riane Nikure",
-                  taskType: "Scheduled",
-                  dueDate: "20-09-2025, 12:10 PM",
-                  time: "30 Min",
-                }
-              ]
-            }
-          ]
-        }
+      } else if (filters.view === 'weekly') {
+        response = await TaskManagement.getUserTimesheetCurrentWeek(userId);
+      } else if (filters.view === 'period') {
+        if (!filters.fromDate || !filters.toDate) return;
+        response = await TaskManagement.getUserTimesheet(userId, filters.fromDate, filters.toDate);
       }
-    },
-    "Tejas Chaudhari": {
-      daily: {
-        "2025-02-25": {
-          summary: { working: 1, present: 1, absent: 0, leave: 0 },
-          tasks: [
-            {
-              title: "Code Review",
-              description: "Review pull requests for main branch",
-              priority: "High",
-              status: "Completed",
-              assignedBy: "Manish Tiwari",
-              taskType: "Scheduled",
-              dueDate: "25-02-2025, 04:00 PM",
-              time: "2 Hours",
-            }
-          ]
-        }
-      },
-      monthly: {
-        "2025-08": {
-          summary: { working: 22, present: 21, absent: 0, leave: 1 },
-          days: [
-            {
-              date: "2025-08-01",
-              dayName: "Friday",
-              tasks: [
-                {
-                  title: "API Development",
-                  description: "Develop new REST API endpoints",
-                  priority: "High",
-                  status: "Completed",
-                  assignedBy: "Riane Nikure",
-                  taskType: "Scheduled",
-                  dueDate: "01-08-2025, 06:00 PM",
-                  time: "6 Hours",
-                }
-              ]
-            }
-          ]
-        },
-        "2025-11": {
-          summary: { working: 21, present: 20, absent: 0, leave: 1 },
-          days: [
-            {
-              date: "2025-11-04",
-              dayName: "Tuesday",
-              tasks: [
-                {
-                  title: "Database Optimization",
-                  description: "Optimize database queries for better performance",
-                  priority: "High",
-                  status: "Completed",
-                  assignedBy: "Manish Tiwari",
-                  taskType: "Scheduled",
-                  dueDate: "04-11-2025, 05:00 PM",
-                  time: "5 Hours",
-                }
-              ]
-            },
-            {
-              date: "2025-11-12",
-              dayName: "Wednesday",
-              tasks: [
-                {
-                  title: "Security Audit",
-                  description: "Conduct security audit of application",
-                  priority: "High",
-                  status: "In-Progress",
-                  assignedBy: "Riane Nikure",
-                  taskType: "Scheduled",
-                  dueDate: "20-11-2025, 04:00 PM",
-                  time: "3 Hours",
-                }
-              ]
-            },
-            {
-              date: "2025-11-18",
-              dayName: "Tuesday",
-              tasks: [
-                {
-                  title: "Code Refactoring",
-                  description: "Refactor legacy code modules",
-                  priority: "Medium",
-                  status: "Completed",
-                  assignedBy: "Manish Tiwari",
-                  taskType: "Scheduled",
-                  dueDate: "18-11-2025, 06:00 PM",
-                  time: "4 Hours",
-                }
-              ]
-            }
-          ]
-        }
-      },
-      period: {
-        "2025-02-20_to_2025-02-25": {
-          summary: { working: 4, present: 4, absent: 0, leave: 0 },
-          days: [
-            {
-              date: "2025-02-25",
-              dayName: "Tuesday",
-              tasks: [
-                {
-                  title: "Code Review",
-                  description: "Review pull requests for main branch",
-                  priority: "High",
-                  status: "Completed",
-                  assignedBy: "Manish Tiwari",
-                  taskType: "Scheduled",
-                  dueDate: "25-02-2025, 04:00 PM",
-                  time: "2 Hours",
-                }
-              ]
-            }
-          ]
-        }
+      
+      if (response) {
+        const transformedData = transformApiResponse(response);
+        setFilteredData(transformedData);
       }
+    } catch (error) {
+      console.error('Error fetching timesheet data:', error);
+      setFilteredData({ days: [], summary: { working: 0, present: 0, absent: 0, leave: 0 } });
+    } finally {
+      setLoading(false);
     }
   };
 
   useEffect(() => {
-    // Simulate loading delay
-    const timer = setTimeout(() => setLoading(false), 1500);
-    return () => clearTimeout(timer);
-  }, []);
+    fetchTimesheetData();
+  }, [filters.view, filters.year, filters.activeSubTab, filters.fromDate, filters.toDate, userId]);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -502,115 +276,7 @@ export default function TimeSheetDashboard() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Filter data based on current selections
-  useEffect(() => {
-    const userData = mockData[name] || mockData["Manish Tiwari"];
-    
-    // Show all available data when no view is selected
-    if (!filters.view) {
-      const allDays = [];
-      
-      // Get data from all sources
-      Object.keys(userData.daily || {}).forEach(dateKey => {
-        const dailyData = userData.daily[dateKey];
-        allDays.push({
-          date: dateKey,
-          dayName: getDayName(dateKey),
-          tasks: dailyData.tasks || []
-        });
-      });
-      
-      Object.keys(userData.monthly || {}).forEach(monthKey => {
-        const monthlyData = userData.monthly[monthKey];
-        if (monthlyData.days) {
-          monthlyData.days.forEach(day => {
-            allDays.push(day);
-          });
-        }
-      });
-      
-      Object.keys(userData.period || {}).forEach(periodKey => {
-        const periodData = userData.period[periodKey];
-        if (periodData.days) {
-          periodData.days.forEach(day => {
-            allDays.push(day);
-          });
-        }
-      });
-      
-      // Remove duplicates and sort by date
-      const uniqueDays = allDays.filter((day, index, self) => 
-        index === self.findIndex(d => d.date === day.date)
-      ).sort((a, b) => new Date(a.date) - new Date(b.date));
-      
-      // Calculate summary based on unique days
-      const workingDays = uniqueDays.filter(day => day.tasks && day.tasks.length > 0).length;
-      const totalSummary = {
-        working: workingDays,
-        present: workingDays,
-        absent: 0,
-        leave: 0
-      };
-      
-      setFilteredData({
-        days: uniqueDays,
-        summary: totalSummary
-      });
-      return;
-    }
-    
-    if (filters.view === "monthly") {
-      // Require year selection for monthly view
-      if (!filters.year) {
-        setFilteredData({ days: [], summary: { working: 0, present: 0, absent: 0, leave: 0 } });
-        return;
-      }
-      
-      // Use activeSubTab (month) to get data
-      let monthKey;
-      if (filters.activeSubTab && monthTabs.includes(filters.activeSubTab)) {
-        const monthIndex = monthTabs.indexOf(filters.activeSubTab) + 1;
-        monthKey = `${filters.year}-${String(monthIndex).padStart(2, '0')}`;
-      } else {
-        monthKey = month; // fallback to default
-      }
-      
-      const monthlyData = userData.monthly[monthKey] || {
-        summary: { working: 0, present: 0, absent: 0, leave: 0 },
-        days: []
-      };
-      setFilteredData(monthlyData);
-    } 
-    else if (filters.view === "weekly") {
-      // Require year, month, and week for weekly view
-      if (!filters.year || !filters.month || !filters.week) {
-        setFilteredData({ days: [], summary: { working: 0, present: 0, absent: 0, leave: 0 } });
-        return;
-      }
-      
-      // Use period data as fallback for weekly
-      const periodKey = `${startDate}_to_${endDate}`;
-      const periodData = userData.period[periodKey] || {
-        summary: { working: 0, present: 0, absent: 0, leave: 0 },
-        days: []
-      };
-      setFilteredData(periodData);
-    }
-    else if (filters.view === "period") {
-      // Require both dates for period view
-      if (!filters.fromDate || !filters.toDate) {
-        setFilteredData({ days: [], summary: { working: 0, present: 0, absent: 0, leave: 0 } });
-        return;
-      }
-      
-      const periodKey = `${filters.fromDate}_to_${filters.toDate}`;
-      const periodData = userData.period[periodKey] || {
-        summary: { working: 0, present: 0, absent: 0, leave: 0 },
-        days: []
-      };
-      setFilteredData(periodData);
-    }
-  }, [filters.view, filters.year, filters.activeSubTab, filters.month, filters.week, filters.fromDate, filters.toDate, name, month, startDate, endDate]);
+
 
   useEffect(() => {
     if (filters.view === 'period' && filters.fromDate && filters.toDate) {
@@ -628,21 +294,62 @@ export default function TimeSheetDashboard() {
     setMobileTabStart(0);
   }, [filters.month, filters.year, filters.week, filters.view]);
 
-  // Initialize activeSubTab when view changes (like in TaskAssignment)
   useEffect(() => {
     if (filters.view === 'monthly' && !filters.activeSubTab) {
       setFilters(prev => ({ ...prev, activeSubTab: monthTabs[0] }));
     }
   }, [filters.view]);
 
-  // Helper function to get day name from date
+  // Fetch departments from API
+  useEffect(() => {
+    const fetchDepartments = async () => {
+      if (!collegeId) return;
+      setDeptLoading(true);
+      try {
+        const data = await DepartmentService.getDepartmentByCollegeId(collegeId);
+        const deptNames = data.map(dept => dept.department_name || dept.name || 'Unknown');
+        setDepartments(deptNames);
+      } catch (err) {
+        console.error('Error fetching departments:', err);
+        setDepartments([]);
+      } finally {
+        setDeptLoading(false);
+      }
+    };
+    fetchDepartments();
+  }, [collegeId]);
+
+ useEffect(() => {
+  const fetchEmployees = async () => {
+    if (!filters.department) {
+      setEmployees([]);
+      setSelectedEmployee(null);
+      return;
+    }
+
+    setEmpLoading(true);
+    try {
+      const response = await TaskManagement.getStaffByDepartment(filters.department);
+      const empList = response.data || response || [];
+      setEmployees(empList); // ✅ store full objects
+    } catch (err) {
+      console.error('Error fetching employees:', err);
+      setEmployees([]);
+    } finally {
+      setEmpLoading(false);
+    }
+  };
+
+  fetchEmployees();
+}, [filters.department]);
+
+
   const getDayName = (dateString) => {
     const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
     const date = new Date(dateString);
     return days[date.getDay()];
   };
 
-  // PDF Generation Function using html2canvas
   const downloadPDF = () => {
     const input = document.getElementById("timesheet-section");
 
@@ -675,25 +382,21 @@ export default function TimeSheetDashboard() {
     });
   };
 
-  // Excel CSV Download Function
   const downloadExcel = () => {
     const csvData = [];
     
-    // Header row
     csvData.push(['Employee Name', 'Employee ID', 'Date', 'Day', 'Task Title', 'Description', 'Priority', 'Status', 'Task Type', 'Assigned By', 'Due Date', 'Time Spent']);
     
-    // Summary row
     csvData.push(['Summary', '', '', '', `Working Days: ${filteredData.summary.working || 0}`, `Present: ${filteredData.summary.present || 0}`, `Absent: ${filteredData.summary.absent || 0}`, `Leave: ${filteredData.summary.leave || 0}`, '', '', '', '']);
-    csvData.push(['', '', '', '', '', '', '', '', '', '', '', '']); // Empty row
+    csvData.push(['', '', '', '', '', '', '', '', '', '', '', '']);
     
-    // Data rows
     if (filteredData.days && filteredData.days.length > 0) {
       filteredData.days.forEach((day) => {
         if (day.tasks && day.tasks.length > 0) {
           day.tasks.forEach((task) => {
             csvData.push([
               name,
-              'LQ-036',
+              employeeId || 'N/A',
               day.date,
               day.dayName,
               task.title,
@@ -709,7 +412,7 @@ export default function TimeSheetDashboard() {
         } else {
           csvData.push([
             name,
-            'LQ-036',
+            employeeId || 'N/A',
             day.date,
             day.dayName,
             'No tasks',
@@ -725,12 +428,10 @@ export default function TimeSheetDashboard() {
       });
     }
     
-    // Convert to CSV string
     const csvString = csvData.map(row => 
       row.map(field => `"${field}"`).join(',')
     ).join('\n');
     
-    // Create and download file
     const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     const url = URL.createObjectURL(blob);
@@ -745,10 +446,8 @@ export default function TimeSheetDashboard() {
   return (
     <div className="p-6">
       
-      {/* Search + Filter + Download */}
       <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-4 mb-4">
         
-        {/* Search */}
         <div className="relative w-full sm:w-80">
           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
             <Search className="w-5 h-5 text-gray-400" />
@@ -762,7 +461,6 @@ export default function TimeSheetDashboard() {
           />
         </div>
 
-        {/* Filter + Download */}
         <div className="flex gap-3 w-full sm:w-auto">
           <button
             onClick={() => setFilters(prev => ({ ...prev, filterOpen: !prev.filterOpen }))}
@@ -775,7 +473,6 @@ export default function TimeSheetDashboard() {
             />
           </button>
 
-          {/* Download Dropdown */}
           <div ref={downloadRef} className="relative">
             <button
               onClick={() => setDownloadOpen(!downloadOpen)}
@@ -813,7 +510,6 @@ export default function TimeSheetDashboard() {
         </div>
       </div>
 
-      {/* Filter Panel */}
       {filters.filterOpen && (
         <div className="bg-white rounded-xl shadow-md p-5 mb-6 border border-gray-200">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
@@ -822,16 +518,31 @@ export default function TimeSheetDashboard() {
               value={filters.department}
               onChange={(e) => setFilters(prev => ({ ...prev, department: e.target.value }))}
               options={departments}
-              placeholder="Select Department"
+              placeholder={deptLoading ? "Loading departments..." : "Select Department"}
+              disabled={deptLoading}
             />
             
-            <CustomSelect
-              label="Name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              options={['Manish Tiwari', 'Tejas Chaudhari']}
-              placeholder="Select Name"
-            />
+           <CustomSelect
+  label="Name"
+  value={
+    selectedEmployee
+      ? `${selectedEmployee.firstname} ${selectedEmployee.lastname}`
+      : ''
+  }
+  onChange={(e) => {
+    const emp = e.target.value;
+
+    setSelectedEmployee(emp);
+    setUserId(emp.user_id);          // ✅ userId set
+    setEmployeeId(emp.employee_id);  // ✅ employeeId set
+    setName(`${emp.firstname} ${emp.lastname}`);
+  }}
+  options={employees}
+  getLabel={(emp) => `${emp.firstname} ${emp.lastname}`}
+  placeholder="Select Name"
+  disabled={!filters.department || empLoading}
+/>
+
 
             <CustomSelect
               label="Select View"
@@ -902,10 +613,8 @@ export default function TimeSheetDashboard() {
             )}
           </div>
 
-          {/* Sub Tabs */}
           {filters.view && (
             <div className="relative max-w-[920px] mx-auto">
-              {/* Desktop Navigation */}
               <button
                 onClick={() => {
                   const el = document.getElementById("tabsCarousel");
@@ -952,7 +661,6 @@ export default function TimeSheetDashboard() {
                 })}
               </div>
 
-              {/* Mobile Tabs */}
               <div className="sm:hidden relative">
                 {getSubTabs().length > 3 && (
                   <>
@@ -1004,16 +712,13 @@ export default function TimeSheetDashboard() {
         </div>
       )}
 
-      {/* WRAPPER TO EXPORT PDF */}
       <div id="timesheet-section" className="bg-white p-4 rounded-xl shadow">
 
-        {/* User Details */}
         <div className="flex justify-between items-center px-1 mb-5">
           <h2 className="text-lg font-semibold">Name : {name}</h2>
-          <p className="text-gray-700 font-medium">Employee ID : LQ-036</p>
+          <p className="text-gray-700 font-medium">Employee ID : {employeeId || 'N/A'}</p>
         </div>
 
-        {/* Summary Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-5 mb-6">
           <div className="bg-blue-100 text-blue-700 p-4 text-center rounded-xl font-semibold shadow">
             Total Working Days : {filteredData.summary.working || 0}
@@ -1029,12 +734,10 @@ export default function TimeSheetDashboard() {
           </div>
         </div>
 
-        {/* Tasks Display */}
         <div className="space-y-6">
           {loading ? (
             <div className="bg-white rounded-xl shadow-md p-8 text-center border border-gray-200">
               <div className="flex flex-col items-center justify-center">
-                {/* <Loader size="lg" className="mb-4" /> */}
                 <p className="text-gray-500">Loading timesheet data...</p>
               </div>
             </div>
@@ -1050,7 +753,6 @@ export default function TimeSheetDashboard() {
                   </span>
                 </div>
 
-                {/* Task Items */}
                 {day.tasks && day.tasks.length > 0 ? (
                   day.tasks.map((task, i) => (
                     <div
