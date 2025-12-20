@@ -727,30 +727,32 @@ const Questions = () => {
 
       {/* Questions List */}
       <div className="bg-white rounded-xl shadow-md border border-gray-200">
-        <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
-          <div>
-            <h2 className="text-lg font-semibold text-gray-900">Questions</h2>
-            <p className="text-sm text-gray-500 mt-1">
-              {totalElements > 0 ? `Showing ${questions.length} of ${totalElements} questions` : 'Manage your assessment questions'}
-            </p>
-          </div>
-          {totalElements > 0 && (
-            <div className="flex items-center gap-2">
-              <label className="text-sm text-gray-600">Per page:</label>
-              <select
-                value={pageSize}
-                onChange={(e) => handlePageSizeChange(Number(e.target.value))}
-                className="border border-gray-300 rounded-md px-2 py-1 text-sm"
-              >
-                <option value={5}>5</option>
-                <option value={10}>10</option>
-                <option value={20}>20</option>
-                <option value={50}>50</option>
-              </select>
+        <div className="px-4 sm:px-6 py-4 border-b border-gray-200">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+            <div>
+              <h2 className="text-lg font-semibold text-gray-900">Questions</h2>
+              <p className="text-xs sm:text-sm text-gray-500 mt-1">
+                {totalElements > 0 ? `Showing ${questions.length} of ${totalElements} questions` : 'Manage your assessment questions'}
+              </p>
             </div>
-          )}
+            {totalElements > 0 && (
+              <div className="flex items-center gap-2 w-full sm:w-auto">
+                <label className="text-xs sm:text-sm text-gray-600">Per page:</label>
+                <select
+                  value={pageSize}
+                  onChange={(e) => handlePageSizeChange(Number(e.target.value))}
+                  className="border border-gray-300 rounded-md px-2 py-1 text-xs sm:text-sm flex-1 sm:flex-none"
+                >
+                  <option value={5}>5</option>
+                  <option value={10}>10</option>
+                  <option value={20}>20</option>
+                  <option value={50}>50</option>
+                </select>
+              </div>
+            )}
+          </div>
         </div>
-        <div className="p-6">
+        <div className="p-4 sm:p-6">
           {loading.questions ? (
             <div className="text-center text-gray-500 py-10">Loading questions...</div>
           ) : (() => {
@@ -762,37 +764,39 @@ const Questions = () => {
                   console.log(`Question ${index} ID:`, questionId, 'Full object:', q);
 
                   return (
-                    <div key={questionId || index} className="p-4 border border-gray-200 rounded-lg flex items-center justify-between hover:shadow-md transition-shadow">
-                      <div className="flex-grow">
-                        <p className="font-semibold text-gray-800">Q{index + 1}.</p>
-                        <p className="mt-1 text-gray-600">{q.question || q.question_text || 'Question text not found.'}</p>
-                        <p className="text-xs text-gray-400 mt-1">
-                          Unit: {q.unit_name || 'N/A'} | Subject: {q.subject_name || 'N/A'} | Status: <span className={q.approval_status ? 'text-green-600' : 'text-red-600'}>{q.approval_status ? 'Approved' : 'Pending'}</span>
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-3 ml-4">
-                        <button
-                          onClick={() => {
-                            console.log("Navigating with question:", q, "and filters:", filters);
-                            navigate("/teacher/content/add-content/question/add-question", { state: { question: q, filters: filters } });
-                          }}
-                          className="p-1.5 rounded-lg bg-yellow-50 text-yellow-600 hover:bg-yellow-100 transition"
-                          disabled={loading.delete || !questionId}
-                        >
-                          <Edit className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => handleDeleteQuestion(questionId)}
-                          disabled={loading.delete || !questionId}
-                          className="p-1.5 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition disabled:opacity-50 disabled:cursor-not-allowed"
-                          title={!questionId ? "Cannot delete: Missing ID" : "Delete question"}
-                        >
-                          {loading.delete && deletingId === questionId ? (
-                            <span className="text-sm">Deleting...</span>
-                          ) : (
-                            <Trash2 className="w-5 h-5" />
-                          )}
-                        </button>
+                    <div key={questionId || index} className="p-3 sm:p-4 border border-gray-200 rounded-lg hover:shadow-md transition-shadow">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        <div className="flex-grow">
+                          <p className="font-semibold text-gray-800 text-sm sm:text-base">Q{index + 1}.</p>
+                          <p className="mt-1 text-gray-600 text-sm sm:text-base line-clamp-2">{q.question || q.question_text || 'Question text not found.'}</p>
+                          <p className="text-xs text-gray-400 mt-1">
+                            Unit: {q.unit_name || 'N/A'} | Subject: {q.subject_name || 'N/A'} | Status: <span className={q.approval_status ? 'text-green-600' : 'text-red-600'}>{q.approval_status ? 'Approved' : 'Pending'}</span>
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2 sm:gap-3 justify-end sm:ml-4">
+                          <button
+                            onClick={() => {
+                              console.log("Navigating with question:", q, "and filters:", filters);
+                              navigate("/teacher/content/add-content/question/add-question", { state: { question: q, filters: filters } });
+                            }}
+                            className="p-1.5 rounded-lg bg-yellow-50 text-yellow-600 hover:bg-yellow-100 transition"
+                            disabled={loading.delete || !questionId}
+                          >
+                            <Edit className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => handleDeleteQuestion(questionId)}
+                            disabled={loading.delete || !questionId}
+                            className="p-1.5 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                            title={!questionId ? "Cannot delete: Missing ID" : "Delete question"}
+                          >
+                            {loading.delete && deletingId === questionId ? (
+                              <span className="text-xs sm:text-sm">Deleting...</span>
+                            ) : (
+                              <Trash2 className="w-4 h-4 sm:w-5 sm:h-5" />
+                            )}
+                          </button>
+                        </div>
                       </div>
                     </div>
                   );
@@ -814,69 +818,72 @@ const Questions = () => {
 
         {/* Pagination Controls */}
         {totalPages > 1 && (
-          <div className="px-6 py-4 border-t border-gray-200 flex items-center justify-between">
-            <div className="text-sm text-gray-600">
-              Page {currentPage + 1} of {totalPages}
-            </div>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => handlePageChange(0)}
-                disabled={currentPage === 0}
-                className="px-3 py-1 border border-gray-300 rounded-md text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
-              >
-                First
-              </button>
-              <button
-                onClick={() => handlePageChange(currentPage - 1)}
-                disabled={currentPage === 0}
-                className="px-3 py-1 border border-gray-300 rounded-md text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
-              >
-                Previous
-              </button>
-
-              {/* Page numbers */}
-              <div className="flex gap-1">
-                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                  let pageNum;
-                  if (totalPages <= 5) {
-                    pageNum = i;
-                  } else if (currentPage < 3) {
-                    pageNum = i;
-                  } else if (currentPage > totalPages - 3) {
-                    pageNum = totalPages - 5 + i;
-                  } else {
-                    pageNum = currentPage - 2 + i;
-                  }
-
-                  return (
-                    <button
-                      key={pageNum}
-                      onClick={() => handlePageChange(pageNum)}
-                      className={`px-3 py-1 border rounded-md text-sm ${currentPage === pageNum
-                        ? 'bg-blue-600 text-white border-blue-600'
-                        : 'border-gray-300 hover:bg-gray-50'
-                        }`}
-                    >
-                      {pageNum + 1}
-                    </button>
-                  );
-                })}
+          <div className="px-4 sm:px-6 py-4 border-t border-gray-200">
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
+              <div className="text-xs sm:text-sm text-gray-600">
+                Page {currentPage + 1} of {totalPages}
               </div>
+              <div className="flex items-center gap-1 sm:gap-2 flex-wrap justify-center">
+                <button
+                  onClick={() => handlePageChange(0)}
+                  disabled={currentPage === 0}
+                  className="px-2 sm:px-3 py-1 border border-gray-300 rounded-md text-xs sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                >
+                  First
+                </button>
+                <button
+                  onClick={() => handlePageChange(currentPage - 1)}
+                  disabled={currentPage === 0}
+                  className="px-2 sm:px-3 py-1 border border-gray-300 rounded-md text-xs sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                >
+                  Prev
+                </button>
 
-              <button
-                onClick={() => handlePageChange(currentPage + 1)}
-                disabled={currentPage >= totalPages - 1}
-                className="px-3 py-1 border border-gray-300 rounded-md text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
-              >
-                Next
-              </button>
-              <button
-                onClick={() => handlePageChange(totalPages - 1)}
-                disabled={currentPage >= totalPages - 1}
-                className="px-3 py-1 border border-gray-300 rounded-md text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
-              >
-                Last
-              </button>
+                {/* Page numbers - show fewer on mobile */}
+                <div className="flex gap-1">
+                  {Array.from({ length: Math.min(window.innerWidth < 640 ? 3 : 5, totalPages) }, (_, i) => {
+                    let pageNum;
+                    const maxPages = window.innerWidth < 640 ? 3 : 5;
+                    if (totalPages <= maxPages) {
+                      pageNum = i;
+                    } else if (currentPage < Math.floor(maxPages/2)) {
+                      pageNum = i;
+                    } else if (currentPage > totalPages - Math.ceil(maxPages/2)) {
+                      pageNum = totalPages - maxPages + i;
+                    } else {
+                      pageNum = currentPage - Math.floor(maxPages/2) + i;
+                    }
+
+                    return (
+                      <button
+                        key={pageNum}
+                        onClick={() => handlePageChange(pageNum)}
+                        className={`px-2 sm:px-3 py-1 border rounded-md text-xs sm:text-sm ${currentPage === pageNum
+                          ? 'bg-blue-600 text-white border-blue-600'
+                          : 'border-gray-300 hover:bg-gray-50'
+                          }`}
+                      >
+                        {pageNum + 1}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                <button
+                  onClick={() => handlePageChange(currentPage + 1)}
+                  disabled={currentPage >= totalPages - 1}
+                  className="px-2 sm:px-3 py-1 border border-gray-300 rounded-md text-xs sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                >
+                  Next
+                </button>
+                <button
+                  onClick={() => handlePageChange(totalPages - 1)}
+                  disabled={currentPage >= totalPages - 1}
+                  className="px-2 sm:px-3 py-1 border border-gray-300 rounded-md text-xs sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                >
+                  Last
+                </button>
+              </div>
             </div>
           </div>
         )}
