@@ -1,6 +1,6 @@
 import React, { useEffect } from "react";
 import SweetAlert from "react-bootstrap-sweetalert";
-// import { getPDFPageCount } from "../utils/pdfUtils.js";
+import { getPDFPageCount } from "../../AddContent/utils/pdfUtils.js";
 import { useContentData } from "../../AddContent/hooks/useContentData.js";
 import CustomSelect from "../../AddContent/components/CustomSelect.jsx";
 import { contentService } from '../../services/AddContent.service.js';

@@ -144,14 +144,14 @@ export default function BulkAddContent() {
                     content_name: item.contentTitle,
                     content_description: item.description || "",
                     content_link: contentLink,
-                    unit_id: parseInt(item.selectedUnit),
+                    unit_id: item.selectedUnit ? parseInt(item.selectedUnit) : null,
                     module_id: parseInt(item.selectedModule),
                     content_type_id: parseInt(item.contentType),
                     content_level_id: item.contentLevel ? parseInt(item.contentLevel) : null,
-                    average_reading_time_seconds: parseInt(item.averageReadingTime) * 60, // Convert minutes to seconds
-                    user_id: userId,
-                    admin: true,
-                    quiz_attachments: null
+                    average_reading_time_seconds: parseInt(item.averageReadingTime) * 60,
+                    quiz_attachments: null,
+                    admin: false,
+                    user_id: userId
                 };
             });
 
