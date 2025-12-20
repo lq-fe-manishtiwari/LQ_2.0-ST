@@ -170,6 +170,12 @@ const StudentSidebar = ({ isOpen, toggle }) => {
         iconActive: classActive,
         iconInactive: classInactive,
       },
+        {
+        to: "/student/leaves",
+        label: "leaves",
+        iconActive: classActive,
+        iconInactive: classInactive,
+      },
       {
         to: "/Documents",
         label: "My Documents",
