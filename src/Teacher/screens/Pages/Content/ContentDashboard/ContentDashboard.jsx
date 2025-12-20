@@ -658,17 +658,7 @@ const ContentDashboard = () => {
 
       <div className="bg-white/90 backdrop-blur-sm rounded-xl sm:rounded-2xl shadow-xl p-4 sm:p-6 lg:p-8 border border-indigo-100">
 
-        {/* Student Requests Section - Only show when a unit (topic) is selected */}
-        {filters.topic && topicOptions.find(t => t.unit_name === filters.topic)?.unit_id && (
-          <StudentRequest
-            unitId={topicOptions.find(t => t.unit_name === filters.topic)?.unit_id}
-            onUpdate={() => {
-              // Refresh content list when a project is approved
-              const unitId = topicOptions.find(t => t.unit_name === filters.topic)?.unit_id;
-              if (unitId) loadContentByUnit(unitId);
-            }}
-          />
-        )}
+
 
         <div>
           <h3 className="text-xl sm:text-2xl font-bold text-blue-600 mb-6 sm:mb-8">

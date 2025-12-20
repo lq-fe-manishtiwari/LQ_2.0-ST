@@ -77,10 +77,9 @@ const CustomSelect = ({ label, value, onChange, options, placeholder, disabled =
   );
 };
 
-const MultiSelectProgram = ({ label, selectedPrograms, programOptions, onProgramChange, onProgramRemove }) => {
+const MultiSelect = ({ label, values, options, onChange, placeholder, loading = false, disabled = false }) => {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef(null);
-  const availableOptions = programOptions.filter((p) => !selectedPrograms.includes(p));
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -90,35 +89,46 @@ const MultiSelectProgram = ({ label, selectedPrograms, programOptions, onProgram
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  const handleToggle = (optionId) => {
+    const newValues = values.includes(optionId)
+      ? values.filter((id) => id !== optionId)
+      : [...values, optionId];
+    onChange(newValues);
+  };
+
   return (
-    <div ref={dropdownRef}>
+    <div ref={dropdownRef} className="relative">
       <label className="block text-sm font-semibold text-gray-700 mb-2">{label}</label>
       <div className="relative">
         <div
-          className="flex flex-wrap items-center gap-1 p-2 border border-gray-300 rounded-lg min-h-[44px] bg-white cursor-pointer hover:border-blue-400"
-          onClick={() => setIsOpen(!isOpen)}
+          className={`flex flex-wrap items-center gap-1 p-2 border ${disabled || loading ? "bg-gray-100 border-gray-200 cursor-not-allowed" : "bg-white border-gray-300 cursor-pointer hover:border-blue-400"
+            } rounded-lg min-h-[44px] bg-white transition-all duration-150`}
+          onClick={() => !disabled && !loading && setIsOpen(!isOpen)}
         >
-          {selectedPrograms.length > 0 ? (
-            selectedPrograms.map((prog) => (
-              <span
-                key={prog}
-                className="inline-flex items-center gap-1 bg-blue-50 text-blue-600 px-2 py-1 rounded-full text-xs font-medium"
-                onClick={(e) => e.stopPropagation()}
-              >
-                {prog}
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onProgramRemove();
-                  }}
-                  className="hover:bg-blue-200 rounded-full p-0.5"
+          {values.length > 0 ? (
+            values.map((val) => {
+              const option = options.find((o) => o.id === val || o.name === val);
+              const displayName = option ? option.name : val;
+              return (
+                <span
+                  key={val}
+                  className="inline-flex items-center gap-1 bg-blue-50 text-blue-600 px-2 py-1 rounded-full text-xs font-medium"
                 >
-                  <X className="w-3 h-3" />
-                </button>
-              </span>
-            ))
+                  {displayName}
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleToggle(val);
+                    }}
+                    className="hover:bg-blue-200 rounded-full p-0.5"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </span>
+              );
+            })
           ) : (
-            <span className="text-gray-400 text-sm ml-1">Select Program</span>
+            <span className="text-gray-400 text-sm ml-1">{loading ? "Loading..." : placeholder}</span>
           )}
           <ChevronDown
             className={`w-4 h-4 text-gray-400 absolute right-3 top-1/2 -translate-y-1/2 transition-transform ${isOpen ? "rotate-180" : "rotate-0"
@@ -126,20 +136,26 @@ const MultiSelectProgram = ({ label, selectedPrograms, programOptions, onProgram
           />
         </div>
 
-        {isOpen && (
-          <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
-            {availableOptions.length > 0 ? (
-              availableOptions.map((prog) => (
+        {isOpen && !disabled && !loading && (
+          <div className="absolute z-30 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+            {options.map((option) => (
+              <div
+                key={option.id}
+                className={`flex items-center gap-2 px-4 py-2 text-sm cursor-pointer hover:bg-blue-50 transition-colors ${values.includes(option.id) ? "bg-blue-50 font-medium text-blue-600" : "text-gray-700"
+                  }`}
+                onClick={() => handleToggle(option.id)}
+              >
                 <div
-                  key={prog}
-                  className="px-4 py-2 text-sm text-gray-700 cursor-pointer hover:bg-blue-50 transition-colors"
-                  onClick={() => onProgramChange({ target: { value: prog } })}
+                  className={`w-4 h-4 rounded border flex items-center justify-center ${values.includes(option.id) ? "bg-blue-600 border-blue-600" : "border-gray-300 bg-white"
+                    }`}
                 >
-                  {prog}
+                  {values.includes(option.id) && <Check className="w-3 h-3 text-white" />}
                 </div>
-              ))
-            ) : (
-              <div className="px-4 py-3 text-sm text-gray-500">All programs selected</div>
+                {option.name}
+              </div>
+            ))}
+            {options.length === 0 && (
+              <div className="px-4 py-3 text-sm text-gray-500 italic">No options available</div>
             )}
           </div>
         )}
@@ -160,7 +176,7 @@ const StudentProject = () => {
     semester: "",
     gradeDivisionId: [],
     chapter: "",
-    topic: "",
+    unitIds: [],
     activeInactiveStatus: "all",
   });
 
@@ -318,31 +334,37 @@ const StudentProject = () => {
     fetchModules();
   }, [selectedSubjectId]);
 
-  // --- 4. Load Projects when Unit Selected ---
+  // --- 4. Load Projects when Module or Units Selected ---
   useEffect(() => {
     const fetchProjects = async () => {
-      const selectedTopic = topicOptions.find((t) => t.unit_name === filters.topic);
-
-      // If no topic selected, or topic not found, clear projects
-      if (!filters.topic || !selectedTopic?.unit_id) {
+      // If no module selected, clear projects
+      if (!selectedChapter?.module_id) {
         setProjects([]);
         return;
       }
 
       setLoading((prev) => ({ ...prev, content: true }));
       try {
-        // Fetch ALL projects (Pending, Approved, Rejected)
-        const unitId = selectedTopic.unit_id;
-        // We'll fetch 'PENDING' by default or maybe we want all statuses? 
-        // The requirement mentions 'request show', typically meaning Pending.
-        const res = await contentService.getStudentProjectsByUnit(unitId, ""); // Empty status fetches all? Or need adjust API
-        // API implementation: getStudentProjectsByUnit(unitId, status)
-        // If we pass empty string, API needs to handle it. 
-        // Let's assume we want to see PENDING requests mostly.
-        // But let's verify if we can fetch all. The API logic was: query params status (Optional).
-        // If I pass "", status might be empty string. Best to pass PENDING or APPROVED or nothing (null/undefined).
+        let unitIdsToFetch = [];
+        if (filters.unitIds && filters.unitIds.length > 0) {
+          unitIdsToFetch = filters.unitIds;
+        } else {
+          // By default, fetch all units of the module
+          unitIdsToFetch = (selectedChapter.units || []).map(u => u.unit_id);
+        }
 
-        const response = await contentService.getStudentProjectsByUnit(unitId, null); // Pass null for all statuses
+        if (unitIdsToFetch.length === 0) {
+          setProjects([]);
+          setLoading((prev) => ({ ...prev, content: false }));
+          return;
+        }
+
+        const response = await contentService.getStudentProjectsByModuleAndUnits(
+          selectedChapter.module_id,
+          unitIdsToFetch,
+          null
+        );
+
         if (Array.isArray(response)) {
           setProjects(response);
         } else {
@@ -357,7 +379,7 @@ const StudentProject = () => {
     };
 
     fetchProjects();
-  }, [filters.topic, topicOptions]);
+  }, [selectedChapter, filters.unitIds]);
 
   // --- Handlers ---
   const handleProgramChange = (e) => {
@@ -394,9 +416,15 @@ const StudentProject = () => {
       setSuccessMessage("Project has been successfully approved!");
       setShowSuccessAlert(true);
       // Refresh list
-      const selectedTopic = topicOptions.find((t) => t.unit_name === filters.topic);
-      if (selectedTopic?.unit_id) {
-        contentService.getStudentProjectsByUnit(selectedTopic.unit_id, null).then(res => setProjects(res || []));
+      if (selectedChapter?.module_id) {
+        let unitIdsToFetch = filters.unitIds.length > 0
+          ? filters.unitIds
+          : (selectedChapter.units || []).map(u => u.unit_id);
+
+        if (unitIdsToFetch.length > 0) {
+          contentService.getStudentProjectsByModuleAndUnits(selectedChapter.module_id, unitIdsToFetch, null)
+            .then(res => setProjects(res || []));
+        }
       }
     } catch (e) {
       console.error(e);
@@ -419,9 +447,15 @@ const StudentProject = () => {
       await contentService.rejectStudentProject(projectToAction);
       setSuccessMessage("Project has been successfully rejected!");
       setShowSuccessAlert(true);
-      const selectedTopic = topicOptions.find((t) => t.unit_name === filters.topic);
-      if (selectedTopic?.unit_id) {
-        contentService.getStudentProjectsByUnit(selectedTopic.unit_id, null).then(res => setProjects(res || []));
+      if (selectedChapter?.module_id) {
+        let unitIdsToFetch = filters.unitIds.length > 0
+          ? filters.unitIds
+          : (selectedChapter.units || []).map(u => u.unit_id);
+
+        if (unitIdsToFetch.length > 0) {
+          contentService.getStudentProjectsByModuleAndUnits(selectedChapter.module_id, unitIdsToFetch, null)
+            .then(res => setProjects(res || []));
+        }
       }
     } catch (e) {
       console.error(e);
@@ -465,12 +499,19 @@ const StudentProject = () => {
         {filters.filterOpen && (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3 sm:gap-4 transition-all">
             {/* Program */}
-            <MultiSelectProgram
+            <MultiSelect
               label="Program"
-              selectedPrograms={filters.program}
-              programOptions={programOptions.map((p) => p.name)}
-              onProgramChange={handleProgramChange}
-              onProgramRemove={removeProgram}
+              values={filters.program}
+              options={programOptions.map((p) => ({ id: p.name, name: p.name }))}
+              onChange={(newValues) => {
+                if (newValues.length > 0) {
+                  const lastValue = newValues[newValues.length - 1];
+                  handleProgramChange({ target: { value: lastValue } });
+                } else {
+                  removeProgram();
+                }
+              }}
+              placeholder="Select Program"
             />
 
             {/* Semester */}
@@ -509,7 +550,7 @@ const StudentProject = () => {
                   ...prev,
                   gradeDivisionId: e.target.value ? [e.target.value] : [],
                   chapter: "",
-                  topic: "",
+                  unitIds: [],
                 }));
                 setChapterOptions([]);
                 setTopicOptions([]);
@@ -526,7 +567,7 @@ const StudentProject = () => {
                 const chapterName = e.target.value;
                 const chapterObj = chapterOptions.find((c) => c.module_name === chapterName);
                 setSelectedChapter(chapterObj || null);
-                setFilters((prev) => ({ ...prev, chapter: chapterName, topic: "" }));
+                setFilters((prev) => ({ ...prev, chapter: chapterName, unitIds: [] }));
                 const units = chapterObj?.units || [];
                 setTopicOptions(units.map((u) => ({ unit_id: u.unit_id, unit_name: u.unit_name })));
               }}
@@ -536,12 +577,12 @@ const StudentProject = () => {
               disabled={chapterOptions.length === 0}
             />
 
-            {/* Unit */}
-            <CustomSelect
+            {/* Unit (MultiSelect) */}
+            <MultiSelect
               label="Unit"
-              value={filters.topic}
-              onChange={(e) => setFilters((prev) => ({ ...prev, topic: e.target.value }))}
-              options={topicOptions.map((t) => t.unit_name)}
+              values={filters.unitIds}
+              options={topicOptions.map((t) => ({ id: t.unit_id, name: t.unit_name }))}
+              onChange={(newIds) => setFilters((prev) => ({ ...prev, unitIds: newIds }))}
               placeholder="Select Unit"
               disabled={topicOptions.length === 0}
             />
@@ -552,7 +593,7 @@ const StudentProject = () => {
       {/* Results Section */}
       <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-100">
         <h3 className="text-xl font-bold text-gray-800 mb-6 flex items-center gap-2">
-          {filters.topic ? `Projects for ${filters.topic}` : "Select a Unit to view projects"}
+          {filters.chapter ? `Projects for ${filters.chapter}` : "Select a Module to view projects"}
           {projects.length > 0 && <span className="bg-blue-100 text-blue-700 text-sm px-2 py-0.5 rounded-full">{projects.length}</span>}
         </h3>
 
@@ -628,8 +669,8 @@ const StudentProject = () => {
         ) : (
           <div className="text-center py-12 bg-gray-50 rounded-lg border border-dashed border-gray-300">
             <FileText className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-            <h3 className="text-gray-500 font-medium">{filters.topic ? "No projects found" : "Select a Unit to start"}</h3>
-            <p className="text-gray-400 text-sm mt-1">Select Program, Semester, Paper, Module and Unit from the filters.</p>
+            <h3 className="text-gray-500 font-medium">{filters.chapter ? "No projects found" : "Select a Module to start"}</h3>
+            <p className="text-gray-400 text-sm mt-1">Select Program, Semester, Paper and Module from the filters.</p>
           </div>
         )}
       </div>

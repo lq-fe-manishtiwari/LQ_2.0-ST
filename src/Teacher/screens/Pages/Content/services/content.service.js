@@ -35,6 +35,7 @@ export const contentService = {
 
     getAllContentsByUnitIdForTeacher,
     getStudentProjectsByUnit,
+    getStudentProjectsByModuleAndUnits,
     approveStudentProject,
     rejectStudentProject,
     getApprovedModuleLevelContent,
@@ -441,6 +442,18 @@ function getStudentProjectsByUnit(unitId) {
         headers: authHeader()
     };
     return fetch(`${ContentAPI}/student-project/unit/${unitId}?status=PENDING`, requestOptions).then(handleResponse);
+}
+
+function getStudentProjectsByModuleAndUnits(moduleId, unitIds = [], status = null) {
+    const params = new URLSearchParams();
+    unitIds.forEach(id => params.append('unitIds', id));
+    if (status) params.append('status', status);
+
+    const requestOptions = {
+        method: 'GET',
+        headers: authHeader()
+    };
+    return fetch(`${ContentAPI}/student-project/module/${moduleId}/units?${params.toString()}`, requestOptions).then(handleResponse);
 }
 
 // PUT /api/student-project/{projectId}/approve
