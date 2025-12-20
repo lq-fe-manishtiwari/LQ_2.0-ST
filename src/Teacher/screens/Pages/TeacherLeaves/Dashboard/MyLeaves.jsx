@@ -1,7 +1,7 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { leaveService } from "../Services/Leave.Service";
 
 export default function MyLeaves() {
-
   /* -------------------- DASHBOARD DATA -------------------- */
   const leaveStats = {
     balance: 12,
@@ -73,6 +73,27 @@ export default function MyLeaves() {
     attachment: null,
   });
 
+  /* -------------------- DYNAMIC LEAVE TYPES -------------------- */
+  const [leaveTypes, setLeaveTypes] = useState([]);
+
+  useEffect(() => {
+    const fetchLeaveTypes = async () => {
+      try {
+        const userProfile = JSON.parse(localStorage.getItem("userProfile") || "{}");
+        const collegeId = userProfile?.college_id;
+
+        if (!collegeId) return;
+
+        const response = await leaveService.getLeaveTypesByCollegeId(collegeId);
+        setLeaveTypes(response || []);
+      } catch (error) {
+        console.error("Failed to fetch leave types", error);
+      }
+    };
+
+    fetchLeaveTypes();
+  }, []);
+
   const handleFormChange = (e) => {
     const { name, value, files } = e.target;
     setLeaveForm({
@@ -81,10 +102,23 @@ export default function MyLeaves() {
     });
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log("Leave Applied:", leaveForm);
-    setShowLeaveModal(false);
+    try {
+      const userProfile = JSON.parse(localStorage.getItem("userProfile") || "{}");
+      const payload = {
+        ...leaveForm,
+        college_id: userProfile?.college_id,
+      };
+
+      await leaveService.applyLeave(payload); // Call API
+      console.log("Leave Applied:", payload);
+      setShowLeaveModal(false);
+      alert("Leave applied successfully");
+    } catch (error) {
+      console.error("Failed to apply leave", error);
+      alert("Failed to apply leave");
+    }
   };
 
   const statusColor = (status) => {
@@ -171,22 +205,29 @@ export default function MyLeaves() {
               <h2 className="text-lg font-semibold mb-4">Apply Leave</h2>
 
               <form onSubmit={handleSubmit} className="space-y-4">
-                <select name="type" onChange={handleFormChange} className="w-full border rounded-lg p-2">
+                <select
+                  name="type"
+                  value={leaveForm.type}
+                  onChange={handleFormChange}
+                  className="w-full border rounded-lg p-2"
+                >
                   <option value="">Select Leave Type</option>
-                  <option>Casual Leave</option>
-                  <option>Medical Leave</option>
-                  <option>Duty Leave</option>
+                  {leaveTypes.map((lt) => (
+                    <option key={lt.id} value={lt.name}>
+                      {lt.name}
+                    </option>
+                  ))}
                 </select>
 
-                <select name="leaveFor" onChange={handleFormChange} className="w-full border rounded-lg p-2">
+                <select name="leaveFor" value={leaveForm.leaveFor} onChange={handleFormChange} className="w-full border rounded-lg p-2">
                   <option>Normal</option>
                   <option>Half Day</option>
                 </select>
 
-                <input type="date" name="fromDate" onChange={handleFormChange} className="w-full border rounded-lg p-2" />
-                <input type="date" name="toDate" onChange={handleFormChange} className="w-full border rounded-lg p-2" />
-                <input type="number" name="days" placeholder="Number of Days" onChange={handleFormChange} className="w-full border rounded-lg p-2" />
-                <textarea name="remark" placeholder="Remark" onChange={handleFormChange} className="w-full border rounded-lg p-2" />
+                <input type="date" name="fromDate" value={leaveForm.fromDate} onChange={handleFormChange} className="w-full border rounded-lg p-2" />
+                <input type="date" name="toDate" value={leaveForm.toDate} onChange={handleFormChange} className="w-full border rounded-lg p-2" />
+                <input type="number" name="days" placeholder="Number of Days" value={leaveForm.days} onChange={handleFormChange} className="w-full border rounded-lg p-2" />
+                <textarea name="remark" placeholder="Remark" value={leaveForm.remark} onChange={handleFormChange} className="w-full border rounded-lg p-2" />
                 <input type="file" name="attachment" onChange={handleFormChange} />
 
                 <div className="flex justify-end gap-3 pt-4">
