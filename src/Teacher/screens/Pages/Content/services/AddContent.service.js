@@ -5,7 +5,7 @@ export const contentService = {
     getCOntentByUnitId,
     UpdateCOntentbyContentId,
     DeleteContentById,
-
+    AddContentBulk,
     getSubjectbyProgramId,
     getModulesAndUnitsBySubjectId,
     getContentTypes,
@@ -191,4 +191,17 @@ function getQuizzesByModuleAndUnits(moduleId, unitIds = [], page = 0, size = 100
     };
     return fetch(`${ContentAPI}/quizzes/module/${moduleId}/units?${params.toString()}`, requestOptions)
         .then(handleResponse);
+}
+function AddContentBulk(values) {
+    const requestOptions = {
+        method: 'POST',
+        headers: authHeaderToPost(),
+        body: JSON.stringify(values) // Expecting array of objects
+    };
+
+    return fetch(`${ContentAPI}/admin/content/bulk`, requestOptions)
+        .then(handleResponse)
+        .then(data => {
+            return data;
+        });
 }
