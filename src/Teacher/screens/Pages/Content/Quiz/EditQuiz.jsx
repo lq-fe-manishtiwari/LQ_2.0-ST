@@ -420,36 +420,47 @@ export default function EditQuiz() {
     setUnits(selectedModule?.units || []);
   }, [formData.module, modules, editQuiz]);
 
-  // Fetch questions
+  // Fetch questions when module or unit changes
   useEffect(() => {
-    if (!formData.unit || formData.unit === "" || formData.unit === "undefined") {
+    if (!formData.module || modules.length === 0) {
       setQuestionsList([]);
       return;
     }
-    
-    contentService.getQuestionsByUnitId(formData.unit)
+
+    const selectedModule = modules.find(m => String(m.module_id) === String(formData.module));
+    if (!selectedModule) {
+      setQuestionsList([]);
+      return;
+    }
+
+    let unitIds = [];
+    if (formData.unit) {
+      // Specific unit selected
+      unitIds = [formData.unit];
+    } else {
+      // No unit selected - get all units from module
+      unitIds = selectedModule.units?.map(u => String(u.unit_id)) || [];
+    }
+
+    if (unitIds.length === 0) {
+      setQuestionsList([]);
+      return;
+    }
+
+    contentService.getQuestionsByModuleAndUnits(formData.module, unitIds, 0, 1000)
       .then(res => {
         let questionsArray = [];
-        if (Array.isArray(res?.data)) {
+        if (res?.content && Array.isArray(res.content)) {
+          questionsArray = res.content;
+        } else if (Array.isArray(res?.data)) {
           questionsArray = res.data;
         } else if (Array.isArray(res)) {
           questionsArray = res;
-        } else if (typeof res === 'object' && res !== null) {
-          questionsArray = Object.values(res);
         }
-        
-        // Remove duplicates based on question_id
-        const uniqueQuestions = questionsArray.filter((question, index, self) => 
-          index === self.findIndex(q => q.question_id === question.question_id)
-        );
-        
-        setQuestionsList(uniqueQuestions);
+        setQuestionsList(questionsArray);
       })
-      .catch(err => {
-        console.error("Error fetching questions:", err);
-        setQuestionsList([]);
-      });
-  }, [formData.unit]);
+      .catch(err => console.error("Error fetching questions:", err));
+  }, [formData.module, formData.unit, modules]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
