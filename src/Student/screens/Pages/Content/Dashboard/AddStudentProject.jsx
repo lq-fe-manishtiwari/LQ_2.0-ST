@@ -273,7 +273,7 @@ const AddStudentProject = () => {
         e.preventDefault();
         setError(null);
 
-        if (!formData.projectTitle || !formData.unitId || !formData.projectLink || !formData.content_type_id || !formData.content_level_id) {
+        if (!formData.projectTitle || !formData.projectLink || !formData.content_type_id || !formData.content_level_id) {
             setError("Please fill in all required fields.");
             return;
         }
@@ -293,6 +293,7 @@ const AddStudentProject = () => {
                 project_description: formData.projectDescription,
                 project_link: formData.projectLink,
                 unit_id: parseInt(formData.unitId),
+                module_id: parseInt(formData.moduleId),
                 semester_id: parseInt(semesterId),
                 student_id: parseInt(studentId),
                 content_type_id: parseInt(formData.content_type_id),

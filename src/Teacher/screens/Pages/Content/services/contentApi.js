@@ -98,7 +98,7 @@ export class ContentApiService {
    */
   static async getModulesAndUnits(subjectId) {
     try {
-      const response = await fetch(`${COREAPI}/admin/academic/api/subjects/${subjectId}/modules-units/can-view`, {
+      const response = await fetch(`${COREAPI}/admin/academic/api/subjects/${subjectId}/modules-units/can-view?role=teacher`, {
         method: 'GET',
         headers: authHeader()
       });

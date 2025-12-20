@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Filter, Upload, Edit, Trash2, ChevronDown, Clock, FileText } from "lucide-react";
+import { Plus, Filter, Upload, Edit, Trash2, ChevronDown, Clock, FileText, LayoutDashboard, BarChart3 } from "lucide-react";
 import SweetAlert from 'react-bootstrap-sweetalert';
 
 import { courseService } from "../services/courses.service"
@@ -12,8 +12,9 @@ import { useUserProfile } from '../../../../../contexts/UserProfileContext';
 import { api } from '../../../../../_services/api';
 
 
-import { contentQuizService } from '../services/contentQuiz.service';
+import { contentQuizService } from '../services/contentQuiz.service.js';
 import BulkUploadQuestionModal from '../Components/BulkUploadQuestionModal';
+import QuizResultDashboard from './QuizResultDashboard';
 
 // Custom Select Component
 const CustomSelect = ({ label, value, onChange, options, placeholder, disabled = false }) => {
@@ -109,16 +110,31 @@ export default function QuizDashboard() {
   const [showDeleteErrorAlert, setShowDeleteErrorAlert] = useState(false);
   const [alertMessage, setAlertMessage] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
+  const [activeTab, setActiveTab] = useState('dashboard'); // 'dashboard' or 'results'
 
-  const [filters, setFilters] = useState({
-    program: "",
-    semester: "",
-    paper: "",
-    module: "",
-    unit: "",
+  const [filters, setFilters] = useState(() => {
+    // Load filters from localStorage on initialization
+    const savedFilters = localStorage.getItem('quizDashboardFilters');
+    if (savedFilters) {
+      try {
+        return JSON.parse(savedFilters);
+      } catch (e) {
+        console.error('Error parsing saved filters:', e);
+      }
+    }
+    return {
+      program: "",
+      semester: "",
+      paper: "",
+      module: "",
+      unit: "",
+    };
   });
 
-  // Additional state for tracking selections
+  // Save filters to localStorage whenever they change
+  useEffect(() => {
+    localStorage.setItem('quizDashboardFilters', JSON.stringify(filters));
+  }, [filters]);
   const [selectedProgramId, setSelectedProgramId] = useState(null);
   const [selectedSubjectId, setSelectedSubjectId] = useState(null);
   const [selectedAcademicYearId, setSelectedAcademicYearId] = useState(null);
@@ -232,7 +248,7 @@ export default function QuizDashboard() {
           setPrograms(uniquePrograms);
           console.log('Formatted programs:', uniquePrograms);
 
-          // Auto-select first program
+          // Auto-select first program only if no saved filters
           if (uniquePrograms.length > 0 && !filters.program) {
             setFilters(prev => ({ ...prev, program: uniquePrograms[0].value }));
           }
@@ -266,7 +282,7 @@ export default function QuizDashboard() {
       const formattedSemesters = semesters.map(sem => ({ label: sem, value: sem }));
       setSemesters(formattedSemesters);
 
-      // Auto-select first semester
+      // Auto-select first semester only if no saved filters
       if (formattedSemesters.length > 0 && !filters.semester) {
         setFilters(prev => ({ ...prev, semester: formattedSemesters[0].value }));
       }
@@ -307,7 +323,7 @@ export default function QuizDashboard() {
               const unique = Array.from(new Map(subjects.map(s => [s.label, s])).values());
               setPapers(unique);
 
-              // Auto-select first paper
+              // Auto-select first paper only if no saved filters
               if (unique.length > 0 && !filters.paper) {
                 setFilters(prev => ({ ...prev, paper: unique[0].value }));
               }
@@ -350,8 +366,8 @@ export default function QuizDashboard() {
           setUnits([]);
           setFilters(prev => ({ ...prev, module: "", unit: "" }));
 
-          // Auto-select first module if only one available
-          if (formatted.length === 1) {
+          // Auto-select first module if only one available and no saved filters
+          if (formatted.length === 1 && !filters.module) {
             setFilters(prev => ({ ...prev, module: formatted[0].value }));
           }
         } else {
@@ -443,150 +459,179 @@ export default function QuizDashboard() {
 
 
   return (
-    <div className="min-h-screen  p-4 md:p-6 lg:p-8">
-      {/* Header: Filter + Create Quiz Button */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
-        <div className="w-full sm:w-auto">
+    <div className="min-h-screen p-4 md:p-6 lg:p-8">
+      {/* Tab Navigation */}
+      <div className="mb-6">
+        <div className="bg-white rounded-xl shadow-md p-2 inline-flex gap-2">
           <button
-            onClick={() => setFilterOpen(!filterOpen)}
-            className="flex items-center justify-center gap-2 bg-white border border-gray-300 hover:bg-gray-50 px-4 py-3 rounded-xl shadow-sm transition-all flex-1 sm:flex-none sm:w-auto"
+            onClick={() => setActiveTab('dashboard')}
+            className={`flex items-center gap-2 px-6 py-3 rounded-lg font-semibold transition-all ${activeTab === 'dashboard'
+              ? 'bg-blue-600 text-white shadow-md'
+              : 'text-gray-600 hover:bg-gray-100'
+              }`}
           >
-            <Filter className="w-4 h-4 text-blue-600" />
-            <span className="text-blue-600 font-medium">Filter</span>
-            <ChevronDown
-              className={`w-4 h-4 text-blue-600 transition-transform ${filterOpen ? 'rotate-180' : 'rotate-0'}`}
-            />
+            <LayoutDashboard className="w-5 h-5" />
+            <span>Dashboard</span>
           </button>
-        </div>
-
-        <div className="flex gap-2 w-full sm:w-auto">
           <button
-            onClick={() => navigate('/teacher/content/add-content/quiz/add', { state: { filters } })}
-            className="flex items-center gap-2 bg-blue-600 text-white font-medium px-4 py-3 rounded-md shadow-md transition-all hover:shadow-lg flex-1 sm:flex-none justify-center"
+            onClick={() => setActiveTab('results')}
+            className={`flex items-center gap-2 px-6 py-3 rounded-lg font-semibold transition-all ${activeTab === 'results'
+              ? 'bg-green-600 text-white shadow-md'
+              : 'text-gray-600 hover:bg-gray-100'
+              }`}
           >
-            <Plus className="w-4 h-4" />
-            <span className="sm:inline">Create New Quiz</span>
+            <BarChart3 className="w-5 h-5" />
+            <span>Results</span>
           </button>
         </div>
       </div>
 
-      {/* Filter Panel */}
-      {filterOpen && (
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-5 mb-6">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3 sm:gap-4">
-            <CustomSelect
-              label="Program"
-              value={filters.program}
-              onChange={(e) => setFilters(prev => ({ ...prev, program: e.target.value }))}
-              options={programs}
-              placeholder="Select Program"
-            />
+      {/* Dashboard Tab Content */}
+      {activeTab === 'dashboard' && (
+        <>
+          {/* Header: Filter + Create Quiz Button */}
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
+            <div className="w-full sm:w-auto">
+              <button
+                onClick={() => setFilterOpen(!filterOpen)}
+                className="flex items-center justify-center gap-2 bg-white border border-gray-300 hover:bg-gray-50 px-4 py-3 rounded-xl shadow-sm transition-all flex-1 sm:flex-none sm:w-auto"
+              >
+                <Filter className="w-4 h-4 text-blue-600" />
+                <span className="text-blue-600 font-medium">Filter</span>
+                <ChevronDown
+                  className={`w-4 h-4 text-blue-600 transition-transform ${filterOpen ? 'rotate-180' : 'rotate-0'}`}
+                />
+              </button>
+            </div>
 
-
-
-            <CustomSelect
-              label="Semester"
-              value={filters.semester}
-              onChange={(e) => setFilters(prev => ({ ...prev, semester: e.target.value }))}
-              options={semesters}
-              placeholder="Select Semester"
-              disabled={!filters.program}
-            />
-
-            <CustomSelect
-              label="Paper"
-              value={filters.paper}
-              onChange={(e) => setFilters(prev => ({ ...prev, paper: e.target.value }))}
-              options={papers}
-              placeholder="Select Paper"
-              disabled={!filters.semester}
-            />
-
-            <CustomSelect
-              label="Module"
-              value={filters.module}
-              onChange={(e) => setFilters(prev => ({ ...prev, module: e.target.value }))}
-              options={modules}
-              placeholder="Select Module"
-              disabled={!filters.paper}
-            />
-
-            <CustomSelect
-              label="Unit (Topic)"
-              value={filters.unit}
-              onChange={(e) => setFilters(prev => ({ ...prev, unit: e.target.value }))}
-              options={units}
-              placeholder="Select Unit (Optional)"
-              disabled={!filters.module}
-            />
+            <div className="flex gap-2 w-full sm:w-auto">
+              <button
+                onClick={() => navigate('/teacher/content/add-content/quiz/add', { state: { filters } })}
+                className="flex items-center gap-2 bg-blue-600 text-white font-medium px-4 py-3 rounded-md shadow-md transition-all hover:shadow-lg flex-1 sm:flex-none justify-center"
+              >
+                <Plus className="w-4 h-4" />
+                <span className="sm:inline">Create New Quiz</span>
+              </button>
+            </div>
           </div>
-        </div>
-      )}
 
-      <div className="bg-white/90 backdrop-blur-sm rounded-xl sm:rounded-2xl shadow-xl p-4 sm:p-6 lg:p-8 border border-indigo-100">
+          {/* Filter Panel */}
+          {filterOpen && (
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-5 mb-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3 sm:gap-4">
+                <CustomSelect
+                  label="Program"
+                  value={filters.program}
+                  onChange={(e) => setFilters(prev => ({ ...prev, program: e.target.value }))}
+                  options={programs}
+                  placeholder="Select Program"
+                />
 
-        <div>
-          <div className="flex justify-between items-center mb-6">
-            <h3 className="text-xl sm:text-2xl font-bold text-blue-600">
-              {filters.module ? (filters.unit ? 'Filtered Quizzes' : 'Module Quizzes') : 'All Quizzes'}
-            </h3>
-            {total_elements > 0 && (
-              <div className="flex items-center gap-4">
-                <span className="text-sm text-gray-600">
-                  Showing {quizzes.length} of {total_elements} quizzes
-                </span>
-                <select
-                  value={pageSize}
-                  onChange={(e) => {
-                    setPageSize(Number(e.target.value));
-                    setCurrentPage(0);
-                  }}
-                  className="px-3 py-1 border border-gray-300 rounded-md text-sm"
-                >
-                  <option value={5}>5 per page</option>
-                  <option value={10}>10 per page</option>
-                  <option value={20}>20 per page</option>
-                  <option value={50}>50 per page</option>
-                </select>
+
+
+                <CustomSelect
+                  label="Semester"
+                  value={filters.semester}
+                  onChange={(e) => setFilters(prev => ({ ...prev, semester: e.target.value }))}
+                  options={semesters}
+                  placeholder="Select Semester"
+                  disabled={!filters.program}
+                />
+
+                <CustomSelect
+                  label="Paper"
+                  value={filters.paper}
+                  onChange={(e) => setFilters(prev => ({ ...prev, paper: e.target.value }))}
+                  options={papers}
+                  placeholder="Select Paper"
+                  disabled={!filters.semester}
+                />
+
+                <CustomSelect
+                  label="Module"
+                  value={filters.module}
+                  onChange={(e) => setFilters(prev => ({ ...prev, module: e.target.value }))}
+                  options={modules}
+                  placeholder="Select Module"
+                  disabled={!filters.paper}
+                />
+
+                <CustomSelect
+                  label="Unit (Topic)"
+                  value={filters.unit}
+                  onChange={(e) => setFilters(prev => ({ ...prev, unit: e.target.value }))}
+                  options={units}
+                  placeholder="Select Unit (Optional)"
+                  disabled={!filters.module}
+                />
               </div>
-            )}
-          </div>
+            </div>
+          )}
 
-          {(() => {
-            return quizzes.length > 0 ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6">
-                {quizzes.map((quiz) => (
-                  <div
-                    key={quiz.quiz_id}
-                    className="group p-4 sm:p-6 bg-gradient-to-br from-white to-indigo-50/50 border border-indigo-100 rounded-xl sm:rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 hover:border-indigo-200"
-                  >
-                    {/* Title */}
-                    <h4 className="text-lg sm:text-xl font-bold text-gray-700 mb-3 group-hover:text-blue-700 transition-colors line-clamp-2">
-                      {quiz.quiz_name}
-                    </h4>
+          <div className="bg-white/90 backdrop-blur-sm rounded-xl sm:rounded-2xl shadow-xl p-4 sm:p-6 lg:p-8 border border-indigo-100">
 
-                    {/* Duration + Questions */}
-                    <div className="flex flex-col sm:flex-row justify-between gap-2 sm:gap-0 text-sm mb-4">
-                      <span className="flex items-center gap-2 text-emerald-600 bg-emerald-50 px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm">
-                        <Clock className="w-3 h-3 sm:w-4 sm:h-4" />
-                        {quiz.duration} min
-                      </span>
-                      <span className="flex items-center gap-2 text-purple-600 bg-purple-50 px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm">
-                        <FileText className="w-3 h-3 sm:w-4 sm:h-4" />
-                        {quiz.question_count || 0} Questions
-                      </span>
-                    </div>
+            <div>
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="text-xl sm:text-2xl font-bold text-blue-600">
+                  {filters.module ? (filters.unit ? 'Filtered Quizzes' : 'Module Quizzes') : 'All Quizzes'}
+                </h3>
+                {total_elements > 0 && (
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4 w-full sm:w-auto">
+                    <span className="text-xs sm:text-sm text-gray-600">
+                      Showing {quizzes.length} of {total_elements} quizzes
+                    </span>
+                    <select
+                      value={pageSize}
+                      onChange={(e) => {
+                        setPageSize(Number(e.target.value));
+                        setCurrentPage(0);
+                      }}
+                      className="px-2 sm:px-3 py-1 border border-gray-300 rounded-md text-xs sm:text-sm w-full sm:w-auto"
+                    >
+                      <option value={5}>5 per page</option>
+                      <option value={10}>10 per page</option>
+                      <option value={20}>20 per page</option>
+                      <option value={50}>50 per page</option>
+                    </select>
+                  </div>
+                )}
+              </div>
+
+              {(() => {
+                return quizzes.length > 0 ? (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6">
+                    {quizzes.map((quiz) => (
+                      <div
+                        key={quiz.quiz_id}
+                        className="group p-4 sm:p-6 bg-gradient-to-br from-white to-indigo-50/50 border border-indigo-100 rounded-xl sm:rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 hover:border-indigo-200"
+                      >
+                        {/* Title */}
+                        <h4 className="text-lg sm:text-xl font-bold text-gray-700 mb-3 group-hover:text-blue-700 transition-colors line-clamp-2">
+                          {quiz.quiz_name}
+                        </h4>
+
+                        {/* Duration + Questions */}
+                        <div className="flex flex-col sm:flex-row justify-between gap-2 sm:gap-0 text-sm mb-4">
+                          <span className="flex items-center gap-2 text-emerald-600 bg-emerald-50 px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm">
+                            <Clock className="w-3 h-3 sm:w-4 sm:h-4" />
+                            {quiz.duration} min
+                          </span>
+                          <span className="flex items-center gap-2 text-purple-600 bg-purple-50 px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm">
+                            <FileText className="w-3 h-3 sm:w-4 sm:h-4" />
+                            {quiz.question_count || 0} Questions
+                          </span>
+                        </div>
 
 
-                    <p className={`text-xs mb-4 px-3 py-1 rounded-full inline-block font-medium ${quiz.approval_status
-                      ? 'text-green-700 bg-green-50'
-                      : 'text-red-700 bg-red-50'
-                      }`}>
-                      Status: {quiz.approval_status ? 'Approved' : 'Pending'}
-                    </p>
+                        <p className={`text-xs mb-4 px-3 py-1 rounded-full inline-block font-medium ${quiz.approval_status
+                          ? 'text-green-700 bg-green-50'
+                          : 'text-red-700 bg-red-50'
+                          }`}>
+                          Status: {quiz.approval_status ? 'Approved' : 'Pending'}
+                        </p>
 
-                    {/* Active Badge */}
-                    {/* <span
+                        {/* Active Badge */}
+                        {/* <span
                     className={`px-3 py-1 rounded-full text-xs font-semibold ${
                       quiz.active
                         ? "bg-green-100 text-green-700"
@@ -595,156 +640,173 @@ export default function QuizDashboard() {
                   >
                     {quiz.active ? "Active" : "Inactive"}
                   </span> */}
-                    {/* --- EDIT + DELETE BUTTONS --- */}
-                    <div className="flex justify-end gap-2 mt-4 sm:mt-6">
+                        {/* --- EDIT + DELETE BUTTONS --- */}
+                        <div className="flex justify-end gap-2 mt-4 sm:mt-6">
+                          <button
+                            onClick={() =>
+                              navigate("/teacher/content/add-content/quiz/edit", {
+                                state: { quiz: quiz, filters: filters }
+                              })
+                            }
+                            className="p-2 sm:p-1.5 rounded-lg bg-yellow-50 text-yellow-600 hover:bg-yellow-100 transition touch-manipulation"
+                          >
+                            <Edit className="w-4 h-4" />
+                          </button>
+
+                          <button
+                            onClick={() => handleDeleteQuiz(quiz.quiz_id)}
+                            className="p-2 sm:p-1.5 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition touch-manipulation"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8 sm:py-12">
+                    <div className="text-4xl sm:text-6xl mb-4">📚</div>
+                    <p className="text-gray-500 text-sm sm:text-lg px-4">
+                      {filters.module ? 'No quizzes found for selected filters.' : 'Please select a module to view quizzes.'}
+                    </p>
+                  </div>
+                );
+              })()
+              }
+
+              {/* Pagination Controls */}
+              {total_elements > 0 && (
+                <div className="mt-4 sm:mt-6 border-t pt-4">
+                  <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
+                    <div className="text-xs sm:text-sm text-gray-600">
+                      Page {currentPage + 1} of {total_pages}
+                    </div>
+                    <div className="flex items-center gap-1 sm:gap-2 flex-wrap justify-center">
                       <button
-                        onClick={() =>
-                          navigate("/teacher/content/add-content/quiz/edit", {
-                            state: { quiz: quiz, filters: filters }
-                          })
-                        }
-                        className="p-2 sm:p-1.5 rounded-lg bg-yellow-50 text-yellow-600 hover:bg-yellow-100 transition touch-manipulation"
+                        onClick={() => handlePageChange(0)}
+                        disabled={currentPage === 0}
+                        className="px-2 sm:px-3 py-1 border border-gray-300 rounded-md text-xs sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
                       >
-                        <Edit className="w-4 h-4" />
+                        First
+                      </button>
+                      <button
+                        onClick={() => handlePageChange(currentPage - 1)}
+                        disabled={currentPage === 0}
+                        className="px-2 sm:px-3 py-1 border border-gray-300 rounded-md text-xs sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                      >
+                        Prev
                       </button>
 
+                      {/* Page numbers - show fewer on mobile */}
+                      <div className="flex gap-1">
+                        {Array.from({ length: Math.min(window.innerWidth < 640 ? 3 : 5, total_pages) }, (_, i) => {
+                          let pageNum;
+                          const maxPages = window.innerWidth < 640 ? 3 : 5;
+                          if (total_pages <= maxPages) {
+                            pageNum = i;
+                          } else if (currentPage < Math.floor(maxPages / 2)) {
+                            pageNum = i;
+                          } else if (currentPage > total_pages - Math.ceil(maxPages / 2)) {
+                            pageNum = total_pages - maxPages + i;
+                          } else {
+                            pageNum = currentPage - Math.floor(maxPages / 2) + i;
+                          }
+
+                          return (
+                            <button
+                              key={pageNum}
+                              onClick={() => handlePageChange(pageNum)}
+                              className={`px-2 sm:px-3 py-1 border rounded-md text-xs sm:text-sm ${currentPage === pageNum
+                                ? 'bg-blue-600 text-white border-blue-600'
+                                : 'border-gray-300 hover:bg-gray-50'
+                                }`}
+                            >
+                              {pageNum + 1}
+                            </button>
+                          );
+                        })}
+                      </div>
+
                       <button
-                        onClick={() => handleDeleteQuiz(quiz.quiz_id)}
-                        className="p-2 sm:p-1.5 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition touch-manipulation"
+                        onClick={() => handlePageChange(currentPage + 1)}
+                        disabled={currentPage >= total_pages - 1}
+                        className="px-2 sm:px-3 py-1 border border-gray-300 rounded-md text-xs sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
                       >
-                        <Trash2 className="w-4 h-4" />
+                        Next
+                      </button>
+                      <button
+                        onClick={() => handlePageChange(total_pages - 1)}
+                        disabled={currentPage >= total_pages - 1}
+                        className="px-2 sm:px-3 py-1 border border-gray-300 rounded-md text-xs sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                      >
+                        Last
                       </button>
                     </div>
                   </div>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-12">
-                <div className="text-6xl mb-4">📚</div>
-                <p className="text-gray-500 text-lg">
-                  {filters.module ? 'No quizzes found for selected filters.' : 'Please select a module to view quizzes.'}
-                </p>
-              </div>
-            );
-          })()
-          }
-
-          {/* Pagination Controls */}
-          {total_elements > 0 && (
-            <div className="mt-6 flex items-center justify-between border-t pt-4">
-              <div className="text-sm text-gray-600">
-                Page {currentPage + 1} of {total_pages}
-              </div>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => handlePageChange(0)}
-                  disabled={currentPage === 0}
-                  className="px-3 py-1 border border-gray-300 rounded-md text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
-                >
-                  First
-                </button>
-                <button
-                  onClick={() => handlePageChange(currentPage - 1)}
-                  disabled={currentPage === 0}
-                  className="px-3 py-1 border border-gray-300 rounded-md text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
-                >
-                  Previous
-                </button>
-
-                {/* Page numbers */}
-                <div className="flex gap-1">
-                  {Array.from({ length: Math.min(5, total_pages) }, (_, i) => {
-                    let pageNum;
-                    if (total_pages <= 5) {
-                      pageNum = i;
-                    } else if (currentPage < 3) {
-                      pageNum = i;
-                    } else if (currentPage > total_pages - 3) {
-                      pageNum = total_pages - 5 + i;
-                    } else {
-                      pageNum = currentPage - 2 + i;
-                    }
-
-                    return (
-                      <button
-                        key={pageNum}
-                        onClick={() => handlePageChange(pageNum)}
-                        className={`px-3 py-1 border rounded-md text-sm ${currentPage === pageNum
-                          ? 'bg-blue-600 text-white border-blue-600'
-                          : 'border-gray-300 hover:bg-gray-50'
-                          }`}
-                      >
-                        {pageNum + 1}
-                      </button>
-                    );
-                  })}
                 </div>
-
-                <button
-                  onClick={() => handlePageChange(currentPage + 1)}
-                  disabled={currentPage >= total_pages - 1}
-                  className="px-3 py-1 border border-gray-300 rounded-md text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
-                >
-                  Next
-                </button>
-                <button
-                  onClick={() => handlePageChange(total_pages - 1)}
-                  disabled={currentPage >= total_pages - 1}
-                  className="px-3 py-1 border border-gray-300 rounded-md text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
-                >
-                  Last
-                </button>
-              </div>
+              )}
             </div>
+          </div>
+
+          {/* Bulk Upload Modal */}
+          {showBulkUpload && (
+            <BulkUploadQuestionModal onClose={() => setShowBulkUpload(false)} />
           )}
-        </div>
-      </div>
 
-      {/* Bulk Upload Modal */}
-      {showBulkUpload && (
-        <BulkUploadQuestionModal onClose={() => setShowBulkUpload(false)} />
+          {/* Delete Confirmation Alert */}
+          {showAlert && (
+            <SweetAlert
+              warning
+              showCancel
+              confirmBtnText="Yes, Delete!"
+              cancelBtnText="Cancel"
+              confirmBtnCssClass="btn-confirm"
+              cancelBtnCssClass="btn-cancel"
+              title="Are you sure?"
+              onConfirm={handleConfirmDelete}
+              onCancel={handleCancelDelete}
+            >
+              You won't be able to recover this quiz!
+            </SweetAlert>
+          )}
+
+          {/* Success Alert */}
+          {showDeleteSuccessAlert && (
+            <SweetAlert
+              success
+              title="Deleted!"
+              confirmBtnCssClass="btn-confirm"
+              onConfirm={() => setShowDeleteSuccessAlert(false)}
+            >
+              {alertMessage}
+            </SweetAlert>
+          )}
+
+          {/* Error Alert */}
+          {showDeleteErrorAlert && (
+            <SweetAlert
+              danger
+              title="Error!"
+              onConfirm={() => setShowDeleteErrorAlert(false)}
+            >
+              {errorMessage}
+            </SweetAlert>
+          )}
+        </>
       )}
 
-      {/* Delete Confirmation Alert */}
-      {showAlert && (
-        <SweetAlert
-          warning
-          showCancel
-          confirmBtnText="Yes, Delete!"
-          cancelBtnText="Cancel"
-          confirmBtnCssClass="btn-confirm"
-          cancelBtnCssClass="btn-cancel"
-          title="Are you sure?"
-          onConfirm={handleConfirmDelete}
-          onCancel={handleCancelDelete}
-        >
-          You won't be able to recover this quiz!
-        </SweetAlert>
-      )}
-
-      {/* Success Alert */}
-      {showDeleteSuccessAlert && (
-        <SweetAlert
-          success
-          title="Deleted!"
-          confirmBtnCssClass="btn-confirm"
-          onConfirm={() => setShowDeleteSuccessAlert(false)}
-        >
-          {alertMessage}
-        </SweetAlert>
-      )}
-
-      {/* Error Alert */}
-      {showDeleteErrorAlert && (
-        <SweetAlert
-          danger
-          title="Error!"
-          onConfirm={() => setShowDeleteErrorAlert(false)}
-        >
-          {errorMessage}
-        </SweetAlert>
+      {/* Results Tab Content */}
+      {activeTab === 'results' && (
+        <QuizResultDashboard
+          filters={filters}
+          setFilters={setFilters}
+          programs={programs}
+          semesters={semesters}
+          papers={papers}
+          modules={modules}
+          units={units}
+        />
       )}
     </div>
   );
 }
-
