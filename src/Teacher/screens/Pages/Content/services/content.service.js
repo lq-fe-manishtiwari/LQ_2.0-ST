@@ -40,7 +40,11 @@ export const contentService = {
     approveStudentProject,
     rejectStudentProject,
     getApprovedModuleLevelContent,
+    updateContent,
+    uploadFileToS3,
 };
+
+
 
 function getAllQuestionLevel() {
     const requestOptions = {
@@ -534,3 +538,49 @@ function getApprovedModuleLevelContent(moduleId) {
             throw error;
         });
 }
+
+// PUT /api/admin/content/{contentId}
+function updateContent(contentId, request) {
+    const requestOptions = {
+        method: 'PUT',
+        headers: authHeaderToPost(),
+        body: JSON.stringify(request)
+    };
+    return fetch(`${ContentAPI}/admin/content/${contentId}`, requestOptions).then(handleResponse);
+}
+
+// Upload file to S3
+function uploadFileToS3(file) {
+    console.log("uploadFileToS3 called with file:", file);
+    const formData = new FormData();
+    formData.append('file', file);
+    const authHeaders = authHeader();
+    const requestOptions = {
+        method: 'POST',
+        headers: {
+            'Authorization': authHeaders.Authorization
+        },
+        body: formData
+    };
+
+    const url = `${AcademicAPI}/s3/upload`;
+
+    return fetch(url, requestOptions)
+        .then(response => {
+            console.log("S3 upload response:", response);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            // S3 upload returns plain text URL, not JSON
+            return response.text();
+        })
+        .then(data => {
+            console.log("S3 upload data:", data);
+            return data;
+        })
+        .catch(error => {
+            console.error("S3 upload error:", error);
+            throw error;
+        });
+}
+

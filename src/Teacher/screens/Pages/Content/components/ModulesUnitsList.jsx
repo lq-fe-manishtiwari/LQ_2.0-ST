@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ChevronDown, ChevronRight, FileText, BookOpen, Loader2, Play, File, Eye, X, ExternalLink, Clock } from 'lucide-react';
+import { ChevronDown, ChevronRight, FileText, BookOpen, Loader2, Play, File, Eye, X, ExternalLink, Clock, Edit, Trash2 } from 'lucide-react';
 import { ContentApiService } from '../services/contentApi';
 
 export default function ModulesUnitsList({ modules, colorCode }) {
@@ -12,6 +12,11 @@ export default function ModulesUnitsList({ modules, colorCode }) {
     const [contentError, setContentError] = useState(null);
     const [previewModal, setPreviewModal] = useState({ isOpen: false, content: null });
     const [readingTimer, setReadingTimer] = useState(0);
+    const [editModal, setEditModal] = useState({ isOpen: false, content: null });
+    const [editFormData, setEditFormData] = useState({});
+    const [showFilePreview, setShowFilePreview] = useState(false);
+    const [uploadingFile, setUploadingFile] = useState(false);
+    const [deleteConfirm, setDeleteConfirm] = useState({ isOpen: false, contentId: null });
 
     const toggleModule = async (moduleId) => {
         if (expandedModuleId === moduleId) {
@@ -90,6 +95,118 @@ export default function ModulesUnitsList({ modules, colorCode }) {
     const closePreviewModal = () => {
         setPreviewModal({ isOpen: false, content: null });
         setReadingTimer(0);
+    };
+
+    const handleEditContent = (content) => {
+        setEditFormData({
+            contentName: content.content_name || '',
+            contentDescription: content.content_description || '',
+            contentLink: content.content_link || '',
+            averageReadingTimeSeconds: content.average_reading_time_seconds || 0,
+            file: null,
+            fileName: content.content_link ? content.content_link.split('/').pop() : '',
+            fileUrl: content.content_link || '',
+        });
+        setEditModal({ isOpen: true, content });
+    };
+
+    const closeEditModal = () => {
+        setEditModal({ isOpen: false, content: null });
+        setEditFormData({});
+        setShowFilePreview(false);
+        setUploadingFile(false);
+    };
+
+    const handleFileUpload = async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        try {
+            setUploadingFile(true);
+            setEditFormData(prev => ({ ...prev, file, fileName: file.name }));
+
+            // Upload to S3 using the service
+            const fileUrl = await contentService.uploadFileToS3(file);
+            setEditFormData(prev => ({ ...prev, fileUrl, contentLink: fileUrl }));
+        } catch (error) {
+            console.error('Error uploading file:', error);
+            alert('Error uploading file. Please try again.');
+            setEditFormData(prev => ({ ...prev, file: null, fileName: prev.fileName }));
+        } finally {
+            setUploadingFile(false);
+        }
+    };
+
+    const handleEditFormChange = (e) => {
+        const { name, value } = e.target;
+        setEditFormData(prev => ({ ...prev, [name]: value }));
+    };
+
+    const handleUpdateContent = async () => {
+        try {
+            const updateRequest = {
+                content_name: editFormData.contentName,
+                content_description: editFormData.contentDescription,
+                content_link: editFormData.contentLink,
+                unit_id: editModal.content.unit_id,
+                average_reading_time_seconds: parseInt(editFormData.averageReadingTimeSeconds) || 0,
+                content_type_id: editModal.content.content_type_id,
+                content_level_id: editModal.content.content_level_id,
+                quiz_attachments: editModal.content.quiz_attachments || [],
+                admin: false,
+                module_id: editModal.content.module_id,
+            };
+
+            await contentService.updateContent(editModal.content.content_id, updateRequest);
+            alert('Content updated successfully!');
+            closeEditModal();
+
+            // Refresh the content
+            if (selectedUnitId) {
+                const response = await ContentApiService.getContentByUnits(selectedUnitId);
+                if (response.success) {
+                    setUnitContent(response.data);
+                }
+            }
+            if (expandedModuleId) {
+                const response = await ContentApiService.getApprovedModuleLevelContent(expandedModuleId);
+                if (response.success) {
+                    setModuleContent(response.data);
+                }
+            }
+        } catch (error) {
+            console.error('Error updating content:', error);
+            alert('Error updating content. Please try again.');
+        }
+    };
+
+    const handleDeleteContent = (contentId) => {
+        setDeleteConfirm({ isOpen: true, contentId });
+    };
+
+    const confirmDelete = async () => {
+        try {
+            await contentService.softDeleteContent(deleteConfirm.contentId);
+            alert('Content deleted successfully!');
+            setDeleteConfirm({ isOpen: false, contentId: null });
+
+            // Refresh the content
+            if (selectedUnitId) {
+                const response = await ContentApiService.getContentByUnits(selectedUnitId);
+                if (response.success) {
+                    setUnitContent(response.data);
+                }
+            }
+            if (expandedModuleId) {
+                const response = await ContentApiService.getApprovedModuleLevelContent(expandedModuleId);
+                if (response.success) {
+                    setModuleContent(response.data);
+                }
+            }
+        } catch (error) {
+            console.error('Error deleting content:', error);
+            alert('Error deleting content. Please try again.');
+        }
     };
 
     // Timer effect for reading time
@@ -203,13 +320,43 @@ export default function ModulesUnitsList({ modules, colorCode }) {
                         )}
                     </div>
                 </div>
-                <button
-                    onClick={() => handleViewContent(content)}
-                    className="flex items-center gap-1 px-3 py-1.5 bg-blue-500 text-white text-xs rounded-md hover:bg-blue-600 transition-colors"
-                >
-                    <Eye className="w-3 h-3" />
-                    View
-                </button>
+                <div className="flex items-center gap-2">
+                    {/* View Button */}
+                    <button
+                        onClick={() => handleViewContent(content)}
+                        className="p-2 rounded-lg bg-blue-100 text-blue-600 hover:bg-blue-200 transition-colors group relative"
+                        title="View Content"
+                    >
+                        <Eye className="w-4 h-4" />
+                        <span className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
+                            View
+                        </span>
+                    </button>
+
+                    {/* Edit Button */}
+                    <button
+                        onClick={() => handleEditContent(content)}
+                        className="p-2 rounded-lg bg-green-100 text-green-600 hover:bg-green-200 transition-colors group relative"
+                        title="Edit Content"
+                    >
+                        <Edit className="w-4 h-4" />
+                        <span className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
+                            Edit
+                        </span>
+                    </button>
+
+                    {/* Delete Button */}
+                    <button
+                        onClick={() => handleDeleteContent(content.content_id)}
+                        className="p-2 rounded-lg bg-red-100 text-red-600 hover:bg-red-200 transition-colors group relative"
+                        title="Delete Content"
+                    >
+                        <Trash2 className="w-4 h-4" />
+                        <span className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
+                            Delete
+                        </span>
+                    </button>
+                </div>
             </div>
         );
     };
@@ -305,14 +452,14 @@ export default function ModulesUnitsList({ modules, colorCode }) {
                                                     <div
                                                         onClick={() => handleUnitClick(unit.unit_id)}
                                                         className={`flex items-center gap-3 p-3 rounded-md border transition-colors cursor-pointer group ${selectedUnitId === unit.unit_id
-                                                                ? 'bg-blue-50 border-blue-200'
-                                                                : 'hover:bg-gray-50 border-gray-100'
+                                                            ? 'bg-blue-50 border-blue-200'
+                                                            : 'hover:bg-gray-50 border-gray-100'
                                                             }`}
                                                     >
                                                         <div
                                                             className={`p-2 rounded-full transition-colors ${selectedUnitId === unit.unit_id
-                                                                    ? 'bg-white'
-                                                                    : 'bg-gray-100 group-hover:bg-white'
+                                                                ? 'bg-white'
+                                                                : 'bg-gray-100 group-hover:bg-white'
                                                                 }`}
                                                             style={{ color: colorCode }}
                                                         >
@@ -420,6 +567,212 @@ export default function ModulesUnitsList({ modules, colorCode }) {
                             <div className="w-full h-full flex items-center justify-center">
                                 {renderPreviewContent(previewModal.content)}
                             </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Edit Content Modal */}
+            {editModal.isOpen && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                    <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden">
+                        {/* Header */}
+                        <div className="bg-gradient-to-r from-blue-500 to-blue-600 p-6 text-white">
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-3">
+                                    <div className="p-3 bg-white/20 rounded-full">
+                                        <Edit className="w-6 h-6" />
+                                    </div>
+                                    <div>
+                                        <h3 className="text-xl font-bold">Edit Content</h3>
+                                        <p className="text-sm text-blue-100">Update content details and files</p>
+                                    </div>
+                                </div>
+                                <button
+                                    onClick={closeEditModal}
+                                    className="p-2 hover:bg-white/20 rounded-full transition-colors"
+                                >
+                                    <X className="w-6 h-6" />
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Content */}
+                        <div className="p-6 space-y-4 max-h-[calc(90vh-200px)] overflow-y-auto">
+                            {/* Content Name */}
+                            <div>
+                                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                                    Content Name <span className="text-red-500">*</span>
+                                </label>
+                                <input
+                                    type="text"
+                                    name="contentName"
+                                    value={editFormData.contentName || ''}
+                                    onChange={handleEditFormChange}
+                                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-blue-500 transition-colors"
+                                    placeholder="Enter content name"
+                                />
+                            </div>
+
+                            {/* Description */}
+                            <div>
+                                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                                    Description
+                                </label>
+                                <textarea
+                                    name="contentDescription"
+                                    value={editFormData.contentDescription || ''}
+                                    onChange={handleEditFormChange}
+                                    rows="3"
+                                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-blue-500 transition-colors resize-none"
+                                    placeholder="Enter description"
+                                />
+                            </div>
+
+                            {/* File Upload Section */}
+                            <div className="bg-blue-50 border-2 border-blue-200 rounded-lg p-4">
+                                <label className="block text-sm font-semibold text-gray-700 mb-3">
+                                    Content File
+                                </label>
+
+                                {/* Current File Display */}
+                                {editFormData.fileUrl && !editFormData.file && (
+                                    <div className="mb-3 p-3 bg-white border border-blue-200 rounded-lg">
+                                        <div className="flex items-center justify-between">
+                                            <div className="flex items-center gap-2">
+                                                <File className="w-5 h-5 text-blue-600" />
+                                                <span className="text-sm text-gray-700 font-medium">
+                                                    Current: {editFormData.fileName}
+                                                </span>
+                                            </div>
+                                            <button
+                                                type="button"
+                                                onClick={() => setShowFilePreview(true)}
+                                                className="text-blue-600 hover:text-blue-700 text-sm font-medium flex items-center gap-1"
+                                            >
+                                                <Eye className="w-4 h-4" />
+                                                Preview
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Upload New File */}
+                                <div className="flex gap-3">
+                                    <input
+                                        type="file"
+                                        onChange={handleFileUpload}
+                                        className="flex-1 text-sm text-gray-600 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-100 file:text-blue-700 hover:file:bg-blue-200 cursor-pointer"
+                                        accept=".pdf,.doc,.docx,.ppt,.pptx,.jpg,.jpeg,.png,.gif"
+                                    />
+                                </div>
+
+                                {uploadingFile && (
+                                    <p className="text-sm text-blue-600 mt-2 flex items-center gap-2">
+                                        <Loader2 className="w-4 h-4 animate-spin" />
+                                        Uploading file...
+                                    </p>
+                                )}
+
+                                {editFormData.file && (
+                                    <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded-lg">
+                                        <p className="text-sm text-green-700 flex items-center gap-2">
+                                            <span className="text-lg">✅</span>
+                                            <strong>{editFormData.fileName}</strong> uploaded successfully
+                                        </p>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Reading Time */}
+                            <div>
+                                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                                    Average Reading Time (seconds)
+                                </label>
+                                <input
+                                    type="number"
+                                    name="averageReadingTimeSeconds"
+                                    value={editFormData.averageReadingTimeSeconds || 0}
+                                    onChange={handleEditFormChange}
+                                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-blue-500 transition-colors"
+                                    min="0"
+                                />
+                            </div>
+                        </div>
+
+                        {/* Footer */}
+                        <div className="bg-gray-50 px-6 py-4 flex items-center justify-end gap-3 border-t">
+                            <button
+                                onClick={closeEditModal}
+                                className="px-6 py-2.5 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors font-medium"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={handleUpdateContent}
+                                disabled={uploadingFile}
+                                className="px-6 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                {uploadingFile ? 'Uploading...' : 'Update Content'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* File Preview Modal */}
+            {showFilePreview && editFormData.fileUrl && (
+                <div className="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-[60] p-4">
+                    <div className="bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden shadow-2xl">
+                        <div className="bg-gradient-to-r from-blue-500 to-blue-600 p-4 text-white flex items-center justify-between">
+                            <h3 className="text-lg font-bold">File Preview</h3>
+                            <button
+                                onClick={() => setShowFilePreview(false)}
+                                className="p-2 hover:bg-white/20 rounded-full transition-colors"
+                            >
+                                <X className="w-5 h-5" />
+                            </button>
+                        </div>
+                        <div className="p-4 max-h-[calc(90vh-80px)] overflow-auto">
+                            <iframe
+                                src={editFormData.fileUrl}
+                                className="w-full h-[70vh] border-0 rounded-lg"
+                                title="File Preview"
+                            />
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Delete Confirmation Modal */}
+            {deleteConfirm.isOpen && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                    <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden animate-in zoom-in-95 duration-200">
+                        {/* Icon Header */}
+                        <div className="pt-8 pb-4 flex flex-col items-center">
+                            <div className="w-20 h-20 rounded-full bg-red-100 flex items-center justify-center mb-4">
+                                <Trash2 className="w-10 h-10 text-red-600" />
+                            </div>
+                            <h3 className="text-2xl font-bold text-gray-900 mb-2">Delete Content?</h3>
+                            <p className="text-gray-600 text-center px-6">
+                                Are you sure you want to delete this content? This action cannot be undone.
+                            </p>
+                        </div>
+
+                        {/* Actions */}
+                        <div className="bg-gray-50 px-6 py-4 flex items-center justify-center gap-3 border-t">
+                            <button
+                                onClick={() => setDeleteConfirm({ isOpen: false, contentId: null })}
+                                className="px-6 py-2.5 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors font-medium"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={confirmDelete}
+                                className="px-6 py-2.5 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium"
+                            >
+                                Yes, Delete
+                            </button>
                         </div>
                     </div>
                 </div>
