@@ -70,7 +70,6 @@ export default function TimeSheetDashboard() {
   const [searchQuery, setSearchQuery] = useState("");
   const [filters, setFilters] = useState({
     filterOpen: false,
-    department: '',
     view: '',
     year: '',
     month: '',
@@ -81,23 +80,11 @@ export default function TimeSheetDashboard() {
   });
   const [mobileTabStart, setMobileTabStart] = useState(0);
   const [name, setName] = useState("Manish Tiwari");
-  const [date, setDate] = useState("2025-02-25");
-  const [month, setMonth] = useState("2025-08");
-  const [startDate, setStartDate] = useState("2025-02-20");
-  const [endDate, setEndDate] = useState("2025-02-25");
+  const [userId, setUserId] = useState(2);
   const [filteredData, setFilteredData] = useState({ days: [], summary: {} });
   const [downloadOpen, setDownloadOpen] = useState(false);
   const downloadRef = useRef(null);
-  const [departments, setDepartments] = useState([]);
-  const [deptLoading, setDeptLoading] = useState(false);
-  const [empLoading, setEmpLoading] = useState(false);
-  const activeCollege = JSON.parse(localStorage.getItem("activeCollege"));
-  const collegeId = activeCollege?.id || null;
-
-  const [employees, setEmployees] = useState([]);
-const [selectedEmployee, setSelectedEmployee] = useState(null);
-const [userId, setUserId] = useState(null);
-const [employeeId, setEmployeeId] = useState('');
+  const [employeeId, setEmployeeId] = useState('EMP001');
 
 
   const years = ['2022', '2023', '2024', '2025'];
@@ -300,48 +287,7 @@ const [employeeId, setEmployeeId] = useState('');
     }
   }, [filters.view]);
 
-  // Fetch departments from API
-  useEffect(() => {
-    const fetchDepartments = async () => {
-      if (!collegeId) return;
-      setDeptLoading(true);
-      try {
-        const data = await DepartmentService.getDepartmentByCollegeId(collegeId);
-        const deptNames = data.map(dept => dept.department_name || dept.name || 'Unknown');
-        setDepartments(deptNames);
-      } catch (err) {
-        console.error('Error fetching departments:', err);
-        setDepartments([]);
-      } finally {
-        setDeptLoading(false);
-      }
-    };
-    fetchDepartments();
-  }, [collegeId]);
 
- useEffect(() => {
-  const fetchEmployees = async () => {
-    if (!filters.department) {
-      setEmployees([]);
-      setSelectedEmployee(null);
-      return;
-    }
-
-    setEmpLoading(true);
-    try {
-      const response = await TaskManagement.getStaffByDepartment(filters.department);
-      const empList = response.data || response || [];
-      setEmployees(empList); // ✅ store full objects
-    } catch (err) {
-      console.error('Error fetching employees:', err);
-      setEmployees([]);
-    } finally {
-      setEmpLoading(false);
-    }
-  };
-
-  fetchEmployees();
-}, [filters.department]);
 
 
   const getDayName = (dateString) => {
@@ -513,37 +459,6 @@ const [employeeId, setEmployeeId] = useState('');
       {filters.filterOpen && (
         <div className="bg-white rounded-xl shadow-md p-5 mb-6 border border-gray-200">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-            <CustomSelect
-              label="Department"
-              value={filters.department}
-              onChange={(e) => setFilters(prev => ({ ...prev, department: e.target.value }))}
-              options={departments}
-              placeholder={deptLoading ? "Loading departments..." : "Select Department"}
-              disabled={deptLoading}
-            />
-            
-           <CustomSelect
-  label="Name"
-  value={
-    selectedEmployee
-      ? `${selectedEmployee.firstname} ${selectedEmployee.lastname}`
-      : ''
-  }
-  onChange={(e) => {
-    const emp = e.target.value;
-
-    setSelectedEmployee(emp);
-    setUserId(emp.user_id);          // ✅ userId set
-    setEmployeeId(emp.employee_id);  // ✅ employeeId set
-    setName(`${emp.firstname} ${emp.lastname}`);
-  }}
-  options={employees}
-  getLabel={(emp) => `${emp.firstname} ${emp.lastname}`}
-  placeholder="Select Name"
-  disabled={!filters.department || empLoading}
-/>
-
-
             <CustomSelect
               label="Select View"
               value={filters.view}

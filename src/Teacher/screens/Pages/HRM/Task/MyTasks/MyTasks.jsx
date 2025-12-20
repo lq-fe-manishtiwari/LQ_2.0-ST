@@ -231,9 +231,9 @@ const MyTaskTable = ({
                   <tr key={task.id} className="hover:bg-gray-50 transition-colors">
                     <td className="px-6 py-4">
                       <div className="flex items-center">
-                        {/* <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-100 to-blue-200 flex items-center justify-center">
+                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-100 to-blue-200 flex items-center justify-center">
                           <User className="w-6 h-6 text-blue-600" />
-                        </div> */}
+                        </div>
                         <div className="ml-3">
                           <p className="font-semibold text-gray-900 whitespace-nowrap">{task.firstname} {task.lastname}</p>
                         </div>
@@ -258,8 +258,7 @@ const MyTaskTable = ({
                     <td className="px-6 py-4 text-center">
                       <button
                         onClick={() => onToggleActive(task.id)}
-                        // disabled={statusChanging[task.id]}
-                        disabled
+                        disabled={statusChanging[task.id]}
                         className={`inline-flex items-center px-3 py-1.5 rounded-full text-xs font-medium transition-all ${statusChanging[task.id]
                           ? 'bg-gray-100 text-gray-500 cursor-not-allowed'
                           : task.status === 'Complete'
@@ -540,9 +539,8 @@ export default function MyTasks() {
   });
   // Alert States
   const [alert, setAlert] = useState(null);
-const currentUser = JSON.parse(localStorage.getItem("userProfile"));
-const userId = currentUser?.userId || null;
-
+  const currentUser = JSON.parse(localStorage.getItem("userProfile"));
+  const userId = currentUser?.userId || null;
   const activeCollege = JSON.parse(localStorage.getItem("activeCollege"));
   const collegeId = activeCollege?.id || null;
 
@@ -764,7 +762,7 @@ const userId = currentUser?.userId || null;
   
   // Pagination state
   const [currentPage, setCurrentPage] = useState(0);
-const entriesPerPage = 10;
+  const entriesPerPage = 10;
   const totalTasks = filteredTasks.length;
   const totalPages = Math.ceil(totalTasks / entriesPerPage);
   
@@ -852,168 +850,56 @@ const entriesPerPage = 10;
     fetchStatuses();
   }, []);
 
-  // Fetch tasks from API - UPDATED TO USE getAllSelfTasks
-//  useEffect(() => {
-//   console.log("userId",userId);
-//   if (!userId) return;
+  // Fetch tasks from API - UPDATED TO USE getAllMyTasks
+  useEffect(() => {
+    if (!userId) return;
 
-//   const fetchTasks = async () => {
-//     try {
-//       setLoading(true);
-
-//       const params = {
-//         page: currentPage,
-//         size: entriesPerPage,
-//         department: filters.department || undefined,
-//         priority: filters.priority && filters.priority !== 'All' ? filters.priority : undefined,
-//         status: filters.status && filters.status !== 'All' ? filters.status : undefined,
-//         view: filters.view || undefined,
-//         year: filters.year || undefined,
-//         month: filters.month || undefined,
-//         week: filters.week || undefined,
-//         fromDate: filters.fromDate || undefined,
-//         toDate: filters.toDate || undefined,
-//         search: searchQuery || undefined
-//       };
-
-//       const response = await TaskManagement.getAllSelfTasks(userId, params);
-
-//       /**
-//        * Expected API response:
-//        * {
-//        *   content: [],
-//        *   totalElements: number,
-//        *   totalPages: number,
-//        *   number: page
-//        * }
-//        */
-
-//       const data = response?.content || [];
-
-//       const mappedTasks = data.map(task => ({
-//         id: task.self_task_id?.toString(),
-//         firstname: task.user?.other_staff_info?.firstname || "N/A",
-//         lastname: task.user?.other_staff_info?.lastname || "N/A",
-//         name: task.user?.username || "Current User",
-//         taskTitle: task.title || "No Title",
-//         taskType: task.task_type?.task_type_name || 'General',
-//         assignedBy: task.assigned_by?.other_staff_info
-//           ? `${task.assigned_by.other_staff_info.firstname} ${task.assigned_by.other_staff_info.lastname}`
-//           : "System",
-//         assignedOn: formatDate(task.assigned_date_time),
-//         dueOn: formatDate(task.due_date_time),
-//         dueDate: task.due_date_time,
-//         priority: task.priority?.priority_name || 'Medium',
-//         status: task.status?.name || 'Pending',
-//         email: task.user?.username || "",
-//         department: task.user?.other_staff_info?.department?.department_name || ""
-//       }));
-
-//       setTasks(mappedTasks);
-//       setTotalTasks(response.totalElements || 0);
-//       setTotalPages(response.totalPages || 0);
-//     } catch (err) {
-//       console.error(err);
-//       setTasks([]);
-//     } finally {
-//       setLoading(false);
-//     }
-//   };
-
-//   fetchTasks();
-// }, [
-//   userId,
-//   currentPage,
-//   filters.department,
-//   filters.priority,
-//   filters.status,
-//   filters.view,
-//   filters.year,
-//   filters.month,
-//   filters.week,
-//   filters.fromDate,
-//   filters.toDate,
-//   searchQuery
-// ]);
-
-useEffect(() => {
-  console.log("userId:", userId);
-  if (!userId) return;
-
-  const fetchTasks = async () => {
-    try {
-      setLoading(true);
-
-      // ✅ Simple API call – ONLY userId
-      const response = await TaskManagement.getAllSelfTasksByUserId(userId);
-
-      /**
-       * Expected response:
-       * {
-       *   user: {...},
-       *   tasks: [...]
-       * }
-       */
-
-      const tasksData = Array.isArray(response?.tasks)
-        ? response.tasks
-        : [];
-
-      const mappedTasks = tasksData.map(task => ({
-        id: task.self_task_id?.toString(),
-
-        firstname: response.user?.other_staff_info?.firstname || "N/A",
-        lastname: response.user?.other_staff_info?.lastname || "N/A",
-
-        name: response.user?.username || "",
-        email: response.user?.username || "",
-
-        taskTitle: task.title || "No Title",
-        taskType: task.task_type?.task_type_name || "General",
-
-        assignedBy: task.assigned_by?.other_staff_info
-          ? `${task.assigned_by.other_staff_info.firstname} ${task.assigned_by.other_staff_info.lastname}`
-          : "System",
-
-        assignedOn: formatDate(task.assigned_date_time),
-        dueOn: formatDate(task.due_date_time),
-        dueDate: task.due_date_time,
-
-        priority: task.priority?.priority_name || "Medium",
-        status: task.status?.name || "Pending",
-
-        department:
-          response.user?.other_staff_info?.department?.department_name || ""
-      }));
-
-      setTasks(mappedTasks);
-
-      // ✅ Client-side pagination only
-      // setTotalTasks(mappedTasks.length);
-      // setTotalPages(Math.ceil(mappedTasks.length / entriesPerPage));
-    } catch (err) {
-      console.error("Error fetching tasks:", err);
-      setTasks([]);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  fetchTasks();
-}, [userId]);
-
-
-
- useEffect(() => {
-  setCurrentPage(0);
-}, [
-  filters.department,
-  filters.priority,
-  filters.status,
-  filters.view,
-  searchQuery
-]);
-
+    const fetchTasks = async () => {
+      try {
+        setLoading(true);
+        const response = await TaskManagement.getAllMyTasks(userId);
+        
+        const tasksData = Array.isArray(response?.tasks) ? response.tasks : [];
+        
+        const mappedTasks = tasksData.map(task => ({
+          id: task.self_task_id?.toString(),
+          firstname: response.user?.other_staff_info?.firstname || "N/A",
+          lastname: response.user?.other_staff_info?.lastname || "N/A",
+          name: response.user?.username || "",
+          email: response.user?.username || "",
+          taskTitle: task.title || "No Title",
+          taskType: task.task_type?.task_type_name || "General",
+          assignedBy: task.assigned_by?.other_staff_info
+            ? `${task.assigned_by.other_staff_info.firstname} ${task.assigned_by.other_staff_info.lastname}`
+            : "System",
+          assignedOn: formatDate(task.assigned_date_time),
+          dueOn: formatDate(task.due_date_time),
+          dueDate: task.due_date_time,
+          priority: task.priority?.priority_name || "Medium",
+          status: task.status?.name || "Pending",
+          department: response.user?.other_staff_info?.department?.department_name || ""
+        }));
+        
+        setTasks(mappedTasks);
+      } catch (err) {
+        console.error('Error fetching tasks:', err);
+        setAlert(
+          <SweetAlert
+            danger
+            title="Error!"
+            onConfirm={() => setAlert(null)}
+          >
+            Failed to load tasks. Please try again later.
+          </SweetAlert>
+        );
+        setTasks([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchTasks();
+  }, [userId]);
 
   return (
     <div className="p-0 md:p-0">
