@@ -178,12 +178,7 @@ const Sidebar = ({ isOpen, toggle }) => {
         iconActive: classActive,
         iconInactive: classInactive,
       },
-      {
-        to: "/teacher-leaves",
-        label: "Leaves",
-        iconActive: classActive,
-        iconInactive: classInactive,
-      },
+    
       {
         to: "/teacher-library",
         label: "My Library",
@@ -216,8 +211,14 @@ const Sidebar = ({ isOpen, toggle }) => {
         show: reportAccess === "true" || reportAccess === true,
       },
       {
-        to: "/teacher-exam",
+        to: "/teacher/exam",
         label: "Exam Management",
+        iconActive: classActive,
+        iconInactive: classInactive,
+      },
+       {
+        to: "/teacher/leaves",
+        label: "Leaves",
         iconActive: classActive,
         iconInactive: classInactive,
       },

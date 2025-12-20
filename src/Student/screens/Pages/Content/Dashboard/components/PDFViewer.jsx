@@ -34,7 +34,7 @@ export default function PDFViewer({ content, colorCode, onClose, onQuizClick }) 
             setCurrentPage(1);
             setRenderedPages(new Set());
             updateQuizButtonsForPage(1, content?.quiz_attachments || []);
-            
+
             // Start rendering pages progressively
             renderAllPages(pdf);
         } catch (error) {
@@ -57,7 +57,7 @@ export default function PDFViewer({ content, colorCode, onClose, onQuizClick }) 
     // Render individual page
     const renderPage = async (pageNum, pdf) => {
         if (!pdf || !canvasRefs.current[pageNum]) return;
-        
+
         try {
             // Cancel any existing render task for this page
             if (renderTasksRef.current[pageNum]) {
@@ -68,22 +68,22 @@ export default function PDFViewer({ content, colorCode, onClose, onQuizClick }) 
             const page = await pdf.getPage(pageNum);
             const canvas = canvasRefs.current[pageNum];
             const context = canvas.getContext('2d');
-            
+
             const viewport = page.getViewport({ scale });
             canvas.height = viewport.height;
             canvas.width = viewport.width;
-            
+
             const renderContext = {
                 canvasContext: context,
                 viewport: viewport
             };
-            
+
             // Store the render task so we can cancel it if needed
             const renderTask = page.render(renderContext);
             renderTasksRef.current[pageNum] = renderTask;
-            
+
             await renderTask.promise;
-            
+
             // Clean up the render task reference
             delete renderTasksRef.current[pageNum];
         } catch (error) {
@@ -99,7 +99,7 @@ export default function PDFViewer({ content, colorCode, onClose, onQuizClick }) 
         if (newPage >= 1 && newPage <= totalPages) {
             setCurrentPage(newPage);
             updateQuizButtonsForPage(newPage, content?.quiz_attachments || []);
-            
+
             // Scroll to the specific page
             const pageElement = canvasRefs.current[newPage];
             if (pageElement && containerRef.current) {
@@ -111,31 +111,31 @@ export default function PDFViewer({ content, colorCode, onClose, onQuizClick }) 
     // Handle scroll-based page detection
     const handleScroll = () => {
         if (!containerRef.current || !pdfDoc) return;
-        
+
         const container = containerRef.current;
-        
+
         // Find which page is most visible
         let mostVisiblePage = 1;
         let maxVisibleArea = 0;
-        
+
         for (let pageNum = 1; pageNum <= totalPages; pageNum++) {
             const canvas = canvasRefs.current[pageNum];
             if (!canvas) continue;
-            
+
             const rect = canvas.getBoundingClientRect();
             const containerRect = container.getBoundingClientRect();
-            
+
             // Calculate visible area of this page
             const visibleTop = Math.max(rect.top, containerRect.top);
             const visibleBottom = Math.min(rect.bottom, containerRect.bottom);
             const visibleHeight = Math.max(0, visibleBottom - visibleTop);
-            
+
             if (visibleHeight > maxVisibleArea) {
                 maxVisibleArea = visibleHeight;
                 mostVisiblePage = pageNum;
             }
         }
-        
+
         if (mostVisiblePage !== currentPage) {
             setCurrentPage(mostVisiblePage);
             updateQuizButtonsForPage(mostVisiblePage, content?.quiz_attachments || []);
@@ -172,7 +172,7 @@ export default function PDFViewer({ content, colorCode, onClose, onQuizClick }) 
         if (content?.content_link) {
             loadPDF(content.content_link);
         }
-        
+
         // Cleanup function to cancel all render tasks when component unmounts
         return () => {
             cancelAllRenderTasks();
@@ -190,7 +190,7 @@ export default function PDFViewer({ content, colorCode, onClose, onQuizClick }) 
 
     return (
         <div className="relative w-full h-full bg-gray-50">
-            <div 
+            <div
                 ref={containerRef}
                 className="w-full h-full overflow-auto"
                 onScroll={handleScroll}
@@ -202,7 +202,7 @@ export default function PDFViewer({ content, colorCode, onClose, onQuizClick }) 
                             <canvas
                                 ref={el => canvasRefs.current[pageNum] = el}
                                 className="shadow-lg border border-gray-200 max-w-full h-auto"
-                                style={{ 
+                                style={{
                                     display: 'block',
                                     opacity: renderedPages.has(pageNum) ? 1 : 0.3
                                 }}
@@ -223,23 +223,23 @@ export default function PDFViewer({ content, colorCode, onClose, onQuizClick }) 
                     ))}
                 </div>
             </div>
-            
+
             {/* Quiz Buttons Overlay */}
-        {showQuizButtons.length > 0 && (
-    <div className="absolute top-12 left-1/2 -translate-x-1/2 space-y-2 z-20">
-        {showQuizButtons.map((quiz, index) => (
-            <button
-                key={quiz.attachment_id || index}
-                onClick={() => onQuizClick(quiz)}
-                className="flex items-center gap-2 px-4 py-2 text-white rounded-lg shadow-lg hover:opacity-90 transition-all animate-pulse"
-                style={{ backgroundColor: colorCode }}
-            >
-                <HelpCircle className="w-5 h-5" />
-                Quiz {quiz.quiz_id}
-            </button>
-        ))}
-    </div>
-)}
+            {showQuizButtons.length > 0 && (
+                <div className="absolute top-12 left-1/2 -translate-x-1/2 space-y-2 z-20">
+                    {showQuizButtons.map((quiz, index) => (
+                        <button
+                            key={quiz.attachment_id || index}
+                            onClick={() => onQuizClick(quiz)}
+                            className="flex items-center gap-2 px-4 py-2 text-white rounded-lg shadow-lg hover:opacity-90 transition-all animate-pulse"
+                            style={{ backgroundColor: colorCode }}
+                        >
+                            <HelpCircle className="w-5 h-5" />
+                            Start Quiz
+                        </button>
+                    ))}
+                </div>
+            )}
 
 
             {/* Current Page Indicator */}
@@ -258,7 +258,7 @@ export default function PDFViewer({ content, colorCode, onClose, onQuizClick }) 
                 >
                     <ChevronLeft className="w-4 h-4" />
                 </button>
-                
+
                 <div className="flex items-center gap-2">
                     <span className="text-sm text-gray-600">Go to Page</span>
                     <input
@@ -271,7 +271,7 @@ export default function PDFViewer({ content, colorCode, onClose, onQuizClick }) 
                     />
                     <span className="text-sm text-gray-600">of {totalPages}</span>
                 </div>
-                
+
                 <button
                     onClick={() => handlePageChange(currentPage + 1)}
                     disabled={currentPage >= totalPages}
@@ -291,11 +291,11 @@ export default function PDFViewer({ content, colorCode, onClose, onQuizClick }) 
                 >
                     <ZoomOut className="w-4 h-4" />
                 </button>
-                
+
                 <span className="text-sm font-medium text-gray-700 min-w-[3rem] text-center">
                     {Math.round(scale * 100)}%
                 </span>
-                
+
                 <button
                     onClick={handleZoomIn}
                     disabled={scale >= 3.0}
@@ -304,7 +304,7 @@ export default function PDFViewer({ content, colorCode, onClose, onQuizClick }) 
                 >
                     <ZoomIn className="w-4 h-4" />
                 </button>
-                
+
                 <button
                     onClick={handleResetZoom}
                     className="p-1 text-gray-600 hover:bg-gray-100 rounded transition-colors"

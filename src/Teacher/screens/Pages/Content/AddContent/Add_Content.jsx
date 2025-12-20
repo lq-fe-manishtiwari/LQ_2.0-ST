@@ -1,267 +1,245 @@
-import React, { useState, useEffect, useRef } from "react";
-import { ChevronDown } from "lucide-react";
-// import { courseService } from "../../Courses/Services/courses.service";
-// import { fetchClassesByprogram } from "../../Student/Services/student.service.js";
-// import { contentService } from "../Services/AddContent.service.js";
-
-// Custom Select Component
-const CustomSelect = ({ label, value, onChange, options, placeholder, disabled = false, required = false, loading = false }) => {
-  const [isOpen, setIsOpen] = useState(false);
-  const dropdownRef = useRef(null);
-
-  const handleSelect = (option) => {
-    onChange(option.value);
-    setIsOpen(false);
-  };
-
-  const displayValue = options.find(opt => opt.value === value)?.label || "";
-
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
-        setIsOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
-
-  return (
-    <div ref={dropdownRef} className="relative">
-      <label className="block font-medium mb-1 text-gray-700">
-        {label}
-        {required && <span className="text-red-500">*</span>}
-      </label>
-      <div
-        className={`w-full px-3 py-2 border ${
-          disabled ? 'bg-gray-100 text-gray-500 border-gray-200 cursor-not-allowed'
-          : 'bg-white border-gray-300 cursor-pointer hover:border-blue-400'
-        } rounded min-h-[40px] flex items-center justify-between transition-all duration-150`}
-        onClick={() => !disabled && !loading && setIsOpen(!isOpen)}
-      >
-        <span className={displayValue ? 'text-gray-900' : 'text-gray-400'}>
-          {loading ? 'Loading...' : (displayValue || placeholder)}
-        </span>
-        <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${isOpen ? 'rotate-180' : 'rotate-0'}`} />
-      </div>
-
-      {isOpen && !disabled && !loading && (
-        <div className="absolute z-20 w-full mt-1 bg-white border border-gray-300 rounded shadow-lg max-h-60 overflow-y-auto">
-          <div className="px-4 py-2 text-sm text-gray-700 cursor-pointer hover:bg-blue-50" onClick={() => handleSelect({ value: '', label: placeholder })}>
-            {placeholder}
-          </div>
-          {options.map((option, index) => (
-            <div key={option.value || index} className="px-4 py-2 text-sm text-gray-700 cursor-pointer hover:bg-blue-50" onClick={() => handleSelect(option)}>
-              {option.label}
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-};
+import React, { useState } from "react";
+import { contentService } from "../services/AddContent.service.js";
+import { getPDFPageCount } from "./utils/pdfUtils.js";
+import { useContentData } from "./hooks/useContentData.js";
+import { useQuizManagement } from "./hooks/useQuizManagement.js";
+import CustomSelect from "./components/CustomSelect.jsx";
+import QuizIntegration from "./components/QuizIntegration.jsx";
+import { useUserProfile } from "../../../../../contexts/UserProfileContext.jsx";
+import SweetAlert from 'react-bootstrap-sweetalert';
 
 export default function AddContent() {
     // State management
     const [formData, setFormData] = useState({
-        selectedProgram: "", selectedClass: "", selectedSemester: "", selectedSubject: "",
+        selectedProgram: "", selectedAcademicSemester: "", selectedBatch: "", selectedSubject: "",
         selectedModule: "", selectedUnit: "", contentType: "", contentLevel: "",
-        contentTitle: "", averageReadingTime: "", description: "", selectedQuiz: "",
-        file: null, externalLink: "", videoUrl: ""
+        contentTitle: "", averageReadingTime: "", description: "",
+        file: null, fileUrl: "", fileName: "", filePageCount: 0, externalLink: "",
+        addQuizToContent: false, quizSelections: []
     });
 
-    const [options, setOptions] = useState({
-        programs: [], classes: [], semesters: [], subjects: [], modules: [], units: [], 
-        contentTypes: [], quizzes: []
-    });
+    const [showPreviewModal, setShowPreviewModal] = useState(false);
+    const [showAlert, setShowAlert] = useState(false);
+    const [alertConfig, setAlertConfig] = useState({});
+    const { getUserId } = useUserProfile();
+    const userId = getUserId();
+    // Custom hooks
+    const { options, loading, setLoading, updateUnitsForModule, loadProgramRelatedData, loadBatchesForAcademicSemester } = useContentData(formData);
+    const { addQuizSelection, updateQuizSelection, removeQuizSelection } = useQuizManagement(formData, setFormData);
 
-    const [loading, setLoading] = useState({});
+    // Handle program selection
+    const handleProgramChange = (value) => {
+        setFormData(prev => ({
+            ...prev,
+            selectedProgram: value,
+            selectedAcademicSemester: "",
+            selectedBatch: "",
+            selectedSubject: "",
+            selectedModule: "",
+            selectedUnit: ""
+        }));
+    };
 
-    // Load initial data
-    useEffect(() => {
-        loadPrograms();
-        loadContentTypes();
-        loadQuizzes();
-    }, []);
+    // Handle academic semester selection with auto batch selection
+    const handleAcademicSemesterChange = (value) => {
+        setFormData(prev => ({
+            ...prev,
+            selectedAcademicSemester: value,
+            selectedBatch: "",
+            selectedSubject: "",
+            selectedModule: "",
+            selectedUnit: ""
+        }));
 
-    // Load dependent data when selections change
-    useEffect(() => { if (formData.selectedProgram) loadClasses(); }, [formData.selectedProgram]);
-    useEffect(() => { if (formData.selectedClass) loadSemesters(); }, [formData.selectedClass]);
-    useEffect(() => { if (formData.selectedProgram) loadSubjects(); }, [formData.selectedProgram]);
-    useEffect(() => { if (formData.selectedSubject) loadModulesAndUnits(); }, [formData.selectedSubject]);
-
-    // Data loading functions
-    const loadPrograms = () => {
-        try {
-            const stored = localStorage.getItem("college_programs");
-            if (stored) {
-                const programs = JSON.parse(stored).map(p => ({ label: p.program_name, value: String(p.program_id), full: p }));
-                setOptions(prev => ({ ...prev, programs }));
+        // Auto-select batch if only one option after batch loading
+        setTimeout(() => {
+            const autoSelectedBatch = loadBatchesForAcademicSemester();
+            if (autoSelectedBatch) {
+                setFormData(prev => ({
+                    ...prev,
+                    selectedBatch: autoSelectedBatch
+                }));
             }
-        } catch (err) {
-            console.error("Error loading programs:", err);
+        }, 100);
+    };
+
+    // Handle input changes
+    const handleInputChange = async (e) => {
+        const { name, value, files } = e.target;
+
+        if (files && files[0]) {
+            // Handle file upload immediately
+            const file = files[0];
+            setFormData(prev => ({ ...prev, [name]: file, fileName: file.name }));
+
+            // Get page count for PDF files
+            let pageCount = 0;
+            if (file.type === 'application/pdf') {
+                try {
+                    console.log("Detecting PDF page count...");
+                    pageCount = await getPDFPageCount(file);
+                    console.log("PDF page count detected:", pageCount);
+                } catch (error) {
+                    console.log("Could not determine page count, using fallback");
+                    pageCount = Math.max(1, Math.ceil(file.size / 50000)); // 50KB per page average
+                }
+            } else if (file.type.startsWith('image/')) {
+                pageCount = 1; // Images are always 1 page
+            }
+
+            // Upload to S3 immediately
+            try {
+                setLoading(prev => ({ ...prev, uploading: true }));
+                console.log("Uploading file immediately:", file);
+                const fileUrl = await contentService.uploadFileToS3(file);
+                console.log("File uploaded successfully, URL:", fileUrl);
+                setFormData(prev => ({ ...prev, fileUrl: fileUrl, filePageCount: pageCount }));
+            } catch (error) {
+                console.error("Error uploading file:", error);
+                alert("Error uploading file. Please try again.");
+                setFormData(prev => ({ ...prev, file: null, fileName: "", fileUrl: "", filePageCount: 0 }));
+                e.target.value = "";
+            } finally {
+                setLoading(prev => ({ ...prev, uploading: false }));
+            }
+        } else {
+            setFormData(prev => ({ ...prev, [name]: value }));
         }
     };
 
-    const loadClasses = async () => {
-        try {
-            const res = await fetchClassesByprogram(formData.selectedProgram);
-            const classes = res.map(c => ({ label: c.class_year_name, value: String(c.class_year_id), full: c }));
-            setOptions(prev => ({ ...prev, classes }));
-        } catch (err) {
-            console.error("Error loading classes:", err);
-        }
-    };
-
-    const loadSemesters = () => {
-        const classData = options.classes.find(cls => cls.value === formData.selectedClass);
-        const semesters = classData?.full?.semester_divisions?.map(sem => ({ 
-            label: sem.semester_name, value: sem.semester_id 
-        })) || [];
-        setOptions(prev => ({ ...prev, semesters }));
-    };
-
-    const loadSubjects = async () => {
-        try {
-            setLoading(prev => ({ ...prev, subjects: true }));
-            const res = await contentService.getSubjectbyProgramId(formData.selectedProgram);
-            const subjects = Array.isArray(res) ? res.map(s => ({ 
-                label: s.name || s.paper_name || s.subject_name, 
-                value: String(s.subject_id || s.id) 
-            })) : [];
-            setOptions(prev => ({ ...prev, subjects }));
-        } catch (err) {
-            console.error("Error loading subjects:", err);
-        } finally {
-            setLoading(prev => ({ ...prev, subjects: false }));
-        }
-    };
-
-    const loadModulesAndUnits = async () => {
-        try {
-            setLoading(prev => ({ ...prev, modules: true, units: true }));
-            const res = await contentService.getModulesAndUnitsBySubjectId(formData.selectedSubject);
-            
-            const modules = res?.modules ? res.modules.map(m => ({ 
-                label: m.name || m.module_name, 
-                value: String(m.module_id || m.id),
-                units: m.units || []
-            })) : [];
-            
-            setOptions(prev => ({ ...prev, modules, units: [] }));
-        } catch (err) {
-            console.error("Error loading modules:", err);
-        } finally {
-            setLoading(prev => ({ ...prev, modules: false, units: false }));
-        }
-    };
-
-    const loadContentTypes = async () => {
-        try {
-            const res = await contentService.getContentTypes();
-            const contentTypes = Array.isArray(res) ? res.map(ct => ({ 
-                label: ct.name || ct.type_name, 
-                value: ct.value || ct.type_value 
-            })) : [
-                { label: "File", value: "file" }, { label: "External Link", value: "external" },
-                { label: "Recorded Lecture", value: "video" }, { label: "Image", value: "image" },
-                { label: "PDF", value: "pdf" }, { label: "Quiz", value: "quiz" }
-            ];
-            setOptions(prev => ({ ...prev, contentTypes }));
-        } catch (err) {
-            console.error("Error loading content types:", err);
-            // Fallback to default options
-            setOptions(prev => ({ ...prev, contentTypes: [
-                { label: "File", value: "file" }, { label: "External Link", value: "external" },
-                { label: "Recorded Lecture", value: "video" }, { label: "Image", value: "image" },
-                { label: "PDF", value: "pdf" }, { label: "Quiz", value: "quiz" }
-            ]}));
-        }
-    };
-
-    const loadQuizzes = async () => {
-        try {
-            const res = await courseService.getAllQuizzes();
-            const quizzes = Array.isArray(res) ? res.map(q => ({ 
-                label: q.name || q.quiz_name, 
-                value: String(q.quiz_id || q.id) 
-            })) : [];
-            setOptions(prev => ({ ...prev, quizzes }));
-        } catch (err) {
-            console.error("Error loading quizzes:", err);
-        }
-    };
-
-    // Handle form changes
-    const handleChange = (field, value) => {
+    // Handle module selection to update units
+    const handleModuleChange = (moduleId) => {
         setFormData(prev => {
-            const newData = { ...prev, [field]: value };
-            
-            // Reset dependent fields
-            if (field === 'selectedProgram') {
-                newData.selectedClass = newData.selectedSemester = newData.selectedSubject = 
-                newData.selectedModule = newData.selectedUnit = "";
-            } else if (field === 'selectedClass') {
-                newData.selectedSemester = newData.selectedSubject = newData.selectedModule = newData.selectedUnit = "";
-            } else if (field === 'selectedSubject') {
-                newData.selectedModule = newData.selectedUnit = "";
-            } else if (field === 'selectedModule') {
-                newData.selectedUnit = "";
-                // Load units for selected module
-                const moduleData = options.modules.find(m => m.value === value);
-                if (moduleData?.units) {
-                    const units = moduleData.units.map(u => ({ 
-                        label: u.name || u.unit_name, 
-                        value: String(u.unit_id || u.id) 
-                    }));
-                    setOptions(prev => ({ ...prev, units }));
+            let newState = { ...prev, selectedModule: moduleId, selectedUnit: "" };
+
+            // Auto-fill title based on Module selection (Live Update)
+            if (options.modules) {
+                const selectedMod = options.modules.find(m => m.value == moduleId);
+                if (selectedMod) {
+                    newState.contentTitle = selectedMod.label;
                 }
             }
-            
-            return newData;
+            return newState;
         });
+        updateUnitsForModule(moduleId);
     };
 
-    const handleInputChange = (e) => {
-        const { name, value, files } = e.target;
-        setFormData(prev => ({ ...prev, [name]: files ? files[0] : value }));
+    const handleUnitChange = (unitId) => {
+        setFormData(prev => {
+            let newState = { ...prev, selectedUnit: unitId };
+
+            // Auto-fill title based on Unit selection (Live Update)
+            if (options.units) {
+                const selectedUnitOption = options.units.find(u => u.value == unitId);
+                if (selectedUnitOption) {
+                    newState.contentTitle = selectedUnitOption.label;
+                }
+            }
+            return newState;
+        });
     };
 
     // Form submission
     const handleSubmit = async (e) => {
         e.preventDefault();
-        
-        if (!formData.selectedProgram || !formData.selectedClass || !formData.selectedSemester || 
-            !formData.selectedSubject || !formData.contentType || !formData.contentTitle) {
-            alert("Please fill in all required fields");
+        console.log("Form data on userId:", userId);
+        // Validate required fields for new payload structure
+        if (!formData.contentType || !formData.contentTitle) {
+            alert("Please fill in all required fields: Content Type, and Content Title");
             return;
         }
 
-        try {
-            const submitData = {
-                program_id: formData.selectedProgram, class_id: formData.selectedClass,
-                semester_id: formData.selectedSemester, subject_id: formData.selectedSubject,
-                module_id: formData.selectedModule || null, unit_id: formData.selectedUnit || null,
-                content_type: formData.contentType, content_level: formData.contentLevel,
-                title: formData.contentTitle, description: formData.description,
-                average_reading_time: formData.averageReadingTime,
-                quiz_id: formData.contentType === "quiz" ? formData.selectedQuiz : null,
-                external_link: formData.contentType === "external" ? formData.externalLink : null,
-                video_url: formData.contentType === "video" ? formData.videoUrl : null,
-            };
+        // Get selected content type details for validation
+        const selectedContentType = options.contentTypes.find(ct => ct.value === formData.contentType);
+        const contentTypeName = selectedContentType?.full?.content_type_name || selectedContentType?.label || "";
 
-            if (formData.file && ["file", "pdf", "image"].includes(formData.contentType)) {
-                const formDataToSend = new FormData();
-                Object.keys(submitData).forEach(key => {
-                    if (submitData[key] !== null) formDataToSend.append(key, submitData[key]);
-                });
-                formDataToSend.append('file', formData.file);
-                await contentService.AddContent(formDataToSend);
-            } else {
-                await contentService.AddContent(submitData);
+        // Validate content type specific fields
+        if (contentTypeName.toLowerCase().includes("file") && !formData.fileUrl) {
+            alert("Please upload a file");
+            return;
+        }
+        if (contentTypeName.toLowerCase().includes("link") && !formData.externalLink) {
+            alert("Please provide an external link");
+            return;
+        }
+
+        // Validate quiz selections if enabled
+        if (formData.addQuizToContent && formData.quizSelections.length > 0) {
+            for (const quiz of formData.quizSelections) {
+                if (!quiz.quizId || !quiz.pageNumber) {
+                    alert("Please complete all quiz selections or remove incomplete ones");
+                    return;
+                }
+            }
+        }
+
+        try {
+            // Get selected content type details
+            const selectedContentType = options.contentTypes.find(ct => ct.value === formData.contentType);
+            const contentTypeName = selectedContentType?.full?.content_type_name || selectedContentType?.label || "";
+
+            // Determine content link based on content type
+            let contentLink = "";
+            if (contentTypeName.toLowerCase().includes("file") && formData.fileUrl) {
+                contentLink = formData.fileUrl;
+            } else if (contentTypeName.toLowerCase().includes("link") && formData.externalLink) {
+                contentLink = formData.externalLink;
             }
 
-            alert("Content added successfully!");
+            // Transform quiz selections to ContentQuizAttachmentDto format
+            const quizAttachments = formData.addQuizToContent && formData.quizSelections.length > 0
+                ? formData.quizSelections.map((quiz, index) => ({
+                    attachment_id: null, // Will be generated by backend
+                    quiz_id: parseInt(quiz.quizId),
+                    attachment_place: quiz.pageNumber,
+                    display_order: index + 1
+                }))
+                : [];
+
+            // Convert average reading time from minutes to seconds
+            const averageReadingTimeSeconds = formData.averageReadingTime ?
+                parseInt(formData.averageReadingTime) * 60 : 0;
+
+            // Create payload matching CreateContentRequest structure
+            const submitData = {
+                content_name: formData.contentTitle,
+                content_description: formData.description || "",
+                content_link: contentLink,
+                unit_id: formData.selectedUnit ? parseInt(formData.selectedUnit) : null,
+                module_id: formData.selectedModule ? parseInt(formData.selectedModule) : null,
+                content_type_id: parseInt(formData.contentType), // Use actual ID from API
+                content_level_id: formData.contentLevel ? parseInt(formData.contentLevel) : null, // Use actual ID from API
+                average_reading_time_seconds: averageReadingTimeSeconds,
+                quiz_attachments: quizAttachments.length > 0 ? quizAttachments : null,
+                admin: false,
+                user_id: userId,
+            };
+
+            console.log("Submitting data:", submitData);
+            const result = await contentService.AddContent(submitData);
+
+            setAlertConfig({
+                title: 'Success!',
+                text: 'Content added successfully!',
+                type: 'success',
+                confirmBtnText: 'OK',
+                confirmBtnCssClass: 'btn-confirm',
+                onConfirm: () => {
+                    setShowAlert(false);
+                    window.history.go(-1);
+                }
+            });
+            setShowAlert(true);
+
+            console.log("AddContent result:", result);
+            // Reset form
+            setFormData({
+                selectedProgram: "", selectedClass: "", selectedSemester: "", selectedSubject: "",
+                selectedModule: "", selectedUnit: "", contentType: "", contentLevel: "",
+                contentTitle: "", averageReadingTime: "", description: "",
+                file: null, fileUrl: "", fileName: "", filePageCount: 0, externalLink: "",
+                addQuizToContent: false, quizSelections: []
+            });
         } catch (error) {
             console.error("Error adding content:", error);
             alert("Error adding content. Please try again.");
@@ -271,26 +249,92 @@ export default function AddContent() {
     return (
         <div className="p-6">
             <div className="flex items-center justify-between mb-6">
-                <h2 className="text-2xl font-semibold text-gray-800">Add Content</h2>
+                <h2 className="text-2xl font-semibold text-blue-700">Add Content</h2>
                 <button type="button" className="w-10 h-10 rounded-full bg-blue-600 text-white flex items-center justify-center hover:bg-blue-700 transition" onClick={() => window.history.back()}>✕</button>
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-6">
                 {/* Academic Selection */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-                    <CustomSelect label="Select Program" value={formData.selectedProgram} onChange={(value) => handleChange('selectedProgram', value)} options={options.programs} placeholder="Select Program" required />
-                    <CustomSelect label="Select Class" value={formData.selectedClass} onChange={(value) => handleChange('selectedClass', value)} options={options.classes} placeholder="Select Class" disabled={!formData.selectedProgram} required />
-                    <CustomSelect label="Select Semester" value={formData.selectedSemester} onChange={(value) => handleChange('selectedSemester', value)} options={options.semesters} placeholder="Select Semester" disabled={!formData.selectedClass} required />
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <CustomSelect
+                        label="Program"
+                        value={formData.selectedProgram}
+                        onChange={handleProgramChange}
+                        options={options.programs}
+                        placeholder="Select Program"
+                        required
+                    />
+                    <CustomSelect
+                        label="Academic Year / Semester"
+                        value={formData.selectedAcademicSemester}
+                        onChange={handleAcademicSemesterChange}
+                        options={options.academicSemesters}
+                        placeholder="Select Academic Year / Semester"
+                        disabled={!formData.selectedProgram}
+                        required
+                    />
+                    <CustomSelect
+                        label="Batch"
+                        value={formData.selectedBatch}
+                        onChange={(value) => setFormData(prev => ({ ...prev, selectedBatch: value }))}
+                        options={options.batches}
+                        placeholder="Select Batch"
+                        disabled={!formData.selectedProgram}
+                    />
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-                    <CustomSelect label="Select Subject" value={formData.selectedSubject} onChange={(value) => handleChange('selectedSubject', value)} options={options.subjects} placeholder="Select Subject" disabled={!formData.selectedProgram} loading={loading.subjects} required />
-                    <CustomSelect label="Select Module" value={formData.selectedModule} onChange={(value) => handleChange('selectedModule', value)} options={options.modules} placeholder="Select Module" disabled={!formData.selectedSubject} loading={loading.modules} />
-                    <CustomSelect label="Select Unit" value={formData.selectedUnit} onChange={(value) => handleChange('selectedUnit', value)} options={options.units} placeholder="Select Unit" disabled={!formData.selectedModule} loading={loading.units} />
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <CustomSelect
+                        label="Paper"
+                        value={formData.selectedSubject}
+                        onChange={(value) => setFormData(prev => ({ ...prev, selectedSubject: value }))}
+                        options={options.subjects}
+                        placeholder="Select Paper"
+                        disabled={!formData.selectedProgram}
+                        loading={loading.subjects}
+                        required
+                    />
+                    <CustomSelect
+                        label="Module"
+                        value={formData.selectedModule}
+                        onChange={handleModuleChange}
+                        options={options.modules}
+                        placeholder="Select Module"
+                        disabled={!formData.selectedSubject}
+                        loading={loading.modules}
+                        required
+                    />
+                    <CustomSelect
+                        label="Unit"
+                        value={formData.selectedUnit}
+                        onChange={handleUnitChange}
+                        options={options.units}
+                        placeholder="Select Unit"
+                        disabled={!formData.selectedModule}
+                        loading={loading.units}
+                    />
                 </div>
 
                 {/* Content Details */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <CustomSelect
+                        label="Content Type"
+                        value={formData.contentType}
+                        onChange={(value) => setFormData(prev => ({ ...prev, contentType: value }))}
+                        options={options.contentTypes}
+                        placeholder="Select Content Type"
+                        required
+                    />
+                    <CustomSelect
+                        label="Content Level"
+                        value={formData.contentLevel}
+                        onChange={(value) => setFormData(prev => ({ ...prev, contentLevel: value }))}
+                        options={options.contentLevels}
+                        placeholder="Select Content Level"
+                    />
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                         <label className="block font-medium mb-1 text-gray-700">Content Title <span className="text-red-500">*</span></label>
                         <input type="text" name="contentTitle" value={formData.contentTitle} onChange={handleInputChange} className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:border-blue-500" placeholder="Enter Title" required />
@@ -299,47 +343,80 @@ export default function AddContent() {
                         <label className="block font-medium mb-1 text-gray-700">Average Reading Time (minutes) <span className="text-red-500">*</span></label>
                         <input type="number" name="averageReadingTime" value={formData.averageReadingTime} onChange={handleInputChange} className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:border-blue-500" placeholder="30" min="1" required />
                     </div>
-                    <CustomSelect label="Content Type" value={formData.contentType} onChange={(value) => handleChange('contentType', value)} options={options.contentTypes} placeholder="Select Content Type" required />
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-                    <CustomSelect label="Content Level" value={formData.contentLevel} onChange={(value) => handleChange('contentLevel', value)} options={[{ label: "Beginner", value: "beginner" }, { label: "Intermediate", value: "intermediate" }, { label: "Advanced", value: "advanced" }]} placeholder="Select Content Level" />
-                </div>
+                {/* Content Type Specific Fields */}
+                {(() => {
+                    const selectedContentType = options.contentTypes.find(ct => ct.value === formData.contentType);
+                    const contentTypeName = selectedContentType?.full?.content_type_name || selectedContentType?.label || "";
+                    return contentTypeName.toLowerCase().includes("file");
+                })() && (
+                        <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                            <h3 className="text-lg font-medium text-gray-800 mb-3">File Upload</h3>
+                            <div className="flex gap-4 items-end">
+                                <div className="flex-1">
+                                    <label className="block font-medium mb-1 text-gray-700">Upload File <span className="text-red-500">*</span></label>
+                                    <input
+                                        type="file"
+                                        name="file"
+                                        onChange={handleInputChange}
+                                        className="flex-1 border border-gray-300 rounded px-3 py-2 focus:outline-none focus:border-blue-500"
+                                        accept=".pdf,.doc,.docx,.ppt,.pptx,.jpg,.jpeg,.png,.gif"
+                                        required={!formData.fileUrl}
+                                    />
+                                </div>
+                                {formData.fileUrl && (
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowPreviewModal(true)}
+                                        className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition-colors"
+                                    >
+                                        Preview
+                                    </button>
+                                )}
+                            </div>
 
-                {/* Conditional Fields */}
-                {formData.contentType && (
-                    <div className="space-y-4">
-                        {formData.contentType === "quiz" && (
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-                                <CustomSelect label="Select Quiz" value={formData.selectedQuiz} onChange={(value) => handleChange('selectedQuiz', value)} options={options.quizzes} placeholder="Select Quiz" required />
-                            </div>
-                        )}
-                        {["file", "pdf", "image"].includes(formData.contentType) && (
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-                                <div>
-                                    <label className="block font-medium mb-1 text-gray-700">Upload {formData.contentType.toUpperCase()} <span className="text-red-500">*</span></label>
-                                    <input type="file" name="file" onChange={handleInputChange} accept={formData.contentType === "pdf" ? "application/pdf" : formData.contentType === "image" ? "image/*" : "*"} className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:border-blue-500" required />
+                            {loading.uploading && (
+                                <p className="text-sm text-blue-600 mt-2">⏳ Uploading file...</p>
+                            )}
+
+                            {formData.fileUrl && formData.fileName && (
+                                <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded">
+                                    <p className="text-sm text-green-700">
+                                        ✅ <strong>{formData.fileName}</strong> uploaded successfully
+                                    </p>
+                                    {formData.filePageCount > 0 && (
+                                        <p className="text-sm text-green-600 mt-1">
+                                            📄 Detected {formData.filePageCount} page{formData.filePageCount !== 1 ? 's' : ''}
+                                        </p>
+                                    )}
                                 </div>
-                            </div>
-                        )}
-                        {formData.contentType === "external" && (
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-                                <div>
-                                    <label className="block font-medium mb-1 text-gray-700">External Link <span className="text-red-500">*</span></label>
-                                    <input type="url" name="externalLink" value={formData.externalLink} onChange={handleInputChange} placeholder="https://example.com" className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:border-blue-500" required />
-                                </div>
-                            </div>
-                        )}
-                        {formData.contentType === "video" && (
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-                                <div>
-                                    <label className="block font-medium mb-1 text-gray-700">Video URL <span className="text-red-500">*</span></label>
-                                    <input type="url" name="videoUrl" value={formData.videoUrl} onChange={handleInputChange} placeholder="https://youtube.com/..." className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:border-blue-500" required />
-                                </div>
-                            </div>
-                        )}
-                    </div>
-                )}
+                            )}
+                        </div>
+                    )}
+
+                {(() => {
+                    const selectedContentType = options.contentTypes.find(ct => ct.value === formData.contentType);
+                    const contentTypeName = selectedContentType?.full?.content_type_name || selectedContentType?.label || "";
+                    return contentTypeName.toLowerCase().includes("link");
+                })() && (
+                        <div>
+                            <label className="block font-medium mb-1 text-gray-700">External Link <span className="text-red-500">*</span></label>
+                            <input type="url" name="externalLink" value={formData.externalLink} onChange={handleInputChange} placeholder="https://example.com" className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:border-blue-500" required />
+                        </div>
+                    )}
+
+
+                {/* Quiz Integration Component */}
+                <QuizIntegration
+                    formData={formData}
+                    setFormData={setFormData}
+                    options={options}
+                    loading={loading}
+                    addQuizSelection={addQuizSelection}
+                    updateQuizSelection={updateQuizSelection}
+                    removeQuizSelection={removeQuizSelection}
+                />
 
                 {/* Description */}
                 <div>
@@ -350,11 +427,45 @@ export default function AddContent() {
                 {/* Buttons */}
                 <div className="flex gap-4 pt-4">
                     <button type="submit" className="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700 transition-colors" disabled={Object.values(loading).some(Boolean)}>
-                        {Object.values(loading).some(Boolean) ? 'Loading...' : 'Submit'}
+                        {loading.uploading ? 'Uploading...' : Object.values(loading).some(Boolean) ? 'Loading...' : 'Submit'}
                     </button>
                     <button type="button" className="bg-gray-300 text-gray-700 px-6 py-2 rounded hover:bg-gray-400 transition-colors" onClick={() => window.history.back()}>Cancel</button>
                 </div>
             </form>
+
+            {/* Preview Modal */}
+            {showPreviewModal && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                    <div className="bg-white rounded-lg max-w-4xl max-h-[90vh] w-full mx-4 overflow-hidden">
+                        <div className="flex items-center justify-between p-4 border-b">
+                            <h3 className="text-lg font-semibold">File Preview - {formData.fileName}</h3>
+                            <button
+                                onClick={() => setShowPreviewModal(false)}
+                                className="text-gray-500 hover:text-gray-700 text-xl font-bold"
+                            >
+                                ×
+                            </button>
+                        </div>
+                        <div className="p-4 overflow-auto max-h-[calc(90vh-80px)]">
+                            {formData.fileUrl && (
+                                <iframe
+                                    src={formData.fileUrl}
+                                    className="w-full h-96 border rounded"
+                                    title="File Preview"
+                                />
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* SweetAlert */}
+            {showAlert && (
+                <SweetAlert
+                    {...alertConfig}
+                    onConfirm={alertConfig.onConfirm}
+                />
+            )}
         </div>
     );
 }

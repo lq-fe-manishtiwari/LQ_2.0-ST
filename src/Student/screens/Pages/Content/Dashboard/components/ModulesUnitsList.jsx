@@ -1,27 +1,71 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { ChevronDown, ChevronRight, FileText, BookOpen, Loader2, Play, File, Eye, X, ExternalLink, HelpCircle, ZoomIn, ZoomOut, RotateCcw } from 'lucide-react';
+import { ChevronDown, ChevronRight, FileText, BookOpen, Loader2, Play, File, Eye, X, ExternalLink, HelpCircle, ZoomIn, ZoomOut, RotateCcw, Clock } from 'lucide-react';
 import { ContentService } from '../../Service/Content.service';
 import PDFViewer from './PDFViewer';
 import QuizModal from './QuizModal';
+import QuizHistoryModal from './QuizHistoryModal';
 
 
 export default function ModulesUnitsList({ modules, colorCode }) {
     const [expandedModuleId, setExpandedModuleId] = useState(null);
     const [selectedUnitId, setSelectedUnitId] = useState(null);
     const [unitContent, setUnitContent] = useState(null);
+    const [moduleContent, setModuleContent] = useState(null);
     const [loadingContent, setLoadingContent] = useState(false);
+    const [loadingModule, setLoadingModule] = useState(false);
     const [contentError, setContentError] = useState(null);
     const [previewModal, setPreviewModal] = useState({ isOpen: false, content: null });
     const [imageZoom, setImageZoom] = useState(1);
     const [quizModal, setQuizModal] = useState({ isOpen: false, quizId: null, contentId: null });
+    const [quizHistoryModal, setQuizHistoryModal] = useState({
+        isOpen: false,
+        quizId: null,
+        contentId: null,
+        quizName: null
+    });
+    const [studentId, setStudentId] = useState(null);
+    const [readingTimer, setReadingTimer] = useState(0);
 
-    const toggleModule = (moduleId) => {
+    const toggleModule = async (moduleId) => {
         if (expandedModuleId === moduleId) {
             setExpandedModuleId(null);
+            setModuleContent(null);
         } else {
             setExpandedModuleId(moduleId);
+            setLoadingModule(true);
+            setModuleContent(null);
+            setUnitContent(null);
+            setSelectedUnitId(null);
+
+            try {
+                const response = await ContentService.getApprovedModuleLevelContent(moduleId);
+                if (response.success) {
+                    setModuleContent(response.data);
+                }
+            } catch (error) {
+                console.error('Error fetching module content:', error);
+            } finally {
+                setLoadingModule(false);
+            }
         }
     };
+
+    // Fetch student profile on component mount
+    useEffect(() => {
+        const fetchStudentProfile = async () => {
+            try {
+                const response = await ContentService.getProfile();
+                if (response.success && response.data) {
+                    const extractedStudentId = response.data.student_id || response.data.id;
+                    setStudentId(extractedStudentId);
+                }
+            } catch (error) {
+                console.error('Error fetching student profile:', error);
+            }
+        };
+
+        fetchStudentProfile();
+    }, []);
 
     const handleUnitClick = async (unitId) => {
         if (selectedUnitId === unitId) {
@@ -52,18 +96,17 @@ export default function ModulesUnitsList({ modules, colorCode }) {
 
     const handleViewContent = (content) => {
         const link = content.content_link;
-        
+
         // Check if it's an external link (starts with http/https)
         if (link && (link.startsWith('http://') || link.startsWith('https://'))) {
             // Check if it's a file that can be previewed
             const fileExtension = link.split('.').pop()?.toLowerCase();
             const previewableTypes = ['pdf', 'jpg', 'jpeg', 'png', 'gif', 'mp4', 'webm', 'ogg'];
-            
+
             if (previewableTypes.includes(fileExtension)) {
-                // Open in preview modal
+                // Reset timer and open in preview modal
+                setReadingTimer(0);
                 setPreviewModal({ isOpen: true, content });
-                setCurrentPage(1);
-                setTotalPages(1);
             } else {
                 // Open external link in new tab
                 window.open(link, '_blank', 'noopener,noreferrer');
@@ -77,6 +120,30 @@ export default function ModulesUnitsList({ modules, colorCode }) {
     const closePreviewModal = () => {
         setPreviewModal({ isOpen: false, content: null });
         setImageZoom(1); // Reset zoom when closing
+        setReadingTimer(0);
+    };
+
+    // Timer effect for reading time
+    useEffect(() => {
+        let interval;
+        if (previewModal.isOpen) {
+            interval = setInterval(() => {
+                setReadingTimer(prev => prev + 1);
+            }, 1000);
+        }
+        return () => clearInterval(interval);
+    }, [previewModal.isOpen]);
+
+    const formatTime = (seconds) => {
+        const mins = Math.floor(seconds / 60);
+        const secs = seconds % 60;
+        return `${mins}:${secs.toString().padStart(2, '0')}`;
+    };
+
+    const formatReadingTime = (seconds) => {
+        if (!seconds) return null;
+        const minutes = Math.round(seconds / 60);
+        return minutes > 0 ? `${minutes} min` : '< 1 min';
     };
 
     // Image zoom functions
@@ -92,13 +159,36 @@ export default function ModulesUnitsList({ modules, colorCode }) {
         setImageZoom(1); // Reset to default
     };
 
-    const handleQuizClick = (quizAttachment, contentId) => {
+    const handleQuizClick = (quizAttachment, contentId, quizName = null) => {
         console.log('Quiz clicked:', quizAttachment, 'Content ID:', contentId);
-        setQuizModal({ isOpen: true, quizId: quizAttachment.quiz_id, contentId: contentId });
+
+        // First show quiz history modal to check previous attempts
+        setQuizHistoryModal({
+            isOpen: true,
+            quizId: quizAttachment.quiz_id,
+            contentId: contentId,
+            quizName: quizName || `Quiz ${quizAttachment.quiz_id}`
+        });
     };
 
     const closeQuizModal = () => {
         setQuizModal({ isOpen: false, quizId: null, contentId: null });
+    };
+
+    const closeQuizHistoryModal = () => {
+        setQuizHistoryModal({
+            isOpen: false,
+            quizId: null,
+            contentId: null,
+            quizName: null
+        });
+    };
+
+    const handleStartQuizFromHistory = () => {
+        // Close history modal and open quiz modal
+        const { quizId, contentId } = quizHistoryModal;
+        closeQuizHistoryModal();
+        setQuizModal({ isOpen: true, quizId: quizId, contentId: contentId });
     };
 
     const renderPreviewContent = (content) => {
@@ -112,7 +202,7 @@ export default function ModulesUnitsList({ modules, colorCode }) {
                         content={content}
                         colorCode={colorCode}
                         onClose={closePreviewModal}
-                        onQuizClick={(quiz) => handleQuizClick(quiz, content.content_id)}
+                        onQuizClick={(quiz) => handleQuizClick(quiz, content.content_id, content.content_name)}
                     />
                 );
             case 'jpg':
@@ -131,7 +221,7 @@ export default function ModulesUnitsList({ modules, colorCode }) {
                                 maxHeight: imageZoom > 1 ? 'none' : '100%'
                             }}
                         />
-                        
+
                         {/* Image Zoom Controls */}
                         <div className="absolute top-4 right-4 flex items-center gap-2 bg-white shadow-lg border border-gray-200 px-3 py-2 rounded-lg z-20">
                             <button
@@ -142,11 +232,11 @@ export default function ModulesUnitsList({ modules, colorCode }) {
                             >
                                 <ZoomOut className="w-4 h-4" />
                             </button>
-                            
+
                             <span className="text-sm font-medium text-gray-700 min-w-[3rem] text-center">
                                 {Math.round(imageZoom * 100)}%
                             </span>
-                            
+
                             <button
                                 onClick={handleImageZoomIn}
                                 disabled={imageZoom >= 3.0}
@@ -155,7 +245,7 @@ export default function ModulesUnitsList({ modules, colorCode }) {
                             >
                                 <ZoomIn className="w-4 h-4" />
                             </button>
-                            
+
                             <button
                                 onClick={handleImageResetZoom}
                                 className="p-1 text-gray-600 hover:bg-gray-100 rounded transition-colors"
@@ -164,14 +254,14 @@ export default function ModulesUnitsList({ modules, colorCode }) {
                                 <RotateCcw className="w-4 h-4" />
                             </button>
                         </div>
-                        
+
                         {/* Quiz Buttons for Images */}
                         {content.quiz_attachments && content.quiz_attachments.length > 0 && (
                             <div className="absolute top-4 left-4 space-y-2">
                                 {content.quiz_attachments.map((quiz, index) => (
                                     <button
                                         key={quiz.attachment_id || index}
-                                        onClick={() => handleQuizClick(quiz, content.content_id)}
+                                        onClick={() => handleQuizClick(quiz, content.content_id, content.content_name)}
                                         className="flex items-center gap-2 px-4 py-2 text-white rounded-lg shadow-lg hover:opacity-90 transition-colors"
                                         style={{ backgroundColor: colorCode }}
                                     >
@@ -194,14 +284,14 @@ export default function ModulesUnitsList({ modules, colorCode }) {
                             className="max-w-full max-h-full"
                             title={content.content_name}
                         />
-                        
+
                         {/* Quiz Buttons for Videos */}
                         {content.quiz_attachments && content.quiz_attachments.length > 0 && (
                             <div className="absolute top-4 right-4 space-y-2">
                                 {content.quiz_attachments.map((quiz, index) => (
                                     <button
                                         key={quiz.attachment_id || index}
-                                        onClick={() => handleQuizClick(quiz, content.content_id)}
+                                        onClick={() => handleQuizClick(quiz, content.content_id, content.content_name)}
                                         className="flex items-center gap-2 px-4 py-2 bg-orange-500 text-white rounded-lg shadow-lg hover:bg-orange-600 transition-colors"
                                     >
                                         <HelpCircle className="w-5 h-5" />
@@ -245,7 +335,7 @@ export default function ModulesUnitsList({ modules, colorCode }) {
         return (
             <div key={content.content_id || index} className="flex items-center justify-between gap-3 p-3 bg-gray-50 rounded-md border">
                 <div className="flex items-center gap-3 flex-1">
-                    <div 
+                    <div
                         className="p-2 rounded-full bg-white"
                         style={{ color: colorCode }}
                     >
@@ -333,24 +423,49 @@ export default function ModulesUnitsList({ modules, colorCode }) {
                             {/* Units List (Expanded Content) */}
                             {expandedModuleId === module.module_id && (
                                 <div className="bg-white p-4 animate-in slide-in-from-top-2 duration-200">
+                                    {/* Module Level Content */}
+                                    {loadingModule ? (
+                                        <div className="flex items-center gap-2 py-2 text-gray-500 mb-4">
+                                            <Loader2 className="w-4 h-4 animate-spin" />
+                                            <span className="text-sm">Loading module content...</span>
+                                        </div>
+                                    ) : moduleContent && moduleContent.length > 0 && (
+                                        <div className="mb-6 space-y-3">
+                                            <h4 className="font-semibold text-gray-800 text-sm flex items-center gap-2">
+                                                <div className="w-1 h-4 rounded-full" style={{ backgroundColor: colorCode }}></div>
+                                                Module Resources
+                                            </h4>
+                                            <div className="space-y-2 px-1">
+                                                {moduleContent.map((content, index) => renderContentItem(content, index))}
+                                            </div>
+                                            <div className="border-b border-gray-100 my-4"></div>
+                                        </div>
+                                    )}
+
+                                    {/* Units Header */}
+                                    {module.units && module.units.length > 0 && (
+                                        <h4 className="font-semibold text-gray-800 text-sm mb-3 flex items-center gap-2">
+                                            <div className="w-1 h-4 rounded-full" style={{ backgroundColor: colorCode }}></div>
+                                            Learning Units
+                                        </h4>
+                                    )}
+
                                     {module.units && module.units.length > 0 ? (
                                         <ul className="space-y-2">
                                             {module.units.map((unit, idx) => (
                                                 <li key={unit.unit_id || idx} className="space-y-2">
                                                     <div
                                                         onClick={() => handleUnitClick(unit.unit_id)}
-                                                        className={`flex items-center gap-3 p-3 rounded-md border transition-colors cursor-pointer group ${
-                                                            selectedUnitId === unit.unit_id 
-                                                                ? 'bg-blue-50 border-blue-200' 
-                                                                : 'hover:bg-gray-50 border-gray-100'
-                                                        }`}
+                                                        className={`flex items-center gap-3 p-3 rounded-md border transition-colors cursor-pointer group ${selectedUnitId === unit.unit_id
+                                                            ? 'bg-blue-50 border-blue-200'
+                                                            : 'hover:bg-gray-50 border-gray-100'
+                                                            }`}
                                                     >
                                                         <div
-                                                            className={`p-2 rounded-full transition-colors ${
-                                                                selectedUnitId === unit.unit_id
-                                                                    ? 'bg-white'
-                                                                    : 'bg-gray-100 group-hover:bg-white'
-                                                            }`}
+                                                            className={`p-2 rounded-full transition-colors ${selectedUnitId === unit.unit_id
+                                                                ? 'bg-white'
+                                                                : 'bg-gray-100 group-hover:bg-white'
+                                                                }`}
                                                             style={{ color: colorCode }}
                                                         >
                                                             <FileText className="w-4 h-4" />
@@ -424,6 +539,16 @@ export default function ModulesUnitsList({ modules, colorCode }) {
                                 <h3 className="text-lg font-semibold text-gray-800">
                                     {previewModal.content?.content_name || 'Content Preview'}
                                 </h3>
+                                {previewModal.content?.average_reading_time_seconds && (
+                                    <div className="flex items-center gap-2 px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm">
+                                        <Clock className="w-4 h-4" />
+                                        <span>Est. {formatReadingTime(previewModal.content.average_reading_time_seconds)} read</span>
+                                    </div>
+                                )}
+                                <div className="flex items-center gap-2 px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm">
+                                    <Clock className="w-4 h-4" />
+                                    <span>Reading: {formatTime(readingTimer)}</span>
+                                </div>
                                 {previewModal.content?.quiz_attachments && previewModal.content.quiz_attachments.length > 0 && (
                                     <span
                                         className="px-3 py-1 text-white text-sm rounded-full"
@@ -433,13 +558,13 @@ export default function ModulesUnitsList({ modules, colorCode }) {
                                     </span>
                                 )}
                             </div>
-                            <div className="flex items-center gap-2">
-                             
+                            <div className="flex items-center gap-2 mr-10">
                                 <button
                                     onClick={closePreviewModal}
-                                    className="p-2 hover:bg-gray-100 rounded-md transition-colors"
+                                    className="p-2 bg-blue-600 hover:bg-blue-700 rounded-full transition-colors"
+                                    title="Close"
                                 >
-                                    <X className="w-5 h-5 text-gray-600" />
+                                    <X className="w-5 h-5 text-white" />
                                 </button>
                             </div>
                         </div>
@@ -455,8 +580,8 @@ export default function ModulesUnitsList({ modules, colorCode }) {
                                 <h4 className="font-semibold mb-2 text-gray-800 text-sm">Available Quizzes:</h4>
                                 <div className="space-y-1 text-xs">
                                     {previewModal.content.quiz_attachments.map((quiz, index) => (
-                                        <div key={quiz.attachment_id || index} className="flex items-center justify-between">
-                                            <span className="text-gray-700">Quiz {quiz.quiz_id}</span>
+                                        <div key={quiz.attachment_id || index} className="flex items-center justify-center">
+                                            {/* <span className="text-gray-700">Quiz {quiz.quiz_id}</span> */}
                                             <span
                                                 className="text-white px-2 py-0.5 rounded text-xs"
                                                 style={{ backgroundColor: colorCode }}
@@ -479,6 +604,18 @@ export default function ModulesUnitsList({ modules, colorCode }) {
                 quizId={quizModal.quizId}
                 colorCode={colorCode}
                 contentId={quizModal.contentId}
+            />
+
+            {/* Quiz History Modal */}
+            <QuizHistoryModal
+                isOpen={quizHistoryModal.isOpen}
+                onClose={closeQuizHistoryModal}
+                onStartQuiz={handleStartQuizFromHistory}
+                quizId={quizHistoryModal.quizId}
+                contentId={quizHistoryModal.contentId}
+                studentId={studentId}
+                colorCode={colorCode}
+                quizName={quizHistoryModal.quizName}
             />
         </>
     );

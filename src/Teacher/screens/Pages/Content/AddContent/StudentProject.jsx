@@ -1,346 +1,699 @@
-import React, { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
-import { Filter, ChevronDown, X ,Eye} from "lucide-react";
+import React, { useState, useEffect, useRef } from "react";
+import { Filter, ChevronDown, Plus, X, Search, Clock, FileText, Check, Trash2, Eye } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { useUserProfile } from "../../../../../contexts/UserProfileContext";
+import { contentService } from "../services/content.service";
+import { api } from "../../../../../_services/api";
+import SweetAlert from "react-bootstrap-sweetalert";
 
-const StudentProject = () => {
-  const [gradeData, setGradeData] = useState([]);
-  const [divisionData, setDivisionData] = useState([]);
-  const [teacherSubject, setTeacherSubject] = useState([]);
-  const [selectedGradeId, setSelectedGradeId] = useState("");
-  const [selectedClassId, setSelectedClassId] = useState("");
-  const [selectedGradeDivisionId, setSelectedGradeDivisionId] = useState("");
-  const [selectedSubjectId, setSelectedSubjectId] = useState("");
-  const [subTabIndex, setSubTabIndex] = useState(0);
-  const [selectedCurriculums, setSelectedCurriculums] = useState([]);
-  const [openChapterIndex, setOpenChapterIndex] = useState(null);
-  const [filterOpen, setFilterOpen] = useState(false);
-  const [showPdfModal, setShowPdfModal] = useState(false);
+const CustomSelect = ({ label, value, onChange, options, placeholder, disabled = false, loading = false }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const dropdownRef = useRef(null);
 
-  const handleViewPdf = () => {
-    setShowPdfModal(true);
-  };
-
-  const closePdfModal = () => {
-    setShowPdfModal(false);
-  };
-
-  // Dummy Data
-  const dummyGrades = [
-    {
-      grade_division: {
-        grade: { grade_id: "1", name: "Grade 1" },
-        class_data: { class_data_id: "1", name_data: "Class A" },
-      },
-    },
-    {
-      grade_division: {
-        grade: { grade_id: "2", name: "Grade 2" },
-        class_data: { class_data_id: "2", name_data: "Class B" },
-      },
-    },
-  ];
-
-  const dummyDivisions = [
-    { grade_division_id: "1", division_id: "1", division_name: "Division A" },
-    { grade_division_id: "2", division_id: "2", division_name: "Division B" },
-  ];
-
-  const dummySubjects = [
-    { subject_id: "1", name: "Mathematics", color_code: "#FF6B6B" },
-    { subject_id: "2", name: "Science", color_code: "#4ECDC4" },
-    { subject_id: "3", name: "English", color_code: "#45B7D1" },
-  ];
-
-  const dummyCurriculums = [
-    {
-      chapter: { chapter_id: "1", label: "Chapter 1: Introduction" },
-      topics: [
-        {
-          topic_id: "1",
-          label: "Topic 1.1: Basics",
-          curriculums: [
-            {
-              curriculum_id: "1",
-              content_title: "Introduction to Mathematics",
-              curriculum_type: { label: "Video" },
-              curriculum_level: { name: "Beginner" },
-              curriculum_read_time: "15 Min",
-              lock_by_superadmin: false,
-              name: "math_intro",
-            },
-            {
-              curriculum_id: "2",
-              content_title: "Basic Mathematical Operations",
-              curriculum_type: { label: "Text" },
-              curriculum_level: { name: "Beginner" },
-              curriculum_read_time: "20 Min",
-              lock_by_superadmin: true,
-              name: "basic_operations",
-            },
-          ],
-        },
-      ],
-    },
-  ];
-
-  // Mock API Functions
-  const getGradeDivisions = () => {
-    setTimeout(() => {
-      setGradeData(dummyGrades);
-      setSelectedGradeId(dummyGrades[0].grade_division.grade.grade_id);
-      setSelectedClassId(dummyGrades[0].grade_division.class_data.class_data_id);
-      getDivisionData(dummyGrades[0].grade_division.grade.grade_id);
-    }, 500);
-  };
-
-  const getDivisionData = (gradeId) => {
-    setSelectedGradeId(gradeId);
-    setTimeout(() => {
-      setDivisionData(dummyDivisions);
-      setSelectedGradeDivisionId("");
-      setTeacherSubject([]);
-      setSelectedCurriculums([]);
-    }, 300);
-  };
-
-  const handleDivisionChangeEvent = (gradeDivId) => {
-    setSelectedGradeDivisionId(gradeDivId);
-    setTeacherSubject(dummySubjects);
-    setSelectedCurriculums([]);
-  };
-
-  const getContentSubjectWise = (subjectId, index) => {
-    setSubTabIndex(index);
-    setSelectedSubjectId(subjectId);
-    setSelectedCurriculums(dummyCurriculums);
-  };
-
-  const toggleChapter = (index) => {
-    setOpenChapterIndex(openChapterIndex === index ? null : index);
+  const handleSelect = (option) => {
+    onChange({ target: { value: option } });
+    setIsOpen(false);
   };
 
   useEffect(() => {
-    getGradeDivisions();
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const displayValue = typeof value === "object" && value !== null ? value.name : value;
+
+  return (
+    <div ref={dropdownRef}>
+      <label className="block text-sm font-semibold text-gray-700 mb-2">{label}</label>
+      <div className="relative">
+        <div
+          className={`w-full px-3 py-2 border ${disabled || loading
+            ? "bg-gray-100 text-gray-500 border-gray-200 cursor-not-allowed"
+            : "bg-white border-gray-300 cursor-pointer hover:border-blue-400"
+            } rounded-lg min-h-[44px] flex items-center justify-between transition-all duration-150`}
+          onClick={() => !disabled && !loading && setIsOpen(!isOpen)}
+        >
+          <span className={`flex-1 truncate ${displayValue && !loading ? "text-gray-900" : "text-gray-400"}`}>
+            {loading ? "Loading..." : displayValue || placeholder}
+          </span>
+          <ChevronDown
+            className={`w-4 h-4 text-gray-400 transition-transform ${isOpen ? "rotate-180" : "rotate-0"}`}
+          />
+        </div>
+
+        {isOpen && !disabled && !loading && (
+          <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+            <div
+              className="px-4 py-2 text-sm text-gray-700 cursor-pointer hover:bg-blue-50 transition-colors"
+              onClick={() => handleSelect("")}
+            >
+              {placeholder}
+            </div>
+            {options.map((option) => {
+              const optionName = typeof option === "object" && option !== null ? option.name : option;
+              const optionId =
+                typeof option === "object" && option !== null
+                  ? option.module_id || option.unit_id || option.id || optionName
+                  : option;
+              return (
+                <div
+                  key={optionId}
+                  className="px-4 py-2 text-sm text-gray-700 cursor-pointer hover:bg-blue-50 transition-colors"
+                  onClick={() => handleSelect(option)}
+                >
+                  {optionName}
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+const MultiSelectProgram = ({ label, selectedPrograms, programOptions, onProgramChange, onProgramRemove }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const dropdownRef = useRef(null);
+  const availableOptions = programOptions.filter((p) => !selectedPrograms.includes(p));
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) setIsOpen(false);
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
   return (
-    <div className="w-full min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 p-4 sm:p-6 flex justify-center">
-      <div className="w-full max-w-7xl bg-white rounded-2xl shadow-lg border border-gray-100 p-6 sm:p-8">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-8 pb-4 border-b border-gray-200">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-orange-500 rounded flex items-center justify-center">
-              <span className="text-white font-semibold">+</span>
-            </div>
-            <h1 className="pageheading">Student Project</h1>
-          </div>
-          <button
-            onClick={() => window.history.back()}
-            className="p-2 hover:bg-gray-100 rounded-full transition-colors"
-          >
-            <X className="w-5 h-5 text-gray-600" />
-          </button>
+    <div ref={dropdownRef}>
+      <label className="block text-sm font-semibold text-gray-700 mb-2">{label}</label>
+      <div className="relative">
+        <div
+          className="flex flex-wrap items-center gap-1 p-2 border border-gray-300 rounded-lg min-h-[44px] bg-white cursor-pointer hover:border-blue-400"
+          onClick={() => setIsOpen(!isOpen)}
+        >
+          {selectedPrograms.length > 0 ? (
+            selectedPrograms.map((prog) => (
+              <span
+                key={prog}
+                className="inline-flex items-center gap-1 bg-blue-50 text-blue-600 px-2 py-1 rounded-full text-xs font-medium"
+                onClick={(e) => e.stopPropagation()}
+              >
+                {prog}
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onProgramRemove();
+                  }}
+                  className="hover:bg-blue-200 rounded-full p-0.5"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              </span>
+            ))
+          ) : (
+            <span className="text-gray-400 text-sm ml-1">Select Program</span>
+          )}
+          <ChevronDown
+            className={`w-4 h-4 text-gray-400 absolute right-3 top-1/2 -translate-y-1/2 transition-transform ${isOpen ? "rotate-180" : "rotate-0"
+              }`}
+          />
         </div>
 
-        {/* Filter Button */}
-        <div className="flex justify-between items-center mb-3">
-          <button
-            onClick={() => setFilterOpen((prev) => !prev)}
-            className="flex items-center gap-2 bg-white border border-gray-300 hover:bg-gray-50 px-4 py-3 rounded-xl shadow-sm transition-all"
-          >
-            <Filter className="w-5 h-5 text-blue-600" />
-            <span className="text-blue-600 font-medium">Filter</span>
-          </button>
-        </div>
-
-        {/* Filter Panel */}
-        {filterOpen && (
-          <div className="bg-white rounded-xl shadow-md p-5 mb-4 border border-gray-200 transition-all">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
-              {/* Grade */}
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Grade
-                </label>
-                <select
-                  value={selectedGradeId}
-                  onChange={(e) => getDivisionData(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
+        {isOpen && (
+          <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+            {availableOptions.length > 0 ? (
+              availableOptions.map((prog) => (
+                <div
+                  key={prog}
+                  className="px-4 py-2 text-sm text-gray-700 cursor-pointer hover:bg-blue-50 transition-colors"
+                  onClick={() => onProgramChange({ target: { value: prog } })}
                 >
-                  <option value="">Select Grade</option>
-                  {gradeData.map((g, i) => (
-                    <option key={i} value={g.grade_division.grade.grade_id}>
-                      {g.grade_division.grade.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Class */}
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Class
-                </label>
-                <select
-                  value={selectedClassId}
-                  onChange={(e) => setSelectedClassId(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
-                >
-                  <option value="">Select Class</option>
-                  {gradeData.map((g, i) => (
-                    <option
-                      key={i}
-                      value={g.grade_division.class_data.class_data_id}
-                    >
-                      {g.grade_division.class_data.name_data}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Division */}
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Division
-                </label>
-                <select
-                  value={selectedGradeDivisionId}
-                  onChange={(e) => handleDivisionChangeEvent(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
-                >
-                  <option value="">Select Division</option>
-                  {divisionData.map((d, i) => (
-                    <option key={i} value={d.grade_division_id}>
-                      {d.division_name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Subject Tabs */}
-        {selectedGradeDivisionId && teacherSubject.length > 0 && (
-          <div className="mb-4">
-            {teacherSubject.map((subject, index) => (
-              <button
-                key={index}
-                onClick={() => getContentSubjectWise(subject.subject_id, index)}
-                style={{
-                  padding: "8px 12px",
-                  marginRight: "5px",
-                  border: `1px solid ${subject.color_code}`,
-                  borderRadius: "6px",
-                  backgroundColor:
-                    subTabIndex === index ? subject.color_code : "#fff",
-                  color: subTabIndex === index ? "#fff" : subject.color_code,
-                  cursor: "pointer",
-                  fontWeight: "500",
-                }}
-              >
-                {subject.name}
-              </button>
-            ))}
-          </div>
-        )}
-
-        {/* Curriculum Accordion */}
-        {selectedCurriculums.length > 0 ? (
-          selectedCurriculums.map((chapter, ci) => (
-            <div
-              key={ci}
-              className="border border-gray-300 rounded-lg mb-3 overflow-hidden"
-            >
-              <div
-                onClick={() => toggleChapter(ci)}
-                className="flex justify-between items-center bg-gray-100 px-4 py-3 cursor-pointer font-semibold"
-              >
-                {chapter.chapter.label}
-                <ChevronDown
-                  className={`w-5 h-5 transform transition-transform ${
-                    openChapterIndex === ci ? "rotate-180" : ""
-                  }`}
-                />
-              </div>
-
-              {openChapterIndex === ci && (
-                <div className="p-4 bg-white">
-                  {chapter.topics.map((topic, ti) => (
-                    <div key={ti} className="mb-4">
-                      <div className="font-semibold mb-2">{topic.label}</div>
-                      {topic.curriculums.map((cur, cidx) => (
-  <div
-    key={cidx}
-    className="ml-4 mb-2 text-gray-700 text-sm flex justify-between items-center"
-  >
-    <span>
-      {cur.content_title} ({cur.curriculum_type.label})
-    </span>
-    {!cur.lock_by_superadmin && (
-      <button
-        onClick={handleViewPdf}
-        className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded-lg font-medium transition-colors flex items-center gap-1 text-sm"
-      >
-        <Eye className="w-4 h-4" />
-        View
-      </button>
-    )}
-  </div>
-))}
-                    </div>
-                  ))}
+                  {prog}
                 </div>
-              )}
-            </div>
-          ))
-        ) : (
-          selectedGradeDivisionId && <div>No Data Found!</div>
+              ))
+            ) : (
+              <div className="px-4 py-3 text-sm text-gray-500">All programs selected</div>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+const StudentProject = () => {
+  // User Context
+  const { getUserId, getTeacherId, isLoaded: isProfileLoaded, loading: profileLoading } = useUserProfile();
+  const navigate = useNavigate();
+
+  // States for Filters
+  const [filters, setFilters] = useState({
+    filterOpen: true,
+    program: [],
+    semester: "",
+    gradeDivisionId: [],
+    chapter: "",
+    topic: "",
+    activeInactiveStatus: "all",
+  });
+
+  // States for Data Options
+  const [programOptions, setProgramOptions] = useState([]);
+  const [subjectOptions, setSubjectOptions] = useState([]);
+  const [semesterOptions, setSemesterOptions] = useState([]);
+  const [chapterOptions, setChapterOptions] = useState([]);
+  const [topicOptions, setTopicOptions] = useState([]);
+
+  // Selection States
+  const [selectedProgramId, setSelectedProgramId] = useState(null);
+  const [selectedSubjectId, setSelectedSubjectId] = useState(null);
+  const [selectedChapter, setSelectedChapter] = useState(null);
+  const [selectedAcademicYearId, setSelectedAcademicYearId] = useState(null);
+  const [selectedSemesterId, setSelectedSemesterId] = useState(null);
+  const [allAllocations, setAllAllocations] = useState([]);
+
+  // Logic States
+  const [loading, setLoading] = useState({
+    chapters: false,
+    topics: false,
+    content: false,
+    delete: false,
+  });
+  const [projects, setProjects] = useState([]);
+  const [processingId, setProcessingId] = useState(null);
+  const [showApproveAlert, setShowApproveAlert] = useState(false);
+  const [showRejectAlert, setShowRejectAlert] = useState(false);
+  const [projectToAction, setProjectToAction] = useState(null);
+  const [showSuccessAlert, setShowSuccessAlert] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
+
+  // SweetAlert
+  const [showAlert, setShowAlert] = useState(false);
+  const [alertConfig, setAlertConfig] = useState({});
+
+  const showSweetAlert = (title, text, type = "success", confirmText = "OK", onConfirm = null) => {
+    setAlertConfig({
+      title,
+      text,
+      type,
+      confirmBtnText: confirmText,
+      confirmBtnCssClass: "btn-confirm",
+      onConfirm: () => {
+        setShowAlert(false);
+        if (onConfirm && typeof onConfirm === "function") {
+          onConfirm();
+        }
+      },
+    });
+    setShowAlert(true);
+  };
+
+  // --- 1. Fetch Programs ---
+  useEffect(() => {
+    const fetchPrograms = async () => {
+      if (!isProfileLoaded || profileLoading) return;
+      const teacherId = getTeacherId();
+      if (!teacherId) return;
+
+      try {
+        const response = await api.getTeacherAllocatedPrograms(teacherId);
+        if (response.success && response.data) {
+          const classTeacherPrograms = response.data.class_teacher_allocation || [];
+          const normalPrograms = response.data.normal_allocation || [];
+          const allPrograms = [...classTeacherPrograms, ...normalPrograms];
+          setAllAllocations(allPrograms);
+
+          const programMap = new Map();
+          allPrograms.forEach((allocation) => {
+            const pid = allocation.program_id;
+            const pname = allocation.program?.program_name || allocation.program_name || `Program ${pid}`;
+            if (!programMap.has(pid)) {
+              programMap.set(pid, { id: pid, name: pname, allocations: [] });
+            }
+            programMap.get(pid).allocations.push(allocation);
+          });
+          const uniquePrograms = Array.from(programMap.values());
+          setProgramOptions(uniquePrograms);
+        }
+      } catch (err) {
+        console.error("Failed to fetch programs:", err);
+      }
+    };
+    fetchPrograms();
+  }, [isProfileLoaded, profileLoading, getTeacherId]);
+
+  // --- 2. Fetch Subjects ---
+  useEffect(() => {
+    const fetchSubjects = async () => {
+      if (!selectedAcademicYearId || !selectedSemesterId) {
+        setSubjectOptions([]);
+        return;
+      }
+      const teacherId = getTeacherId();
+      if (!teacherId) return;
+
+      try {
+        const response = await contentService.getTeacherSubjectsAllocated(
+          teacherId,
+          selectedAcademicYearId,
+          selectedSemesterId
+        );
+
+        if (Array.isArray(response)) {
+          const subjects = response
+            .map((subjectInfo) => ({
+              id: subjectInfo.subject_id || subjectInfo.id,
+              name: subjectInfo.subject_name || subjectInfo.name,
+            }))
+            .filter((s) => s.name && s.id);
+          const unique = Array.from(new Map(subjects.map((s) => [s.name, s])).values());
+          setSubjectOptions(unique);
+        } else {
+          setSubjectOptions([]);
+        }
+      } catch (err) {
+        console.error("Failed to fetch subjects:", err);
+        setSubjectOptions([]);
+      }
+    };
+    fetchSubjects();
+  }, [selectedAcademicYearId, selectedSemesterId, getTeacherId]);
+
+  // --- 3. Fetch Modules/Units ---
+  useEffect(() => {
+    const fetchModules = async () => {
+      if (!selectedSubjectId) {
+        setChapterOptions([]);
+        setTopicOptions([]);
+        return;
+      }
+      setLoading((prev) => ({ ...prev, chapters: true }));
+      try {
+        const response = await contentService.getModulesbySubject(selectedSubjectId);
+        const modulesArray = response?.modules || response || [];
+        if (Array.isArray(modulesArray)) {
+          const formatted = modulesArray.map((mod) => ({
+            module_id: mod.module_id,
+            module_name: mod.module_name,
+            units: mod.units || [],
+          }));
+          setChapterOptions(formatted);
+        } else {
+          setChapterOptions([]);
+        }
+      } catch (err) {
+        console.error("Failed to fetch modules:", err);
+        setChapterOptions([]);
+      } finally {
+        setLoading((prev) => ({ ...prev, chapters: false }));
+      }
+    };
+    fetchModules();
+  }, [selectedSubjectId]);
+
+  // --- 4. Load Projects when Unit Selected ---
+  useEffect(() => {
+    const fetchProjects = async () => {
+      const selectedTopic = topicOptions.find((t) => t.unit_name === filters.topic);
+
+      // If no topic selected, or topic not found, clear projects
+      if (!filters.topic || !selectedTopic?.unit_id) {
+        setProjects([]);
+        return;
+      }
+
+      setLoading((prev) => ({ ...prev, content: true }));
+      try {
+        // Fetch ALL projects (Pending, Approved, Rejected)
+        const unitId = selectedTopic.unit_id;
+        // We'll fetch 'PENDING' by default or maybe we want all statuses? 
+        // The requirement mentions 'request show', typically meaning Pending.
+        const res = await contentService.getStudentProjectsByUnit(unitId, ""); // Empty status fetches all? Or need adjust API
+        // API implementation: getStudentProjectsByUnit(unitId, status)
+        // If we pass empty string, API needs to handle it. 
+        // Let's assume we want to see PENDING requests mostly.
+        // But let's verify if we can fetch all. The API logic was: query params status (Optional).
+        // If I pass "", status might be empty string. Best to pass PENDING or APPROVED or nothing (null/undefined).
+
+        const response = await contentService.getStudentProjectsByUnit(unitId, null); // Pass null for all statuses
+        if (Array.isArray(response)) {
+          setProjects(response);
+        } else {
+          setProjects([]);
+        }
+      } catch (err) {
+        console.error("Error loading projects:", err);
+        setProjects([]);
+      } finally {
+        setLoading((prev) => ({ ...prev, content: false }));
+      }
+    };
+
+    fetchProjects();
+  }, [filters.topic, topicOptions]);
+
+  // --- Handlers ---
+  const handleProgramChange = (e) => {
+    const value = e.target.value;
+    const program = programOptions.find((p) => p.name === value);
+    if (program) {
+      setSelectedProgramId(program.id);
+      const semesters = [...new Set(program.allocations.map((a) => a.semester?.name).filter(Boolean))];
+      setSemesterOptions(semesters);
+      setFilters((prev) => ({ ...prev, program: [value], semester: "", gradeDivisionId: [] }));
+      setSubjectOptions([]);
+    }
+  };
+
+  const removeProgram = () => {
+    setFilters((prev) => ({ ...prev, program: [], semester: "", gradeDivisionId: [] }));
+    setSelectedProgramId(null);
+    setSelectedAcademicYearId(null);
+    setSelectedSemesterId(null);
+    setSemesterOptions([]);
+    setSubjectOptions([]);
+  };
+
+  const handleApprove = async (projectId) => {
+    setProjectToAction(projectId);
+    setShowApproveAlert(true);
+  };
+
+  const handleConfirmApprove = async () => {
+    setShowApproveAlert(false);
+    setProcessingId(projectToAction);
+    try {
+      await contentService.approveStudentProject(projectToAction);
+      setSuccessMessage("Project has been successfully approved!");
+      setShowSuccessAlert(true);
+      // Refresh list
+      const selectedTopic = topicOptions.find((t) => t.unit_name === filters.topic);
+      if (selectedTopic?.unit_id) {
+        contentService.getStudentProjectsByUnit(selectedTopic.unit_id, null).then(res => setProjects(res || []));
+      }
+    } catch (e) {
+      console.error(e);
+      showSweetAlert("Error", "Failed to approve project", "error");
+    } finally {
+      setProcessingId(null);
+      setProjectToAction(null);
+    }
+  };
+
+  const handleReject = async (projectId) => {
+    setProjectToAction(projectId);
+    setShowRejectAlert(true);
+  };
+
+  const handleConfirmReject = async () => {
+    setShowRejectAlert(false);
+    setProcessingId(projectToAction);
+    try {
+      await contentService.rejectStudentProject(projectToAction);
+      setSuccessMessage("Project has been successfully rejected!");
+      setShowSuccessAlert(true);
+      const selectedTopic = topicOptions.find((t) => t.unit_name === filters.topic);
+      if (selectedTopic?.unit_id) {
+        contentService.getStudentProjectsByUnit(selectedTopic.unit_id, null).then(res => setProjects(res || []));
+      }
+    } catch (e) {
+      console.error(e);
+      showSweetAlert("Error", "Failed to reject project", "error");
+    } finally {
+      setProcessingId(null);
+      setProjectToAction(null);
+    }
+  };
+
+  return (
+    <div className="min-h-screen p-4 md:p-6 lg:p-8 bg-gray-50">
+      {/* Header */}
+      <div className="flex flex-row justify-between items-center mb-6 gap-4">
+        <div className="flex items-center gap-3">
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-800">Student Projects Review</h1>
+        </div>
+        <button
+          onClick={() => navigate(-1)}
+          className="p-2 hover:bg-gray-200 rounded-full transition-colors shrink-0"
+        >
+          <X className="w-5 h-5 text-gray-600" />
+        </button>
+      </div>
+
+      {/* Filter Section */}
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-5 mb-6">
+        {/* Filter Toggle Button */}
+        <div className="flex justify-start mb-4">
+          <button
+            onClick={() => setFilters(prev => ({ ...prev, filterOpen: !prev.filterOpen }))}
+            className="flex items-center gap-2 bg-white border border-gray-300 hover:bg-gray-50 px-4 py-2 rounded-lg shadow-sm transition-all"
+          >
+            <Filter className="w-4 h-4 text-blue-600" />
+            <span className="text-blue-600 font-medium">Filters</span>
+            <ChevronDown className={`w-4 h-4 text-blue-600 transition-transform ${filters.filterOpen ? 'rotate-180' : 'rotate-0'}`} />
+          </button>
+        </div>
+
+        {/* Filter Inputs */}
+        {filters.filterOpen && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3 sm:gap-4 transition-all">
+            {/* Program */}
+            <MultiSelectProgram
+              label="Program"
+              selectedPrograms={filters.program}
+              programOptions={programOptions.map((p) => p.name)}
+              onProgramChange={handleProgramChange}
+              onProgramRemove={removeProgram}
+            />
+
+            {/* Semester */}
+            <CustomSelect
+              label="Semester"
+              value={filters.semester}
+              onChange={(e) => {
+                const semesterName = e.target.value;
+                setFilters((prev) => ({ ...prev, semester: semesterName, gradeDivisionId: [] }));
+                if (semesterName && selectedProgramId) {
+                  const program = programOptions.find((p) => p.id === selectedProgramId);
+                  const semesterAllocation = program?.allocations.find((a) => a.semester?.name === semesterName);
+                  if (semesterAllocation) {
+                    setSelectedSemesterId(semesterAllocation.semester_id);
+                    setSelectedAcademicYearId(semesterAllocation.academic_year_id);
+                  }
+                } else {
+                  setSelectedSemesterId(null);
+                  setSelectedAcademicYearId(null);
+                }
+                setSubjectOptions([]);
+              }}
+              options={semesterOptions}
+              placeholder="Select Semester"
+              disabled={filters.program.length === 0}
+            />
+
+            {/* Subject (Paper) */}
+            <CustomSelect
+              label="Paper"
+              value={filters.gradeDivisionId[0] || ""}
+              onChange={(e) => {
+                const subjectObj = subjectOptions.find((s) => s.name === e.target.value);
+                setSelectedSubjectId(subjectObj ? subjectObj.id : null);
+                setFilters((prev) => ({
+                  ...prev,
+                  gradeDivisionId: e.target.value ? [e.target.value] : [],
+                  chapter: "",
+                  topic: "",
+                }));
+                setChapterOptions([]);
+                setTopicOptions([]);
+              }}
+              options={subjectOptions.map((s) => s.name)}
+              placeholder="Select Paper"
+            />
+
+            {/* Module */}
+            <CustomSelect
+              label="Module"
+              value={filters.chapter}
+              onChange={(e) => {
+                const chapterName = e.target.value;
+                const chapterObj = chapterOptions.find((c) => c.module_name === chapterName);
+                setSelectedChapter(chapterObj || null);
+                setFilters((prev) => ({ ...prev, chapter: chapterName, topic: "" }));
+                const units = chapterObj?.units || [];
+                setTopicOptions(units.map((u) => ({ unit_id: u.unit_id, unit_name: u.unit_name })));
+              }}
+              options={chapterOptions.map((c) => c.module_name)}
+              placeholder="Select Module"
+              loading={loading.chapters}
+              disabled={chapterOptions.length === 0}
+            />
+
+            {/* Unit */}
+            <CustomSelect
+              label="Unit"
+              value={filters.topic}
+              onChange={(e) => setFilters((prev) => ({ ...prev, topic: e.target.value }))}
+              options={topicOptions.map((t) => t.unit_name)}
+              placeholder="Select Unit"
+              disabled={topicOptions.length === 0}
+            />
+          </div>
         )}
       </div>
 
-      {showPdfModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 animate-fade-in">
-          <div className="bg-white rounded-xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
-            {/* Modal Header */}
-            <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-4 flex justify-between items-center">
-              <h3 className="text-xl font-bold text-white">Topic 1.1: Basics</h3>
-              <button
-                onClick={closePdfModal}
-                className="text-white hover:text-gray-200 transition-colors"
-              >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
+      {/* Results Section */}
+      <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-100">
+        <h3 className="text-xl font-bold text-gray-800 mb-6 flex items-center gap-2">
+          {filters.topic ? `Projects for ${filters.topic}` : "Select a Unit to view projects"}
+          {projects.length > 0 && <span className="bg-blue-100 text-blue-700 text-sm px-2 py-0.5 rounded-full">{projects.length}</span>}
+        </h3>
 
-            {/* Modal Content */}
-            <div className="p-6">
-              <div className="border-2 border-dashed border-gray-300 rounded-lg h-96 flex items-center justify-center bg-gray-50 mb-4">
-                <div className="text-center">
-                  <svg className="w-16 h-16 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                  </svg>
-                  <p className="text-gray-600 font-medium">PDF Document Preview</p>
-                  <p className="text-gray-500 text-sm mt-2">Testing-1_Study_Materials.pdf</p>
+        {loading.content ? (
+          <div className="flex flex-col items-center justify-center py-12">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mb-2"></div>
+            <p className="text-gray-500">Loading projects...</p>
+          </div>
+        ) : projects.length > 0 ? (
+          <div className="grid grid-cols-1 gap-4">
+            {projects.map((project) => (
+              <div key={project.project_id} className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden">
+                {/* Status Indicator Strip */}
+                <div className={`absolute left-0 top-0 bottom-0 w-1 ${project.approval_status === 'APPROVED' ? 'bg-green-500' :
+                  project.approval_status === 'REJECTED' ? 'bg-red-500' : 'bg-orange-500'
+                  }`}></div>
+
+                <div className="flex flex-col sm:flex-row justify-between gap-4 pl-3">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-1">
+                      <h4 className="text-lg font-bold text-gray-800">{project.project_title}</h4>
+                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium border ${project.approval_status === 'APPROVED' ? 'bg-green-50 text-green-700 border-green-200' :
+                        project.approval_status === 'REJECTED' ? 'bg-red-50 text-red-700 border-red-200' : 'bg-orange-50 text-orange-700 border-orange-200'
+                        }`}>
+                        {project.approval_status || 'PENDING'}
+                      </span>
+                    </div>
+                    <p className="text-gray-600 mb-2">{project.project_description}</p>
+
+                    <div className="flex flex-wrap gap-4 text-sm text-gray-500">
+                      <div className="flex items-center gap-1">
+                        <span className="font-semibold text-gray-700">Student:</span>
+                        <span>{project.student_name || `ID: ${project.student_id}`}</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <a href={project.project_link} target="_blank" rel="noreferrer" className="flex items-center gap-1 text-blue-600 hover:text-blue-800 hover:underline">
+                          <Eye className="w-4 h-4" /> View Project Link
+                        </a>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Action Buttons */}
+                  <div className="flex flex-row sm:flex-col gap-2 justify-end sm:border-l sm:pl-4 border-gray-100">
+                    {(project.approval_status === 'PENDING' || !project.approval_status) && (
+                      <>
+                        <button
+                          onClick={() => handleApprove(project.project_id)}
+                          disabled={processingId === project.project_id}
+                          className="flex items-center justify-center gap-2 bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 transition-colors text-sm font-medium disabled:opacity-50"
+                        >
+                          <Check className="w-4 h-4" /> Approve
+                        </button>
+                        <button
+                          onClick={() => handleReject(project.project_id)}
+                          disabled={processingId === project.project_id}
+                          className="flex items-center justify-center gap-2 bg-red-50 text-red-600 border border-red-200 px-4 py-2 rounded-md hover:bg-red-100 transition-colors text-sm font-medium disabled:opacity-50"
+                        >
+                          <X className="w-4 h-4" /> Reject
+                        </button>
+                      </>
+                    )}
+                    {project.approval_status !== 'PENDING' && project.approval_status && (
+                      <div className="text-sm text-gray-400 italic text-center px-4">
+                        Action taken
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
-
-              {/* Action Buttons */}
-              <div className="flex gap-3 justify-end">
-                <button className="bg-gray-600 hover:bg-gray-700 text-white px-6 py-2 rounded-lg font-medium transition-colors">
-                  Download PDF
-                </button>
-                <button className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-medium transition-colors">
-                  Print
-                </button>
-              </div>
-            </div>
+            ))}
           </div>
-        </div>
+        ) : (
+          <div className="text-center py-12 bg-gray-50 rounded-lg border border-dashed border-gray-300">
+            <FileText className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+            <h3 className="text-gray-500 font-medium">{filters.topic ? "No projects found" : "Select a Unit to start"}</h3>
+            <p className="text-gray-400 text-sm mt-1">Select Program, Semester, Paper, Module and Unit from the filters.</p>
+          </div>
+        )}
+      </div>
+
+      {showAlert && (
+        <SweetAlert
+          {...alertConfig}
+          onConfirm={alertConfig.onConfirm}
+          onCancel={alertConfig.onCancel}
+        />
       )}
 
+      {/* Approve Confirmation Alert */}
+      {showApproveAlert && (
+        <SweetAlert
+          warning
+          showCancel
+          confirmBtnText="Yes, Approve"
+          cancelBtnText="Cancel"
+          confirmBtnCssClass="btn-confirm"
+          cancelBtnCssClass="btn-cancel"
+          title="Approve Project?"
+          onConfirm={handleConfirmApprove}
+          onCancel={() => {
+            setShowApproveAlert(false);
+            setProjectToAction(null);
+          }}
+        >
+          Are you sure you want to approve this project? This action will mark it as approved.
+        </SweetAlert>
+      )}
+
+      {/* Reject Confirmation Alert */}
+      {showRejectAlert && (
+        <SweetAlert
+          warning
+          showCancel
+          confirmBtnText="Yes, Reject"
+          cancelBtnText="Cancel"
+          confirmBtnCssClass="btn-confirm"
+          cancelBtnCssClass="btn-cancel"
+          title="Reject Project?"
+          onConfirm={handleConfirmReject}
+          onCancel={() => {
+            setShowRejectAlert(false);
+            setProjectToAction(null);
+          }}
+        >
+          Are you sure you want to reject this project? This action will mark it as rejected.
+        </SweetAlert>
+      )}
+
+      {/* Success Alert */}
+      {showSuccessAlert && (
+        <SweetAlert
+          success
+          title="Success!"
+          onConfirm={() => setShowSuccessAlert(false)}
+          confirmBtnText="OK"
+          confirmBtnCssClass="btn-confirm"
+        >
+          {successMessage}
+        </SweetAlert>
+      )}
     </div>
   );
 };

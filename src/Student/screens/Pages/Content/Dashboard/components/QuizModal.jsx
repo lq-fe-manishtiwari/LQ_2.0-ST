@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { X, CheckCircle, Clock, AlertCircle, Timer } from 'lucide-react';
 import { ContentService } from '../../Service/Content.service';
+import SweetAlert from 'react-bootstrap-sweetalert';
 
-export default function QuizModal({ isOpen, onClose, quizId, colorCode, contentId }) {
+export default function QuizModal({ isOpen, onClose, onShowHistory, quizId, colorCode, contentId, studentId: propStudentId }) {
     const [quiz, setQuiz] = useState(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
@@ -17,7 +18,11 @@ export default function QuizModal({ isOpen, onClose, quizId, colorCode, contentI
     const [saveError, setSaveError] = useState(null);
     const [timeExpired, setTimeExpired] = useState(false);
     const [studentId, setStudentId] = useState(null);
-    const [popup, setPopup] = useState({ show: false, type: '', message: '' });
+    const [showSuccessAlert, setShowSuccessAlert] = useState(false);
+    const [showErrorAlert, setShowErrorAlert] = useState(false);
+    const [alertTitle, setAlertTitle] = useState('');
+    const [alertMessage, setAlertMessage] = useState('');
+
     const timerRef = useRef(null);
 
     // Fetch student profile
@@ -148,7 +153,9 @@ export default function QuizModal({ isOpen, onClose, quizId, colorCode, contentI
             setSaving(false);
             setSaveError(null);
             setTimeExpired(false);
-            setPopup({ show: false, type: '', message: '' });
+            setShowSuccessAlert(false);
+            setShowErrorAlert(false);
+
         } else if (!isOpen) {
             // Clean up timer when modal closes
             stopTimer();
@@ -193,64 +200,67 @@ export default function QuizModal({ isOpen, onClose, quizId, colorCode, contentI
     const handleSubmit = async (isAutoSubmit = false) => {
         if (!quiz || !quiz.questions) return;
         
+        // If manually submitting, prevent auto-submit from running
+        if (!isAutoSubmit) {
+            setTimeExpired(false);
+        }
+        
         // Stop the timer
         stopTimer();
 
         // Calculate score
         let correctAnswers = 0;
-        let totalWeightage = 0;
-        let earnedWeightage = 0;
+        const totalQuestions = quiz.questions.length;
 
         quiz.questions.forEach((question, index) => {
             const selectedOptionIndex = answers[index];
-            const selectedOption = selectedOptionIndex !== null ? question.options[selectedOptionIndex] : null;
-            const weightage = question.default_weightage || 1;
             
-            totalWeightage += weightage;
+            // Convert correct_answer from string to 0-based index
+            const correctAnswerIndex = parseInt(question.correct_answer) - 1;
             
-            if (selectedOption === question.correct_answer) {
+            if (selectedOptionIndex !== null && selectedOptionIndex === correctAnswerIndex) {
                 correctAnswers++;
-                earnedWeightage += weightage;
             }
         });
 
-        // Calculate percentage based on weightage
-        const calculatedScore = totalWeightage > 0 ? Math.round((earnedWeightage / totalWeightage) * 100) : 0;
+        // Set raw score (number of correct answers)
+        setScore(correctAnswers);
         
         // Calculate time taken in seconds
         const timeTaken = quizStartTime ? Math.floor((new Date() - quizStartTime) / 1000) : 0;
         
-        setScore(calculatedScore);
         setSubmitted(true);
 
-        // Save quiz result to backend
-        await saveQuizResult(earnedWeightage, totalWeightage, timeTaken, isAutoSubmit);
+        // Save quiz result to backend - send raw score (correct answers count)
+        await saveQuizResult(correctAnswers, totalQuestions, timeTaken, isAutoSubmit);
     };
 
-    // Popup functions
-    const showPopup = (type, message) => {
-        setPopup({ show: true, type, message });
-    };
-
-    const closePopup = () => {
-        setPopup({ show: false, type: '', message: '' });
+    // SweetAlert functions
+    const showSweetAlert = (type, title, message) => {
+        setAlertTitle(title);
+        setAlertMessage(message);
+        if (type === 'success') {
+            setShowSuccessAlert(true);
+        } else {
+            setShowErrorAlert(true);
+        }
     };
 
     // Save quiz result function
-    const saveQuizResult = async (earnedScore, totalMarks, timeTaken, isAutoSubmit = false) => {
+    const saveQuizResult = async (correctAnswers, totalQuestions, timeTaken, isAutoSubmit = false) => {
         console.log('Attempting to save quiz result:', {
             contentId,
             studentId,
             quizId,
-            earnedScore,
-            totalMarks,
+            correctAnswers,
+            totalQuestions,
             timeTaken
         });
 
         if (!contentId || !studentId) {
             const errorMsg = `Missing required data - contentId: ${contentId}, studentId: ${studentId}`;
             console.error(errorMsg);
-            showPopup('error', 'Unable to save quiz result. Missing required information.');
+            showSweetAlert('error', 'Error', 'Unable to save quiz result. Missing required information.');
             return;
         }
 
@@ -262,9 +272,10 @@ export default function QuizModal({ isOpen, onClose, quizId, colorCode, contentI
                 content_id: contentId,
                 quiz_id: quizId,
                 student_id: studentId,
-                score: earnedScore,
-                total_marks: totalMarks,
-                time_taken: timeTaken
+                score: correctAnswers,
+                total_marks: totalQuestions,
+                time_taken: timeTaken,
+                completed: true
             };
 
             const response = await ContentService.saveQuizResult(resultData);
@@ -272,9 +283,9 @@ export default function QuizModal({ isOpen, onClose, quizId, colorCode, contentI
             if (response.success) {
                 // Show appropriate success message
                 if (isAutoSubmit) {
-                    showPopup('success', 'Time up! Your response has been submitted successfully.');
+                    showSweetAlert('success', 'Time Up!', 'Your response has been submitted successfully.');
                 } else {
-                    showPopup('success', 'Quiz result saved successfully!');
+                    showSweetAlert('success', 'Success', 'Quiz submitted successfully!');
                 }
             } else {
                 throw new Error('Failed to save quiz result');
@@ -283,9 +294,9 @@ export default function QuizModal({ isOpen, onClose, quizId, colorCode, contentI
             console.error('Error saving quiz result:', error);
             setSaveError('Failed to save quiz result. Please try again.');
             if (isAutoSubmit) {
-                showPopup('error', 'Time up! Error saving your response. Please contact support.');
+                showSweetAlert('error', 'Time Up!', 'Error saving your response. Please contact support.');
             } else {
-                showPopup('error', 'Error: Failed to save quiz result. Please contact support.');
+                showSweetAlert('error', 'Error', 'Failed to save quiz result. Please contact support.');
             }
         } finally {
             setSaving(false);
@@ -435,13 +446,14 @@ export default function QuizModal({ isOpen, onClose, quizId, colorCode, contentI
                             <CheckCircle className="w-16 h-16 mx-auto mb-4 text-green-500" />
                             <h3 className="text-2xl font-bold text-gray-800 mb-2">Quiz Completed!</h3>
                             <p className="text-xl text-gray-600 mb-6">
-                                Your Score: <span className="font-bold" style={{ color: colorCode }}>{score}%</span>
+                                Your Score: <span className="font-bold" style={{ color: colorCode }}>{score}</span>
                             </p>
                             <div className="bg-gray-50 rounded-lg p-4 mb-6">
                                 <p className="text-gray-700">
                                     You answered {Object.values(answers).filter((answer, index) => {
-                                        const selectedOption = answer !== null ? quiz.questions[index]?.options[answer] : null;
-                                        return selectedOption === quiz.questions[index]?.correct_answer;
+                                        if (answer === null) return false;
+                                        const correctAnswerIndex = parseInt(quiz.questions[index]?.correct_answer) - 1;
+                                        return answer === correctAnswerIndex;
                                     }).length} out of {quiz.questions?.length || 0} questions correctly.
                                 </p>
                                 {quiz.duration && (
@@ -476,7 +488,7 @@ export default function QuizModal({ isOpen, onClose, quizId, colorCode, contentI
                                 </button>
                             ) : (
                                 <button
-                                    onClick={handleSubmit}
+                                    onClick={() => handleSubmit(false)}
                                     disabled={!allQuestionsAnswered || saving}
                                     className="px-6 py-2 text-white rounded-lg hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
                                     style={{ backgroundColor: colorCode }}
@@ -502,32 +514,28 @@ export default function QuizModal({ isOpen, onClose, quizId, colorCode, contentI
                 )}
             </div>
 
-            {/* Custom Popup */}
-            {popup.show && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-                    <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
-                        <div className="flex items-center mb-4">
-                            {popup.type === 'success' ? (
-                                <CheckCircle className="w-6 h-6 text-green-500 mr-3" />
-                            ) : (
-                                <AlertCircle className="w-6 h-6 text-red-500 mr-3" />
-                            )}
-                            <h3 className="text-lg font-semibold text-gray-800">
-                                {popup.type === 'success' ? 'Success' : 'Error'}
-                            </h3>
-                        </div>
-                        <p className="text-gray-600 mb-6">{popup.message}</p>
-                        <div className="flex justify-end">
-                            <button
-                                onClick={closePopup}
-                                className="px-4 py-2 text-white rounded-lg hover:opacity-90 transition-colors"
-                                style={{ backgroundColor: colorCode }}
-                            >
-                                OK
-                            </button>
-                        </div>
-                    </div>
-                </div>
+            {/* Success Alert */}
+            {showSuccessAlert && (
+                <SweetAlert
+                    success
+                    title={alertTitle}
+                    onConfirm={() => setShowSuccessAlert(false)}
+                    confirmBtnStyle={{ backgroundColor: colorCode, color: 'white' }}
+                >
+                    {alertMessage}
+                </SweetAlert>
+            )}
+
+            {/* Error Alert */}
+            {showErrorAlert && (
+                <SweetAlert
+                    error
+                    title={alertTitle}
+                    onConfirm={() => setShowErrorAlert(false)}
+                    confirmBtnStyle={{ backgroundColor: colorCode }}
+                >
+                    {alertMessage}
+                </SweetAlert>
             )}
         </div>
     );
