@@ -110,15 +110,29 @@ export default function QuizDashboard() {
   const [alertMessage, setAlertMessage] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
 
-  const [filters, setFilters] = useState({
-    program: "",
-    semester: "",
-    paper: "",
-    module: "",
-    unit: "",
+  const [filters, setFilters] = useState(() => {
+    // Load filters from localStorage on initialization
+    const savedFilters = localStorage.getItem('quizDashboardFilters');
+    if (savedFilters) {
+      try {
+        return JSON.parse(savedFilters);
+      } catch (e) {
+        console.error('Error parsing saved filters:', e);
+      }
+    }
+    return {
+      program: "",
+      semester: "",
+      paper: "",
+      module: "",
+      unit: "",
+    };
   });
 
-  // Additional state for tracking selections
+  // Save filters to localStorage whenever they change
+  useEffect(() => {
+    localStorage.setItem('quizDashboardFilters', JSON.stringify(filters));
+  }, [filters]);
   const [selectedProgramId, setSelectedProgramId] = useState(null);
   const [selectedSubjectId, setSelectedSubjectId] = useState(null);
   const [selectedAcademicYearId, setSelectedAcademicYearId] = useState(null);
@@ -232,7 +246,7 @@ export default function QuizDashboard() {
           setPrograms(uniquePrograms);
           console.log('Formatted programs:', uniquePrograms);
 
-          // Auto-select first program
+          // Auto-select first program only if no saved filters
           if (uniquePrograms.length > 0 && !filters.program) {
             setFilters(prev => ({ ...prev, program: uniquePrograms[0].value }));
           }
@@ -266,7 +280,7 @@ export default function QuizDashboard() {
       const formattedSemesters = semesters.map(sem => ({ label: sem, value: sem }));
       setSemesters(formattedSemesters);
 
-      // Auto-select first semester
+      // Auto-select first semester only if no saved filters
       if (formattedSemesters.length > 0 && !filters.semester) {
         setFilters(prev => ({ ...prev, semester: formattedSemesters[0].value }));
       }
@@ -307,7 +321,7 @@ export default function QuizDashboard() {
               const unique = Array.from(new Map(subjects.map(s => [s.label, s])).values());
               setPapers(unique);
 
-              // Auto-select first paper
+              // Auto-select first paper only if no saved filters
               if (unique.length > 0 && !filters.paper) {
                 setFilters(prev => ({ ...prev, paper: unique[0].value }));
               }
@@ -350,8 +364,8 @@ export default function QuizDashboard() {
           setUnits([]);
           setFilters(prev => ({ ...prev, module: "", unit: "" }));
 
-          // Auto-select first module if only one available
-          if (formatted.length === 1) {
+          // Auto-select first module if only one available and no saved filters
+          if (formatted.length === 1 && !filters.module) {
             setFilters(prev => ({ ...prev, module: formatted[0].value }));
           }
         } else {
