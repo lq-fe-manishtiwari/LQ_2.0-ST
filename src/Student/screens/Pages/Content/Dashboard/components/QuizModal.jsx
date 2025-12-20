@@ -3,7 +3,7 @@ import { X, CheckCircle, Clock, AlertCircle, Timer } from 'lucide-react';
 import { ContentService } from '../../Service/Content.service';
 import SweetAlert from 'react-bootstrap-sweetalert';
 
-export default function QuizModal({ isOpen, onClose, onShowHistory, quizId, colorCode, contentId, studentId: propStudentId }) {
+export default function QuizModal({ isOpen, onClose, onShowHistory, quizId, colorCode, contentId, studentId: propStudentId, academicYearId, semesterId }) {
     const [quiz, setQuiz] = useState(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
@@ -31,7 +31,7 @@ export default function QuizModal({ isOpen, onClose, onShowHistory, quizId, colo
             console.log('Fetching student profile...');
             const response = await ContentService.getProfile();
             console.log('Profile response:', response);
-            
+
             if (response.success && response.data) {
                 const extractedStudentId = response.data.student_id || response.data.id;
                 console.log('Extracted student ID:', extractedStudentId);
@@ -70,16 +70,16 @@ export default function QuizModal({ isOpen, onClose, onShowHistory, quizId, colo
                         default_weightage: q.default_weightage || 1
                     })) || []
                 };
-                
+
                 setQuiz(processedQuiz);
-                
+
                 // Initialize answers object
                 const initialAnswers = {};
                 processedQuiz.questions.forEach((_, index) => {
                     initialAnswers[index] = null;
                 });
                 setAnswers(initialAnswers);
-                
+
                 // Initialize timer and set start time
                 if (response.data.duration) {
                     setTimeRemaining(response.data.duration * 60); // Convert minutes to seconds
@@ -100,7 +100,7 @@ export default function QuizModal({ isOpen, onClose, onShowHistory, quizId, colo
     // Timer functions
     const startTimer = () => {
         if (timerStarted) return;
-        
+
         setTimerStarted(true);
         timerRef.current = setInterval(() => {
             setTimeRemaining(prev => {
@@ -110,12 +110,12 @@ export default function QuizModal({ isOpen, onClose, onShowHistory, quizId, colo
                     timerRef.current = null;
                     setTimerStarted(false);
                     setTimeExpired(true);
-                    
+
                     // Use setTimeout to ensure state updates are processed
                     setTimeout(() => {
                         handleSubmit(true); // Pass true to indicate auto-submit
                     }, 100);
-                    
+
                     return 0;
                 }
                 return prev - 1;
@@ -160,7 +160,7 @@ export default function QuizModal({ isOpen, onClose, onShowHistory, quizId, colo
             // Clean up timer when modal closes
             stopTimer();
         }
-        
+
         // Cleanup timer on unmount
         return () => {
             stopTimer();
@@ -199,12 +199,12 @@ export default function QuizModal({ isOpen, onClose, onShowHistory, quizId, colo
     // Submit quiz
     const handleSubmit = async (isAutoSubmit = false) => {
         if (!quiz || !quiz.questions) return;
-        
+
         // If manually submitting, prevent auto-submit from running
         if (!isAutoSubmit) {
             setTimeExpired(false);
         }
-        
+
         // Stop the timer
         stopTimer();
 
@@ -214,10 +214,10 @@ export default function QuizModal({ isOpen, onClose, onShowHistory, quizId, colo
 
         quiz.questions.forEach((question, index) => {
             const selectedOptionIndex = answers[index];
-            
+
             // Convert correct_answer from string to 0-based index
             const correctAnswerIndex = parseInt(question.correct_answer) - 1;
-            
+
             if (selectedOptionIndex !== null && selectedOptionIndex === correctAnswerIndex) {
                 correctAnswers++;
             }
@@ -225,10 +225,10 @@ export default function QuizModal({ isOpen, onClose, onShowHistory, quizId, colo
 
         // Set raw score (number of correct answers)
         setScore(correctAnswers);
-        
+
         // Calculate time taken in seconds
         const timeTaken = quizStartTime ? Math.floor((new Date() - quizStartTime) / 1000) : 0;
-        
+
         setSubmitted(true);
 
         // Save quiz result to backend - send raw score (correct answers count)
@@ -275,11 +275,13 @@ export default function QuizModal({ isOpen, onClose, onShowHistory, quizId, colo
                 score: correctAnswers,
                 total_marks: totalQuestions,
                 time_taken: timeTaken,
-                completed: true
+                completed: true,
+                academic_year_id: academicYearId,
+                semester_id: semesterId
             };
 
             const response = await ContentService.saveQuizResult(resultData);
-            
+
             if (response.success) {
                 // Show appropriate success message
                 if (isAutoSubmit) {
@@ -321,7 +323,7 @@ export default function QuizModal({ isOpen, onClose, onShowHistory, quizId, colo
                             <p className="text-gray-600 mt-1">{quiz.description}</p>
                         )}
                     </div>
-                    
+
                     <div className="flex items-center gap-4">
                         {/* Timer Display */}
                         {quiz && quiz.duration && !submitted && (
@@ -332,7 +334,7 @@ export default function QuizModal({ isOpen, onClose, onShowHistory, quizId, colo
                                 </span>
                             </div>
                         )}
-                        
+
                         <button
                             onClick={onClose}
                             className="p-2 hover:bg-gray-100 rounded-full transition-colors"
@@ -404,11 +406,10 @@ export default function QuizModal({ isOpen, onClose, onShowHistory, quizId, colo
                                             <button
                                                 key={optionIndex}
                                                 onClick={() => handleAnswerSelect(currentQuestionIndex, optionIndex)}
-                                                className={`w-full p-4 text-left rounded-lg border-2 transition-all ${
-                                                    answers[currentQuestionIndex] === optionIndex
+                                                className={`w-full p-4 text-left rounded-lg border-2 transition-all ${answers[currentQuestionIndex] === optionIndex
                                                         ? 'border-current bg-opacity-10'
                                                         : 'border-gray-200 hover:border-gray-300'
-                                                }`}
+                                                    }`}
                                                 style={{
                                                     borderColor: answers[currentQuestionIndex] === optionIndex ? colorCode : undefined,
                                                     backgroundColor: answers[currentQuestionIndex] === optionIndex ? `${colorCode}10` : undefined
@@ -416,11 +417,10 @@ export default function QuizModal({ isOpen, onClose, onShowHistory, quizId, colo
                                             >
                                                 <div className="flex items-center">
                                                     <div
-                                                        className={`w-4 h-4 rounded-full border-2 mr-3 ${
-                                                            answers[currentQuestionIndex] === optionIndex
+                                                        className={`w-4 h-4 rounded-full border-2 mr-3 ${answers[currentQuestionIndex] === optionIndex
                                                                 ? 'border-current'
                                                                 : 'border-gray-300'
-                                                        }`}
+                                                            }`}
                                                         style={{
                                                             borderColor: answers[currentQuestionIndex] === optionIndex ? colorCode : undefined,
                                                             backgroundColor: answers[currentQuestionIndex] === optionIndex ? colorCode : undefined

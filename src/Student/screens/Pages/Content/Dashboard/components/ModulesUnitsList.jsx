@@ -6,7 +6,7 @@ import QuizModal from './QuizModal';
 import QuizHistoryModal from './QuizHistoryModal';
 
 
-export default function ModulesUnitsList({ modules, colorCode }) {
+export default function ModulesUnitsList({ modules, colorCode, academicYearId, semesterId }) {
     const [expandedModuleId, setExpandedModuleId] = useState(null);
     const [selectedUnitId, setSelectedUnitId] = useState(null);
     const [unitContent, setUnitContent] = useState(null);
@@ -604,6 +604,8 @@ export default function ModulesUnitsList({ modules, colorCode }) {
                 quizId={quizModal.quizId}
                 colorCode={colorCode}
                 contentId={quizModal.contentId}
+                academicYearId={academicYearId}
+                semesterId={semesterId}
             />
 
             {/* Quiz History Modal */}
