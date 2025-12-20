@@ -229,7 +229,6 @@ export const PMSAPI = import.meta.env.VITE_API_URL_PMS;
 export const PMSNEWAPI = import.meta.env.VITE_API_URL_PMSNEW;
 export const COREAPI = import.meta.env.VITE_API_CORE;
 export const ContentAPI = import.meta.env.VITE_API_URL_Content;
-export const HRMAPI = import.meta.env.VITE_API_URL_HRM;
 
 // Legacy support - defaults to TeacherLoginAPI for backward compatibility
 export const DevAPI = TeacherLoginAPI;
