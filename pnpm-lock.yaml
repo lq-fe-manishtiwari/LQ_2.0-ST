@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 lockfileVersion: '9.0'
 
 settings:
@@ -4906,3 +4907,5 @@ snapshots:
       tiny-case: 1.0.3
       toposort: 2.0.2
       type-fest: 2.19.0
+=======
+>>>>>>> f4681c83d6e68dad1a33912972dcd8228b1d6b18
