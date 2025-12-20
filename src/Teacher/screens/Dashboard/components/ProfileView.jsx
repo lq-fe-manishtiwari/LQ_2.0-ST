@@ -23,9 +23,12 @@ const ProfileView = ({
   designation,
   profileImage,
   allocatedPrograms,
+  allocatedMentorClasses,
   programsLoading,
   programsError,
   fetchAllocatedPrograms,
+  fetchMentoringStudents,
+  fetchAllocatedMentorClasses,
   expandedProgram,
   setExpandedProgram,
   studentsData,
@@ -109,9 +112,12 @@ const ProfileView = ({
         return (
           <AllocatedPrograms
             allocatedPrograms={allocatedPrograms}
+            allocatedMentorClasses={allocatedMentorClasses}
             programsLoading={programsLoading}
             programsError={programsError}
             fetchAllocatedPrograms={fetchAllocatedPrograms}
+            fetchMentoringStudents={fetchMentoringStudents}
+            fetchAllocatedMentorClasses={fetchAllocatedMentorClasses}
             expandedProgram={expandedProgram}
             setExpandedProgram={setExpandedProgram}
             studentsData={studentsData}

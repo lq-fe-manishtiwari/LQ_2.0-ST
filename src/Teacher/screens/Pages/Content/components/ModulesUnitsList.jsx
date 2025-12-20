@@ -1,20 +1,39 @@
-import React, { useState } from 'react';
-import { ChevronDown, ChevronRight, FileText, BookOpen, Loader2, Play, File, Eye, X, ExternalLink } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { ChevronDown, ChevronRight, FileText, BookOpen, Loader2, Play, File, Eye, X, ExternalLink, Clock } from 'lucide-react';
 import { ContentApiService } from '../services/contentApi';
 
 export default function ModulesUnitsList({ modules, colorCode }) {
     const [expandedModuleId, setExpandedModuleId] = useState(null);
     const [selectedUnitId, setSelectedUnitId] = useState(null);
     const [unitContent, setUnitContent] = useState(null);
+    const [moduleContent, setModuleContent] = useState(null);
     const [loadingContent, setLoadingContent] = useState(false);
+    const [loadingModule, setLoadingModule] = useState(false);
     const [contentError, setContentError] = useState(null);
     const [previewModal, setPreviewModal] = useState({ isOpen: false, content: null });
+    const [readingTimer, setReadingTimer] = useState(0);
 
-    const toggleModule = (moduleId) => {
+    const toggleModule = async (moduleId) => {
         if (expandedModuleId === moduleId) {
             setExpandedModuleId(null);
+            setModuleContent(null);
         } else {
             setExpandedModuleId(moduleId);
+            setLoadingModule(true);
+            setModuleContent(null);
+            setUnitContent(null);
+            setSelectedUnitId(null);
+
+            try {
+                const response = await ContentApiService.getApprovedModuleLevelContent(moduleId);
+                if (response.success) {
+                    setModuleContent(response.data);
+                }
+            } catch (error) {
+                console.error('Error fetching module content:', error);
+            } finally {
+                setLoadingModule(false);
+            }
         }
     };
 
@@ -47,15 +66,16 @@ export default function ModulesUnitsList({ modules, colorCode }) {
 
     const handleViewContent = (content) => {
         const link = content.content_link;
-        
+
         // Check if it's an external link (starts with http/https)
         if (link && (link.startsWith('http://') || link.startsWith('https://'))) {
             // Check if it's a file that can be previewed
             const fileExtension = link.split('.').pop()?.toLowerCase();
             const previewableTypes = ['pdf', 'jpg', 'jpeg', 'png', 'gif', 'mp4', 'webm', 'ogg'];
-            
+
             if (previewableTypes.includes(fileExtension)) {
-                // Open in preview modal
+                // Reset timer and open in preview modal
+                setReadingTimer(0);
                 setPreviewModal({ isOpen: true, content });
             } else {
                 // Open external link in new tab
@@ -69,6 +89,30 @@ export default function ModulesUnitsList({ modules, colorCode }) {
 
     const closePreviewModal = () => {
         setPreviewModal({ isOpen: false, content: null });
+        setReadingTimer(0);
+    };
+
+    // Timer effect for reading time
+    useEffect(() => {
+        let interval;
+        if (previewModal.isOpen) {
+            interval = setInterval(() => {
+                setReadingTimer(prev => prev + 1);
+            }, 1000);
+        }
+        return () => clearInterval(interval);
+    }, [previewModal.isOpen]);
+
+    const formatTime = (seconds) => {
+        const mins = Math.floor(seconds / 60);
+        const secs = seconds % 60;
+        return `${mins}:${secs.toString().padStart(2, '0')}`;
+    };
+
+    const formatReadingTime = (seconds) => {
+        if (!seconds) return null;
+        const minutes = Math.round(seconds / 60);
+        return minutes > 0 ? `${minutes} min` : '< 1 min';
     };
 
     const renderPreviewContent = (content) => {
@@ -139,7 +183,7 @@ export default function ModulesUnitsList({ modules, colorCode }) {
         return (
             <div key={content.content_id || index} className="flex items-center justify-between gap-3 p-3 bg-gray-50 rounded-md border">
                 <div className="flex items-center gap-3 flex-1">
-                    <div 
+                    <div
                         className="p-2 rounded-full bg-white"
                         style={{ color: colorCode }}
                     >
@@ -227,24 +271,49 @@ export default function ModulesUnitsList({ modules, colorCode }) {
                             {/* Units List (Expanded Content) */}
                             {expandedModuleId === module.module_id && (
                                 <div className="bg-white p-4 animate-in slide-in-from-top-2 duration-200">
+                                    {/* Module Level Content */}
+                                    {loadingModule ? (
+                                        <div className="flex items-center gap-2 py-2 text-gray-500 mb-4">
+                                            <Loader2 className="w-4 h-4 animate-spin" />
+                                            <span className="text-sm">Loading module content...</span>
+                                        </div>
+                                    ) : moduleContent && moduleContent.length > 0 && (
+                                        <div className="mb-6 space-y-3">
+                                            <h4 className="font-semibold text-gray-800 text-sm flex items-center gap-2">
+                                                <div className="w-1 h-4 rounded-full" style={{ backgroundColor: colorCode }}></div>
+                                                Module Resources
+                                            </h4>
+                                            <div className="space-y-2 px-1">
+                                                {moduleContent.map((content, index) => renderContentItem(content, index))}
+                                            </div>
+                                            <div className="border-b border-gray-100 my-4"></div>
+                                        </div>
+                                    )}
+
+                                    {/* Units Header */}
+                                    {module.units && module.units.length > 0 && (
+                                        <h4 className="font-semibold text-gray-800 text-sm mb-3 flex items-center gap-2">
+                                            <div className="w-1 h-4 rounded-full" style={{ backgroundColor: colorCode }}></div>
+                                            Learning Units
+                                        </h4>
+                                    )}
+
                                     {module.units && module.units.length > 0 ? (
                                         <ul className="space-y-2">
                                             {module.units.map((unit, idx) => (
                                                 <li key={unit.unit_id || idx} className="space-y-2">
                                                     <div
                                                         onClick={() => handleUnitClick(unit.unit_id)}
-                                                        className={`flex items-center gap-3 p-3 rounded-md border transition-colors cursor-pointer group ${
-                                                            selectedUnitId === unit.unit_id 
-                                                                ? 'bg-blue-50 border-blue-200' 
+                                                        className={`flex items-center gap-3 p-3 rounded-md border transition-colors cursor-pointer group ${selectedUnitId === unit.unit_id
+                                                                ? 'bg-blue-50 border-blue-200'
                                                                 : 'hover:bg-gray-50 border-gray-100'
-                                                        }`}
+                                                            }`}
                                                     >
                                                         <div
-                                                            className={`p-2 rounded-full transition-colors ${
-                                                                selectedUnitId === unit.unit_id
+                                                            className={`p-2 rounded-full transition-colors ${selectedUnitId === unit.unit_id
                                                                     ? 'bg-white'
                                                                     : 'bg-gray-100 group-hover:bg-white'
-                                                            }`}
+                                                                }`}
                                                             style={{ color: colorCode }}
                                                         >
                                                             <FileText className="w-4 h-4" />
@@ -314,9 +383,21 @@ export default function ModulesUnitsList({ modules, colorCode }) {
                     <div className="relative w-full h-full max-w-7xl max-h-full m-4 bg-white rounded-lg overflow-hidden">
                         {/* Modal Header */}
                         <div className="flex items-center justify-between p-4 border-b bg-gray-50">
-                            <h3 className="text-lg font-semibold text-gray-800">
-                                {previewModal.content?.content_name || 'Content Preview'}
-                            </h3>
+                            <div className="flex items-center gap-4">
+                                <h3 className="text-lg font-semibold text-gray-800">
+                                    {previewModal.content?.content_name || 'Content Preview'}
+                                </h3>
+                                {previewModal.content?.average_reading_time_seconds && (
+                                    <div className="flex items-center gap-2 px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm">
+                                        <Clock className="w-4 h-4" />
+                                        <span>Est. {formatReadingTime(previewModal.content.average_reading_time_seconds)} read</span>
+                                    </div>
+                                )}
+                                <div className="flex items-center gap-2 px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm">
+                                    <Clock className="w-4 h-4" />
+                                    <span>Reading: {formatTime(readingTimer)}</span>
+                                </div>
+                            </div>
                             <div className="flex items-center gap-2">
                                 <button
                                     onClick={() => window.open(previewModal.content?.content_link, '_blank', 'noopener,noreferrer')}
@@ -327,9 +408,9 @@ export default function ModulesUnitsList({ modules, colorCode }) {
                                 </button>
                                 <button
                                     onClick={closePreviewModal}
-                                    className="p-2 hover:bg-gray-200 rounded-md transition-colors"
+                                    className="p-2 bg-blue-600 hover:bg-blue-700 rounded-full transition-colors"
                                 >
-                                    <X className="w-5 h-5 text-gray-600" />
+                                    <X className="w-5 h-5 text-white" />
                                 </button>
                             </div>
                         </div>

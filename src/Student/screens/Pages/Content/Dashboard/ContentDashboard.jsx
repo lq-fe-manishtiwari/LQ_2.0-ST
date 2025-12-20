@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Link } from 'react-router-dom';
-import { Search, Filter, ChevronDown } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
+import { Search, Filter, ChevronDown, Plus } from 'lucide-react';
 import ContentService from '../Service/Content.service';
 import { StudentService } from '../../Profile/Student.Service';
 import { useUserProfile } from '../../../../../contexts/UserProfileContext';
@@ -65,7 +65,9 @@ const CustomSelect = ({ label, value, onChange, options, placeholder, disabled =
 };
 
 export default function ContentDashboard() {
-  const { userProfile } = useUserProfile();
+  const navigate = useNavigate();
+  const { profile } = useUserProfile();
+  console.log('User profile in ContentDashboard:', profile);
   const [selectedPaperType, setSelectedPaperType] = useState('Vertical');
   const [selectedProgram, setSelectedProgram] = useState('');
   const [selectedBatch, setSelectedBatch] = useState('');
@@ -76,6 +78,7 @@ export default function ContentDashboard() {
   const [showFilters, setShowFilters] = useState(true);
   const dropdownRef = useRef(null);
   const [allSubjects, setAllSubjects] = useState([]);
+
 
   // State for API data
   const [allocatedPrograms, setAllocatedPrograms] = useState([]);
@@ -94,7 +97,7 @@ export default function ContentDashboard() {
       const typeInfo = subjectTypes[typeName].type_info;
       let color = 'bg-primary-600 text-gray-50 border-gray-200';
 
-      
+
       types.push({
         id: typeName,
         label: typeInfo.type_name,
@@ -132,28 +135,30 @@ export default function ContentDashboard() {
 
   // Fetch allocated programs when user profile is available
   useEffect(() => {
+    console.log('User profile changed:', profile);
     const fetchAllocatedPrograms = async () => {
-      if (!userProfile?.student_id) {
+      if (!profile?.student_id) {
         return;
       }
 
       setLoading(true);
       setError(null);
       try {
-        const response = await StudentService.getStudentHistory(userProfile.student_id);
-        
+        const response = await StudentService.getStudentHistory(profile.student_id);
+        console.log('Student history response:', response);
+
         if (Array.isArray(response)) {
           const processedPrograms = processAllocationsData(response);
           setAllocatedPrograms(processedPrograms);
-          
+
           if (processedPrograms.length > 0) {
             const firstProgram = processedPrograms[0];
             setSelectedProgram(firstProgram.id.toString());
-            
+
             if (firstProgram.batches.length > 0) {
               setSelectedBatch(firstProgram.batches[0].id.toString());
             }
-            
+
             if (firstProgram.semesters.length > 0) {
               setSelectedSemester(firstProgram.semesters[0].id.toString());
             }
@@ -168,21 +173,21 @@ export default function ContentDashboard() {
     };
 
     fetchAllocatedPrograms();
-  }, [userProfile?.student_id]);
+  }, [profile?.student_id]);
 
   // Process student history data
   const processAllocationsData = (students) => {
     const programsMap = new Map();
-    
+
     students.forEach(student => {
       const program = student.academic_year?.program;
       const batch = student.academic_year?.batch;
       const semester = student.semester;
-      
+
       if (!program) return;
-      
+
       const programId = program.program_id;
-      
+
       if (!programsMap.has(programId)) {
         programsMap.set(programId, {
           id: programId,
@@ -193,9 +198,9 @@ export default function ContentDashboard() {
           semesters: new Map()
         });
       }
-      
+
       const programData = programsMap.get(programId);
-      
+
       if (batch) {
         programData.batches.set(batch.batch_id, {
           id: batch.batch_id,
@@ -203,7 +208,7 @@ export default function ContentDashboard() {
           code: batch.batch_code
         });
       }
-      
+
       if (semester) {
         programData.semesters.set(student.semester_id, {
           id: student.semester_id,
@@ -212,7 +217,7 @@ export default function ContentDashboard() {
         });
       }
     });
-    
+
     return Array.from(programsMap.values()).map(program => ({
       ...program,
       batches: Array.from(program.batches.values()),
@@ -223,7 +228,7 @@ export default function ContentDashboard() {
   // Process subject types API response
   const processSubjectTypesData = (apiData) => {
     const processedTypes = {};
-    
+
     if (apiData.type_buttons) {
       apiData.type_buttons.forEach(typeButton => {
         const typeName = typeButton.type_name.toLowerCase();
@@ -234,7 +239,7 @@ export default function ContentDashboard() {
         };
       });
     }
-    
+
     return processedTypes;
   };
 
@@ -248,17 +253,17 @@ export default function ContentDashboard() {
           // Get academic year ID from selected program data
           const selectedProgramData = allocatedPrograms.find(p => p.id.toString() === selectedProgram);
           const academicYearId = selectedProgramData?.academicYearId;
-          
+
           if (!academicYearId) {
             throw new Error('Academic year ID not found for selected program');
           }
-          
+
           const response = await ContentService.getSubjectTypes(academicYearId, selectedSemester);
-          
+
           if (response.success && response.data) {
             const processedTypes = processSubjectTypesData(response.data);
             setSubjectTypes(processedTypes);
-            
+
             if (response.data.type_buttons && response.data.type_buttons.length > 0) {
               setSelectedPaperType(response.data.type_buttons[0].type_name);
             }
@@ -336,33 +341,47 @@ export default function ContentDashboard() {
       {/* Top Bar */}
       <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
         {/* Left side - Paper type buttons */}
-        <div className="flex gap-3 flex-wrap">
+        <div className="flex gap-2 sm:gap-3 flex-wrap w-full lg:w-auto overflow-x-auto pb-2 lg:pb-0 scrollbar-hide">
           {paperTypes.map((type) => (
             <button
               key={type.id}
               onClick={() => setSelectedPaperType(type.label)}
-              className={`px-4 py-2 rounded-xl font-medium transition-all duration-200 border ${
-                selectedPaperType === type.label 
-                  ? 'bg-blue-600 text-white border-blue-600 shadow-lg shadow-blue-200/50' 
-                  : 'bg-white text-gray-700 border-gray-200 hover:border-blue-300 hover:bg-gray-50'
-              }`}
+              className={`px-3 sm:px-4 py-2 rounded-xl font-medium transition-all duration-200 border whitespace-nowrap flex-shrink-0 text-sm sm:text-base ${selectedPaperType === type.label
+                ? 'bg-blue-600 text-white border-blue-600 shadow-lg shadow-blue-200/50'
+                : 'bg-white text-gray-700 border-gray-200 hover:border-blue-300 hover:bg-gray-50'
+                }`}
             >
               {type.label}
             </button>
           ))}
         </div>
 
-        {/* Right side - Filter */}
-        <button
-          onClick={() => setShowFilters(!showFilters)}
-          className="flex items-center gap-2 bg-white border border-gray-300 hover:bg-gray-50 px-4 py-3 rounded-xl shadow-sm transition-all w-full lg:w-auto justify-center"
-        >
-          <Filter className="w-5 h-5 text-blue-600" />
-          <span className="text-blue-600 font-medium">Filter</span>
-          <ChevronDown
-            className={`w-4 h-4 text-blue-600 transition-transform ${showFilters ? 'rotate-180' : 'rotate-0'}`}
-          />
-        </button>
+        {/* Right side - Filter and Add Project */}
+        <div className="grid grid-cols-2 lg:flex gap-3 w-full lg:w-auto">
+          <button
+            onClick={() => navigate('student-project', {
+              state: {
+                programId: selectedProgram,
+                semesterId: selectedSemester,
+                academicYearId: selectedProgramData?.academicYearId
+              }
+            })}
+            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white border border-transparent px-3 sm:px-4 py-2.5 sm:py-3 rounded-xl shadow-sm transition-all justify-center whitespace-nowrap text-sm sm:text-base"
+          >
+            {/* <Plus className="w-4 h-4 sm:w-5 sm:h-5" /> */}
+            <span className="font-medium">Projects</span>
+          </button>
+          <button
+            onClick={() => setShowFilters(!showFilters)}
+            className="flex items-center gap-2 bg-white border border-gray-300 hover:bg-gray-50 px-3 sm:px-4 py-2.5 sm:py-3 rounded-xl shadow-sm transition-all justify-center whitespace-nowrap text-sm sm:text-base"
+          >
+            <Filter className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600" />
+            <span className="text-blue-600 font-medium">Filter</span>
+            <ChevronDown
+              className={`w-4 h-4 text-blue-600 transition-transform ${showFilters ? 'rotate-180' : 'rotate-0'}`}
+            />
+          </button>
+        </div>
       </div>
 
       {/* Filter Row */}
@@ -371,7 +390,7 @@ export default function ContentDashboard() {
           <CustomSelect
             label="Program"
             value={selectedProgramData?.name || ''}
-            onChange={() => {}}
+            onChange={() => { }}
             options={[]}
             placeholder="select program"
             disabled={true}
@@ -379,7 +398,7 @@ export default function ContentDashboard() {
           <CustomSelect
             label="Batch"
             value={selectedProgramData?.batches?.find(b => b.id.toString() === selectedBatch)?.name || ''}
-            onChange={() => {}}
+            onChange={() => { }}
             options={[]}
             placeholder="select batch"
             disabled={true}
@@ -405,11 +424,10 @@ export default function ContentDashboard() {
             <button
               key={`${subTab.type}-${subTab.id}-${index}`}
               onClick={() => setSelectedSubTab(subTab)}
-              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 ${
-                selectedSubTab?.id === subTab.id && selectedSubTab?.type === subTab.type 
-                  ? 'bg-blue-600 text-white shadow-md' 
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-200'
-              }`}
+              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 ${selectedSubTab?.id === subTab.id && selectedSubTab?.type === subTab.type
+                ? 'bg-blue-600 text-white shadow-md'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-200'
+                }`}
             >
               {subTab.name}
             </button>
@@ -465,8 +483,8 @@ export default function ContentDashboard() {
             </div>
             <h3 className="text-lg font-medium text-gray-900 mb-2">Content Dashboard</h3>
             <p className="text-gray-600 mb-4">
-              {selectedProgram && selectedSemester && !subjectTypes[selectedPaperType.toLowerCase()] 
-                ? 'Content not available' 
+              {selectedProgram && selectedSemester && !subjectTypes[selectedPaperType.toLowerCase()]
+                ? 'Content not available'
                 : 'Select Program and Semester to view available content.'}
             </p>
             {selectedProgram && selectedSemester && (
@@ -479,6 +497,7 @@ export default function ContentDashboard() {
           </div>
         )}
       </div>
+
     </div>
   );
 }

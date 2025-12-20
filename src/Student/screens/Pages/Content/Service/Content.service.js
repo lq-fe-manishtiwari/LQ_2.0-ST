@@ -1,4 +1,4 @@
-import { apiRequest, DevAPI, COREAPI, authHeader ,ContentAPI} from '../../../../../_services/api';
+import { apiRequest, DevAPI, COREAPI, authHeader, ContentAPI } from '../../../../../_services/api';
 
 /**
  * Content API service for handling teacher content dashboard data
@@ -62,6 +62,34 @@ export class ContentService {
   }
 
   /**
+   * Fetch subject allocations for a specific academic year and semester
+   * @param {string} academicYearId - The academic year ID
+   * @param {string} semesterId - The semester ID
+   * @returns {Promise} API response with subject allocations
+   */
+  static async getSubjectAllocations(academicYearId, semesterId) {
+    try {
+      const response = await fetch(`${COREAPI}/admin/academic/subject-allocation/by-academic-year-semester?academicYearId=${academicYearId}&semesterId=${semesterId}`, {
+        method: 'GET',
+        headers: authHeader()
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      return {
+        success: true,
+        data: data
+      };
+    } catch (error) {
+      console.error('Error fetching subject allocations:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Fetch subjects by tab for a specific academic year and semester
    * @param {string} tabId - The tab ID
    * @param {string} academicYearId - The academic year ID
@@ -99,7 +127,7 @@ export class ContentService {
    */
   static async getModulesAndUnits(subjectId) {
     try {
-      const response = await fetch(`${COREAPI}/admin/academic/api/subjects/${subjectId}/modules-units`, {
+      const response = await fetch(`${COREAPI}/admin/academic/api/subjects/${subjectId}/modules-units/can-view`, {
         method: 'GET',
         headers: authHeader()
       });
@@ -120,11 +148,11 @@ export class ContentService {
   }
 
 
-    /**
-   * Fetch unit content for a specific unit
-   * @param {string} unitId - The unit ID
-   * @returns {Promise} API response with modules and units
-   */
+  /**
+ * Fetch unit content for a specific unit
+ * @param {string} unitId - The unit ID
+ * @returns {Promise} API response with modules and units
+ */
   static async getContentByUnits(unitId) {
     try {
       const response = await fetch(`${ContentAPI}/admin/content/unit/${unitId}`, {
@@ -264,6 +292,148 @@ export class ContentService {
       };
     } catch (error) {
       console.error('Error fetching user profile:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get quiz results for a specific student and quiz
+   * @param {string} contentId - The content ID
+   * @param {string} quizId - The quiz ID (optional)
+   * @param {string} studentId - The student ID
+   * @returns {Promise} API response with quiz results history
+   */
+  static async getQuizResultsByStudent(contentId, quizId, studentId) {
+    try {
+      let url = `${ContentAPI}/admin/content-quiz/result?contentId=${contentId}&studentId=${studentId}`;
+      if (quizId) {
+        url += `&quizId=${quizId}`;
+      }
+
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: authHeader()
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      return {
+        success: true,
+        data: data
+      };
+    } catch (error) {
+      console.error('Error fetching quiz results by student:', error);
+      throw error;
+    }
+  }
+  /**
+   * Fetch content types
+   * @returns {Promise} API response with content types
+   */
+  static async getContentTypes() {
+    try {
+      const response = await fetch(`${ContentAPI}/admin/content-types`, {
+        method: 'GET',
+        headers: authHeader()
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      return {
+        success: true,
+        data: data
+      };
+    } catch (error) {
+      console.error('Error fetching content types:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Fetch content levels
+   * @returns {Promise} API response with content levels
+   */
+  static async getContentLevel() {
+    try {
+      const response = await fetch(`${ContentAPI}/content-level`, {
+        method: 'GET',
+        headers: authHeader()
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      return {
+        success: true,
+        data: data
+      };
+    } catch (error) {
+      console.error('Error fetching content levels:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Upload file to S3
+   * @param {File} file - The file to upload
+   * @returns {Promise} The file URL
+   */
+  static async uploadFileToS3(file) {
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      const authHeaders = authHeader();
+
+      const response = await fetch(`https://lq-new-api.learnqoch.com/core/api/admin/academic/s3/upload`, {
+        method: 'POST',
+        headers: {
+          'Authorization': authHeaders.Authorization
+        },
+        body: formData
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.text();
+      return data;
+    } catch (error) {
+      console.error('Error uploading file to S3:', error);
+      throw error;
+    }
+  }
+  /**
+   * Fetch approved module level content
+   * @param {string} moduleId - The module ID
+   * @returns {Promise} API response with module level content
+   */
+  static async getApprovedModuleLevelContent(moduleId) {
+    try {
+      const response = await fetch(`${ContentAPI}/admin/content/module/${moduleId}`, {
+        method: 'GET',
+        headers: authHeader()
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      return {
+        success: true,
+        data: data
+      };
+    } catch (error) {
+      console.error('Error fetching module content:', error);
       throw error;
     }
   }

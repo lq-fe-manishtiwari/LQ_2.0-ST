@@ -88,17 +88,23 @@ export default function SubjectsList({
       }
     };
 
-    if (availableTabs.length > 0 && !selectedTab) {
-      console.log('Auto-selecting first tab:', availableTabs[0]);
-      const firstTab = availableTabs[0];
-      setSelectedTab(firstTab);
-      // Immediately fetch subjects for the first tab without waiting for state update
-      fetchSubjects(firstTab);
+    if (availableTabs.length > 0) {
+      if (!selectedTab) {
+        console.log('Auto-selecting first tab:', availableTabs[0]);
+        const firstTab = availableTabs[0];
+        setSelectedTab(firstTab);
+        // Immediately fetch subjects for the first tab without waiting for state update
+        fetchSubjects(firstTab);
+      } else {
+        // Re-fetch when selectedTab is already set (handles paper type changes)
+        console.log('Re-fetching for existing tab:', selectedTab);
+        fetchSubjects(selectedTab);
+      }
     } else if (availableTabs.length === 0) {
       setSelectedTab(null);
       setSubjects([]);
     }
-  }, [availableTabs.length, academicYearId, semesterId, subjectTypes, selectedPaperType]);
+  }, [availableTabs.length, academicYearId, semesterId, subjectTypes, selectedPaperType, selectedTab]);
 
   // Reset when paper type changes
   useEffect(() => {
