@@ -558,6 +558,13 @@ const ContentDashboard = () => {
             <Plus className="w-4 h-4" />
             <span className="sm:inline">Create New Content</span>
           </button>
+          <button
+            onClick={() => navigate('/teacher/content/add-content/content/bulk-upload')}
+            className="flex items-center gap-2 bg-blue-600 text-white font-medium px-4 py-3 rounded-md shadow-md transition-all hover:shadow-lg flex-1 sm:flex-none justify-center"
+          >
+            <Plus className="w-4 h-4" />
+            <span className="sm:inline">Bulk Upload</span>
+          </button>
         </div>
       </div>
 
