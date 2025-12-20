@@ -34,6 +34,7 @@ export const contentService = {
     getTeacherSubjectsAllocated,
 
     getAllContentsByUnitIdForTeacher,
+    getAllContentsByModuleAndUnitsForTeacher,
     getStudentProjectsByUnit,
     getStudentProjectsByModuleAndUnits,
     approveStudentProject,
@@ -117,21 +118,21 @@ function getQuestionsByUnitIdPaginated(unitId, page = 0, size = 10, sortDirectio
 // GET /api/questions/teacher/module/{moduleId}/units (always paginated)
 function getQuestionsByModuleAndUnits(moduleId, unitIds = [], page = 0, size = 10, sortDirection = 'DESC') {
     const params = new URLSearchParams();
-
-    // Add unitIds as multiple parameters
-    unitIds.forEach(id => params.append('unitIds', id));
-
     params.append('page', page);
     params.append('size', size);
     if (sortDirection) params.append('sortDirection', sortDirection);
+
+    let url = `${ContentAPI}/questions/teacher/module/${moduleId}/units?${params.toString()}`;
+    if (unitIds.length > 0) {
+        url += `&unitIds=${unitIds.join(',')}`;
+    }
 
     const requestOptions = {
         method: 'GET',
         headers: authHeader()
     };
 
-    return fetch(`${ContentAPI}/questions/teacher/module/${moduleId}/units?${params.toString()}`, requestOptions)
-        .then(handleResponse);
+    return fetch(url, requestOptions).then(handleResponse);
 }
 
 // Alias for clarity
@@ -400,6 +401,28 @@ function getAllContentsByUnitIdForTeacher(unitId) {
         });
 }
 
+function getAllContentsByModuleAndUnitsForTeacher(moduleId, unitIds = []) {
+    let url = `${ContentAPI}/admin/content/teacher/module/${moduleId}/units`;
+    if (unitIds.length > 0) {
+        url += `?unitIds=${unitIds.join(',')}`;
+    }
+
+    const requestOptions = {
+        method: 'GET',
+        headers: authHeader()
+    };
+
+    return fetch(url, requestOptions)
+        .then(handleResponse)
+        .then(data => {
+            return { success: true, data: data };
+        })
+        .catch(error => {
+            console.error('Error fetching module contents for teacher:', error);
+            throw error;
+        });
+}
+
 // GET /api/teacher/{teacherId}/subjects-allocated
 function getTeacherSubjectsAllocated(teacherId, academicYearId, semesterId) {
     const requestOptions = {
@@ -445,15 +468,24 @@ function getStudentProjectsByUnit(unitId) {
 }
 
 function getStudentProjectsByModuleAndUnits(moduleId, unitIds = [], status = null) {
-    const params = new URLSearchParams();
-    unitIds.forEach(id => params.append('unitIds', id));
-    if (status) params.append('status', status);
+    let url = `${ContentAPI}/student-project/module/${moduleId}/units`;
+    const queryParts = [];
+    if (unitIds.length > 0) {
+        queryParts.push(`unitIds=${unitIds.join(',')}`);
+    }
+    if (status) {
+        queryParts.push(`status=${status}`);
+    }
+
+    if (queryParts.length > 0) {
+        url += `?${queryParts.join('&')}`;
+    }
 
     const requestOptions = {
         method: 'GET',
         headers: authHeader()
     };
-    return fetch(`${ContentAPI}/student-project/module/${moduleId}/units?${params.toString()}`, requestOptions).then(handleResponse);
+    return fetch(url, requestOptions).then(handleResponse);
 }
 
 // PUT /api/student-project/{projectId}/approve

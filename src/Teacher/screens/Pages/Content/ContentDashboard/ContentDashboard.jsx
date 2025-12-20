@@ -1,6 +1,6 @@
 'use client';
 import React, { useState, useRef, useEffect } from 'react';
-import { Plus, Filter, ChevronDown, X, Edit, Trash2, Clock, FileText } from 'lucide-react';
+import { Plus, Filter, ChevronDown, X, Edit, Trash2, Clock, FileText, Check } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { contentService } from '../services/content.service.js';
 import SweetAlert from 'react-bootstrap-sweetalert';
@@ -20,7 +20,7 @@ const ContentDashboard = () => {
     semester: '',
     gradeDivisionId: [],
     chapter: '',
-    topic: '',
+    unitIds: [],
     activeInactiveStatus: 'all',
   });
 
@@ -50,17 +50,26 @@ const ContentDashboard = () => {
   const [selectedSemesterId, setSelectedSemesterId] = useState(null);
   const [allAllocations, setAllAllocations] = useState([]);
 
-  // Load content when unit is selected
+  // Load content when module or unit is selected
   useEffect(() => {
-    if (filters.topic) {
-      const selectedTopic = topicOptions.find(t => t.unit_name === filters.topic);
-      if (selectedTopic?.unit_id) {
-        loadContentByUnit(selectedTopic.unit_id);
+    if (selectedChapter?.module_id) {
+      let unitIdsToFetch = [];
+      if (filters.unitIds && filters.unitIds.length > 0) {
+        unitIdsToFetch = filters.unitIds;
+      } else {
+        // Default: all units of the module
+        unitIdsToFetch = (selectedChapter.units || []).map(u => u.unit_id);
+      }
+
+      if (unitIdsToFetch.length > 0) {
+        loadContentByModuleAndUnits(selectedChapter.module_id, unitIdsToFetch);
+      } else {
+        setContent([]);
       }
     } else {
-      setContent([]); // Clear content when no unit is selected
+      setContent([]); // Clear content when no module is selected
     }
-  }, [filters.topic, topicOptions]);
+  }, [selectedChapter, filters.unitIds]);
 
   // SweetAlert function
   const showSweetAlert = (title, text, type = 'success', confirmText = 'OK', onConfirm = null) => {
@@ -80,15 +89,15 @@ const ContentDashboard = () => {
     setShowAlert(true);
   };
 
-  const loadContentByUnit = async (unitId) => {
+  const loadContentByModuleAndUnits = async (moduleId, unitIds) => {
     setLoading(prev => ({ ...prev, content: true }));
     try {
-      console.log('Loading content for unit ID:', unitId);
-      const res = await contentService.getAllContentsByUnitIdForTeacher(unitId);
+      console.log('Loading content for module ID:', moduleId, 'unit IDs:', unitIds);
+      const res = await contentService.getAllContentsByModuleAndUnitsForTeacher(moduleId, unitIds);
       console.log('Content response:', res);
       setContent(res.data || []);
     } catch (err) {
-      console.error("Error loading content for unit:", err);
+      console.error("Error loading content for module and units:", err);
       setContent([]);
     } finally {
       setLoading(prev => ({ ...prev, content: false }));
@@ -164,11 +173,10 @@ const ContentDashboard = () => {
     );
   };
 
-  // Multi Select Program
-  const MultiSelectProgram = ({ label, selectedPrograms, programOptions, onProgramChange, onProgramRemove }) => {
+  // Multi Select Component
+  const MultiSelect = ({ label, values, options, onChange, placeholder, disabled = false, loading = false }) => {
     const [isOpen, setIsOpen] = useState(false);
     const dropdownRef = useRef(null);
-    const availableOptions = programOptions.filter(p => !selectedPrograms.includes(p));
 
     useEffect(() => {
       const handleClickOutside = (event) => {
@@ -178,53 +186,72 @@ const ContentDashboard = () => {
       return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
+    const handleToggle = (optionId) => {
+      const newValues = values.includes(optionId)
+        ? values.filter((id) => id !== optionId)
+        : [...values, optionId];
+      onChange(newValues);
+    };
+
     return (
-      <div ref={dropdownRef}>
+      <div ref={dropdownRef} className="relative">
         <label className="block text-sm font-semibold text-gray-700 mb-2">{label}</label>
         <div className="relative">
           <div
-            className="flex flex-wrap items-center gap-1 p-2 border border-gray-300 rounded-lg min-h-[44px] bg-white cursor-pointer hover:border-blue-400"
-            onClick={() => setIsOpen(!isOpen)}
+            className={`flex flex-wrap items-center gap-1 p-2 border ${disabled || loading
+              ? 'bg-gray-100 border-gray-200 cursor-not-allowed'
+              : 'bg-white border-gray-300 cursor-wait hover:border-blue-400'
+              } rounded-lg min-h-[44px] bg-white transition-all duration-150 cursor-pointer`}
+            onClick={() => !disabled && !loading && setIsOpen(!isOpen)}
           >
-            {selectedPrograms.length > 0 ? (
-              selectedPrograms.map((prog) => (
-                <span
-                  key={prog}
-                  className="inline-flex items-center gap-1 bg-blue-50 text-blue-600 px-2 py-1 rounded-full text-xs font-medium"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  {prog}
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onProgramRemove();
-                    }}
-                    className="hover:bg-blue-200 rounded-full p-0.5"
+            {values.length > 0 ? (
+              values.map((val) => {
+                const option = options.find((o) => o.id === val || o.name === val);
+                const displayName = option ? option.name : val;
+                return (
+                  <span
+                    key={val}
+                    className="inline-flex items-center gap-1 bg-blue-50 text-blue-600 px-2 py-1 rounded-full text-xs font-medium"
                   >
-                    <X className="w-3 h-3" />
-                  </button>
-                </span>
-              ))
+                    {displayName}
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleToggle(val);
+                      }}
+                      className="hover:bg-blue-200 rounded-full p-0.5"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </span>
+                );
+              })
             ) : (
-              <span className="text-gray-400 text-sm ml-1">Select Program</span>
+              <span className="text-gray-400 text-sm ml-1">{loading ? 'Loading...' : placeholder}</span>
             )}
             <ChevronDown className={`w-4 h-4 text-gray-400 absolute right-3 top-1/2 -translate-y-1/2 transition-transform ${isOpen ? 'rotate-180' : 'rotate-0'}`} />
           </div>
 
-          {isOpen && (
-            <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
-              {availableOptions.length > 0 ? (
-                availableOptions.map((prog) => (
+          {isOpen && !disabled && !loading && (
+            <div className="absolute z-30 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+              {options.map((option) => (
+                <div
+                  key={option.id}
+                  className={`flex items-center gap-2 px-4 py-2 text-sm cursor-pointer hover:bg-blue-50 transition-colors ${values.includes(option.id) ? 'bg-blue-50 font-medium text-blue-600' : 'text-gray-700'
+                    }`}
+                  onClick={() => handleToggle(option.id)}
+                >
                   <div
-                    key={prog}
-                    className="px-4 py-2 text-sm text-gray-700 cursor-pointer hover:bg-blue-50 transition-colors"
-                    onClick={() => onProgramChange({ target: { value: prog } })}
+                    className={`w-4 h-4 rounded border flex items-center justify-center ${values.includes(option.id) ? 'bg-blue-600 border-blue-600' : 'border-gray-300 bg-white'
+                      }`}
                   >
-                    {prog}
+                    {values.includes(option.id) && <Check className="w-3 h-3 text-white" />}
                   </div>
-                ))
-              ) : (
-                <div className="px-4 py-3 text-sm text-gray-500">All programs selected</div>
+                  {option.name}
+                </div>
+              ))}
+              {options.length === 0 && (
+                <div className="px-4 py-3 text-sm text-gray-500 italic">No options available</div>
               )}
             </div>
           )}
@@ -398,8 +425,8 @@ const ContentDashboard = () => {
 
         if (Array.isArray(modulesArray) && modulesArray.length > 0) {
           const formatted = modulesArray.map(mod => ({
-            module_id: mod.module_id,
-            module_name: mod.module_name,
+            module_id: mod.module_id || mod.id || mod.ID,
+            module_name: mod.module_name || mod.name,
             units: mod.units || []
           }));
           setChapterOptions(formatted);
@@ -411,11 +438,10 @@ const ContentDashboard = () => {
             const formattedUnits = units.map(u => ({ unit_id: u.unit_id, unit_name: u.unit_name }));
             setTopicOptions(formattedUnits);
 
-            const firstUnit = formattedUnits[0];
             setFilters(prev => ({
               ...prev,
               chapter: firstModule.module_name,
-              topic: firstUnit ? firstUnit.unit_name : ''
+              unitIds: [] // Default: no units selected visually, but logic will fetch all
             }));
             setSelectedChapter(firstModule);
           }
@@ -566,12 +592,19 @@ const ContentDashboard = () => {
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-5 mb-6">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3 sm:gap-4">
             {/* Program */}
-            <MultiSelectProgram
+            <MultiSelect
               label="Program"
-              selectedPrograms={filters.program}
-              programOptions={programOptions.map(p => p.name)}
-              onProgramChange={handleProgramChange}
-              onProgramRemove={removeProgram}
+              values={filters.program}
+              options={programOptions.map(p => ({ id: p.name, name: p.name }))}
+              onChange={(newValues) => {
+                if (newValues.length > 0) {
+                  const lastValue = newValues[newValues.length - 1];
+                  handleProgramChange({ target: { value: lastValue } });
+                } else {
+                  removeProgram();
+                }
+              }}
+              placeholder="Select Program"
             />
 
             {/* Semester */}
@@ -614,7 +647,7 @@ const ContentDashboard = () => {
                   ...prev,
                   gradeDivisionId: e.target.value ? [e.target.value] : [],
                   chapter: '',
-                  topic: ''
+                  unitIds: []
                 }));
                 setChapterOptions([]);
                 setTopicOptions([]);
@@ -630,10 +663,10 @@ const ContentDashboard = () => {
                 const chapterName = e.target.value;
                 const chapterObj = chapterOptions.find(c => c.module_name === chapterName);
                 setSelectedChapter(chapterObj || null);
-                setFilters(prev => ({ ...prev, chapter: chapterName, topic: '' }));
+                setFilters(prev => ({ ...prev, chapter: chapterName, unitIds: [] }));
 
                 const units = chapterObj?.units || [];
-                const formattedUnits = units.map(u => ({ unit_id: u.unit_id, unit_name: u.unit_name }));
+                const formattedUnits = units.map(u => ({ unit_id: u.unit_id || u.id || u.ID, unit_name: u.unit_name || u.name }));
                 setTopicOptions(formattedUnits);
               }}
               options={chapterOptions.map(c => c.module_name)}
@@ -641,14 +674,12 @@ const ContentDashboard = () => {
               disabled={chapterOptions.length === 0}
               loading={loading.chapters}
             />
-            {/* Topic */}
-            <CustomSelect
+            {/* Topic (MultiSelect) */}
+            <MultiSelect
               label="Unit"
-              value={filters.topic}
-              onChange={(e) => {
-                setFilters(prev => ({ ...prev, topic: e.target.value }));
-              }}
-              options={topicOptions.map(t => t.unit_name)}
+              values={filters.unitIds}
+              options={topicOptions.map(t => ({ id: t.unit_id, name: t.unit_name }))}
+              onChange={(newIds) => setFilters(prev => ({ ...prev, unitIds: newIds }))}
               placeholder="Select Unit"
               disabled={topicOptions.length === 0}
             />
@@ -662,7 +693,7 @@ const ContentDashboard = () => {
 
         <div>
           <h3 className="text-xl sm:text-2xl font-bold text-blue-600 mb-6 sm:mb-8">
-            {filters.topic ? 'Filtered Content' : 'All Content'}
+            {filters.chapter ? `Content for ${filters.chapter}` : 'All Content'}
           </h3>
 
           {(() => {
@@ -755,7 +786,7 @@ const ContentDashboard = () => {
               <div className="text-center py-12">
                 <div className="text-6xl mb-4">📚</div>
                 <p className="text-gray-500 text-lg">
-                  {filters.topic ? 'No content found for selected filters.' : 'No content available.'}
+                  {filters.chapter ? 'No content found for selected filters.' : 'No content available.'}
                 </p>
               </div>
             );

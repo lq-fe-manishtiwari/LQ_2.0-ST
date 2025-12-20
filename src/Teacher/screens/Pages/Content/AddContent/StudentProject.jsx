@@ -316,8 +316,8 @@ const StudentProject = () => {
         const modulesArray = response?.modules || response || [];
         if (Array.isArray(modulesArray)) {
           const formatted = modulesArray.map((mod) => ({
-            module_id: mod.module_id,
-            module_name: mod.module_name,
+            module_id: mod.module_id || mod.id || mod.ID,
+            module_name: mod.module_name || mod.name,
             units: mod.units || [],
           }));
           setChapterOptions(formatted);
@@ -569,7 +569,7 @@ const StudentProject = () => {
                 setSelectedChapter(chapterObj || null);
                 setFilters((prev) => ({ ...prev, chapter: chapterName, unitIds: [] }));
                 const units = chapterObj?.units || [];
-                setTopicOptions(units.map((u) => ({ unit_id: u.unit_id, unit_name: u.unit_name })));
+                setTopicOptions(units.map((u) => ({ unit_id: u.unit_id || u.id || u.ID, unit_name: u.unit_name || u.name })));
               }}
               options={chapterOptions.map((c) => c.module_name)}
               placeholder="Select Module"
