@@ -88,6 +88,7 @@ export default function QuizDashboard() {
   // Get user profile data
   const { getUserId, getCollegeId, getTeacherId, isLoaded: isProfileLoaded, loading: profileLoading } = useUserProfile();
   const [programs, setPrograms] = useState([]);
+  const [batches, setBatches] = useState([]);
   const [classes, setClasses] = useState([]);
   const [semesters, setSemesters] = useState([]);
   const [papers, setPapers] = useState([]);
@@ -124,7 +125,8 @@ export default function QuizDashboard() {
     }
     return {
       program: "",
-      semester: "",
+      semester: "", // This will hold the combined label
+      batch: "",
       paper: "",
       module: "",
       unit: "",
@@ -277,17 +279,70 @@ export default function QuizDashboard() {
     const program = programs.find(p => p.value === filters.program);
     if (program) {
       setSelectedProgramId(program.id);
-      // Get semesters from allocations for this program
-      const semesters = [...new Set(program.allocations.map(a => a.semester?.name).filter(Boolean))];
-      const formattedSemesters = semesters.map(sem => ({ label: sem, value: sem }));
-      setSemesters(formattedSemesters);
+
+      // Create Academic Year - Semester format
+      const academicSemesters = program.allocations.map(allocation => {
+        const academicYear = allocation.academic_year?.name || allocation.academic_year_name || 'Unknown Year';
+        const semester = allocation.semester?.name || allocation.semester_name || 'Unknown Semester';
+        const combinedLabel = `${academicYear} - ${semester}`;
+
+        return {
+          label: combinedLabel,
+          value: combinedLabel,
+          academicYearId: allocation.academic_year_id,
+          semesterId: allocation.semester_id,
+          allocation: allocation
+        };
+      }).filter(item => item.label !== 'Unknown Year - Unknown Semester');
+
+      // Remove duplicates
+      const uniqueSemesters = academicSemesters.filter((item, index, self) =>
+        index === self.findIndex(t => t.label === item.label)
+      );
+
+      setSemesters(uniqueSemesters);
 
       // Auto-select first semester only if no saved filters
-      if (formattedSemesters.length > 0 && !filters.semester) {
-        setFilters(prev => ({ ...prev, semester: formattedSemesters[0].value }));
+      if (uniqueSemesters.length > 0 && !filters.semester) {
+        setFilters(prev => ({ ...prev, semester: uniqueSemesters[0].value }));
       }
     }
   }, [filters.program, programs]);
+
+  // ---------- FETCH BATCHES WHEN SEMESTER CHANGES ----------
+  useEffect(() => {
+    if (!filters.semester) {
+      setBatches([]);
+      setFilters(prev => ({ ...prev, batch: "" }));
+      return;
+    }
+
+    const selectedSemesterObj = semesters.find(s => s.value === filters.semester);
+    if (selectedSemesterObj) {
+      const program = programs.find(p => p.id === selectedProgramId);
+      if (program) {
+        const batchesForSemester = program.allocations
+          .filter(allocation =>
+            allocation.academic_year_id === selectedSemesterObj.academicYearId &&
+            allocation.semester_id === selectedSemesterObj.semesterId
+          )
+          .map(allocation => ({
+            label: allocation.batch?.batch_name || allocation.batch_name || 'Default Batch',
+            value: allocation.batch_id || allocation.batch?.batch_id || 'default'
+          }))
+          .filter((batch, index, self) =>
+            index === self.findIndex(b => b.value === batch.value)
+          );
+
+        setBatches(batchesForSemester);
+
+        // Auto-select first batch if no saved filters
+        if (batchesForSemester.length > 0 && !filters.batch) {
+          setFilters(prev => ({ ...prev, batch: batchesForSemester[0].value }));
+        }
+      }
+    }
+  }, [filters.semester, semesters, programs, selectedProgramId]);
 
   // ---------- FETCH PAPERS WHEN SEMESTER CHANGES ----------
   useEffect(() => {
@@ -298,46 +353,42 @@ export default function QuizDashboard() {
         return;
       }
 
-      // Find the program and then the semester allocation
-      const program = programs.find(p => p.id === selectedProgramId);
-      if (program) {
-        const semesterAllocation = program.allocations.find(a => a.semester?.name === filters.semester);
-        if (semesterAllocation) {
-          setSelectedSemesterId(semesterAllocation.semester_id);
-          setSelectedAcademicYearId(semesterAllocation.academic_year_id);
+      const selectedSemesterObj = semesters.find(s => s.value === filters.semester);
+      if (selectedSemesterObj) {
+        setSelectedSemesterId(selectedSemesterObj.semesterId);
+        setSelectedAcademicYearId(selectedSemesterObj.academicYearId);
 
-          if (!isProfileLoaded || profileLoading) return;
+        if (!isProfileLoaded || profileLoading) return;
 
-          const teacherId = getTeacherId();
-          if (!teacherId) return;
+        const teacherId = getTeacherId();
+        if (!teacherId) return;
 
-          try {
-            const response = await contentService.getTeacherSubjectsAllocated(teacherId, semesterAllocation.academic_year_id, semesterAllocation.semester_id);
+        try {
+          const response = await contentService.getTeacherSubjectsAllocated(teacherId, selectedSemesterObj.academicYearId, selectedSemesterObj.semesterId);
 
-            if (Array.isArray(response)) {
-              const subjects = response.map(subjectInfo => ({
-                label: subjectInfo.subject_name || subjectInfo.name,
-                value: subjectInfo.subject_id || subjectInfo.id
-              })).filter(s => s.label && s.value);
+          if (Array.isArray(response)) {
+            const subjects = response.map(subjectInfo => ({
+              label: subjectInfo.subject_name || subjectInfo.name,
+              value: subjectInfo.subject_id || subjectInfo.id
+            })).filter(s => s.label && s.value);
 
-              const unique = Array.from(new Map(subjects.map(s => [s.label, s])).values());
-              setPapers(unique);
+            const unique = Array.from(new Map(subjects.map(s => [s.label, s])).values());
+            setPapers(unique);
 
-              // Auto-select first paper only if no saved filters
-              if (unique.length > 0 && !filters.paper) {
-                setFilters(prev => ({ ...prev, paper: unique[0].value }));
-              }
+            // Auto-select first paper only if no saved filters
+            if (unique.length > 0 && !filters.paper) {
+              setFilters(prev => ({ ...prev, paper: unique[0].value }));
             }
-          } catch (err) {
-            console.error('Failed to fetch teacher allocated subjects:', err);
-            setPapers([]);
           }
+        } catch (err) {
+          console.error('Failed to fetch teacher allocated subjects:', err);
+          setPapers([]);
         }
       }
     };
 
     fetchSubjects();
-  }, [filters.semester, selectedProgramId, programs, isProfileLoaded, profileLoading, getTeacherId]);
+  }, [filters.semester, selectedProgramId, semesters, isProfileLoaded, profileLoading, getTeacherId]);
 
   useEffect(() => {
     if (!filters.paper) {
@@ -486,87 +537,122 @@ export default function QuizDashboard() {
         </div>
       </div>
 
+      {/* Header: Global Filters + Tab Actions */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
+        <div className="w-full sm:w-auto">
+          <button
+            onClick={() => setFilterOpen(!filterOpen)}
+            className="flex items-center justify-center gap-2 bg-white border border-gray-300 hover:bg-gray-50 px-4 py-3 rounded-xl shadow-sm transition-all flex-1 sm:flex-none sm:w-auto"
+          >
+            <Filter className="w-4 h-4 text-blue-600" />
+            <span className="text-blue-600 font-medium">Filter</span>
+            <ChevronDown
+              className={`w-4 h-4 text-blue-600 transition-transform ${filterOpen ? 'rotate-180' : 'rotate-0'}`}
+            />
+          </button>
+        </div>
+
+        {/* Tab-specific actions */}
+        <div className="flex gap-2 w-full sm:w-auto">
+          {activeTab === 'dashboard' && (
+            <button
+              onClick={() => navigate('/teacher/content/add-content/quiz/add', { state: { filters } })}
+              className="flex items-center gap-2 bg-blue-600 text-white font-medium px-4 py-3 rounded-md shadow-md transition-all hover:shadow-lg flex-1 sm:flex-none justify-center"
+            >
+              <Plus className="w-4 h-4" />
+              <span className="sm:inline">Create New Quiz</span>
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Global Filter Panel */}
+      {filterOpen && (
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-5 mb-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3 sm:gap-4">
+            <CustomSelect
+              label="Program"
+              value={filters.program}
+              onChange={(e) => setFilters(prev => ({ ...prev, program: e.target.value }))}
+              options={programs}
+              placeholder="Select Program"
+            />
+
+            <CustomSelect
+              label="Academic Year - Semester"
+              value={filters.semester}
+              onChange={(e) => {
+                setFilters({
+                  ...filters,
+                  semester: e.target.value,
+                  batch: "",
+                  paper: "",
+                  module: "",
+                  unit: "",
+                });
+              }}
+              options={semesters}
+              placeholder="Select Year - Semester"
+              disabled={!filters.program}
+            />
+
+            <CustomSelect
+              label="Batch"
+              value={filters.batch}
+              onChange={(e) => {
+                setFilters({
+                  ...filters,
+                  batch: e.target.value,
+                  paper: "",
+                  module: "",
+                  unit: "",
+                });
+              }}
+              options={batches}
+              placeholder="Select Batch"
+              disabled={!filters.semester}
+            />
+
+            <CustomSelect
+              label="Paper (Subject)"
+              value={filters.paper}
+              onChange={(e) => {
+                setFilters({
+                  ...filters,
+                  paper: e.target.value,
+                  module: "",
+                  unit: "",
+                });
+              }}
+              options={papers}
+              placeholder="Select Paper"
+              disabled={!filters.semester}
+            />
+
+            <CustomSelect
+              label="Module"
+              value={filters.module}
+              onChange={(e) => setFilters(prev => ({ ...prev, module: e.target.value }))}
+              options={modules}
+              placeholder="Select Module"
+              disabled={!filters.paper}
+            />
+
+            <CustomSelect
+              label="Unit (Topic)"
+              value={filters.unit}
+              onChange={(e) => setFilters(prev => ({ ...prev, unit: e.target.value }))}
+              options={units}
+              placeholder="Select Unit (Optional)"
+              disabled={!filters.module}
+            />
+          </div>
+        </div>
+      )}
+
       {/* Dashboard Tab Content */}
       {activeTab === 'dashboard' && (
         <>
-          {/* Header: Filter + Create Quiz Button */}
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
-            <div className="w-full sm:w-auto">
-              <button
-                onClick={() => setFilterOpen(!filterOpen)}
-                className="flex items-center justify-center gap-2 bg-white border border-gray-300 hover:bg-gray-50 px-4 py-3 rounded-xl shadow-sm transition-all flex-1 sm:flex-none sm:w-auto"
-              >
-                <Filter className="w-4 h-4 text-blue-600" />
-                <span className="text-blue-600 font-medium">Filter</span>
-                <ChevronDown
-                  className={`w-4 h-4 text-blue-600 transition-transform ${filterOpen ? 'rotate-180' : 'rotate-0'}`}
-                />
-              </button>
-            </div>
-
-            <div className="flex gap-2 w-full sm:w-auto">
-              <button
-                onClick={() => navigate('/teacher/content/add-content/quiz/add', { state: { filters } })}
-                className="flex items-center gap-2 bg-blue-600 text-white font-medium px-4 py-3 rounded-md shadow-md transition-all hover:shadow-lg flex-1 sm:flex-none justify-center"
-              >
-                <Plus className="w-4 h-4" />
-                <span className="sm:inline">Create New Quiz</span>
-              </button>
-            </div>
-          </div>
-
-          {/* Filter Panel */}
-          {filterOpen && (
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-5 mb-6">
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3 sm:gap-4">
-                <CustomSelect
-                  label="Program"
-                  value={filters.program}
-                  onChange={(e) => setFilters(prev => ({ ...prev, program: e.target.value }))}
-                  options={programs}
-                  placeholder="Select Program"
-                />
-
-
-
-                <CustomSelect
-                  label="Semester"
-                  value={filters.semester}
-                  onChange={(e) => setFilters(prev => ({ ...prev, semester: e.target.value }))}
-                  options={semesters}
-                  placeholder="Select Semester"
-                  disabled={!filters.program}
-                />
-
-                <CustomSelect
-                  label="Paper"
-                  value={filters.paper}
-                  onChange={(e) => setFilters(prev => ({ ...prev, paper: e.target.value }))}
-                  options={papers}
-                  placeholder="Select Paper"
-                  disabled={!filters.semester}
-                />
-
-                <CustomSelect
-                  label="Module"
-                  value={filters.module}
-                  onChange={(e) => setFilters(prev => ({ ...prev, module: e.target.value }))}
-                  options={modules}
-                  placeholder="Select Module"
-                  disabled={!filters.paper}
-                />
-
-                <CustomSelect
-                  label="Unit (Topic)"
-                  value={filters.unit}
-                  onChange={(e) => setFilters(prev => ({ ...prev, unit: e.target.value }))}
-                  options={units}
-                  placeholder="Select Unit (Optional)"
-                  disabled={!filters.module}
-                />
-              </div>
-            </div>
-          )}
 
           <div className="bg-white/90 backdrop-blur-sm rounded-xl sm:rounded-2xl shadow-xl p-4 sm:p-6 lg:p-8 border border-indigo-100">
 
@@ -798,13 +884,11 @@ export default function QuizDashboard() {
       {/* Results Tab Content */}
       {activeTab === 'results' && (
         <QuizResultDashboard
-          filters={filters}
-          setFilters={setFilters}
-          programs={programs}
-          semesters={semesters}
-          papers={papers}
-          modules={modules}
-          units={units}
+          filters={{
+            ...filters,
+            academicYear: selectedAcademicYearId,
+            paper: filters.paper // This is the subjectId
+          }}
         />
       )}
     </div>
