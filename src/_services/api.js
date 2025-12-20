@@ -225,8 +225,8 @@ export function authHeaderToDownloadReport() {
 export const AcademicAPI = import.meta.env.VITE_API_URL_Academic;
 export const TeacherLoginAPI = import.meta.env.VITE_API_URL_TeacherORLogin;
 export const TeacherAcademicAPI = import.meta.env.VITE_API_URL_AcademicAPI;
-export const PMSAPI = import.meta.env.VITE_API_URL_PMS;
-export const PMSNEWAPI = import.meta.env.VITE_API_URL_PMSNEW;
+export const PMSAPI = import.meta.env.VITE_API_URL_HRM;
+export const PMSNEWAPI = import.meta.env.VITE_API_URL_HRMNEW;
 export const COREAPI = import.meta.env.VITE_API_CORE;
 export const ContentAPI = import.meta.env.VITE_API_URL_Content;
 
