@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { ChevronDown, ChevronRight, FileText, BookOpen, Loader2, Play, File, Eye, X, ExternalLink, Clock, Edit, Trash2 } from 'lucide-react';
+import SweetAlert from 'react-bootstrap-sweetalert';
 import { ContentApiService } from '../services/contentApi';
+import { contentService } from '../services/content.service';
 
 export default function ModulesUnitsList({ modules, colorCode }) {
     const [expandedModuleId, setExpandedModuleId] = useState(null);
@@ -17,6 +19,14 @@ export default function ModulesUnitsList({ modules, colorCode }) {
     const [showFilePreview, setShowFilePreview] = useState(false);
     const [uploadingFile, setUploadingFile] = useState(false);
     const [deleteConfirm, setDeleteConfirm] = useState({ isOpen: false, contentId: null });
+    const [showAlert, setShowAlert] = useState(false);
+    const [contentToDelete, setContentToDelete] = useState(null);
+    const [showDeleteSuccessAlert, setShowDeleteSuccessAlert] = useState(false);
+    const [showDeleteErrorAlert, setShowDeleteErrorAlert] = useState(false);
+    const [showUpdateSuccessAlert, setShowUpdateSuccessAlert] = useState(false);
+    const [showUpdateErrorAlert, setShowUpdateErrorAlert] = useState(false);
+    const [alertMessage, setAlertMessage] = useState('');
+    const [errorMessage, setErrorMessage] = useState('');
 
     const toggleModule = async (moduleId) => {
         if (expandedModuleId === moduleId) {
@@ -158,7 +168,8 @@ export default function ModulesUnitsList({ modules, colorCode }) {
             };
 
             await contentService.updateContent(editModal.content.content_id, updateRequest);
-            alert('Content updated successfully!');
+            setAlertMessage('Content updated successfully!');
+            setShowUpdateSuccessAlert(true);
             closeEditModal();
 
             // Refresh the content
@@ -176,19 +187,23 @@ export default function ModulesUnitsList({ modules, colorCode }) {
             }
         } catch (error) {
             console.error('Error updating content:', error);
-            alert('Error updating content. Please try again.');
+            setErrorMessage('Error updating content. Please try again.');
+            setShowUpdateErrorAlert(true);
         }
     };
 
     const handleDeleteContent = (contentId) => {
-        setDeleteConfirm({ isOpen: true, contentId });
+        setContentToDelete(contentId);
+        setShowAlert(true);
     };
 
-    const confirmDelete = async () => {
+    const handleConfirmDelete = async () => {
+        setShowAlert(false);
         try {
-            await contentService.softDeleteContent(deleteConfirm.contentId);
-            alert('Content deleted successfully!');
-            setDeleteConfirm({ isOpen: false, contentId: null });
+            await contentService.softDeleteContent(contentToDelete);
+            setAlertMessage('Content deleted successfully!');
+            setShowDeleteSuccessAlert(true);
+            setContentToDelete(null);
 
             // Refresh the content
             if (selectedUnitId) {
@@ -205,8 +220,15 @@ export default function ModulesUnitsList({ modules, colorCode }) {
             }
         } catch (error) {
             console.error('Error deleting content:', error);
-            alert('Error deleting content. Please try again.');
+            setErrorMessage('Error deleting content. Please try again.');
+            setShowDeleteErrorAlert(true);
+            setContentToDelete(null);
         }
+    };
+
+    const handleCancelDelete = () => {
+        setShowAlert(false);
+        setContentToDelete(null);
     };
 
     // Timer effect for reading time
@@ -324,37 +346,28 @@ export default function ModulesUnitsList({ modules, colorCode }) {
                     {/* View Button */}
                     <button
                         onClick={() => handleViewContent(content)}
-                        className="p-2 rounded-lg bg-blue-100 text-blue-600 hover:bg-blue-200 transition-colors group relative"
+                        className="p-1.5 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition"
                         title="View Content"
                     >
                         <Eye className="w-4 h-4" />
-                        <span className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
-                            View
-                        </span>
                     </button>
 
                     {/* Edit Button */}
                     <button
                         onClick={() => handleEditContent(content)}
-                        className="p-2 rounded-lg bg-green-100 text-green-600 hover:bg-green-200 transition-colors group relative"
+                        className="p-1.5 rounded-lg bg-yellow-50 text-yellow-600 hover:bg-yellow-100 transition"
                         title="Edit Content"
                     >
                         <Edit className="w-4 h-4" />
-                        <span className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
-                            Edit
-                        </span>
                     </button>
 
                     {/* Delete Button */}
                     <button
                         onClick={() => handleDeleteContent(content.content_id)}
-                        className="p-2 rounded-lg bg-red-100 text-red-600 hover:bg-red-200 transition-colors group relative"
+                        className="p-1.5 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition"
                         title="Delete Content"
                     >
                         <Trash2 className="w-4 h-4" />
-                        <span className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
-                            Delete
-                        </span>
                     </button>
                 </div>
             </div>
@@ -744,6 +757,71 @@ export default function ModulesUnitsList({ modules, colorCode }) {
                 </div>
             )}
 
+            {/* Delete Confirmation Alert */}
+            {showAlert && (
+                <SweetAlert
+                    warning
+                    showCancel
+                    confirmBtnText="Yes, Delete!"
+                    cancelBtnText="Cancel"
+                    confirmBtnCssClass="btn-confirm"
+                    cancelBtnCssClass="btn-cancel"
+                    title="Are you sure?"
+                    onConfirm={handleConfirmDelete}
+                    onCancel={handleCancelDelete}
+                >
+                    You won't be able to recover this content!
+                </SweetAlert>
+            )}
+
+            {/* Success Alert */}
+            {showDeleteSuccessAlert && (
+                <SweetAlert
+                    success
+                    title="Deleted!"
+                    confirmBtnCssClass="btn-confirm"
+                    onConfirm={() => setShowDeleteSuccessAlert(false)}
+                >
+                    {alertMessage}
+                </SweetAlert>
+            )}
+
+            {/* Error Alert */}
+            {showDeleteErrorAlert && (
+                <SweetAlert
+                    danger
+                    title="Error!"
+                    confirmBtnCssClass="btn-confirm"
+                    onConfirm={() => setShowDeleteErrorAlert(false)}
+                >
+                    {errorMessage}
+                </SweetAlert>
+            )}
+
+            {/* Update Success Alert */}
+            {showUpdateSuccessAlert && (
+                <SweetAlert
+                    success
+                    title="Updated!"
+                    confirmBtnCssClass="btn-confirm"
+                    onConfirm={() => setShowUpdateSuccessAlert(false)}
+                >
+                    {alertMessage}
+                </SweetAlert>
+            )}
+
+            {/* Update Error Alert */}
+            {showUpdateErrorAlert && (
+                <SweetAlert
+                    danger
+                    title="Error!"
+                    confirmBtnCssClass="btn-confirm"
+                    onConfirm={() => setShowUpdateErrorAlert(false)}
+                >
+                    {errorMessage}
+                </SweetAlert>
+            )}
+
             {/* Delete Confirmation Modal */}
             {deleteConfirm.isOpen && (
                 <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
@@ -763,13 +841,13 @@ export default function ModulesUnitsList({ modules, colorCode }) {
                         <div className="bg-gray-50 px-6 py-4 flex items-center justify-center gap-3 border-t">
                             <button
                                 onClick={() => setDeleteConfirm({ isOpen: false, contentId: null })}
-                                className="px-6 py-2.5 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors font-medium"
+                                className="px-6 py-2.5 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors font-medium btn-cancel"
                             >
                                 Cancel
                             </button>
                             <button
                                 onClick={confirmDelete}
-                                className="px-6 py-2.5 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium"
+                                className="px-6 py-2.5 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium btn-confirm"
                             >
                                 Yes, Delete
                             </button>
