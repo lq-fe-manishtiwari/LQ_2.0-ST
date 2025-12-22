@@ -1,4 +1,5 @@
-import { authHeader, handleResponse, authHeaderToPost, PMSNEWAPI } from '@/_services/api';
+import { authHeader, handleResponse, authHeaderToPost, PMSNEWAPI,AcademicAPI } from '@/_services/api';
+import { authHeaderToFile, handleTextResponse } from '@/_services/api';
 
 export const leaveService = {
   // Leave Type APIs
@@ -19,10 +20,26 @@ export const leaveService = {
   updateLeaveStatus,
   softDeleteLeave,
   hardDeleteLeave,
+  uploadFileToS3,
 };
 
 /* ===================== LEAVE TYPE FUNCTIONS ===================== */
+function uploadFileToS3(file) {
+  const formData = new FormData();
+  formData.append("file", file);
 
+  const requestOptions = {
+    method: "POST",
+    headers: authHeaderToFile(),
+    body: formData,
+  };
+
+  return fetch(`${AcademicAPI}/s3/upload`, requestOptions)
+    .then(handleTextResponse)
+    .then((response) => {
+      return response; // assuming backend returns the file URL/path as plain text
+    });
+}
 // 1. POST /api/leave-type
 function createLeaveType(data) {
   const requestOptions = {
@@ -76,26 +93,40 @@ function hardDeleteLeaveType(id) {
 /* ===================== APPLY LEAVE FUNCTIONS ===================== */
 
 // 1. POST /api/apply-leave
-function applyLeave(data) {
-  const formData = new FormData();
-  formData.append('college_id', data.college_id);
-  formData.append('user_id', data.user_id);
-  formData.append('leave_type_id', data.leave_type_id);
-  formData.append('start_date', data.start_date);
-  formData.append('end_date', data.end_date);
-  formData.append('remark', data.remark);
+async function applyLeave(data) {
+  let attachmentUrls = [];
 
+  // If there are attachments, upload them to S3 first
   if (data.attachment && data.attachment.length > 0) {
-    data.attachment.forEach((file) => formData.append('attachment', file));
+    const uploadPromises = data.attachment.map(file => uploadFileToS3(file));
+    attachmentUrls = await Promise.all(uploadPromises);
   }
+
+  // Prepare JSON payload
+  const payload = {
+    college_id: data.college_id,
+    user_id: data.user_id,
+    leave_type_id: data.leave_type_id,
+    start_date: data.fromDate,      // matching form field names
+    end_date: data.toDate,
+    remark: data.remark,
+    attachment: attachmentUrls,      // array of S3 URLs (or empty array)
+    leave_period: data.leaveFor,       // Normal / Half Day
+    no_of_days: data.days,
+    leave_status: "PENDING",
+  };
 
   const requestOptions = {
     method: 'POST',
-    headers: authHeader(), // authHeader already works with multipart/form-data in fetch
-    body: formData,
+    headers: {
+      ...authHeader(),
+      'Content-Type': 'application/json',  // important for JSON
+    },
+    body: JSON.stringify(payload),
   };
 
-  return fetch(`${PMSNEWAPI}/apply-leave`, requestOptions).then(handleResponse);
+  return fetch(`${PMSNEWAPI}/apply-leave`, requestOptions)
+    .then(handleResponse);
 }
 
 // 2. GET ALL /api/apply-leave?page=0&size=10
