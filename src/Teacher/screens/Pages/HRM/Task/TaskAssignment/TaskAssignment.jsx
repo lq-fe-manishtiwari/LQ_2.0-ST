@@ -1122,13 +1122,13 @@ export default function TaskAssignment() {
           </button>
 
           {/* Create Task - All screens */}
-          <button
+          {/* <button
             onClick={() => navigate("/hrm/tasks/task-assignment/create-task")}
             className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-medium px-4 py-2 rounded-md shadow-md transition-all hover:shadow-lg flex-1 sm:flex-none justify-center"
           >
             <Plus className="w-4 h-4" aria-hidden="true" />
             <span className="sm:inline">Create Task</span>
-          </button>
+          </button> */}
         </div>
       </div>
 
