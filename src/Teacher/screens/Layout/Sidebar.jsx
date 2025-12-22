@@ -192,10 +192,13 @@ const Sidebar = ({ isOpen, toggle }) => {
       //   iconInactive: classInactive,
       //  },
       {
-        to: "/hrm",
+        to: "/teacher/hrm",
         label: "HRM",
         iconActive: classActive,
         iconInactive: classInactive,
+        match: [
+          "/teacher/hrm",
+        ],
        },
       {
         to: "/teacher-certificate",
