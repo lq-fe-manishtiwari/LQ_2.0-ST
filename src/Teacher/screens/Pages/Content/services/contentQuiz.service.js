@@ -12,6 +12,8 @@ export const contentQuizService = {
     updateQuiz,
     softDeleteQuiz,
     updateQuizByQuizId,
+    getQuizDashboard,
+    getQuizStudentResults,
 };
 
 // POST /api/quizzes
@@ -149,5 +151,33 @@ function updateQuizByQuizId(quizId, quizData) {
     };
 
     return fetch(`${ContentAPI}/quizzes/${quizId}`, requestOptions)
+        .then(handleResponse);
+}
+
+function getQuizDashboard(acyId, subjectId) {
+    const params = new URLSearchParams();
+    params.append('acyId', acyId);
+    params.append('subjectId', subjectId);
+
+    const requestOptions = {
+        method: 'GET',
+        headers: authHeader()
+    };
+
+    return fetch(`${ContentAPI}/admin/content-quiz/result/dashboard?${params.toString()}`, requestOptions)
+        .then(handleResponse);
+}
+
+function getQuizStudentResults(quizId, acyId) {
+    const params = new URLSearchParams();
+    params.append('quizId', quizId);
+    params.append('acyId', acyId);
+
+    const requestOptions = {
+        method: 'GET',
+        headers: authHeader()
+    };
+
+    return fetch(`${ContentAPI}/admin/content-quiz/result/dashboard/students?${params.toString()}`, requestOptions)
         .then(handleResponse);
 }

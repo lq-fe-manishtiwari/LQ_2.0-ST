@@ -471,6 +471,8 @@ export default function ContentDashboard() {
               <ModulesUnitsList
                 modules={modulesData}
                 colorCode={selectedSubject.color_code || "#3b82f6"}
+                academicYearId={selectedProgramData?.academicYearId}
+                semesterId={selectedSemester}
               />
             )}
           </>

@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { ChevronDown, ChevronRight, FileText, BookOpen, Loader2, Play, File, Eye, X, ExternalLink, Clock, Edit, Trash2 } from 'lucide-react';
+import { ChevronDown, ChevronRight, FileText, BookOpen, Loader2, Play, File, Eye, X, ExternalLink, Clock, Edit, Trash2, Layers } from 'lucide-react';
+import SweetAlert from 'react-bootstrap-sweetalert';
 import { ContentApiService } from '../services/contentApi';
+import { contentService } from '../services/content.service';
 
 export default function ModulesUnitsList({ modules, colorCode }) {
     const [expandedModuleId, setExpandedModuleId] = useState(null);
@@ -17,6 +19,14 @@ export default function ModulesUnitsList({ modules, colorCode }) {
     const [showFilePreview, setShowFilePreview] = useState(false);
     const [uploadingFile, setUploadingFile] = useState(false);
     const [deleteConfirm, setDeleteConfirm] = useState({ isOpen: false, contentId: null });
+    const [showAlert, setShowAlert] = useState(false);
+    const [contentToDelete, setContentToDelete] = useState(null);
+    const [showDeleteSuccessAlert, setShowDeleteSuccessAlert] = useState(false);
+    const [showDeleteErrorAlert, setShowDeleteErrorAlert] = useState(false);
+    const [showUpdateSuccessAlert, setShowUpdateSuccessAlert] = useState(false);
+    const [showUpdateErrorAlert, setShowUpdateErrorAlert] = useState(false);
+    const [alertMessage, setAlertMessage] = useState('');
+    const [errorMessage, setErrorMessage] = useState('');
 
     const toggleModule = async (moduleId) => {
         if (expandedModuleId === moduleId) {
@@ -158,7 +168,8 @@ export default function ModulesUnitsList({ modules, colorCode }) {
             };
 
             await contentService.updateContent(editModal.content.content_id, updateRequest);
-            alert('Content updated successfully!');
+            setAlertMessage('Content updated successfully!');
+            setShowUpdateSuccessAlert(true);
             closeEditModal();
 
             // Refresh the content
@@ -176,19 +187,23 @@ export default function ModulesUnitsList({ modules, colorCode }) {
             }
         } catch (error) {
             console.error('Error updating content:', error);
-            alert('Error updating content. Please try again.');
+            setErrorMessage('Error updating content. Please try again.');
+            setShowUpdateErrorAlert(true);
         }
     };
 
     const handleDeleteContent = (contentId) => {
-        setDeleteConfirm({ isOpen: true, contentId });
+        setContentToDelete(contentId);
+        setShowAlert(true);
     };
 
-    const confirmDelete = async () => {
+    const handleConfirmDelete = async () => {
+        setShowAlert(false);
         try {
-            await contentService.softDeleteContent(deleteConfirm.contentId);
-            alert('Content deleted successfully!');
-            setDeleteConfirm({ isOpen: false, contentId: null });
+            await contentService.softDeleteContent(contentToDelete);
+            setAlertMessage('Content deleted successfully!');
+            setShowDeleteSuccessAlert(true);
+            setContentToDelete(null);
 
             // Refresh the content
             if (selectedUnitId) {
@@ -205,8 +220,15 @@ export default function ModulesUnitsList({ modules, colorCode }) {
             }
         } catch (error) {
             console.error('Error deleting content:', error);
-            alert('Error deleting content. Please try again.');
+            setErrorMessage('Error deleting content. Please try again.');
+            setShowDeleteErrorAlert(true);
+            setContentToDelete(null);
         }
+    };
+
+    const handleCancelDelete = () => {
+        setShowAlert(false);
+        setContentToDelete(null);
     };
 
     // Timer effect for reading time
@@ -296,65 +318,64 @@ export default function ModulesUnitsList({ modules, colorCode }) {
         }
     };
 
-    const renderContentItem = (content, index) => {
+    const renderContentItem = (content, index, contentType = 'unit') => {
+        const isModule = contentType === 'module';
+        const borderColor = isModule ? 'border-amber-200' : 'border-blue-200';
+        const bgColor = isModule ? 'bg-amber-50' : 'bg-blue-50';
+        const iconBgColor = isModule ? 'bg-amber-100' : 'bg-blue-100';
+        const iconColor = isModule ? 'text-amber-600' : 'text-blue-600';
+
         return (
-            <div key={content.content_id || index} className="flex items-center justify-between gap-3 p-3 bg-gray-50 rounded-md border">
-                <div className="flex items-center gap-3 flex-1">
+            <div key={content.content_id || index} className={`flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4 p-3 sm:p-4 ${bgColor} rounded-lg border-2 ${borderColor} shadow-sm hover:shadow-md transition-all duration-200`}>
+                <div className="flex items-center gap-3 sm:gap-4 flex-1 min-w-0 w-full sm:w-auto">
                     <div
-                        className="p-2 rounded-full bg-white"
-                        style={{ color: colorCode }}
+                        className={`p-2 sm:p-3 rounded-lg ${iconBgColor} shadow-sm flex-shrink-0`}
                     >
                         {getContentIcon(content.content_type_id)}
                     </div>
-                    <div className="flex-1">
-                        <h4 className="font-medium text-gray-800 text-sm">
+                    <div className="flex-1 min-w-0">
+                        <h4 className="font-bold text-gray-900 text-sm mb-1 truncate">
                             {content.content_name || 'Untitled Content'}
                         </h4>
                         {content.content_description && (
-                            <p className="text-xs text-gray-600 mt-1">{content.content_description}</p>
+                            <p className="text-xs text-gray-600 mb-2 line-clamp-2">{content.content_description}</p>
                         )}
-                        {content.quiz_attachments && content.quiz_attachments.length > 0 && (
-                            <span className="inline-block mt-1 px-2 py-0.5 bg-blue-100 text-blue-600 text-xs rounded-full">
-                                {content.quiz_attachments.length} Quiz Attachments
-                            </span>
-                        )}
+                        <div className="flex items-center gap-2 flex-wrap">
+                            {content.quiz_attachments && content.quiz_attachments.length > 0 && (
+                                <span className={`inline-flex items-center gap-1 px-2 py-1 ${iconBgColor} ${iconColor} text-xs font-medium rounded-full`}>
+                                    <FileText className="w-3 h-3" />
+                                    {content.quiz_attachments.length} Quiz {content.quiz_attachments.length === 1 ? 'Attachment' : 'Attachments'}
+                                </span>
+                            )}
+                        </div>
                     </div>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
                     {/* View Button */}
                     <button
                         onClick={() => handleViewContent(content)}
-                        className="p-2 rounded-lg bg-blue-100 text-blue-600 hover:bg-blue-200 transition-colors group relative"
+                        className="p-1.5 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition"
                         title="View Content"
                     >
                         <Eye className="w-4 h-4" />
-                        <span className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
-                            View
-                        </span>
                     </button>
 
                     {/* Edit Button */}
                     <button
                         onClick={() => handleEditContent(content)}
-                        className="p-2 rounded-lg bg-green-100 text-green-600 hover:bg-green-200 transition-colors group relative"
+                        className="p-1.5 rounded-lg bg-yellow-50 text-yellow-600 hover:bg-yellow-100 transition"
                         title="Edit Content"
                     >
                         <Edit className="w-4 h-4" />
-                        <span className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
-                            Edit
-                        </span>
                     </button>
 
                     {/* Delete Button */}
                     <button
                         onClick={() => handleDeleteContent(content.content_id)}
-                        className="p-2 rounded-lg bg-red-100 text-red-600 hover:bg-red-200 transition-colors group relative"
+                        className="p-1.5 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition"
                         title="Delete Content"
                     >
                         <Trash2 className="w-4 h-4" />
-                        <span className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
-                            Delete
-                        </span>
                     </button>
                 </div>
             </div>
@@ -363,159 +384,247 @@ export default function ModulesUnitsList({ modules, colorCode }) {
 
     if (!modules || modules.length === 0) {
         return (
-            <div className="text-center py-8 text-gray-500">
-                No modules available for this subject.
+            <div className="text-center py-6 sm:py-8 text-gray-500 px-4">
+                <span className="text-sm sm:text-base">No modules available for this subject.</span>
             </div>
         );
     }
 
     return (
         <>
-            <div className="space-y-4 mt-6">
-                <h3 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
-                    <BookOpen className="w-5 h-5" style={{ color: colorCode }} />
-                    Modules & Units
-                </h3>
+            <div className="space-y-4 sm:space-y-6 mt-4 sm:mt-6">
+                {/* Header with clear title */}
+                <div className="flex items-center gap-2 sm:gap-3 pb-2 sm:pb-3 border-b-2" style={{ borderColor: `${colorCode}30` }}>
+                    <div className="p-1.5 sm:p-2 rounded-lg" style={{ backgroundColor: `${colorCode}20` }}>
+                        <BookOpen className="w-5 h-5 sm:w-6 sm:h-6" style={{ color: colorCode }} />
+                    </div>
+                    <div>
+                        <h3 className="text-lg sm:text-xl font-bold text-gray-900">Modules</h3>
+                    </div>
+                </div>
 
-                <div className="grid grid-cols-1 gap-4">
+                <div className="grid grid-cols-1 gap-3 sm:gap-5">
                     {modules.map((module) => (
                         <div
                             key={module.module_id}
-                            className="border rounded-lg overflow-hidden shadow-sm transition-all duration-200"
+                            className="border-2 rounded-xl overflow-hidden shadow-md hover:shadow-lg transition-all duration-300"
                             style={{
-                                borderColor: `${colorCode}40`, // Low opacity border
+                                borderColor: expandedModuleId === module.module_id ? colorCode : `${colorCode}30`,
                             }}
                         >
                             {/* Module Header / Button */}
                             <button
                                 onClick={() => toggleModule(module.module_id)}
-                                className="w-full flex items-center justify-between p-4 text-left hover:opacity-95 transition-opacity"
+                                className="w-full flex items-center justify-between p-3 sm:p-5 text-left transition-all duration-200 group"
                                 style={{
                                     backgroundColor: expandedModuleId === module.module_id
-                                        ? colorCode // Full color when active
-                                        : `${colorCode}15`, // Very light bg when inactive
-                                    color: expandedModuleId === module.module_id
-                                        ? '#ffffff'
-                                        : '#1f2937' // Text color logic
+                                        ? colorCode
+                                        : `${colorCode}08`,
                                 }}
                             >
-                                <div className="flex items-center gap-3">
-                                    <span className={`font-medium ${expandedModuleId === module.module_id ? 'text-white' : 'text-gray-900'}`}>
-                                        {module.module_name}
-                                    </span>
-                                    <span className={`text-xs px-2 py-0.5 rounded-full ${expandedModuleId === module.module_id ? 'bg-white/20 text-white' : 'bg-gray-200 text-gray-600'}`}>
-                                        {module.units ? module.units.length : 0} Units
-                                    </span>
+                                <div className="flex items-center gap-2 sm:gap-4 flex-1 min-w-0">
+                                    {/* Module Number Badge */}
+                                    <div
+                                        className={`flex items-center justify-center w-8 h-8 sm:w-10 sm:h-10 rounded-full font-bold text-sm sm:text-lg ${expandedModuleId === module.module_id
+                                            ? 'bg-white/90 shadow-md'
+                                            : 'bg-white shadow-sm'
+                                            }`}
+                                        style={{
+                                            color: expandedModuleId === module.module_id ? colorCode : '#6B7280'
+                                        }}
+                                    >
+                                        {modules.findIndex(m => m.module_id === module.module_id) + 1}
+                                    </div>
+
+                                    <div className="flex-1 min-w-0">
+                                        <div className="flex items-center gap-2 sm:gap-3 mb-1">
+                                            <span className={`text-xs font-semibold uppercase tracking-wide ${expandedModuleId === module.module_id ? 'text-white/90' : 'text-gray-500'
+                                                }`}>
+                                                Module {modules.findIndex(m => m.module_id === module.module_id) + 1}
+                                            </span>
+                                        </div>
+                                        <h4 className={`text-sm sm:text-lg font-bold truncate ${expandedModuleId === module.module_id ? 'text-white' : 'text-gray-900'
+                                            }`}>
+                                            {module.module_name}
+                                        </h4>
+                                    </div>
+
+                                    {/* Units Count Badge */}
+                                    <div className={`hidden sm:flex items-center gap-2 px-4 py-2 rounded-lg ${expandedModuleId === module.module_id
+                                        ? 'bg-white/20 backdrop-blur-sm'
+                                        : 'bg-white shadow-sm'
+                                        }`}>
+                                        <FileText className={`w-4 h-4 ${expandedModuleId === module.module_id ? 'text-white' : 'text-gray-600'
+                                            }`} />
+                                        <span className={`text-sm font-semibold ${expandedModuleId === module.module_id ? 'text-white' : 'text-gray-700'
+                                            }`}>
+                                            {module.units ? module.units.length : 0} Units
+                                        </span>
+                                    </div>
                                 </div>
 
-                                {expandedModuleId === module.module_id ? (
-                                    <ChevronDown className={`w-5 h-5 ${expandedModuleId === module.module_id ? 'text-white' : 'text-gray-500'}`} />
-                                ) : (
-                                    <ChevronRight className={`w-5 h-5 ${expandedModuleId === module.module_id ? 'text-white' : 'text-gray-500'}`} />
-                                )}
+                                {/* Expand/Collapse Icon */}
+                                <div className={`ml-2 sm:ml-4 p-1 sm:p-2 rounded-lg transition-transform duration-200 ${expandedModuleId === module.module_id ? 'rotate-0 bg-white/20' : 'rotate-0 bg-white/50'
+                                    }`}>
+                                    {expandedModuleId === module.module_id ? (
+                                        <ChevronDown className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
+                                    ) : (
+                                        <ChevronRight className="w-5 h-5 sm:w-6 sm:h-6" style={{ color: colorCode }} />
+                                    )}
+                                </div>
                             </button>
 
                             {/* Units List (Expanded Content) */}
                             {expandedModuleId === module.module_id && (
-                                <div className="bg-white p-4 animate-in slide-in-from-top-2 duration-200">
+                                <div className="bg-gradient-to-b from-gray-50 to-white p-3 sm:p-6 animate-in slide-in-from-top-2 duration-300">
                                     {/* Module Level Content */}
                                     {loadingModule ? (
-                                        <div className="flex items-center gap-2 py-2 text-gray-500 mb-4">
-                                            <Loader2 className="w-4 h-4 animate-spin" />
-                                            <span className="text-sm">Loading module content...</span>
+                                        <div className="flex items-center justify-center gap-3 py-8 text-gray-500 bg-white rounded-lg border-2 border-dashed border-gray-200 mb-6">
+                                            <Loader2 className="w-5 h-5 animate-spin" style={{ color: colorCode }} />
+                                            <span className="text-base font-medium">Loading module resources...</span>
                                         </div>
                                     ) : moduleContent && moduleContent.length > 0 && (
-                                        <div className="mb-6 space-y-3">
-                                            <h4 className="font-semibold text-gray-800 text-sm flex items-center gap-2">
-                                                <div className="w-1 h-4 rounded-full" style={{ backgroundColor: colorCode }}></div>
-                                                Module Resources
-                                            </h4>
-                                            <div className="space-y-2 px-1">
-                                                {moduleContent.map((content, index) => renderContentItem(content, index))}
+                                        <div className="mb-6">
+                                            <div className="flex items-center gap-3 mb-4 p-3 rounded-lg bg-amber-50 border-2 border-amber-200">
+                                                <div className="p-2 rounded-lg bg-amber-100">
+                                                    <BookOpen className="w-5 h-5 text-amber-600" />
+                                                </div>
+                                                <div className="flex-1 text-left">
+                                                    <h4 className="font-bold text-gray-900 text-base">Module Content</h4>
+                                                </div>
+                                                <span className="px-3 py-1 bg-amber-100 text-amber-700 text-xs font-semibold rounded-full">
+                                                    {moduleContent.length} {moduleContent.length === 1 ? 'Resource' : 'Resources'}
+                                                </span>
                                             </div>
-                                            <div className="border-b border-gray-100 my-4"></div>
+                                            <div className="space-y-3">
+                                                {moduleContent.map((content, index) => renderContentItem(content, index, 'module'))}
+                                            </div>
+                                            <div className="border-b-2 border-gray-100 my-6"></div>
                                         </div>
                                     )}
 
                                     {/* Units Header */}
                                     {module.units && module.units.length > 0 && (
-                                        <h4 className="font-semibold text-gray-800 text-sm mb-3 flex items-center gap-2">
-                                            <div className="w-1 h-4 rounded-full" style={{ backgroundColor: colorCode }}></div>
-                                            Learning Units
-                                        </h4>
+                                        <div className="flex items-center gap-2 sm:gap-3 mb-4">
+                                            <div className="p-1.5 sm:p-2 rounded-lg" style={{ backgroundColor: `${colorCode}20` }}>
+                                                <Layers className="w-4 h-4 sm:w-5 sm:h-5" style={{ color: colorCode }} />
+                                            </div>
+                                            <div>
+                                                <h4 className="font-bold text-gray-900 text-sm sm:text-base">Units</h4>
+                                            </div>
+                                        </div>
                                     )}
 
                                     {module.units && module.units.length > 0 ? (
-                                        <ul className="space-y-2">
-                                            {module.units.map((unit, idx) => (
-                                                <li key={unit.unit_id || idx} className="space-y-2">
-                                                    <div
-                                                        onClick={() => handleUnitClick(unit.unit_id)}
-                                                        className={`flex items-center gap-3 p-3 rounded-md border transition-colors cursor-pointer group ${selectedUnitId === unit.unit_id
-                                                            ? 'bg-blue-50 border-blue-200'
-                                                            : 'hover:bg-gray-50 border-gray-100'
-                                                            }`}
-                                                    >
+                                        <div className="space-y-4">
+                                            <div className="space-y-3">
+                                                {module.units.map((unit, idx) => (
+                                                    <div key={unit.unit_id || idx} className="space-y-3">
+                                                        {/* Unit Card */}
                                                         <div
-                                                            className={`p-2 rounded-full transition-colors ${selectedUnitId === unit.unit_id
-                                                                ? 'bg-white'
-                                                                : 'bg-gray-100 group-hover:bg-white'
+                                                            onClick={() => handleUnitClick(unit.unit_id)}
+                                                            className={`flex items-center gap-2 sm:gap-4 p-3 sm:p-4 rounded-xl border-2 transition-all duration-200 cursor-pointer ${selectedUnitId === unit.unit_id
+                                                                ? 'bg-white border-blue-400 shadow-md'
+                                                                : 'bg-white border-gray-200 hover:border-gray-300 hover:shadow-sm'
                                                                 }`}
-                                                            style={{ color: colorCode }}
                                                         >
-                                                            <FileText className="w-4 h-4" />
-                                                        </div>
-                                                        <span className="text-gray-700 font-medium text-sm flex-1">
-                                                            {unit.unit_name || unit.name || `Unit ${idx + 1}`}
-                                                        </span>
-                                                        {loadingContent && selectedUnitId === unit.unit_id && (
-                                                            <Loader2 className="w-4 h-4 animate-spin text-gray-500" />
-                                                        )}
-                                                    </div>
+                                                            {/* Unit Number */}
+                                                            <div
+                                                                className={`flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 rounded-lg font-bold text-sm sm:text-base ${selectedUnitId === unit.unit_id
+                                                                    ? 'shadow-md'
+                                                                    : 'shadow-sm'
+                                                                    }`}
+                                                                style={{
+                                                                    backgroundColor: selectedUnitId === unit.unit_id ? `${colorCode}20` : '#F3F4F6',
+                                                                    color: selectedUnitId === unit.unit_id ? colorCode : '#6B7280'
+                                                                }}
+                                                            >
+                                                                {idx + 1}
+                                                            </div>
 
-                                                    {/* Unit Content Display */}
-                                                    {selectedUnitId === unit.unit_id && (
-                                                        <div className="ml-6 pl-4 border-l-2 border-gray-200">
-                                                            {loadingContent ? (
-                                                                <div className="flex items-center gap-2 py-4 text-gray-500">
-                                                                    <Loader2 className="w-4 h-4 animate-spin" />
-                                                                    <span className="text-sm">Loading content...</span>
-                                                                </div>
-                                                            ) : contentError ? (
-                                                                <div className="py-4">
-                                                                    <div className="bg-red-50 border border-red-200 rounded-md p-3">
-                                                                        <p className="text-red-600 text-sm">{contentError}</p>
-                                                                        <button
-                                                                            onClick={() => handleUnitClick(unit.unit_id)}
-                                                                            className="mt-2 text-red-600 text-sm underline hover:no-underline"
-                                                                        >
-                                                                            Try again
-                                                                        </button>
-                                                                    </div>
-                                                                </div>
-                                                            ) : unitContent && Array.isArray(unitContent) ? (
-                                                                <div className="py-4 space-y-3">
-                                                                    <h4 className="font-medium text-gray-800 text-sm mb-3">
-                                                                        Unit Content ({unitContent.length}):
-                                                                    </h4>
-                                                                    {unitContent.length > 0 ? (
-                                                                        unitContent.map((content, index) => renderContentItem(content, index))
-                                                                    ) : (
-                                                                        <p className="text-sm text-gray-500 italic">No content available for this unit.</p>
+                                                            {/* Unit Info */}
+                                                            <div className="flex-1 min-w-0">
+                                                                <div className="flex items-center gap-2 mb-1">
+                                                                    <span className={`text-xs font-semibold uppercase tracking-wide ${selectedUnitId === unit.unit_id ? 'text-blue-600' : 'text-gray-500'
+                                                                        }`}>
+                                                                        Unit {idx + 1}
+                                                                    </span>
+                                                                    {selectedUnitId === unit.unit_id && (
+                                                                        <span className="hidden sm:inline px-2 py-0.5 bg-blue-100 text-blue-700 text-xs font-semibold rounded-full">
+                                                                            Expanded
+                                                                        </span>
                                                                     )}
                                                                 </div>
+                                                                <h5 className="text-sm sm:text-base font-bold text-gray-900 truncate">
+                                                                    {unit.unit_name || unit.name || `Unit ${idx + 1}`}
+                                                                </h5>
+                                                            </div>
+
+                                                            {/* Loading or Arrow Icon */}
+                                                            {loadingContent && selectedUnitId === unit.unit_id ? (
+                                                                <Loader2 className="w-4 h-4 sm:w-5 sm:h-5 animate-spin text-blue-500" />
                                                             ) : (
-                                                                <div className="py-4">
-                                                                    <p className="text-sm text-gray-500 italic">No content available for this unit.</p>
-                                                                </div>
+                                                                <ChevronRight
+                                                                    className={`w-4 h-4 sm:w-5 sm:h-5 transition-transform duration-200 ${selectedUnitId === unit.unit_id ? 'rotate-90 text-blue-500' : 'text-gray-400'
+                                                                        }`}
+                                                                />
                                                             )}
                                                         </div>
-                                                    )}
-                                                </li>
-                                            ))}
-                                        </ul>
+
+                                                    {/* Unit Content Display */}
+                                                        {/* Unit Content Display */}
+                                                        {selectedUnitId === unit.unit_id && (
+                                                            <div className="ml-4 sm:ml-8 pl-3 sm:pl-6 border-l-4 rounded-bl-lg animate-in slide-in-from-top-2 duration-200"
+                                                                style={{ borderColor: `${colorCode}40` }}>
+                                                                {loadingContent ? (
+                                                                    <div className="flex items-center justify-center gap-3 py-8 text-gray-500 bg-white rounded-lg border-2 border-dashed border-gray-200">
+                                                                        <Loader2 className="w-5 h-5 animate-spin" style={{ color: colorCode }} />
+                                                                        <span className="text-sm font-medium">Loading unit content...</span>
+                                                                    </div>
+                                                                ) : contentError ? (
+                                                                    <div className="py-4">
+                                                                        <div className="bg-red-50 border-2 border-red-200 rounded-lg p-4">
+                                                                            <p className="text-red-700 font-medium text-sm mb-2">⚠️ {contentError}</p>
+                                                                            <button
+                                                                                onClick={() => handleUnitClick(unit.unit_id)}
+                                                                                className="px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 transition-colors"
+                                                                            >
+                                                                                🔄 Try Again
+                                                                            </button>
+                                                                        </div>
+                                                                    </div>
+                                                                ) : unitContent && Array.isArray(unitContent) ? (
+                                                                    <div className="py-4 space-y-4">
+                                                                        {unitContent.length > 0 ? (
+                                                                            <div className="space-y-3">
+                                                                                {unitContent.map((content, index) => renderContentItem(content, index, 'unit'))}
+                                                                            </div>
+                                                                        ) : (
+                                                                            <div className="bg-gray-50 border-2 border-dashed border-gray-200 rounded-lg p-6 text-center">
+                                                                                <FileText className="w-12 h-12 mx-auto mb-3 text-gray-300" />
+                                                                                <p className="text-sm text-gray-500 font-medium">No content available for this unit yet.</p>
+                                                                            </div>
+                                                                        )}
+                                                                    </div>
+                                                                ) : (
+                                                                    <div className="py-4">
+                                                                        <div className="bg-gray-50 border-2 border-dashed border-gray-200 rounded-lg p-6 text-center">
+                                                                            <FileText className="w-12 h-12 mx-auto mb-3 text-gray-300" />
+                                                                            <p className="text-sm text-gray-500 font-medium">No content available for this unit yet.</p>
+                                                                        </div>
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
                                     ) : (
-                                        <p className="text-sm text-gray-500 italic px-2">No units found in this module.</p>
+                                        <div className="bg-gray-50 border-2 border-dashed border-gray-200 rounded-xl p-8 text-center">
+                                            <FileText className="w-16 h-16 mx-auto mb-4 text-gray-300" />
+                                            <p className="text-base text-gray-500 font-medium">No units found in this module.</p>
+                                        </div>
                                     )}
                                 </div>
                             )}
@@ -526,44 +635,40 @@ export default function ModulesUnitsList({ modules, colorCode }) {
 
             {/* Full Screen Preview Modal */}
             {previewModal.isOpen && (
-                <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
-                    <div className="relative w-full h-full max-w-7xl max-h-full m-4 bg-white rounded-lg overflow-hidden">
+                <div className="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50 backdrop-blur-sm">
+                    <div className="relative w-full h-full max-w-7xl max-h-full m-4 bg-white rounded-2xl overflow-hidden shadow-2xl">
                         {/* Modal Header */}
-                        <div className="flex items-center justify-between p-4 border-b bg-gray-50">
-                            <div className="flex items-center gap-4">
-                                <h3 className="text-lg font-semibold text-gray-800">
-                                    {previewModal.content?.content_name || 'Content Preview'}
-                                </h3>
-                                {previewModal.content?.average_reading_time_seconds && (
-                                    <div className="flex items-center gap-2 px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm">
-                                        <Clock className="w-4 h-4" />
-                                        <span>Est. {formatReadingTime(previewModal.content.average_reading_time_seconds)} read</span>
-                                    </div>
-                                )}
-                                {/* <div className="flex items-center gap-2 px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm">
-                                    <Clock className="w-4 h-4" />
-                                    <span>Reading: {formatTime(readingTimer)}</span>
-                                </div> */}
+                        <div className="flex items-center justify-between p-5 border-b-2 bg-gradient-to-r from-gray-50 to-gray-100">
+                            <div className="flex items-center gap-3">
+                                <div className="p-2 rounded-lg bg-blue-100">
+                                    <Eye className="w-5 h-5 text-blue-600" />
+                                </div>
+                                <div>
+                                    <h3 className="text-lg font-bold text-gray-900">
+                                        {previewModal.content?.content_name || 'Content Preview'}
+                                    </h3>
+                                    <p className="text-xs text-gray-500">Preview Mode</p>
+                                </div>
                             </div>
                             <div className="flex items-center gap-2">
                                 <button
                                     onClick={() => window.open(previewModal.content?.content_link, '_blank', 'noopener,noreferrer')}
-                                    className="flex items-center gap-1 px-3 py-1.5 bg-blue-500 text-white text-sm rounded-md hover:bg-blue-600 transition-colors"
+                                    className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors shadow-md"
                                 >
                                     <ExternalLink className="w-4 h-4" />
                                     Open in New Tab
                                 </button>
                                 <button
                                     onClick={closePreviewModal}
-                                    className="p-2 bg-blue-600 hover:bg-blue-700 rounded-full transition-colors"
+                                    className="p-2 hover:bg-gray-200 rounded-lg transition-colors"
                                 >
-                                    <X className="w-5 h-5 text-white" />
+                                    <X className="w-6 h-6 text-gray-600" />
                                 </button>
                             </div>
                         </div>
 
                         {/* Modal Content */}
-                        <div className="flex-1 p-4 h-full overflow-auto">
+                        <div className="flex-1 p-6 h-full overflow-auto bg-gray-50">
                             <div className="w-full h-full flex items-center justify-center">
                                 {renderPreviewContent(previewModal.content)}
                             </div>
@@ -744,6 +849,71 @@ export default function ModulesUnitsList({ modules, colorCode }) {
                 </div>
             )}
 
+            {/* Delete Confirmation Alert */}
+            {showAlert && (
+                <SweetAlert
+                    warning
+                    showCancel
+                    confirmBtnText="Yes, Delete!"
+                    cancelBtnText="Cancel"
+                    confirmBtnCssClass="btn-confirm"
+                    cancelBtnCssClass="btn-cancel"
+                    title="Are you sure?"
+                    onConfirm={handleConfirmDelete}
+                    onCancel={handleCancelDelete}
+                >
+                    You won't be able to recover this content!
+                </SweetAlert>
+            )}
+
+            {/* Success Alert */}
+            {showDeleteSuccessAlert && (
+                <SweetAlert
+                    success
+                    title="Deleted!"
+                    confirmBtnCssClass="btn-confirm"
+                    onConfirm={() => setShowDeleteSuccessAlert(false)}
+                >
+                    {alertMessage}
+                </SweetAlert>
+            )}
+
+            {/* Error Alert */}
+            {showDeleteErrorAlert && (
+                <SweetAlert
+                    danger
+                    title="Error!"
+                    confirmBtnCssClass="btn-confirm"
+                    onConfirm={() => setShowDeleteErrorAlert(false)}
+                >
+                    {errorMessage}
+                </SweetAlert>
+            )}
+
+            {/* Update Success Alert */}
+            {showUpdateSuccessAlert && (
+                <SweetAlert
+                    success
+                    title="Updated!"
+                    confirmBtnCssClass="btn-confirm"
+                    onConfirm={() => setShowUpdateSuccessAlert(false)}
+                >
+                    {alertMessage}
+                </SweetAlert>
+            )}
+
+            {/* Update Error Alert */}
+            {showUpdateErrorAlert && (
+                <SweetAlert
+                    danger
+                    title="Error!"
+                    confirmBtnCssClass="btn-confirm"
+                    onConfirm={() => setShowUpdateErrorAlert(false)}
+                >
+                    {errorMessage}
+                </SweetAlert>
+            )}
+
             {/* Delete Confirmation Modal */}
             {deleteConfirm.isOpen && (
                 <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
@@ -763,13 +933,13 @@ export default function ModulesUnitsList({ modules, colorCode }) {
                         <div className="bg-gray-50 px-6 py-4 flex items-center justify-center gap-3 border-t">
                             <button
                                 onClick={() => setDeleteConfirm({ isOpen: false, contentId: null })}
-                                className="px-6 py-2.5 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors font-medium"
+                                className="px-6 py-2.5 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors font-medium btn-cancel"
                             >
                                 Cancel
                             </button>
                             <button
                                 onClick={confirmDelete}
-                                className="px-6 py-2.5 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium"
+                                className="px-6 py-2.5 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium btn-confirm"
                             >
                                 Yes, Delete
                             </button>

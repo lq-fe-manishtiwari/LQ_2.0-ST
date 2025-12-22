@@ -173,9 +173,17 @@ export default function MyLeaves() {
               <form onSubmit={handleSubmit} className="space-y-4">
                 <select name="type" onChange={handleFormChange} className="w-full border rounded-lg p-2">
                   <option value="">Select Leave Type</option>
+<<<<<<< HEAD
+                  {leaveTypes.map((lt) => (
+                    <option key={lt.leave_type_id} value={lt.leave_type_id}>
+                      {lt.leave_type}
+                    </option>
+                  ))}
+=======
                   <option>Casual Leave</option>
                   <option>Medical Leave</option>
                   <option>Duty Leave</option>
+>>>>>>> a97ef7ca3d0bc0edc88613c38fcbc03c32a0d5a5
                 </select>
 
                 <select name="leaveFor" onChange={handleFormChange} className="w-full border rounded-lg p-2">
