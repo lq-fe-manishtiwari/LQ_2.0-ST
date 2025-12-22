@@ -801,7 +801,7 @@ export default function MyTasks() {
       if (!collegeId) return;
       setDeptLoading(true);
       try {
-        const data = await DepartmentService.getDepartmentByCollegeId(collegeId);
+        const data = await TaskManagement.getDepartmentByCollegeId(collegeId);
         const deptNames = data.map(dept => dept.department_name || dept.name || 'Unknown');
         setDepartments(deptNames);
       } catch (err) {
