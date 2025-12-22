@@ -128,8 +128,8 @@ const StudentSidebar = ({ isOpen, toggle }) => {
         iconInactive: quicknotesInactive,
         match: ["/student-quickNotesList", "/student-view-note"],
       },
-      {
-        to: "/student-leave",
+       {
+        to: "/student/leaves",
         label: "Leaves",
         iconActive: classActive,
         iconInactive: classInactive,

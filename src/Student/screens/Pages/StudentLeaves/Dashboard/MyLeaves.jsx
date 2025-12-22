@@ -65,7 +65,7 @@ export default function MyLeaves() {
     const fetchData = async () => {
       try {
         const userProfile = JSON.parse(localStorage.getItem("userProfile") || "{}");
-        const collegeId = userProfile?.college_id;
+        const collegeId = userProfile?.college_id || "16";
         const userId = userProfile?.user?.user_id || userProfile?.user_id;
 
         if (!collegeId || !userId) {
@@ -77,7 +77,7 @@ export default function MyLeaves() {
         // Fetch leave types
         const typesResponse = await leaveService.getLeaveTypesByCollegeId(collegeId);
         const teacherLeaveTypes = Array.isArray(typesResponse)
-          ? typesResponse.filter((lt) => lt.user_type === "TEACHER")
+          ? typesResponse.filter((lt) => lt.user_type === "STUDENT")
           : [];
 
         setLeaveTypes(teacherLeaveTypes);
@@ -158,7 +158,7 @@ export default function MyLeaves() {
     try {
       const userProfile = JSON.parse(localStorage.getItem("userProfile") || "{}");
       const user_id = userProfile?.user?.user_id || userProfile?.user_id;
-      const college_id = userProfile?.college_id;
+      const college_id = userProfile?.college_id || "16";
 
       const payload = {
         college_id,
