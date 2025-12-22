@@ -213,8 +213,8 @@ export default function MyLeaves() {
                 >
                   <option value="">Select Leave Type</option>
                   {leaveTypes.map((lt) => (
-                    <option key={lt.id} value={lt.name}>
-                      {lt.name}
+                    <option key={lt.leave_type_id} value={lt.leave_type_id}>
+                      {lt.leave_type}
                     </option>
                   ))}
                 </select>
