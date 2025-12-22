@@ -178,42 +178,35 @@ export default function TimeSheetDashboard() {
       return { days: [], summary: { working: 0, present: 0, absent: 0, leave: 0 } };
     }
 
-    const days = apiResponse.date_wise_data
-      .filter(dayData => dayData.total_task_count > 0)
-      .map(dayData => {
-        const allTasks = [...(dayData.assigned_tasks || []), ...(dayData.self_tasks || [])];
-        
-        return {
-          date: dayData.date,
-          dayName: new Date(dayData.date).toLocaleDateString('en-US', { weekday: 'long' }),
-          tasks: allTasks.map(task => ({
-            title: task.task_name || 'Untitled Task',
-            description: task.description || '',
-            priority: task.priority_name || 'Medium',
-            status: task.task_status_name || 'UNKNOWN',
-            taskType: task.task_type_name || 'General',
-            assignedBy: task.assigned_by_user ? `${task.assigned_by_user.other_staff_info?.firstname || ''} ${task.assigned_by_user.other_staff_info?.lastname || ''}`.trim() || task.assigned_by_user.username : 'N/A',
-            dueDate: task.due_date_time ? new Date(task.due_date_time).toLocaleDateString() : 'N/A',
-            time: task.estimated_time || 'N/A'
-          }))
-        };
-      });
-
-    const finalDays = days.length > 0 ? days : apiResponse.date_wise_data.map(dayData => ({
-      date: dayData.date,
-      dayName: new Date(dayData.date).toLocaleDateString('en-US', { weekday: 'long' }),
-      tasks: []
-    }));
+    // Transform all dates, including empty ones
+    const days = apiResponse.date_wise_data.map(dayData => {
+      const allTasks = [...(dayData.assigned_tasks || []), ...(dayData.self_tasks || [])];
+      
+      return {
+        date: dayData.date,
+        dayName: new Date(dayData.date).toLocaleDateString('en-US', { weekday: 'long' }),
+        tasks: allTasks.map(task => ({
+          title: task.task_name || 'Untitled Task',
+          description: task.description || '',
+          priority: task.priority_name || 'Medium',
+          status: task.task_status_name || 'UNKNOWN',
+          taskType: task.task_type_name || 'General',
+          assignedBy: task.assigned_by_user ? `${task.assigned_by_user.other_staff_info?.firstname || ''} ${task.assigned_by_user.other_staff_info?.lastname || ''}`.trim() || task.assigned_by_user.username : 'N/A',
+          dueDate: task.due_date_time ? new Date(task.due_date_time).toLocaleDateString() : 'N/A',
+          time: task.estimated_time || 'N/A'
+        }))
+      };
+    });
 
     const summary = {
-      working: apiResponse.summary?.total_days_with_tasks || finalDays.length,
-      present: apiResponse.summary?.total_days_with_tasks || finalDays.length,
-      absent: 0,
+      working: apiResponse.summary?.total_days_with_tasks || days.filter(day => day.tasks.length > 0).length,
+      present: apiResponse.summary?.total_days_with_tasks || days.filter(day => day.tasks.length > 0).length,
+      absent: days.filter(day => day.tasks.length === 0).length,
       leave: 0
     };
 
-    console.log('Transformed Data:', { days: finalDays, summary });
-    return { days: finalDays, summary };
+    console.log('Transformed Data:', { days, summary });
+    return { days, summary };
   };
 
   const fetchTimesheetData = async () => {
@@ -634,16 +627,16 @@ export default function TimeSheetDashboard() {
 
         <div className="grid grid-cols-1 md:grid-cols-4 gap-5 mb-6">
           <div className="bg-blue-100 text-blue-700 p-4 text-center rounded-xl font-semibold shadow">
-            Total Working Days : {filteredData.summary.working || 0}
+            Total Days : {filteredData.days?.length || 0}
           </div>
           <div className="bg-green-100 text-green-700 p-4 text-center rounded-xl font-semibold shadow">
-            Total Present Days : {filteredData.summary.present || 0}
+            Days with Tasks : {filteredData.summary.working || 0}
           </div>
           <div className="bg-red-100 text-red-700 p-4 text-center rounded-xl font-semibold shadow">
-            Total Absent Days : {filteredData.summary.absent || 0}
+            Days without Tasks : {filteredData.summary.absent || 0}
           </div>
           <div className="bg-yellow-100 text-yellow-700 p-4 text-center rounded-xl font-semibold shadow">
-            Leave Taken : {filteredData.summary.leave || 0}
+            Total Tasks : {filteredData.days?.reduce((total, day) => total + (day.tasks?.length || 0), 0) || 0}
           </div>
         </div>
 
