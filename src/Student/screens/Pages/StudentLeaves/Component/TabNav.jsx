@@ -2,8 +2,8 @@ import React from "react";
 import { NavLink } from "react-router-dom";
 
 const tabs = [
-  { label: "My Leaves", to: "/teacher/leaves" },
-  { label: "Class Leaves", to: "/teacher/leaves/class-leave" },
+  { label: "My Leaves", to: "/student/leaves" },
+  // { label: "My Submitted Forms", to: "/teacher/leaves/submitted-feedback" },
 ];
 
 export default function TabsNav() {
