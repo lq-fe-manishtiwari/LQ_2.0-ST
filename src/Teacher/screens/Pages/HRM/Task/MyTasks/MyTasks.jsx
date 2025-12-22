@@ -703,8 +703,8 @@ export default function MyTasks() {
     }
   };
   
-  const handleView = (task) => {
-    navigate(`/teacher/hrm/tasks/my-tasks/view/${task.id}`);
+   const handleView = (task) => {
+    navigate(`/teacher/hrm/tasks/my-tasks/view/${task.id}`, { state: { taskData: task } });
   };
  
   const handleEdit = (task) => {

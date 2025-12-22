@@ -483,7 +483,7 @@ export default function EditTask() {
             assignedDate: formatDateForInput(first.task?.assigned_date_time),
             dueDate: formatDateForInput(first.task?.due_date_time),
             priority: first.task?.priority?.priority_id || "",
-           status: first.task_status?.task_status_id || first.task?.task_status?.task_status_id || "",
+            status: first.task_status?.task_status_id || first.task?.task_status?.task_status_id || "",
             department: "",
             employee: "",
             role: "",
@@ -636,6 +636,22 @@ export default function EditTask() {
     }
 
     return true;
+  };
+
+  // Update task status handler
+  const handleStatusUpdate = async (newStatusId) => {
+    try {
+      const updatedBy = user?.id || user?.user_id || 1;
+      await TaskManagement.updateTaskStatus(id, newStatusId, updatedBy);
+      
+      setForm(prev => ({ ...prev, status: newStatusId }));
+      setAlertMessage('Task status updated successfully!');
+      setShowSuccessAlert(true);
+    } catch (error) {
+      console.error("Status update error:", error);
+      setAlertMessage('Failed to update task status. Please try again.');
+      setShowErrorAlert(true);
+    }
   };
 
   // Form submission handler
@@ -992,7 +1008,12 @@ export default function EditTask() {
               const status = statuses.find(s => String(s.value) === String(form.status));
               return status ? status.name : form.status;
             })()}
-            onChange={(e) => setForm({ ...form, status: e.target.value })}
+            onChange={(e) => {
+              const newStatusId = e.target.value;
+              if (newStatusId !== form.status) {
+                handleStatusUpdate(newStatusId);
+              }
+            }}
             options={statuses}
             placeholder={loadingStatuses ? "Loading statuses..." : "select status *"}
             disabled={loadingStatuses}

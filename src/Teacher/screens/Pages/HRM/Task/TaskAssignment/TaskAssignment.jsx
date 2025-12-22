@@ -822,7 +822,7 @@ export default function TaskAssignment() {
        || "Medium",
 
             
-              status: item.task?.task_status_name || item.assignment_status || "ASSIGNED",
+             status: item.task_status?.name || item.task?.task_status?.name || item.assignment_status || "Pending",
             
               email: item.user?.email || "",
             

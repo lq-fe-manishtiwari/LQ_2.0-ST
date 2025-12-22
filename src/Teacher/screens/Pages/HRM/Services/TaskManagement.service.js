@@ -11,6 +11,7 @@ export const TaskManagement = {
        getTaskAssignmentbyID,
        deletePMSTaskAssignment,
        updateTaskAssignment,
+       updateTaskStatus,    //teacher side status update
 
        
        getAllMyTasks,
@@ -240,5 +241,16 @@ function getUserTimesheetMonthlySummary(userId, year, month) {
     });
     const requestOptions = { method: 'GET', headers: authHeader() };
     return fetch(`${PMSAPI}/timesheet/user/${userId}/monthly-summary?${queryParams.toString()}`, requestOptions)
+        .then(handleResponse);
+}
+
+function updateTaskStatus(taskId, taskStatusId, updatedBy) {
+    // PUT: /api/task/update-status/{taskId}
+    const queryParams = new URLSearchParams({
+        taskStatusId: taskStatusId,
+        updatedBy: updatedBy
+    });
+    const requestOptions = { method: 'PUT', headers: authHeader() };
+    return fetch(`${PMSAPI}/task/update-status/${taskId}?${queryParams.toString()}`, requestOptions)
         .then(handleResponse);
 }
