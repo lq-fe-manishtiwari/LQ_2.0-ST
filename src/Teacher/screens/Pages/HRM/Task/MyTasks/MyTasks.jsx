@@ -708,7 +708,13 @@ export default function MyTasks() {
   };
  
   const handleEdit = (task) => {
-    navigate(`/hrm/tasks/my-tasks/edit/${task.id}`);
+    // Find the original task data from the API response
+    const originalTask = tasks.find(t => t.id === task.id);
+    if (originalTask && originalTask.originalData) {
+      navigate(`/hrm/tasks/my-tasks/edit/${task.id}`, { state: { taskData: originalTask.originalData } });
+    } else {
+      navigate(`/hrm/tasks/my-tasks/edit/${task.id}`);
+    }
   };
  
   // Delete functionality
@@ -877,7 +883,8 @@ export default function MyTasks() {
           dueDate: task.due_date_time,
           priority: task.priority?.priority_name || "Medium",
           status: task.status?.name || "Pending",
-          department: response.user?.other_staff_info?.department?.department_name || ""
+          department: response.user?.other_staff_info?.department?.department_name || "",
+          originalData: task // Store original API data
         }));
         
         setTasks(mappedTasks);

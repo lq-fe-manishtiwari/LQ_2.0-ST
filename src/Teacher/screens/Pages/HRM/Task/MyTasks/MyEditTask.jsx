@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { Edit, X, ChevronDown } from "lucide-react";
 import SweetAlert from 'react-bootstrap-sweetalert';
 import { TaskManagement } from '../../Services/TaskManagement.service';
@@ -66,18 +66,33 @@ const CustomSelect = ({ label, value, onChange, options, placeholder, disabled =
 export default function MyTaskEdit() {
   const navigate = useNavigate();
   const { id } = useParams();
+  const location = useLocation();
+  const taskData = location.state?.taskData;
 
+  // Helper function to safely format date
+  const formatDateForInput = (dateStr) => {
+    if (!dateStr) return "";
+    try {
+      const date = new Date(dateStr);
+      if (isNaN(date.getTime())) return "";
+      return date.toISOString().slice(0, 16);
+    } catch {
+      return "";
+    }
+  };
+
+  // Initialize form with passed data or empty values
   const [form, setForm] = useState({
-    title: "",
-    description: "",
-    taskType: "",
-    taskTypeId: "",
-    assignedDate: "",
-    dueDate: "",
-    priority: "",
-    priorityId: "",
-    status: "",
-    statusId: "",
+    title: taskData?.title || "",
+    description: taskData?.description || "",
+    taskType: taskData?.task_type?.task_type_name || "",
+    taskTypeId: taskData?.task_type?.task_type_id || "",
+    assignedDate: formatDateForInput(taskData?.assigned_date_time),
+    dueDate: formatDateForInput(taskData?.due_date_time),
+    priority: taskData?.priority?.priority_name || "",
+    priorityId: taskData?.priority?.priority_id || "",
+    status: taskData?.status?.name || "",
+    statusId: taskData?.status?.task_status_id || "",
   });
 
   const [priorities, setPriorities] = useState([]);
@@ -108,8 +123,9 @@ export default function MyTaskEdit() {
     fetchData();
   }, []);
 
+  // Only fetch from API if no data was passed
   useEffect(() => {
-    if (id && !loading) {
+    if (id && !loading && !taskData) {
       TaskManagement.getMyTaskbyID(id)
         .then(response => {
           if (response) {
@@ -133,7 +149,7 @@ export default function MyTaskEdit() {
           setShowErrorAlert(true);
         });
     }
-  }, [id, loading]);
+  }, [id, loading, taskData]);
 
   const [showSuccessAlert, setShowSuccessAlert] = useState(false);
   const [showErrorAlert, setShowErrorAlert] = useState(false);
