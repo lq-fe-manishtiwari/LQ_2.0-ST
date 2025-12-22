@@ -1,6 +1,6 @@
 // Class
 // import config from 'config';
-import { authHeader, handleResponse, authHeaderToPost, PMSAPI} from '@/_services/api';
+import { authHeader, handleResponse, authHeaderToPost, PMSAPI,TeacherLoginAPI} from '@/_services/api';
 
 export const TaskManagement = {
        getAllStaff,
@@ -18,6 +18,9 @@ export const TaskManagement = {
        getMyTaskbyID,
        deleteMyTask,
        updateMyTask,
+
+       //department 
+       getDepartmentByCollegeId,
 }; 
 
 function getAllStaff() {
@@ -141,4 +144,12 @@ function updateMyTask(values, self_task_id) {
 
     return fetch(`${PMSAPI}/admin/self-task/delete/${self_task_id}?user_id=${user_id}`, requestOptions)
         .then(handleResponse);
+}
+
+//department
+function getDepartmentByCollegeId(id) {
+    // /: /api/departments/{id}
+    const requestOptions = { method: 'GET', headers: authHeader() };
+    return fetch(`${TeacherLoginAPI}/departments/college/${id}`, requestOptions)
+    .then(handleResponse);
 }
