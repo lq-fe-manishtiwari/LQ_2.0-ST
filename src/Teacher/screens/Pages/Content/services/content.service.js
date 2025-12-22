@@ -34,11 +34,17 @@ export const contentService = {
     getTeacherSubjectsAllocated,
 
     getAllContentsByUnitIdForTeacher,
+    getAllContentsByModuleAndUnitsForTeacher,
     getStudentProjectsByUnit,
+    getStudentProjectsByModuleAndUnits,
     approveStudentProject,
     rejectStudentProject,
     getApprovedModuleLevelContent,
+    updateContent,
+    uploadFileToS3,
 };
+
+
 
 function getAllQuestionLevel() {
     const requestOptions = {
@@ -116,21 +122,21 @@ function getQuestionsByUnitIdPaginated(unitId, page = 0, size = 10, sortDirectio
 // GET /api/questions/teacher/module/{moduleId}/units (always paginated)
 function getQuestionsByModuleAndUnits(moduleId, unitIds = [], page = 0, size = 10, sortDirection = 'DESC') {
     const params = new URLSearchParams();
-
-    // Add unitIds as multiple parameters
-    unitIds.forEach(id => params.append('unitIds', id));
-
     params.append('page', page);
     params.append('size', size);
     if (sortDirection) params.append('sortDirection', sortDirection);
+
+    let url = `${ContentAPI}/questions/teacher/module/${moduleId}/units?${params.toString()}`;
+    if (unitIds.length > 0) {
+        url += `&unitIds=${unitIds.join(',')}`;
+    }
 
     const requestOptions = {
         method: 'GET',
         headers: authHeader()
     };
 
-    return fetch(`${ContentAPI}/questions/teacher/module/${moduleId}/units?${params.toString()}`, requestOptions)
-        .then(handleResponse);
+    return fetch(url, requestOptions).then(handleResponse);
 }
 
 // Alias for clarity
@@ -266,7 +272,7 @@ function getModulesbySubject(subjectId) {
         headers: authHeader()
     };
 
-    return fetch(`${AcademicAPI}/admin/academic/api/subjects/${subjectId}/modules-units/can-view`, requestOptions)
+    return fetch(`${AcademicAPI}/admin/academic/api/subjects/${subjectId}/modules-units/can-view?role=teacher`, requestOptions)
         .then(handleResponse)
         .then(data => {
             return data;
@@ -296,7 +302,7 @@ function getModulesAndUnits(subjectId) {
     };
 
     return fetch(
-        `${AcademicAPI}/api/subjects/${subjectId}/modules-units/can-view`,
+        `${AcademicAPI}/api/subjects/${subjectId}/modules-units/can-view?role=teacher`,
         requestOptions
     ).then(handleResponse);
 }
@@ -399,6 +405,28 @@ function getAllContentsByUnitIdForTeacher(unitId) {
         });
 }
 
+function getAllContentsByModuleAndUnitsForTeacher(moduleId, unitIds = []) {
+    let url = `${ContentAPI}/admin/content/teacher/module/${moduleId}/units`;
+    if (unitIds.length > 0) {
+        url += `?unitIds=${unitIds.join(',')}`;
+    }
+
+    const requestOptions = {
+        method: 'GET',
+        headers: authHeader()
+    };
+
+    return fetch(url, requestOptions)
+        .then(handleResponse)
+        .then(data => {
+            return { success: true, data: data };
+        })
+        .catch(error => {
+            console.error('Error fetching module contents for teacher:', error);
+            throw error;
+        });
+}
+
 // GET /api/teacher/{teacherId}/subjects-allocated
 function getTeacherSubjectsAllocated(teacherId, academicYearId, semesterId) {
     const requestOptions = {
@@ -441,6 +469,27 @@ function getStudentProjectsByUnit(unitId) {
         headers: authHeader()
     };
     return fetch(`${ContentAPI}/student-project/unit/${unitId}?status=PENDING`, requestOptions).then(handleResponse);
+}
+
+function getStudentProjectsByModuleAndUnits(moduleId, unitIds = [], status = null) {
+    let url = `${ContentAPI}/student-project/module/${moduleId}/units`;
+    const queryParts = [];
+    if (unitIds.length > 0) {
+        queryParts.push(`unitIds=${unitIds.join(',')}`);
+    }
+    if (status) {
+        queryParts.push(`status=${status}`);
+    }
+
+    if (queryParts.length > 0) {
+        url += `?${queryParts.join('&')}`;
+    }
+
+    const requestOptions = {
+        method: 'GET',
+        headers: authHeader()
+    };
+    return fetch(url, requestOptions).then(handleResponse);
 }
 
 // PUT /api/student-project/{projectId}/approve
@@ -489,3 +538,49 @@ function getApprovedModuleLevelContent(moduleId) {
             throw error;
         });
 }
+
+// PUT /api/admin/content/{contentId}
+function updateContent(contentId, request) {
+    const requestOptions = {
+        method: 'PUT',
+        headers: authHeaderToPost(),
+        body: JSON.stringify(request)
+    };
+    return fetch(`${ContentAPI}/admin/content/${contentId}`, requestOptions).then(handleResponse);
+}
+
+// Upload file to S3
+function uploadFileToS3(file) {
+    console.log("uploadFileToS3 called with file:", file);
+    const formData = new FormData();
+    formData.append('file', file);
+    const authHeaders = authHeader();
+    const requestOptions = {
+        method: 'POST',
+        headers: {
+            'Authorization': authHeaders.Authorization
+        },
+        body: formData
+    };
+
+    const url = `${AcademicAPI}/s3/upload`;
+
+    return fetch(url, requestOptions)
+        .then(response => {
+            console.log("S3 upload response:", response);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            // S3 upload returns plain text URL, not JSON
+            return response.text();
+        })
+        .then(data => {
+            console.log("S3 upload data:", data);
+            return data;
+        })
+        .catch(error => {
+            console.error("S3 upload error:", error);
+            throw error;
+        });
+}
+

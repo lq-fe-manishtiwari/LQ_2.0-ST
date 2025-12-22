@@ -5,7 +5,7 @@ export const contentService = {
     getCOntentByUnitId,
     UpdateCOntentbyContentId,
     DeleteContentById,
-
+    AddContentBulk,
     getSubjectbyProgramId,
     getModulesAndUnitsBySubjectId,
     getContentTypes,
@@ -89,7 +89,7 @@ function getModulesAndUnitsBySubjectId(subjectId) {
         method: 'GET',
         headers: authHeader()
     };
-    return fetch(`${AcademicAPI}/admin/academic/api/subjects/${subjectId}/modules-units/can-view`, requestOptions)
+    return fetch(`${AcademicAPI}/admin/academic/api/subjects/${subjectId}/modules-units/can-view?role=teacher`, requestOptions)
         .then(handleResponse)
         .then(data => {
             return data;
@@ -191,4 +191,17 @@ function getQuizzesByModuleAndUnits(moduleId, unitIds = [], page = 0, size = 100
     };
     return fetch(`${ContentAPI}/quizzes/module/${moduleId}/units?${params.toString()}`, requestOptions)
         .then(handleResponse);
+}
+function AddContentBulk(values) {
+    const requestOptions = {
+        method: 'POST',
+        headers: authHeaderToPost(),
+        body: JSON.stringify(values) // Expecting array of objects
+    };
+
+    return fetch(`${ContentAPI}/admin/content/bulk`, requestOptions)
+        .then(handleResponse)
+        .then(data => {
+            return data;
+        });
 }
