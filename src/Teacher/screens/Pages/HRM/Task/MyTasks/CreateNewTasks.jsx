@@ -304,7 +304,7 @@ export default function CreateTask() {
       {/* Header */}
       <div className="flex items-center justify-between mb-4 sm:mb-6">
         <div className="flex items-center gap-2">
-          <Plus className="w-6 h-6 text-[#2162C1]" />
+          {/* <Plus className="w-6 h-6 text-[#2162C1]" /> */}
           <h2 className="pageheading text-lg sm:text-xl md:text-2xl">Add Task</h2>
         </div>
         <button

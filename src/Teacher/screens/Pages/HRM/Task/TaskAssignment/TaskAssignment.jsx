@@ -556,6 +556,10 @@ export default function TaskAssignment() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [tasks, setTasks] = useState([]);
+  
+  // Get current user ID from localStorage
+  const currentUser = JSON.parse(localStorage.getItem("userProfile"));
+  const userId = currentUser?.user?.user_id || null;
 
   const [searchQuery, setSearchQuery] = useState("");
   const [filters, setFilters] = useState({
@@ -761,9 +765,16 @@ export default function TaskAssignment() {
   // Fetch tasks from API - IMPROVED
   useEffect(() => {
     async function fetchTasks() {
+      if (!userId) {
+        console.error("User ID not found");
+        setTasks([]);
+        setLoading(false);
+        return;
+      }
+      
       try {
         setLoading(true);
-        console.log("Fetching tasks from API...");
+        console.log("Fetching tasks from API for user ID:", userId);
   
         const response = await TaskManagement.getAllPMSTasks();
         console.log("API Response:", response);
@@ -841,8 +852,16 @@ export default function TaskAssignment() {
           }
         });
   
+        // Filter tasks to show only those assigned to current user
+        const userTasks = formatted.filter(task => {
+          // Check if task is assigned to current user
+          const taskUserId = task._raw?.user?.user_id || task._raw?.user_id;
+          return taskUserId === userId;
+        });
+        
         console.log("Formatted tasks:", formatted);
-        setTasks(formatted);
+        console.log("User specific tasks:", userTasks);
+        setTasks(userTasks);
       } catch (error) {
         console.error("Error fetching tasks:", error);
         // Set empty array instead of throwing
@@ -853,7 +872,7 @@ export default function TaskAssignment() {
     }
   
     fetchTasks();
-  }, []);
+  }, [userId]);
   
   // DELETE HANDLERS
   const handleDelete = (id) => {

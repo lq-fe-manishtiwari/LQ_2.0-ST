@@ -270,7 +270,7 @@ export default function EditTask() {
     }
 
     setLoadingDepartments(true);
-    DepartmentService.getDepartmentByCollegeId(collegeId)
+    TaskManagement.getDepartmentByCollegeId(collegeId)
       .then(response => {
         const deptList = response.data || response || [];
         console.log("Department API Response:", deptList);
@@ -483,7 +483,7 @@ export default function EditTask() {
             assignedDate: formatDateForInput(first.task?.assigned_date_time),
             dueDate: formatDateForInput(first.task?.due_date_time),
             priority: first.task?.priority?.priority_id || "",
-            status: first.task?.task_status_id || "",
+           status: first.task_status?.task_status_id || first.task?.task_status?.task_status_id || "",
             department: "",
             employee: "",
             role: "",

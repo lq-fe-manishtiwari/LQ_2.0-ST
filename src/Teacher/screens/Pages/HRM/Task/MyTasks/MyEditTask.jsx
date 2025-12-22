@@ -203,7 +203,7 @@ export default function MyTaskEdit() {
     <div className="w-full flex flex-col gap-8 p-4 sm:p-6 md:p-8">
       <div className="flex items-center justify-between mb-4 sm:mb-6">
         <div className="flex items-center gap-2">
-          <Edit className="w-6 h-6 text-[#2162C1]" />
+          {/* <Edit className="w-6 h-6 text-[#2162C1]" /> */}
           <h2 className="pageheading text-lg sm:text-xl md:text-2xl">
             Edit Task
           </h2>

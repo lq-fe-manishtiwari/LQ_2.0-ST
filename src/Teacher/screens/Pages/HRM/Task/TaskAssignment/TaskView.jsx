@@ -147,7 +147,7 @@ export default function TaskView() {
     const collegeId = activeCollege?.id;
 
     if (collegeId) {
-      DepartmentService.getDepartmentByCollegeId(collegeId)
+      TaskManagement.getDepartmentByCollegeId(collegeId)
         .then(response => {
           const deptList = response.data || response || [];
           setDepartments(deptList);
