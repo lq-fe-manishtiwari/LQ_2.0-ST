@@ -79,14 +79,14 @@ export default function TimeSheetDashboard() {
     activeSubTab: ''
   });
   const [mobileTabStart, setMobileTabStart] = useState(0);
-  const [name, setName] = useState("Manish Tiwari");
+  // const [name, setName] = useState("Manish Tiwari");
   // const [userId, setUserId] = useState(2);
   const currentUser = JSON.parse(localStorage.getItem("userProfile"));
   const userId = currentUser?.user?.user_id || null;
   const [filteredData, setFilteredData] = useState({ days: [], summary: {} });
   const [downloadOpen, setDownloadOpen] = useState(false);
   const downloadRef = useRef(null);
-  const [employeeId, setEmployeeId] = useState('EMP001');
+  // const [employeeId, setEmployeeId] = useState('EMP001');
 
 
   const years = ['2022', '2023', '2024', '2025'];
@@ -326,25 +326,23 @@ export default function TimeSheetDashboard() {
         heightLeft -= pdf.internal.pageSize.getHeight();
       }
 
-      pdf.save(`Timesheet-${name}-${new Date().toISOString().split('T')[0]}.pdf`);
+      pdf.save(`Timesheet-${new Date().toISOString().split('T')[0]}.pdf`);
     });
   };
 
   const downloadExcel = () => {
     const csvData = [];
     
-    csvData.push(['Employee Name', 'Employee ID', 'Date', 'Day', 'Task Title', 'Description', 'Priority', 'Status', 'Task Type', 'Assigned By', 'Due Date', 'Time Spent']);
+    csvData.push(['Date', 'Day', 'Task Title', 'Description', 'Priority', 'Status', 'Task Type', 'Assigned By', 'Due Date', 'Time Spent']);
     
-    csvData.push(['Summary', '', '', '', `Working Days: ${filteredData.summary.working || 0}`, `Present: ${filteredData.summary.present || 0}`, `Absent: ${filteredData.summary.absent || 0}`, `Leave: ${filteredData.summary.leave || 0}`, '', '', '', '']);
-    csvData.push(['', '', '', '', '', '', '', '', '', '', '', '']);
+    csvData.push(['Summary', '', `Working Days: ${filteredData.summary.working || 0}`, `Present: ${filteredData.summary.present || 0}`, `Absent: ${filteredData.summary.absent || 0}`, `Leave: ${filteredData.summary.leave || 0}`, '', '', '', '']);
+    csvData.push(['', '', '', '', '', '', '', '', '', '']);
     
     if (filteredData.days && filteredData.days.length > 0) {
       filteredData.days.forEach((day) => {
         if (day.tasks && day.tasks.length > 0) {
           day.tasks.forEach((task) => {
             csvData.push([
-              name,
-              employeeId || 'N/A',
               day.date,
               day.dayName,
               task.title,
@@ -359,8 +357,6 @@ export default function TimeSheetDashboard() {
           });
         } else {
           csvData.push([
-            name,
-            employeeId || 'N/A',
             day.date,
             day.dayName,
             'No tasks',
@@ -384,7 +380,7 @@ export default function TimeSheetDashboard() {
     const link = document.createElement('a');
     const url = URL.createObjectURL(blob);
     link.setAttribute('href', url);
-    link.setAttribute('download', `Timesheet-${name}-${new Date().toISOString().split('T')[0]}.csv`);
+    link.setAttribute('download', `Timesheet-${new Date().toISOString().split('T')[0]}.csv`);
     link.style.visibility = 'hidden';
     document.body.appendChild(link);
     link.click();
@@ -631,10 +627,10 @@ export default function TimeSheetDashboard() {
 
       <div id="timesheet-section" className="bg-white p-4 rounded-xl shadow">
 
-        <div className="flex justify-between items-center px-1 mb-5">
+        {/* <div className="flex justify-between items-center px-1 mb-5">
           <h2 className="text-lg font-semibold">Name : {name}</h2>
           <p className="text-gray-700 font-medium">Employee ID : {employeeId || 'N/A'}</p>
-        </div>
+        </div> */}
 
         <div className="grid grid-cols-1 md:grid-cols-4 gap-5 mb-6">
           <div className="bg-blue-100 text-blue-700 p-4 text-center rounded-xl font-semibold shadow">
