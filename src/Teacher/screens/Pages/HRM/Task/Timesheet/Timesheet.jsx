@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useMemo } from "react";
 import { Download, Search, Filter, ChevronDown, ChevronLeft, ChevronRight } from "lucide-react";
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
-import { TaskManagement } from '../../Services/TaskManagement.service';
+import { TaskManagement } from '../../Services/TaskManagement.service.js';
 // import { DepartmentService } from '../../../Academics/Services/Department.service';
 // import Loader from '../Components/Loader';
 
@@ -80,7 +80,9 @@ export default function TimeSheetDashboard() {
   });
   const [mobileTabStart, setMobileTabStart] = useState(0);
   const [name, setName] = useState("Manish Tiwari");
-  const [userId, setUserId] = useState(2);
+  // const [userId, setUserId] = useState(2);
+  const currentUser = JSON.parse(localStorage.getItem("userProfile"));
+  const userId = currentUser?.user?.user_id || null;
   const [filteredData, setFilteredData] = useState({ days: [], summary: {} });
   const [downloadOpen, setDownloadOpen] = useState(false);
   const downloadRef = useRef(null);

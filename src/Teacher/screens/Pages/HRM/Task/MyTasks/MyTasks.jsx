@@ -540,7 +540,7 @@ export default function MyTasks() {
   // Alert States
   const [alert, setAlert] = useState(null);
   const currentUser = JSON.parse(localStorage.getItem("userProfile"));
-  const userId = currentUser?.userId || null;
+  const userId = currentUser?.user?.user_id || null;
   const activeCollege = JSON.parse(localStorage.getItem("activeCollege"));
   const collegeId = activeCollege?.id || null;
 
@@ -704,11 +704,17 @@ export default function MyTasks() {
   };
   
   const handleView = (task) => {
-    navigate(`/hrm/tasks/my-tasks/view/${task.id}`);
+    navigate(`/teacher/hrm/tasks/my-tasks/view/${task.id}`);
   };
  
   const handleEdit = (task) => {
-    navigate(`/hrm/tasks/my-tasks/edit/${task.id}`);
+    // Find the original task data from the API response
+    const originalTask = tasks.find(t => t.id === task.id);
+    if (originalTask && originalTask.originalData) {
+      navigate(`/hrm/tasks/my-tasks/edit/${task.id}`, { state: { taskData: originalTask.originalData } });
+    } else {
+      navigate(`/hrm/tasks/my-tasks/edit/${task.id}`);
+    }
   };
  
   // Delete functionality
@@ -863,8 +869,8 @@ export default function MyTasks() {
         
         const mappedTasks = tasksData.map(task => ({
           id: task.self_task_id?.toString(),
-          firstname: response.user?.other_staff_info?.firstname || "N/A",
-          lastname: response.user?.other_staff_info?.lastname || "N/A",
+          firstname: response.user?.teacher_info?.firstname || "N/A",
+          lastname: response.user?.teacher_info?.lastname || "N/A",
           name: response.user?.username || "",
           email: response.user?.username || "",
           taskTitle: task.title || "No Title",
@@ -877,7 +883,8 @@ export default function MyTasks() {
           dueDate: task.due_date_time,
           priority: task.priority?.priority_name || "Medium",
           status: task.status?.name || "Pending",
-          department: response.user?.other_staff_info?.department?.department_name || ""
+          department: response.user?.other_staff_info?.department?.department_name || "",
+          originalData: task // Store original API data
         }));
         
         setTasks(mappedTasks);
