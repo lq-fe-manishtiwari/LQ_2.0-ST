@@ -704,7 +704,7 @@ export default function MyTasks() {
   };
   
   const handleView = (task) => {
-    navigate(`/hrm/tasks/my-tasks/view/${task.id}`);
+    navigate(`/teacher/hrm/tasks/my-tasks/view/${task.id}`);
   };
  
   const handleEdit = (task) => {
@@ -863,8 +863,8 @@ export default function MyTasks() {
         
         const mappedTasks = tasksData.map(task => ({
           id: task.self_task_id?.toString(),
-          firstname: response.user?.other_staff_info?.firstname || "N/A",
-          lastname: response.user?.other_staff_info?.lastname || "N/A",
+          firstname: response.user?.teacher_info?.firstname || "N/A",
+          lastname: response.user?.teacher_info?.lastname || "N/A",
           name: response.user?.username || "",
           email: response.user?.username || "",
           taskTitle: task.title || "No Title",

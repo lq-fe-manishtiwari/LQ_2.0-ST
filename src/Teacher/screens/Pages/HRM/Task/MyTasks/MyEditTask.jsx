@@ -152,8 +152,11 @@ export default function MyTaskEdit() {
 
     setIsSubmitting(true);
 
+    const currentUser = JSON.parse(localStorage.getItem("userProfile"));
+    const userId = currentUser?.user?.user_id || null;
+
     const payload = {
-      user_id: 2,
+      user_id: userId,
       title: form.title,
       description: form.description,
       priority_id: parseInt(form.priorityId),
