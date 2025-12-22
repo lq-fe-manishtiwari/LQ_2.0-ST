@@ -76,6 +76,17 @@ function App() {
           }
         />
 
+        <Route
+          path="/teacher/hrm/*"
+          element={
+            <ProtectedRoute>
+              <TeacherHomepage>
+                <HRMRoutes />
+              </TeacherHomepage>
+            </ProtectedRoute>
+          }
+        />
+
         {/* ────── STUDENT ────── */}
         <Route
           path="/student-dashboard/*"

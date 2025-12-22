@@ -4,10 +4,10 @@ import { Plus, Settings, Upload } from "lucide-react";
 // import BulkUploadModal from "../Components/BulkUploadModal";
 
 const tabs = [
-  { label: "Dashboard", to: "/hrm/dashboard" },
-  { label: "Academic Diary", to: "/hrm/academic-diary" },
-  { label: "Tasks", to: "/hrm/tasks" },
-  { label: "Salary", to: "/hrm/salary" },
+  { label: "Dashboard", to: "/teacher/hrm/dashboard" },
+  { label: "Academic Diary", to: "/teacher/hrm/academic-diary" },
+  { label: "Tasks", to: "/teacher/hrm/tasks" },
+  { label: "Salary", to: "/teacher/hrm/salary" },
 ];
 
 export default function TabsNav() {
