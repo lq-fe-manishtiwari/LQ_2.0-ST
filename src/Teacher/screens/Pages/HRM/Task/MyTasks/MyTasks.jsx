@@ -540,7 +540,7 @@ export default function MyTasks() {
   // Alert States
   const [alert, setAlert] = useState(null);
   const currentUser = JSON.parse(localStorage.getItem("userProfile"));
-  const userId = currentUser?.userId || null;
+  const userId = currentUser?.user?.user_id || null;
   const activeCollege = JSON.parse(localStorage.getItem("activeCollege"));
   const collegeId = activeCollege?.id || null;
 

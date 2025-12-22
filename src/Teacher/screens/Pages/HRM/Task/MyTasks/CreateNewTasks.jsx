@@ -9,12 +9,10 @@ import { TaskManagement } from '../../Services/TaskManagement.service';
 const CustomSelect = ({ label, value, onChange, options, placeholder, disabled = false, loading = false }) => {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef(null);
-
   const handleSelect = (selectedValue) => {
     onChange({ target: { value: selectedValue } });
     setIsOpen(false);
   };
-
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
@@ -24,7 +22,6 @@ const CustomSelect = ({ label, value, onChange, options, placeholder, disabled =
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
-
   return (
     <div ref={dropdownRef}>
       <label className="block text-sm font-semibold text-blue-700 mb-2">{label}</label>
@@ -38,7 +35,6 @@ const CustomSelect = ({ label, value, onChange, options, placeholder, disabled =
           </span>
           <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${isOpen ? 'rotate-180' : 'rotate-0'}`} />
         </div>
-
         {isOpen && !disabled && !loading && (
           <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
             <div
@@ -65,18 +61,16 @@ const CustomSelect = ({ label, value, onChange, options, placeholder, disabled =
 
 export default function CreateTask() {
   const navigate = useNavigate();
-
   const [form, setForm] = useState({
     title: "",
     description: "",
     taskType: "",
     assignedDate: "",
     dueDate: "",
-    priority: "", // Now stores priority_id (number/string)
+    priority: "",
   });
-
   const [taskTypes, setTaskTypes] = useState([]);
-  const [priorities, setPriorities] = useState([]); // New state for priorities
+  const [priorities, setPriorities] = useState([]);
   const [loadingTaskTypes, setLoadingTaskTypes] = useState(true);
   const [loadingPriorities, setLoadingPriorities] = useState(true);
   const [showSuccessAlert, setShowSuccessAlert] = useState(false);
@@ -89,25 +83,42 @@ export default function CreateTask() {
   const labelClass = "block text-sm font-semibold text-blue-700 mb-2";
 
   useEffect(() => {
-    // Get current user ID (same robust logic)
+    // Updated function to correctly extract user_id (3138) from your localStorage structure
     const getUserIdFromStorage = () => {
-      // ... (your existing robust user ID extraction logic remains unchanged)
-      let userId = localStorage.getItem("currentUserId") || 
-                   localStorage.getItem("userId") || 
-                   localStorage.getItem("user_id") || 
+      let userId = localStorage.getItem("currentUserId") ||
+                   localStorage.getItem("userId") ||
+                   localStorage.getItem("user_id") ||
                    localStorage.getItem("id") ||
                    localStorage.getItem("UserID") ||
                    localStorage.getItem("uid");
 
       if (!userId) {
-        userId = sessionStorage.getItem("currentUserId") || 
-                 sessionStorage.getItem("userId") || 
-                 sessionStorage.getItem("user_id") || 
+        userId = sessionStorage.getItem("currentUserId") ||
+                 sessionStorage.getItem("userId") ||
+                 sessionStorage.getItem("user_id") ||
                  sessionStorage.getItem("id") ||
                  sessionStorage.getItem("UserID") ||
                  sessionStorage.getItem("uid");
       }
 
+      // Primary source: userProfile (your app's actual storage key)
+      if (!userId) {
+        const userProfileStr = localStorage.getItem("userProfile") || sessionStorage.getItem("userProfile");
+        if (userProfileStr) {
+          try {
+            const userProfile = JSON.parse(userProfileStr);
+            if (userProfile?.user?.user_id) {
+              userId = userProfile.user.user_id;
+            } else if (userProfile?.teacher_id) {
+              userId = userProfile.teacher_id; // fallback (57 in your case)
+            }
+          } catch (e) {
+            console.error("Error parsing userProfile:", e);
+          }
+        }
+      }
+
+      // Fallback: generic "user" key
       if (!userId) {
         const userStr = localStorage.getItem("user") || sessionStorage.getItem("user");
         if (userStr) {
@@ -120,17 +131,27 @@ export default function CreateTask() {
         }
       }
 
+      // Final fallback: JWT token decoding (if any token exists)
       if (!userId) {
-        const token = localStorage.getItem("token") || localStorage.getItem("access_token");
+        const token = localStorage.getItem("token") || 
+                      localStorage.getItem("access_token") || 
+                      localStorage.getItem("refreshToken");
         if (token) {
           try {
-            const base64Url = token.split('.')[1];
-            const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-            const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
-              return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
-            }).join(''));
-            const payload = JSON.parse(jsonPayload);
-            userId = payload.userId || payload.user_id || payload.id || payload.sub;
+            let tokenStr = token;
+            if (typeof token === "string" && token.startsWith('{')) {
+              try { tokenStr = JSON.parse(token).token || token; } catch {}
+            }
+            const parts = tokenStr.split('.');
+            if (parts.length > 1) {
+              const base64Url = parts[1];
+              const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+              const jsonPayload = decodeURIComponent(atob(base64).split('').map(c => 
+                '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)
+              ).join(''));
+              const payload = JSON.parse(jsonPayload);
+              userId = payload.userId || payload.user_id || payload.id || payload.sub || payload.jti;
+            }
           } catch (e) {
             console.error("Error decoding token:", e);
           }
@@ -154,11 +175,11 @@ export default function CreateTask() {
         const types = response.data || response || [];
         const uniqueTypes = [];
         const seenIds = new Set();
-        
+       
         types.forEach(type => {
           const typeId = type.task_type_id || type.id;
           const typeName = type.task_type_name || type.name || type.title;
-          
+         
           if (typeId && !seenIds.has(typeId)) {
             seenIds.add(typeId);
             uniqueTypes.push({ value: typeId, name: typeName });
@@ -166,7 +187,7 @@ export default function CreateTask() {
             uniqueTypes.push({ value: typeName, name: typeName });
           }
         });
-        
+       
         setTaskTypes(uniqueTypes);
         setLoadingTaskTypes(false);
       })
@@ -196,7 +217,6 @@ export default function CreateTask() {
         setAlertMessage("Failed to load priorities.");
         setShowErrorAlert(true);
       });
-
   }, []);
 
   const formatDateTimeForAPI = (datetimeLocal) => {
@@ -218,7 +238,6 @@ export default function CreateTask() {
     if (!form.assignedDate) { setAlertMessage('Please select an assigned date and time.'); setShowErrorAlert(true); return; }
     if (!form.dueDate) { setAlertMessage('Please select a due date and time.'); setShowErrorAlert(true); return; }
     if (!form.priority) { setAlertMessage('Please select a priority.'); setShowErrorAlert(true); return; }
-
     if (new Date(form.dueDate) <= new Date(form.assignedDate)) {
       setAlertMessage('Due date must be after assigned date.');
       setShowErrorAlert(true);
@@ -226,13 +245,12 @@ export default function CreateTask() {
     }
 
     setIsSubmitting(true);
-
     try {
       const taskData = [{
-        user_id: currentUserId,
+        user_id: currentUserId,                    // अब यहाँ सही user_id (3138) जाएगा
         title: form.title.trim(),
         description: form.description.trim(),
-        priority_id: parseInt(form.priority), // Now sending priority_id
+        priority_id: parseInt(form.priority),
         assigned_date_time: formatDateTimeForAPI(form.assignedDate),
         due_date_time: formatDateTimeForAPI(form.dueDate),
         task_type_id: parseInt(form.taskType),
@@ -240,20 +258,16 @@ export default function CreateTask() {
       }];
 
       const response = await TaskManagement.postMyTask(taskData);
-
       setIsSubmitting(false);
       setAlertMessage('Task created successfully!');
       setShowSuccessAlert(true);
-
     } catch (error) {
       setIsSubmitting(false);
       console.error('Error creating task:', error);
-
       let errorMsg = 'Failed to create task. Please try again.';
       if (error.response?.data?.message) errorMsg = error.response.data.message;
       else if (error.message?.includes('401') || error.message?.includes('403')) errorMsg = 'Authentication failed. Please login again.';
       else if (error.message?.includes('400')) errorMsg = 'Invalid data. Please check your inputs.';
-
       setAlertMessage(errorMsg);
       setShowErrorAlert(true);
     }
@@ -304,7 +318,6 @@ export default function CreateTask() {
       {/* Form Card */}
       <div className="bg-white rounded-xl p-4 sm:p-6 shadow-sm border">
         <h2 className="text-lg sm:text-xl font-semibold mb-4 sm:mb-6">Task Information</h2>
-
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
           <div>
             <label className={labelClass}>Title *</label>
@@ -312,47 +325,42 @@ export default function CreateTask() {
               onChange={(e) => setForm({ ...form, title: e.target.value })} maxLength={100} />
             <p className="text-xs text-gray-500 mt-1">Max 100 characters</p>
           </div>
-
           <div>
             <label className={labelClass}>Description *</label>
             <textarea placeholder="Enter task description" className={`${inputClass} min-h-[100px] resize-none`}
               value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} maxLength={500} />
             <p className="text-xs text-gray-500 mt-1">Max 500 characters</p>
           </div>
-
           <div>
-            <CustomSelect 
-              label="Priority *" 
-              value={form.priority} 
+            <CustomSelect
+              label="Priority *"
+              value={form.priority}
               onChange={(e) => setForm({ ...form, priority: e.target.value })}
-              options={priorities} 
+              options={priorities}
               placeholder={loadingPriorities ? "Loading..." : "Select priority"}
               disabled={loadingPriorities}
               loading={loadingPriorities}
             />
           </div>
-
           <div>
             <label className={labelClass}>Assigned Date & Time *</label>
             <input type="datetime-local" className={inputClass} value={form.assignedDate}
               onChange={(e) => setForm({ ...form, assignedDate: e.target.value })} min={getCurrentDateTime()} />
           </div>
-
           <div>
             <label className={labelClass}>Due Date & Time *</label>
             <input type="datetime-local" className={inputClass} value={form.dueDate}
               onChange={(e) => setForm({ ...form, dueDate: e.target.value })} min={form.assignedDate || getCurrentDateTime()} />
           </div>
-
           <div>
-            <CustomSelect 
-              label="Task Type *" 
-              value={form.taskType} 
+            <CustomSelect
+              label="Task Type *"
+              value={form.taskType}
               onChange={(e) => setForm({ ...form, taskType: e.target.value })}
-              options={taskTypes} 
+              options={taskTypes}
               placeholder={loadingTaskTypes ? "Loading..." : "Select task type"}
-              disabled={loadingTaskTypes} 
-              loading={loadingTaskTypes} 
+              disabled={loadingTaskTypes}
+              loading={loadingTaskTypes}
             />
           </div>
         </div>
@@ -381,7 +389,6 @@ export default function CreateTask() {
               </div>
             ) : 'Create Task'}
           </button>
-
           <button onClick={handleCancel} disabled={isSubmitting}
             className="px-8 py-3 rounded-lg shadow-md text-white bg-orange-500 hover:bg-orange-600 transition-all font-medium disabled:opacity-50 disabled:cursor-not-allowed">
             Cancel
