@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from "react";
-import { ChevronDown } from "lucide-react";
+import { CheckCircle, XCircle, Clock,ChevronDown } from "lucide-react";
 import { getTeacherAllocatedPrograms } from "../../../../../_services/api";
 import { leaveService } from "../Services/Leave.Service";
+import SweetAlert from "react-bootstrap-sweetalert";
 
 /* =======================
    Custom Select Component
@@ -83,6 +84,8 @@ export default function ClassLeave() {
   const [leaves, setLeaves] = useState([]);
   const [loading, setLoading] = useState(true);
   const [leavesLoading, setLeavesLoading] = useState(false);
+
+   const [alert, setAlert] = useState(null);
 
   /* =======================
      Fetch Allocations
@@ -184,21 +187,59 @@ export default function ClassLeave() {
   /* =======================
      Update Leave Status
   ======================= */
-const updateLeaveStatus = async (id, status) => {
-  try {
-    await leaveService.updateLeaveStatus(id, status);
+// const updateLeaveStatus = async (id, status) => {
+//   try {
+//     await leaveService.updateLeaveStatus(id, status);
 
-    // Update UI immediately
-    setLeaves((prev) =>
-      prev.map((leave) =>
-        leave.id === id ? { ...leave, status } : leave
-      )
-    );
-  } catch (error) {
-    console.error("Update failed:", error);
-    alert("Failed to update leave status");
-  }
-};
+//     // Update UI immediately
+//     setLeaves((prev) =>
+//       prev.map((leave) =>
+//         leave.id === id ? { ...leave, status } : leave
+//       )
+//     );
+//   } catch (error) {
+//     console.error("Update failed:", error);
+//     alert("Failed to update leave status");
+//   }
+// };
+
+  const updateLeaveStatus = async (id, newStatus) => {
+    try {
+      await leaveService.updateLeaveStatus(id, newStatus);
+
+      setLeaves((prev) =>
+        prev.map((req) =>
+          req.id === id ? { ...req, status: newStatus } : req
+        )
+      );
+
+      setAlert(
+        <SweetAlert
+          success
+          title="Success"
+             confirmBtnCssClass="btn-confirm"
+          cancelBtnCssClass="btn-cancel"
+          onConfirm={() => setAlert(null)}
+        >
+          Leave {newStatus === "APPROVED" ? "approved" : "rejected"} successfully.
+        </SweetAlert>
+      );
+    } catch (err) {
+      console.error("Failed to update status:", err);
+
+      setAlert(
+        <SweetAlert
+          danger
+             confirmBtnCssClass="btn-confirm"
+          cancelBtnCssClass="btn-cancel"
+          title="Error"
+          onConfirm={() => setAlert(null)}
+        >
+          Failed to update leave status.
+        </SweetAlert>
+      );
+    }
+  };
 
 
   /* =======================
@@ -206,6 +247,7 @@ const updateLeaveStatus = async (id, status) => {
   ======================= */
   return (
     <div className="p-6 bg-slate-50 min-h-screen">
+       {alert}
       <h1 className="text-2xl font-bold mb-6">Class Leaves</h1>
 
       <div className="grid grid-cols-3 gap-4 bg-white p-4 rounded shadow mb-6">
@@ -237,8 +279,8 @@ const updateLeaveStatus = async (id, status) => {
         <p>Loading...</p>
       ) : (
         <table className="w-full bg-white shadow rounded">
-          <thead className="bg-blue-50">
-            <tr>
+          <thead className="table-header">
+            <tr className="text-blue-700 text-left">
               <th className="p-3">Sr</th>
               <th className="p-3">Student</th>
               <th className="p-3">From</th>
@@ -257,24 +299,36 @@ const updateLeaveStatus = async (id, status) => {
                 <td className="p-3">{l.toDate}</td>
                 <td className="p-3">{l.days}</td>
                 <td className="p-3">{l.status}</td>
-                <td className="p-3 space-x-2">
-                  {l.status === "PENDING" && (
-                    <>
-                      <button
-                        onClick={() => updateLeaveStatus(l.id, "APPROVED")}
-                        className="px-3 py-1 bg-green-600 text-white rounded"
-                      >
-                        Approve
-                      </button>
-                      <button
-                        onClick={() => updateLeaveStatus(l.id, "REJECTED")}
-                        className="px-3 py-1 bg-red-600 text-white rounded"
-                      >
-                        Reject
-                      </button>
-                    </>
-                  )}
-                </td>
+                  <td className="px-4 py-3 text-center">
+                        {l.status === "PENDING" ? (
+                          <div className="flex justify-center gap-3">
+                            <button
+                              onClick={() =>
+                                updateLeaveStatus(l.id, "APPROVED")
+                              }
+                              className="text-green-600 hover:text-green-800"
+                              title="Approve"
+                            >
+                              <CheckCircle size={20} />
+                            </button>
+
+                            <button
+                              onClick={() =>
+                                updateLeaveStatus(l.id, "REJECTED")
+                              }
+                              className="text-red-600 hover:text-red-800"
+                              title="Reject"
+                            >
+                              <XCircle size={20} />
+                            </button>
+                          </div>
+                        ) : (
+                          <Clock
+                            size={20}
+                            className="mx-auto text-gray-400"
+                          />
+                        )}
+                      </td>
               </tr>
             ))}
           </tbody>
