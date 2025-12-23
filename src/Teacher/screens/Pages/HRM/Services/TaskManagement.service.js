@@ -12,6 +12,7 @@ export const TaskManagement = {
        deletePMSTaskAssignment,
        updateTaskAssignment,
        updateTaskStatus,    //teacher side status update
+       getEmployeeTaskView,
 
        
        getAllMyTasks,
@@ -252,5 +253,17 @@ function updateTaskStatus(taskId, taskStatusId, updatedBy) {
     });
     const requestOptions = { method: 'PUT', headers: authHeader() };
     return fetch(`${PMSAPI}/task/update-status/${taskId}?${queryParams.toString()}`, requestOptions)
+        .then(handleResponse);
+}
+
+function getEmployeeTaskView(userId, collegeId) {
+    // GET: /api/task/employee-view
+    const queryParams = new URLSearchParams({
+        userId: userId,
+        collegeId: collegeId
+    });
+    
+    const requestOptions = { method: 'GET', headers: authHeader() };
+    return fetch(`${PMSAPI}/task/employee-view?${queryParams.toString()}`, requestOptions)
         .then(handleResponse);
 }
