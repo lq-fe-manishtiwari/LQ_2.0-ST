@@ -1,7 +1,8 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { ArrowLeft, User, GraduationCap, MessageCircle, Bus, FileText } from "lucide-react";
 import moment from "moment";
+import { useUserProfile } from "@/contexts/UserProfileContext";
 import StudentPersonalDetails from "./Components/StudentPersonalDetails";
 import StudentEducationalDetails from "./Components/StudentEducationalDetails";
 import StudentCommunicationDetails from "./Components/StudentCommunicationDetails";
@@ -12,6 +13,16 @@ export default function ProfileDashboard() {
   const [activeTab, setActiveTab] = useState("personal");
   const [historyLoading, setHistoryLoading] = useState(false);
 
+  // Use UserProfile context for actual student data
+  const {
+    profile,
+    loading: profileLoading,
+    error: profileError,
+    getFullName,
+    fetchProfile,
+    isLoaded
+  } = useUserProfile();
+
   const tabs = [
     { id: 'personal', name: 'Personal', icon: <User className="w-5 h-5" /> },
     { id: 'educational', name: 'Educational', icon: <GraduationCap className="w-5 h-5" /> },
@@ -20,10 +31,17 @@ export default function ProfileDashboard() {
     { id: 'academic', name: 'Academic Journey', icon: <FileText className="w-5 h-5" /> }
   ];
 
-  // Mock student data - replace with actual data from props or API
-  const studentData = {};
-  const studentName = "Prajwal Bawane";
-  const profileImage = null; // Set to null or image URL
+  // Use actual API data instead of dummy data
+  const studentData = profile || {};
+  const studentName = getFullName() || "Student";
+  const profileImage = profile?.avatar || null;
+
+  useEffect(() => {
+    // Ensure profile data is loaded when component mounts
+    if (!isLoaded && !profileLoading) {
+      fetchProfile();
+    }
+  }, [isLoaded, profileLoading, fetchProfile]);
 
   const handleProfileUpload = async (file) => {
     console.log('Uploading file:', file);
@@ -64,6 +82,38 @@ export default function ProfileDashboard() {
     }
   };
 
+  // Show loading state
+  if (profileLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading profile data...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show error state
+  if (profileError && !profile) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="bg-red-50 border border-red-200 rounded-lg p-6 max-w-md">
+            <h3 className="text-red-800 font-medium mb-2">Error Loading Profile</h3>
+            <p className="text-red-600 text-sm mb-4">{profileError}</p>
+            <button
+              onClick={fetchProfile}
+              className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm font-medium"
+            >
+              Try Again
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
@@ -102,16 +152,32 @@ export default function ProfileDashboard() {
               <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">
                 {studentName}
               </h1>
-              {/* <p className="text-lg text-gray-600 mb-2">Student</p> */}
+              {profile?.admission_number && (
+                <p className="text-lg text-gray-600 mb-2">
+                  Admission No: {profile.admission_number}
+                </p>
+              )}
+              {profile?.roll_number && (
+                <p className="text-lg text-gray-600 mb-2">
+                  Roll No: {profile.roll_number}
+                </p>
+              )}
 
               {/* Tags */}
               <div className="flex flex-wrap justify-center md:justify-start gap-2 mt-2">
                 <span className="bg-blue-50 text-blue-700 px-4 py-2 rounded-full text-sm font-medium">
                   Student
                 </span>
-                <span className="bg-green-50 text-green-700 px-4 py-2 rounded-full text-sm font-medium">
-                  Active
+                <span className={`px-4 py-2 rounded-full text-sm font-medium ${
+                  profile?.is_active ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'
+                }`}>
+                  {profile?.is_active ? 'Active' : 'Inactive'}
                 </span>
+                {profile?.user?.user_type && (
+                  <span className="bg-purple-50 text-purple-700 px-4 py-2 rounded-full text-sm font-medium">
+                    {profile.user.user_type}
+                  </span>
+                )}
               </div>
             </div>
           </div>

@@ -11,17 +11,33 @@ import {
   X,
 } from 'lucide-react';
 import { authenticationService } from '@/_services/api';
+import { useUserProfile } from '@/contexts/UserProfileContext';
 import Logo from "@/_assets/images_new_design/Login/lq_new.png";
 import { Link } from "react-router-dom";
 
 const StudentDashboard = () => {
   const [user, setUser] = useState(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  
+  // Use UserProfile context for profile data
+  const {
+    profile,
+    loading: profileLoading,
+    error: profileError,
+    getFullName,
+    fetchProfile,
+    isLoaded
+  } = useUserProfile();
 
   useEffect(() => {
     const currentUser = authenticationService.currentUser();
     setUser(currentUser);
-  }, []);
+    
+    // Ensure profile data is loaded when dashboard mounts
+    if (!isLoaded && !profileLoading) {
+      fetchProfile();
+    }
+  }, [isLoaded, profileLoading, fetchProfile]);
 
   const handleLogout = () => {
     authenticationService.logout();
@@ -66,10 +82,21 @@ const StudentDashboard = () => {
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
               <h2 className="text-2xl sm:text-3xl font-bold text-primary-50 text-gray-900">
-                Welcome Back, {user?.sub || 'Admin'}!
+                {profileLoading ? (
+                  <span className="flex items-center">
+                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white mr-2"></div>
+                    Loading...
+                  </span>
+                ) : (
+                  `Welcome Back, ${getFullName() || user?.sub || 'Student'}!`
+                )}
               </h2>
               <p className="text-gray-600 mt-1 text-primary-50">
-                Here’s what’s happening with your classes today.
+                {profileError ? (
+                  "Unable to load profile data. Please refresh the page."
+                ) : (
+                  "Here's what's happening with your classes today."
+                )}
               </p>
             </div>
             <BarChart3 className="w-12 h-12 text-primary-50 sm:w-16 sm:h-16 text-blue-600" />
