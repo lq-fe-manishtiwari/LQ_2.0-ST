@@ -776,7 +776,9 @@ export default function TaskAssignment() {
         setLoading(true);
         console.log("Fetching tasks from API for user ID:", userId);
   
-        const response = await TaskManagement.getAllPMSTasks();
+        const currentUser = JSON.parse(localStorage.getItem("userProfile"));
+        const collegeId = currentUser?.college_id || 1;
+        const response = await TaskManagement.getEmployeeTaskView(userId, collegeId);
         console.log("API Response:", response);
   
         // Check if response is an array
@@ -1036,7 +1038,7 @@ export default function TaskAssignment() {
       if (!collegeId) return;
       setDeptLoading(true);
       try {
-        const data = await DepartmentService.getDepartmentByCollegeId(collegeId);
+        const data = await TaskManagement.getDepartmentByCollegeId(collegeId);
         const deptNames = data.map(dept => dept.department_name || dept.name || 'Unknown');
         setDepartments(deptNames);
       } catch (err) {
