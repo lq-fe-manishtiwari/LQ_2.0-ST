@@ -374,7 +374,8 @@ export default function MyLeaves() {
     {/* -------------------- APPLY / EDIT LEAVE MODAL -------------------- */}
 {showLeaveModal && (
   <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-    <div className="bg-white rounded-xl p-8 w-full max-w-2xl max-h-screen overflow-y-auto">
+    <div className="bg-white w-full max-w-md lg:max-w-lg rounded-xl shadow-xl border p-5 relative max-h-[85vh] overflow-y-auto">
+
       <h2 className="text-2xl font-semibold mb-6">
         {isEditMode ? "Edit Leave" : "Apply Leave"}
       </h2>

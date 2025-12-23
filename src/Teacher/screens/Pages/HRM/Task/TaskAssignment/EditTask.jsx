@@ -921,9 +921,9 @@ export default function EditTask() {
             <input
               type="text"
               placeholder="enter title *"
-              className={inputClass}
+              className={`${inputClass} bg-gray-100 cursor-not-allowed`}
               value={form.title}
-              onChange={(e) => setForm({ ...form, title: e.target.value })}
+              disabled={true}
             />
           </div>
 
@@ -933,9 +933,9 @@ export default function EditTask() {
             <input
               type="text"
               placeholder="enter description *"
-              className={inputClass}
+              className={`${inputClass} bg-gray-100 cursor-not-allowed`}
               value={form.description}
-              onChange={(e) => setForm({ ...form, description: e.target.value })}
+              disabled={true}
             />
           </div>
 
@@ -951,7 +951,7 @@ export default function EditTask() {
               onChange={(e) => setForm({ ...form, taskType: e.target.value })}
               options={taskTypes}
               placeholder={loadingTaskTypes ? "Loading task types..." : "enter task type *"}
-              disabled={loadingTaskTypes}
+              disabled={true}
               loading={loadingTaskTypes}
             />
           </div>
@@ -961,13 +961,9 @@ export default function EditTask() {
             <label className={labelClass}>Assigned Date & Time</label>
             <input
               type="datetime-local"
-              className={`${inputClass} text-sm sm:text-base`}
+              className={`${inputClass} text-sm sm:text-base bg-gray-100 cursor-not-allowed`}
               value={form.assignedDate}
-              onChange={(e) => {
-                setForm({ ...form, assignedDate: e.target.value });
-                e.target.blur(); // Auto-close calendar
-              }}
-              onBlur={(e) => e.target.blur()} // Ensure calendar closes
+              disabled={true}
             />
           </div>
 
@@ -976,14 +972,9 @@ export default function EditTask() {
             <label className={labelClass}>Due Date & Time</label>
             <input
               type="datetime-local"
-              className={`${inputClass} text-sm sm:text-base`}
+              className={`${inputClass} text-sm sm:text-base bg-gray-100 cursor-not-allowed`}
               value={form.dueDate}
-              min={form.assignedDate || new Date().toISOString().slice(0, 16)}
-              onChange={(e) => {
-                setForm({ ...form, dueDate: e.target.value });
-                e.target.blur(); // Auto-close calendar
-              }}
-              onBlur={(e) => e.target.blur()} // Ensure calendar closes
+              disabled={true}
             />
           </div>
 
@@ -997,7 +988,7 @@ export default function EditTask() {
             onChange={(e) => setForm({ ...form, priority: e.target.value })}
             options={priorities}
             placeholder={loadingPriorities ? "Loading priorities..." : "select priority *"}
-            disabled={loadingPriorities}
+            disabled={true}
             loading={loadingPriorities}
           />
 
@@ -1022,14 +1013,13 @@ export default function EditTask() {
         </div>
       </div>
 
-      {/* ASSIGNED TO SECTION */}
-      <div className="bg-white rounded-xl p-4 sm:p-6 shadow-sm border">
+      {/* ASSIGNED TO SECTION - COMMENTED OUT */}
+      {/* <div className="bg-white rounded-xl p-4 sm:p-6 shadow-sm border">
         <h2 className="text-lg sm:text-xl font-semibold mb-4 sm:mb-6">
           Assigned To
         </h2>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-          {/* Department */}
           <CustomSelect
             label="Department"
             value={(() => {
@@ -1043,7 +1033,6 @@ export default function EditTask() {
             loading={loadingDepartments}
           />
 
-          {/* Employee */}
           <CustomSelect
             label="Employee"
             value={(() => {
@@ -1070,7 +1059,6 @@ export default function EditTask() {
             loading={loadingEmployees}
           />
 
-          {/* Role */}
           <CustomSelect
             label="Role"
             value={(() => {
@@ -1083,18 +1071,8 @@ export default function EditTask() {
             disabled={loadingRoles}
             loading={loadingRoles}
           />
-
-          {/* Responsibility */}
-          {/* <MultiSelectResponsibility
-            label="Roles & Responsibility"
-            selectedItems={selectedResponsibilities}
-            options={responsibilityOptions}
-            onChange={handleResponsibilityChange}
-            onRemove={handleResponsibilityRemove}
-          /> */}
         </div>
 
-        {/* Add Employee Button */}
         <div className="flex justify-end mt-6">
           <button 
             onClick={handleAddEmployee}
@@ -1103,9 +1081,143 @@ export default function EditTask() {
             Add Employee
           </button>
         </div>
-      </div>
+      </div> */}
 
-      {/* Employee Table - DESKTOP */}
+      {/* Employee Table - DESKTOP - COMMENTED OUT */}
+      {/* <div className="hidden lg:block bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Employee</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Department</th>
+                <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {assignedEmployees.length === 0 ? (
+                <tr>
+                  <td colSpan={4} className="px-6 py-12 text-center text-gray-500">
+                    <div className="text-center">
+                      <p className="text-lg font-medium mb-2">No employees assigned</p>
+                      <p className="text-sm">Add employees using the form above.</p>
+                    </div>
+                  </td>
+                </tr>
+              ) : (
+                currentEntries.map((employee) => {
+                  const departmentName = getDepartmentName(employee.department);
+                  const roleName = getRoleName(employee.role);
+                  
+                  return (
+                    <tr key={employee.id} className="hover:bg-gray-50">
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm font-medium text-gray-900">{employee.employeeName || employee.employee}</div>
+                      </td>
+                      <td className="px-6 py-4 text-sm text-gray-700 text-center">{roleName}</td>
+                      <td className="px-6 py-4 text-sm text-gray-700 text-center">{departmentName}</td>
+                      <td className="px-6 py-4 text-center">
+                        <div className="flex items-center justify-center gap-2">
+                          <button 
+                            onClick={() => handleEditEmployee(employee)}
+                            className="p-2 rounded-lg bg-yellow-50 text-yellow-600 hover:bg-yellow-100 transition"
+                          >
+                            <Edit className="w-4 h-4" />
+                          </button>
+                          <button 
+                            onClick={() => handleRemoveEmployee(employee.id)}
+                            className="p-2 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
+        
+        {totalEntries > 0 && (
+          <div className="flex justify-between items-center px-6 py-4 border-t border-gray-200 text-sm text-gray-600">
+            <button
+              onClick={handlePrev}
+              disabled={currentPage === 1}
+              className={`px-4 py-2 rounded-md text-white ${
+                currentPage === 1 
+                  ? 'bg-blue-200 text-gray-400 cursor-not-allowed' 
+                  : 'bg-blue-600 hover:bg-blue-700'
+              }`}
+            >
+              Previous
+            </button>
+
+            <span className="text-gray-700 font-medium">
+              Showing {start + 1}–{Math.min(end, totalEntries)} of {totalEntries} entries
+            </span>
+
+            <button
+              onClick={handleNext}
+              disabled={currentPage === totalPages}
+              className={`px-4 py-2 rounded-md text-white ${
+                currentPage === totalPages 
+                  ? 'bg-blue-200 text-gray-400 cursor-not-allowed' 
+                  : 'bg-blue-600 hover:bg-blue-700'
+              }`}
+            >
+              Next
+            </button>
+          </div>
+        )}
+      </div> */}
+
+      {/* Mobile Cards - COMMENTED OUT */}
+      {/* <div className="lg:hidden space-y-4">
+        {assignedEmployees.length === 0 ? (
+          <div className="bg-white rounded-xl shadow-md p-8 text-center border border-gray-200">
+            <div className="text-gray-500">
+              <p className="text-lg font-medium mb-2">No employees assigned</p>
+              <p className="text-sm">Add employees using the form above.</p>
+            </div>
+          </div>
+        ) : (
+          currentEntries.map((employee) => {
+            const departmentName = getDepartmentName(employee.department);
+            const roleName = getRoleName(employee.role);
+            
+            return (
+              <div key={employee.id} className="bg-white rounded-xl shadow-md border border-gray-200 p-5 hover:shadow-lg transition-all">
+                <div className="flex justify-between items-start mb-3">
+                  <div>
+                    <p className="font-semibold text-gray-900">{employee.employeeName || employee.employee}</p>
+                    <p className="text-sm text-gray-500">{roleName}</p>
+                  </div>
+                </div>
+                <div className="space-y-2 text-sm text-gray-700 mb-4">
+                  <div><span className="font-medium">Department:</span> {departmentName}</div>
+                </div>
+                <div className="flex justify-end items-center gap-2">
+                  <button 
+                    onClick={() => handleEditEmployee(employee)}
+                    className="p-2.5 rounded-lg bg-yellow-50 text-yellow-600 hover:bg-yellow-100 transition"
+                  >
+                    <Edit className="w-4 h-4" />
+                  </button>
+                  <button 
+                    onClick={() => handleRemoveEmployee(employee.id)}
+                    className="p-2.5 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            );
+          })
+        )}
+      </div> */}
       <div className="hidden lg:block bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full min-w-[900px]">
@@ -1260,8 +1372,8 @@ export default function EditTask() {
         )}
       </div>
 
-      {/* Submit Task Button */}
-      {assignedEmployees.length > 0 && (
+      {/* Submit Task Button - COMMENTED OUT */}
+      {/* {assignedEmployees.length > 0 && (
         <div className="bg-white rounded-xl p-4 sm:p-6 shadow-sm border">
           <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
             <div className="text-center sm:text-left">
@@ -1289,7 +1401,30 @@ export default function EditTask() {
             </button>
           </div>
         </div>
-      )}
+      )} */}
+
+      {/* Simple Update Status Button */}
+      <div className="bg-white rounded-xl p-4 sm:p-6 shadow-sm border">
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+          <div className="text-center sm:text-left">
+            <h3 className="text-lg font-semibold text-gray-900">
+              Update Task Status
+            </h3>
+            <p className="text-sm text-gray-600 mt-1">
+              Only task status can be updated
+            </p>
+          </div>
+          <button 
+            onClick={() => {
+              setAlertMessage('Task status updated successfully!');
+              setShowSuccessAlert(true);
+            }}
+            className="w-full sm:w-auto px-6 sm:px-8 py-3 rounded-full shadow-md text-white transition-all text-sm sm:text-base font-medium bg-blue-600 hover:bg-blue-700"
+          >
+            Update Status
+          </button>
+        </div>
+      </div>
 
       {/* Success Alert */}
       {showSuccessAlert && (
