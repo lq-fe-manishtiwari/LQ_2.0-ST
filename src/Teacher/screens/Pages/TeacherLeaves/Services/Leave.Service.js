@@ -21,6 +21,8 @@ export const leaveService = {
   softDeleteLeave,
   hardDeleteLeave,
   uploadFileToS3,
+
+  getLeaveByAcaddemicyearIdSemesterId,
 };
 
 /* ===================== LEAVE TYPE FUNCTIONS ===================== */
@@ -34,7 +36,7 @@ function uploadFileToS3(file) {
     body: formData,
   };
 
-  return fetch(`${AcademicAPI}/s3/upload`, requestOptions)
+  return fetch(`${AcademicAPI}/admin/academic/s3/upload`, requestOptions)
     .then(handleTextResponse)
     .then((response) => {
       return response; // assuming backend returns the file URL/path as plain text
@@ -173,4 +175,9 @@ function softDeleteLeave(id) {
 function hardDeleteLeave(id) {
   const requestOptions = { method: 'DELETE', headers: authHeader() };
   return fetch(`${PMSNEWAPI}/apply-leave/hard/${id}`, requestOptions).then(handleResponse);
+}
+
+function getLeaveByAcaddemicyearIdSemesterId(academicYearId,SemesterId) {
+  const requestOptions = { method: 'GET', headers: authHeader() };
+  return fetch(`${PMSNEWAPI}/apply-leave/by-academic-year-semester?academicYearId=${academicYearId}&semesterId=${SemesterId}`, requestOptions).then(handleResponse);
 }

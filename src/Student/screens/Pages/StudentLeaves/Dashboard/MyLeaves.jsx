@@ -4,16 +4,7 @@ import SweetAlert from "react-bootstrap-sweetalert";
 
 export default function MyLeaves() {
   /* -------------------- DASHBOARD DATA -------------------- */
-  const leaveStats = {
-    balance: 12,
-    approved: 8,
-    total: 15,
-    byType: [
-      { type: "Casual Leave", count: 5 },
-      { type: "Medical Leave", count: 3 },
-      { type: "Duty Leave", count: 2 },
-    ],
-  };
+
 
   /* -------------------- STATE FOR LEAVE RECORDS -------------------- */
   const [leaveRecords, setLeaveRecords] = useState([]);
@@ -39,12 +30,13 @@ export default function MyLeaves() {
   /* -------------------- LEAVE FORM STATE -------------------- */
   const [leaveForm, setLeaveForm] = useState({
     type: "",
-    leaveFor: "Normal",
+     leaveFor: "FULL_DAY",
     fromDate: "",
     toDate: "",
     days: "",
     remark: "",
     attachment: [],
+    existingAttachments: [],
   });
 
   /* -------------------- DYNAMIC LEAVE TYPES -------------------- */
@@ -121,21 +113,22 @@ export default function MyLeaves() {
     }
   };
 
-  const handleFormChange = (e) => {
-    const { name, value, files } = e.target;
+ const handleFormChange = (e) => {
+  const { name, value, files } = e.target;
 
-    if (name === "attachment") {
-      setLeaveForm({
-        ...leaveForm,
-        attachment: Array.from(files),
-      });
-    } else {
-      setLeaveForm({
-        ...leaveForm,
-        [name]: value,
-      });
-    }
-  };
+  if (name === "attachment") {
+    setLeaveForm((prev) => ({
+      ...prev,
+      newAttachments: Array.from(files)
+    }));
+  } else {
+    setLeaveForm((prev) => ({
+      ...prev,
+      [name]: value
+    }));
+  }
+};
+
 
   const resetFormAndCloseModal = () => {
     setShowLeaveModal(false);
@@ -143,7 +136,7 @@ export default function MyLeaves() {
     setEditingLeaveId(null);
     setLeaveForm({
       type: "",
-      leaveFor: "Normal",
+      leaveFor: "FULL_DAY",
       fromDate: "",
       toDate: "",
       days: "",
@@ -201,9 +194,10 @@ export default function MyLeaves() {
   const diffTime = Math.abs(to - from);
   let calculatedDays = (diffTime / (1000 * 60 * 60 * 24)) + 1;
 
-  if (leaveForm.leaveFor === "Half Day") {
-    calculatedDays = 0.5;
-  }
+if (leaveForm.leaveFor === "HALF_DAY") {
+  calculatedDays = 0.5;
+}
+
 
   setLeaveForm((prev) => ({
     ...prev,
@@ -217,12 +211,15 @@ export default function MyLeaves() {
 
     setLeaveForm({
       type: leave.leave_type_id || leave.type_id || "",
-      leaveFor: leave.leaveFor || leave.leave_for || "Normal",
+      leaveFor: leave.leave_duration || "FULL_DAY",
       fromDate: leave.from || leave.start_date || "",
       toDate: leave.to || leave.end_date || "",
       days: leave.days || leave.no_of_days || "",
       remark: leave.remark || "",
-      attachment: [], // Files cannot be pre-filled
+      existingAttachments: Array.isArray(leave.attachment)
+      ? leave.attachment
+      : [],
+      attachment: [], 
     });
 
     setShowLeaveModal(true);
@@ -260,6 +257,18 @@ export default function MyLeaves() {
     }
   };
 
+  const displayLeaveFor = (leaveFor) => {
+  switch (leaveFor) {
+    case "FULL_DAY":
+      return "Normal";
+    case "HALF_DAY":
+      return "Half Day";
+    default:
+      return "Normal";
+  }
+};
+
+
   return (
     <div className="min-h-screen bg-slate-50 p-6">
       <div className="max-w-7xl mx-auto">
@@ -285,7 +294,7 @@ export default function MyLeaves() {
           ) : (
             <>
               <table className="w-full">
-                <thead className="bg-blue-50">
+                 <thead className="table-header">
                   <tr className="text-blue-700 text-left">
                     <th className="p-4">Sr No</th>
                     <th className="p-4">Leave Type</th>
@@ -302,8 +311,8 @@ export default function MyLeaves() {
                   {currentEntries.map((leave) => (
                     <tr key={leave.sr} className="border-t hover:bg-blue-50">
                       <td className="p-4">{leave.sr}</td>
-                      <td className="p-4 font-medium">{leave.type || leave.leave_type}</td>
-                      <td className="p-4">{leave.leaveFor || leave.leave_for || "Normal"}</td>
+                      <td className="p-4 font-medium">{leave.leave_type_name || leave.leave_type}</td>
+                      <td className="p-4">{displayLeaveFor(leave.leave_duration || leave.leave_for)}</td>
                       <td className="p-4">{leave.from || leave.start_date}</td>
                       <td className="p-4">{leave.to || leave.end_date}</td>
                       <td className="p-4">{leave.days || leave.no_of_days}</td>
@@ -403,24 +412,16 @@ export default function MyLeaves() {
         {/* Leave For */}
         <div>
           <label className="block text-sm font-medium mb-1">Leave For</label>
-          <select
-            name="leaveFor"
-            value={leaveForm.leaveFor}
-            onChange={(e) => {
-              handleFormChange(e);
-              // If switching to Half Day and From Date exists → auto-set To Date
-              if (e.target.value === "Half Day" && leaveForm.fromDate) {
-                setLeaveForm((prev) => ({
-                  ...prev,
-                  toDate: leaveForm.fromDate,
-                }));
-              }
-            }}
-            className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-          >
-            <option>Normal</option>
-            <option>Half Day</option>
-          </select>
+      <select
+          name="leaveFor"
+          value={leaveForm.leaveFor}
+          onChange={handleFormChange}
+          className="w-full border border-gray-300 rounded-lg px-4 py-2"
+        >
+          <option value="FULL_DAY">Normal</option>
+          <option value="HALF_DAY">Half Day</option>
+        </select>
+
         </div>
 
         {/* Dates */}
@@ -436,12 +437,10 @@ export default function MyLeaves() {
               onChange={(e) => {
                 handleFormChange(e);
                 // Auto-set To Date if Half Day
-                if (leaveForm.leaveFor === "Half Day") {
-                  setLeaveForm((prev) => ({
-                    ...prev,
-                    toDate: e.target.value,
-                  }));
+               if (leaveForm.leaveFor === "HALF_DAY") {
+                  setLeaveForm((prev) => ({ ...prev, toDate: e.target.value }));
                 }
+
               }}
               required
               min={new Date().toISOString().split("T")[0]}
@@ -460,9 +459,9 @@ export default function MyLeaves() {
               onChange={handleFormChange}
               required
               min={leaveForm.fromDate || new Date().toISOString().split("T")[0]}
-              disabled={leaveForm.leaveFor === "Half Day"}
+              disabled={leaveForm.leaveFor === "HALF_DAY"}
               className={`w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                leaveForm.leaveFor === "Half Day" ? "bg-gray-50 cursor-not-allowed" : ""
+                leaveForm.leaveFor === "HALF_DAY" ? "bg-gray-50 cursor-not-allowed" : ""
               }`}
             />
           </div>
@@ -490,7 +489,7 @@ export default function MyLeaves() {
                 const diffTime = Math.abs(to - from);
                 let calculatedDays = (diffTime / (1000 * 60 * 60 * 24)) + 1; // Inclusive
 
-                if (leaveForm.leaveFor === "Half Day") {
+                if (leaveForm.leaveFor === "HALF_DAY") {
                   calculatedDays = 0.5;
                 }
 
@@ -549,6 +548,29 @@ export default function MyLeaves() {
               Selected files: {leaveForm.attachment.map((f) => f.name).join(", ")}
             </div>
           )}
+          {/* Existing Attachments */}
+            {isEditMode && leaveForm.existingAttachments.length > 0 && (
+              <div className="mt-3">
+                <p className="text-sm font-medium text-gray-700 mb-1">
+                  Existing Attachments
+                </p>
+                <ul className="list-disc list-inside text-sm text-blue-600">
+                  {leaveForm.existingAttachments.map((url, idx) => (
+                    <li key={idx}>
+                      <a
+                        href={url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="hover:underline"
+                      >
+                        Attachment {idx + 1}
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
         </div>
 
         {/* Buttons */}
@@ -578,7 +600,7 @@ export default function MyLeaves() {
                 const from = new Date(leaveForm.fromDate);
                 const to = new Date(leaveForm.toDate);
                 let days = (Math.abs(to - from) / (1000 * 60 * 60 * 24)) + 1;
-                if (leaveForm.leaveFor === "Half Day") days = 0.5;
+                if (leaveForm.leaveFor === "HALF_DAY") days = 0.5;
                 return days > max;
               })()
             }
@@ -599,6 +621,8 @@ export default function MyLeaves() {
           showCancel
           confirmBtnText="Yes, delete it!"
           confirmBtnBsStyle="danger"
+          confirmBtnCssClass="btn-confirm"
+          cancelBtnCssClass="btn-cancel"
           title="Are you sure?"
           onConfirm={handleDelete}
           onCancel={() => setShowConfirmDelete(false)}
@@ -613,6 +637,8 @@ export default function MyLeaves() {
           success
           title="Success!"
           confirmBtnBsStyle="success"
+          confirmBtnCssClass="btn-confirm"
+          cancelBtnCssClass="btn-cancel"
           onConfirm={() => setShowSuccessAlert(false)}
         >
           {successMessage}
@@ -624,6 +650,8 @@ export default function MyLeaves() {
           error
           title="Error!"
           confirmBtnBsStyle="danger"
+          confirmBtnCssClass="btn-confirm"
+          cancelBtnCssClass="btn-cancel"
           onConfirm={() => setShowErrorAlert(false)}
         >
           {errorMessage}

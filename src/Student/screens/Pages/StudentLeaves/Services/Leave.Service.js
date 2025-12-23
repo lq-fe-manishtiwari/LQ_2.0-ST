@@ -34,7 +34,7 @@ function uploadFileToS3(file) {
     body: formData,
   };
 
-  return fetch(`${AcademicAPI}/s3/upload`, requestOptions)
+  return fetch(`${AcademicAPI}/admin/academic/s3/upload`, requestOptions)
     .then(handleTextResponse)
     .then((response) => {
       return response; // assuming backend returns the file URL/path as plain text
@@ -111,7 +111,7 @@ async function applyLeave(data) {
     end_date: data.toDate,
     remark: data.remark,
     attachment: attachmentUrls,      // array of S3 URLs (or empty array)
-    leave_period: data.leaveFor,       // Normal / Half Day
+    leave_duration: data.leaveFor,       // Normal / Half Day
     no_of_days: data.days,
     leave_status: "PENDING",
   };
