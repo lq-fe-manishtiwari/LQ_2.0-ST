@@ -97,9 +97,9 @@ export class ContentService {
    * @param {string} tabType - The tab type name
    * @returns {Promise} API response with subjects
    */
-  static async getSubjectsByTab(tabId, academicYearId, semesterId, tabType) {
+  static async getSubjectsByTab(tabId, academicYearId, semesterId, tabType, studentId) {
     try {
-      const response = await fetch(`${COREAPI}/admin/academic/api/subjects/by-tab/${tabId}/academic-year/${academicYearId}/semester/${semesterId}?tabType=${encodeURIComponent(tabType)}`, {
+      const response = await fetch(`${COREAPI}/admin/academic/api/subjects/by-tab/${tabId}/academic-year/${academicYearId}/semester/${semesterId}/student/${studentId}?tabType=${encodeURIComponent(tabType)}`, {
         method: 'GET',
         headers: authHeader()
       });
