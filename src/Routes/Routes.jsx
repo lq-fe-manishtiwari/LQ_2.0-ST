@@ -22,6 +22,7 @@ import ProfileRoutes from '../Student/screens/Pages/Profile/Routes/ProfileRoutes
 import PMSRoutes from '../Teacher/screens/Pages/PerformanceManagementSystem/Routes/PMSRoutes.jsx';
 import ContentRoutes from '../Student/screens/Pages/Content/Routes/ContentRoutes.jsx';
 import HRMRoutes from '../Teacher/screens/Pages/HRM/Routes/HRMRoute.jsx';
+import SubjectSelectionRoutes from '../Teacher/screens/pages/SubjectSelection/Routes/SubjectSelectionRoutes.jsx';
 
 // ────── Route guards ──────
 const ProtectedRoute = ({ children }) => {
@@ -71,6 +72,17 @@ function App() {
             <ProtectedRoute>
               <TeacherHomepage>
                 <TeacherRoutes />
+              </TeacherHomepage>
+            </ProtectedRoute>
+          }
+        />
+          <Route
+          path="/subject-selection/*"
+          element={
+        
+              <ProtectedRoute>
+              <TeacherHomepage>
+                <SubjectSelectionRoutes />
               </TeacherHomepage>
             </ProtectedRoute>
           }
