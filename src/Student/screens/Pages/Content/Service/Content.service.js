@@ -437,6 +437,70 @@ export class ContentService {
       throw error;
     }
   }
+
+  /**
+   * Fetch student selection status by academic semester
+   * @param {number} academicYearId - The academic year ID
+   * @param {number} semesterId - The semester ID
+   * @param {number} studentId - The student ID
+   * @param {number} subjectTypeId - The subject type ID
+   * @param {number} verticalTypeId - The vertical type ID (optional)
+   * @returns {Promise} API response with student selection status
+   */
+  static async getSelectionByAcademicSemester(academicYearId, semesterId, studentId, subjectTypeId, verticalTypeId = null) {
+    try {
+      let url = `${COREAPI}/admin/academic/student/subject-selection/by-academic-semester?academicYearId=${academicYearId}&semesterId=${semesterId}&studentId=${studentId}&subjectTypeId=${subjectTypeId}`;
+
+      if (verticalTypeId !== null && verticalTypeId !== undefined) {
+        url += `&verticalTypeId=${verticalTypeId}`;
+      }
+
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: authHeader()
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      return {
+        success: true,
+        data: data
+      };
+    } catch (error) {
+      console.error('Error fetching selection by academic semester:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Fetch subject selection config by config ID
+   * @param {number} configId - The config ID
+   * @returns {Promise} API response with config data
+   */
+  static async getSubjectSelectionConfig(configId) {
+    try {
+      const response = await fetch(`${COREAPI}/admin/academic/subject-selection-configs/${configId}`, {
+        method: 'GET',
+        headers: authHeader()
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      return {
+        success: true,
+        data: data
+      };
+    } catch (error) {
+      console.error('Error fetching subject selection config:', error);
+      throw error;
+    }
+  }
 }
 
 export default ContentService;
