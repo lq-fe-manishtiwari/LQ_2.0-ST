@@ -1,5 +1,8 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import { ContentService } from "../../Service/Content.service";
+import { useUserProfile } from "../../../../../../contexts/UserProfileContext";
+import SelectionModal from "./SelectionModal";
 
 export default function SubjectsList({
   subjectTypes,
@@ -13,13 +16,24 @@ export default function SubjectsList({
   selectedSubjectId,
   selectedSubTab // ✅ FIXED — coming from parent
 }) {
+  const { profile } = useUserProfile();
+  const navigate = useNavigate();
   const [subjects, setSubjects] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [selectionStatus, setSelectionStatus] = useState(null);
+  const [showModal, setShowModal] = useState(false);
+  const [isLocked, setIsLocked] = useState(false); // Track if current tab is locked
+  const [currentTabName, setCurrentTabName] = useState('');
+
+  // Refs to prevent duplicate API calls
+  const lastFetchedTab = useRef(null);
+  const isFetching = useRef(false);
 
   // ---- GET TAB BASED ON selectedSubTab OR type_info ----
   const getAvailableTabs = () => {
     // If selectedSubTab exists (vertical/specialization), use it
     if (selectedSubTab) {
+      console.log('✅ Using selectedSubTab:', selectedSubTab.name);
       return [
         {
           id: selectedSubTab.id,        // vertical_id or specialization_id
@@ -30,9 +44,19 @@ export default function SubjectsList({
       ];
     }
 
-    // If no selectedSubTab but type_info exists (no sub-tabs case), use type_info
+    // Check if current type has subtabs
     const currentType = subjectTypes[selectedPaperType.toLowerCase()];
+    const hasSubTabs = currentType?.verticals?.length > 0 || currentType?.specializations?.length > 0;
+
+    if (hasSubTabs) {
+      // If subtabs exist but none selected yet, don't fetch at tab level
+      console.log('⏸️ Subtabs exist but none selected yet - skipping tab level fetch');
+      return [];
+    }
+
+    // If no selectedSubTab and no subtabs, use type_info (no sub-tabs case)
     if (currentType?.type_info) {
+      console.log('✅ Using type_info (no subtabs):', currentType.type_info.type_name);
       return [
         {
           id: currentType.type_info.type_id,
@@ -47,6 +71,152 @@ export default function SubjectsList({
   };
 
   const availableTabs = getAvailableTabs();
+
+  // ============================================
+  // Handle Modal Actions
+  // ============================================
+  const handleCancelSelection = () => {
+    setShowModal(false);
+    // Set current tab as locked (subjects will show with lock icon)
+    setIsLocked(true);
+  };
+
+  const handleGoToSelection = async () => {
+    setShowModal(false);
+
+    if (selectionStatus?.config_id) {
+      try {
+        console.log('Fetching config for config_id:', selectionStatus.config_id);
+        const response = await ContentService.getSubjectSelectionConfig(selectionStatus.config_id);
+
+        if (response.success) {
+          console.log('Subject Selection Config Response:', response.data);
+
+          // Navigate to selection page with the config data
+          navigate('/student-dashboard/subject-selection', {
+            state: {
+              configData: response.data,
+              configId: selectionStatus.config_id,
+              academicYearId,
+              semesterId,
+              studentId: profile?.student_id
+            }
+          });
+        }
+      } catch (error) {
+        console.error('Error fetching selection config:', error);
+      }
+    }
+  };
+
+  // ============================================
+  // Fetch Student Selection Status
+  // ============================================
+  const fetchSelectionStatus = async (tab) => {
+    if (!tab || !academicYearId || !semesterId || !profile?.student_id) return;
+
+    try {
+      const currentType = subjectTypes[selectedPaperType.toLowerCase()];
+      const subjectTypeId = currentType?.type_info?.type_id;
+
+      if (!subjectTypeId) {
+        console.warn('Subject type ID not found');
+        return;
+      }
+
+      // For vertical type tabs, pass the vertical ID
+      const verticalTypeId = tab.type === 'vertical' ? tab.id : null;
+
+      console.log('Fetching selection status with params:', {
+        academicYearId,
+        semesterId,
+        studentId: profile.student_id,
+        subjectTypeId,
+        verticalTypeId
+      });
+
+      const response = await ContentService.getSelectionByAcademicSemester(
+        academicYearId,
+        semesterId,
+        profile.student_id,
+        subjectTypeId,
+        verticalTypeId
+      );
+
+      console.log('🔍 response', response);
+
+      if (response.success && response.data) {
+        // Handle array response - API returns array sometimes
+        let responseData = response.data;
+
+        // If API returned an array, get first element
+        if (Array.isArray(response.data)) {
+          console.log('⚠️ API returned ARRAY, length:', response.data.length);
+          if (response.data.length === 0) {
+            console.log('📭 Empty array response - no selection data');
+            setIsLocked(false);
+            return;
+          }
+          responseData = response.data[0]; // Get first element
+          console.log('📦 Extracted data from array:', responseData);
+        }
+
+        console.log('✅ Selection status API SUCCESS');
+        console.log('Full response.data:', JSON.stringify(responseData, null, 2));
+        console.log('Response keys:', Object.keys(responseData));
+        console.log('has_selection value:', responseData.has_selection);
+        console.log('config_id value:', responseData.config_id);
+
+        // Check if response is truly blank (null or empty object)
+        const isBlankResponse = !responseData || Object.keys(responseData).length === 0;
+
+        if (isBlankResponse) {
+          console.log('⚠️ Response is BLANK/EMPTY');
+          setIsLocked(false);
+          return;
+        }
+
+        setSelectionStatus(responseData);
+
+        // Check if selection is required - only show modal if config_id exists
+        console.log('📊 Selection check:', {
+          has_selection: responseData.has_selection,
+          has_selection_type: typeof responseData.has_selection,
+          config_id: responseData.config_id,
+          config_id_type: typeof responseData.config_id,
+          shouldShowModal: !responseData.has_selection && responseData.config_id
+        });
+
+        if (!responseData.has_selection && responseData.config_id) {
+          console.log('🔒 CONDITIONS MET! Locking tab and showing modal for:', tab.name);
+          console.log('Setting currentTabName to:', tab.name);
+          console.log('Setting isLocked to: true');
+          console.log('Setting showModal to: true');
+
+          setCurrentTabName(tab.name);
+          setIsLocked(true);
+
+          // Use setTimeout to ensure state updates complete
+          setTimeout(() => {
+            console.log('⏰ Executing showModal(true) after timeout');
+            setShowModal(true);
+          }, 50);
+        } else {
+          console.log('✅ Tab unlocked - Reason:',
+            !responseData.has_selection ? 'has_selection is false but no config_id' : 'has_selection is true'
+          );
+          setIsLocked(false);
+        }
+      } else {
+        // Blank/invalid response - don't lock or show modal
+        console.log('No valid response, keeping subjects unlocked');
+        setIsLocked(false);
+      }
+    } catch (error) {
+      console.error('Error fetching selection status:', error);
+      setIsLocked(false); // Don't lock on error
+    }
+  };
 
   // ============================================
   // Fetch Subjects When Tab Changes (CORRECT)
@@ -111,11 +281,43 @@ export default function SubjectsList({
   // Fetch subjects automatically when subTab changes OR when type changes
   useEffect(() => {
     if (availableTabs.length > 0) {
-      fetchSubjects(availableTabs[0]);
+      const currentTab = availableTabs[0];
+      const tabKey = `${currentTab.id}-${currentTab.type}-${selectedPaperType}-${academicYearId}-${semesterId}`;
+
+      // Check if it's a different tab
+      const isDifferentTab = lastFetchedTab.current !== tabKey;
+
+      // Prevent duplicate calls for SAME tab only
+      if (!isDifferentTab && isFetching.current) {
+        console.log('Skipping duplicate API call for tab:', currentTab.name);
+        return;
+      }
+
+      // Mark as fetching
+      isFetching.current = true;
+      lastFetchedTab.current = tabKey;
+
+      console.log('🔄 Fetching data for tab:', currentTab.name, 'Type:', currentTab.type);
+
+      // Reset locked state when tab changes
+      setIsLocked(false);
+      setShowModal(false);
+
+      // Fetch both subjects and selection status
+      Promise.all([
+        fetchSubjects(currentTab),
+        fetchSelectionStatus(currentTab)
+      ]).finally(() => {
+        isFetching.current = false;
+      });
     } else {
       setSubjects([]);
+      setSelectionStatus(null);
+      setIsLocked(false);
+      setShowModal(false);
+      lastFetchedTab.current = null;
     }
-  }, [selectedSubTab?.id, academicYearId, semesterId, selectedPaperType]);
+  }, [selectedSubTab?.id, academicYearId, semesterId, selectedPaperType, profile?.student_id]);
 
   // ---------------------------------------------
   // When Search Filter Updates → Show filtered list
@@ -128,8 +330,19 @@ export default function SubjectsList({
 
   if (!subjectTypes[selectedPaperType.toLowerCase()]) return null;
 
+  // Debug: Log modal state before render
+  console.log('🎭 Render - showModal:', showModal, 'isLocked:', isLocked, 'currentTabName:', currentTabName);
+
   return (
     <div>
+      {/* Selection Modal */}
+      <SelectionModal
+        isOpen={showModal}
+        onClose={handleCancelSelection}
+        onGoToSelection={handleGoToSelection}
+        tabName={currentTabName}
+      />
+
       {/* SUBJECT GRID */}
       <div>
         {loading ? (
@@ -141,16 +354,32 @@ export default function SubjectsList({
             {subjects.map((subject) => (
               <button
                 key={subject.subject_id}
-                onClick={() => onSubjectClick(subject)}
-                className={`w-full py-2 px-3 rounded-md text-white text-sm font-medium shadow transition-all duration-200 ${selectedSubjectId === subject.subject_id
-                  ? "ring-2 ring-offset-2 scale-[1.02]"
-                  : "hover:scale-[1.01]"
+                onClick={() => !isLocked && onSubjectClick(subject)}
+                disabled={isLocked}
+                className={`relative w-full py-2 px-3 rounded-md text-white text-sm font-medium shadow transition-all duration-200 ${isLocked
+                  ? "opacity-60 cursor-not-allowed"
+                  : selectedSubjectId === subject.subject_id
+                    ? "ring-2 ring-offset-2 scale-[1.02]"
+                    : "hover:scale-[1.01]"
                   }`}
                 style={{
                   backgroundColor: subject.color_code || "#3b82f6",
                   "--tw-ring-color": subject.color_code || "#3b82f6"
                 }}
               >
+                {isLocked && (
+                  <svg
+                    className="w-4 h-4 absolute top-2 right-2"
+                    fill="currentColor"
+                    viewBox="0 0 20 20"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                )}
                 {subject.name}
               </button>
             ))}
