@@ -33,6 +33,7 @@ export default function SubjectsList({
   const getAvailableTabs = () => {
     // If selectedSubTab exists (vertical/specialization), use it
     if (selectedSubTab) {
+      console.log('✅ Using selectedSubTab:', selectedSubTab.name);
       return [
         {
           id: selectedSubTab.id,        // vertical_id or specialization_id
@@ -43,9 +44,19 @@ export default function SubjectsList({
       ];
     }
 
-    // If no selectedSubTab but type_info exists (no sub-tabs case), use type_info
+    // Check if current type has subtabs
     const currentType = subjectTypes[selectedPaperType.toLowerCase()];
+    const hasSubTabs = currentType?.verticals?.length > 0 || currentType?.specializations?.length > 0;
+
+    if (hasSubTabs) {
+      // If subtabs exist but none selected yet, don't fetch at tab level
+      console.log('⏸️ Subtabs exist but none selected yet - skipping tab level fetch');
+      return [];
+    }
+
+    // If no selectedSubTab and no subtabs, use type_info (no sub-tabs case)
     if (currentType?.type_info) {
+      console.log('✅ Using type_info (no subtabs):', currentType.type_info.type_name);
       return [
         {
           id: currentType.type_info.type_id,
@@ -82,7 +93,7 @@ export default function SubjectsList({
           console.log('Subject Selection Config Response:', response.data);
 
           // Navigate to selection page with the config data
-          navigate('/subject-selection', {
+          navigate('/student-dashboard/subject-selection', {
             state: {
               configData: response.data,
               configId: selectionStatus.config_id,
@@ -132,15 +143,32 @@ export default function SubjectsList({
         verticalTypeId
       );
 
+      console.log('🔍 response', response);
+
       if (response.success && response.data) {
+        // Handle array response - API returns array sometimes
+        let responseData = response.data;
+
+        // If API returned an array, get first element
+        if (Array.isArray(response.data)) {
+          console.log('⚠️ API returned ARRAY, length:', response.data.length);
+          if (response.data.length === 0) {
+            console.log('📭 Empty array response - no selection data');
+            setIsLocked(false);
+            return;
+          }
+          responseData = response.data[0]; // Get first element
+          console.log('📦 Extracted data from array:', responseData);
+        }
+
         console.log('✅ Selection status API SUCCESS');
-        console.log('Full response.data:', JSON.stringify(response.data, null, 2));
-        console.log('Response keys:', Object.keys(response.data));
-        console.log('has_selection value:', response.data.has_selection);
-        console.log('config_id value:', response.data.config_id);
+        console.log('Full response.data:', JSON.stringify(responseData, null, 2));
+        console.log('Response keys:', Object.keys(responseData));
+        console.log('has_selection value:', responseData.has_selection);
+        console.log('config_id value:', responseData.config_id);
 
         // Check if response is truly blank (null or empty object)
-        const isBlankResponse = !response.data || Object.keys(response.data).length === 0;
+        const isBlankResponse = !responseData || Object.keys(responseData).length === 0;
 
         if (isBlankResponse) {
           console.log('⚠️ Response is BLANK/EMPTY');
@@ -148,18 +176,18 @@ export default function SubjectsList({
           return;
         }
 
-        setSelectionStatus(response.data);
+        setSelectionStatus(responseData);
 
         // Check if selection is required - only show modal if config_id exists
         console.log('📊 Selection check:', {
-          has_selection: response.data.has_selection,
-          has_selection_type: typeof response.data.has_selection,
-          config_id: response.data.config_id,
-          config_id_type: typeof response.data.config_id,
-          shouldShowModal: !response.data.has_selection && response.data.config_id
+          has_selection: responseData.has_selection,
+          has_selection_type: typeof responseData.has_selection,
+          config_id: responseData.config_id,
+          config_id_type: typeof responseData.config_id,
+          shouldShowModal: !responseData.has_selection && responseData.config_id
         });
 
-        if (!response.data.has_selection && response.data.config_id) {
+        if (!responseData.has_selection && responseData.config_id) {
           console.log('🔒 CONDITIONS MET! Locking tab and showing modal for:', tab.name);
           console.log('Setting currentTabName to:', tab.name);
           console.log('Setting isLocked to: true');
@@ -175,7 +203,7 @@ export default function SubjectsList({
           }, 50);
         } else {
           console.log('✅ Tab unlocked - Reason:',
-            !response.data.has_selection ? 'has_selection is false but no config_id' : 'has_selection is true'
+            !responseData.has_selection ? 'has_selection is false but no config_id' : 'has_selection is true'
           );
           setIsLocked(false);
         }

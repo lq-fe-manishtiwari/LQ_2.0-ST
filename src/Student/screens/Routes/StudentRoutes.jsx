@@ -14,7 +14,7 @@ const StudentRoutes = () => {
       <Route path="/home" element={<StudentHomepage />} />
       <Route path="/my-profile/*" element={<ProfileRoutes />} />
       <Route path="content/*" element={<ContentRoutes />} />
-      <Route path="/subject-selection" element={<SubjectSelectionPage />} />
+      <Route path="subject-selection" element={<SubjectSelectionPage />} />
       {/* Add more student pages */}
     </Routes>
   );
