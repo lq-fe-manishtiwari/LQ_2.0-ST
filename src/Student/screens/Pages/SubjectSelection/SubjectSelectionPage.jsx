@@ -1,14 +1,23 @@
 import React, { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Clock, CheckCircle2, AlertCircle, BookOpen } from 'lucide-react';
+import { ArrowLeft, Clock, CheckCircle2, AlertCircle, BookOpen, Loader2 } from 'lucide-react';
+import { saveStudentSubjectSelection } from './Service/subjectSelection.service';
+import { useUserProfile } from '@/contexts/UserProfileContext';
 
 export default function SubjectSelectionPage() {
     const location = useLocation();
     const navigate = useNavigate();
     const { configData, configId, academicYearId, semesterId, studentId } = location.state || {};
+    
+    // Get student ID from profile context
+    const { profile } = useUserProfile();
+    const currentStudentId = profile?.student_id || studentId;
 
     const [selectedSubjects, setSelectedSubjects] = useState([]);
     const [timeRemaining, setTimeRemaining] = useState('');
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [submitError, setSubmitError] = useState('');
+    const [submitSuccess, setSubmitSuccess] = useState(false);
 
     useEffect(() => {
         if (configData) {
@@ -40,6 +49,16 @@ export default function SubjectSelectionPage() {
     }, [configData]);
 
     const handleSubjectToggle = (subjectId) => {
+        // Prevent changes during submission or after successful submission
+        if (isSubmitting || submitSuccess) {
+            return;
+        }
+
+        // Clear any previous error when user makes changes
+        if (submitError) {
+            setSubmitError('');
+        }
+
         setSelectedSubjects(prev => {
             if (prev.includes(subjectId)) {
                 return prev.filter(id => id !== subjectId);
@@ -53,15 +72,69 @@ export default function SubjectSelectionPage() {
         });
     };
 
-    const handleSubmit = () => {
+    const handleSubmit = async () => {
+        // Clear previous errors
+        setSubmitError('');
+        
+        // Validation
         if (selectedSubjects.length < configData.minimum_selections) {
-            alert(`Please select at least ${configData.minimum_selections} subjects`);
+            setSubmitError(`Please select at least ${configData.minimum_selections} subjects`);
             return;
         }
 
-        console.log('Submitting selections:', selectedSubjects);
-        // TODO: Call submit API
-        alert('Selection submitted successfully!');
+        if (selectedSubjects.length > configData.maximum_selections) {
+            setSubmitError(`Please select no more than ${configData.maximum_selections} subjects`);
+            return;
+        }
+
+        if (!currentStudentId) {
+            setSubmitError('Student ID not found. Please refresh the page and try again.');
+            return;
+        }
+
+        if (!configId) {
+            setSubmitError('Configuration ID not found. Please go back and try again.');
+            return;
+        }
+
+        setIsSubmitting(true);
+
+        try {
+            // Prepare the request payload according to the API specification
+            const selectionRequest = {
+                subject_selection_config_id: configId,
+                subject_ids: selectedSubjects // This is already a Set/Array of Long values
+            };
+
+            console.log('Submitting subject selection:', {
+                currentStudentId,
+                selectionRequest
+            });
+
+            const response = await saveStudentSubjectSelection(currentStudentId, selectionRequest);
+
+            if (response.success) {
+                setSubmitSuccess(true);
+                console.log('Subject selection saved successfully:', response.data);
+                
+                // Show success message and redirect after a delay
+                setTimeout(() => {
+                    navigate(-1, {
+                        state: {
+                            message: 'Subject selection submitted successfully!',
+                            type: 'success'
+                        }
+                    });
+                }, 2000);
+            } else {
+                setSubmitError(response.message || 'Failed to save subject selection. Please try again.');
+            }
+        } catch (error) {
+            console.error('Error submitting subject selection:', error);
+            setSubmitError('An unexpected error occurred. Please try again.');
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
     if (!configData) {
@@ -84,7 +157,9 @@ export default function SubjectSelectionPage() {
     }
 
     const canSubmit = selectedSubjects.length >= configData.minimum_selections &&
-        selectedSubjects.length <= configData.maximum_selections;
+        selectedSubjects.length <= configData.maximum_selections &&
+        !isSubmitting &&
+        !submitSuccess;
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 p-4 sm:p-6">
@@ -151,23 +226,7 @@ export default function SubjectSelectionPage() {
                         </div>
                     </div>
 
-                    {/* Available Subjects */}
-                    <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
-                        <div className="flex items-center gap-3 mb-2">
-                            <div className="p-2 bg-purple-100 rounded-lg">
-                                <BookOpen className="w-5 h-5 text-purple-600" />
-                            </div>
-                            <h3 className="font-semibold text-gray-900">Available</h3>
-                        </div>
-                        <div className="space-y-1 text-sm">
-                            <p className="text-gray-600">
-                                Total Subjects: <span className="font-semibold text-gray-900">{configData.allocated_subject_count}</span>
-                            </p>
-                            <p className="text-gray-600">
-                                Limit per Subject: <span className="font-semibold text-gray-900">{configData.limit_per_subject_selections}</span> students
-                            </p>
-                        </div>
-                    </div>
+      
                 </div>
 
                 {/* Subject Sets */}
@@ -195,10 +254,14 @@ export default function SubjectSelectionPage() {
                                                 <button
                                                     key={subject.subject_id}
                                                     onClick={() => handleSubjectToggle(subject.subject_id)}
-                                                    className={`relative p-4 rounded-lg border-2 transition-all duration-200 text-left ${isSelected
-                                                            ? 'border-blue-500 bg-blue-50 shadow-md scale-[1.02]'
-                                                            : 'border-gray-200 bg-white hover:border-blue-300 hover:shadow-sm'
-                                                        }`}
+                                                    disabled={isSubmitting || submitSuccess}
+                                                    className={`relative p-4 rounded-lg border-2 transition-all duration-200 text-left ${
+                                                        isSubmitting || submitSuccess
+                                                            ? 'border-gray-200 bg-gray-100 cursor-not-allowed opacity-60'
+                                                            : isSelected
+                                                                ? 'border-blue-500 bg-blue-50 shadow-md scale-[1.02] hover:border-blue-600'
+                                                                : 'border-gray-200 bg-white hover:border-blue-300 hover:shadow-sm'
+                                                    }`}
                                                 >
                                                     {/* Selection Indicator */}
                                                     <div className={`absolute top-3 right-3 w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all ${isSelected
@@ -240,12 +303,38 @@ export default function SubjectSelectionPage() {
                     ))}
                 </div>
 
+                {/* Error Message */}
+                {submitError && (
+                    <div className="mt-6 bg-red-50 border border-red-200 rounded-xl p-4">
+                        <div className="flex items-center gap-3">
+                            <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0" />
+                            <p className="text-red-800 font-medium">{submitError}</p>
+                        </div>
+                    </div>
+                )}
+
+                {/* Success Message */}
+                {submitSuccess && (
+                    <div className="mt-6 bg-green-50 border border-green-200 rounded-xl p-4">
+                        <div className="flex items-center gap-3">
+                            <CheckCircle2 className="w-5 h-5 text-green-600 flex-shrink-0" />
+                            <p className="text-green-800 font-medium">
+                                Subject selection submitted successfully! Redirecting...
+                            </p>
+                        </div>
+                    </div>
+                )}
+
                 {/* Submit Button */}
                 <div className="sticky bottom-6 mt-8">
                     <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-4">
                         <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
                             <div className="text-sm text-gray-600">
-                                {selectedSubjects.length < configData.minimum_selections ? (
+                                {submitSuccess ? (
+                                    <span className="text-green-600 font-medium">
+                                        ✓ Selection submitted successfully!
+                                    </span>
+                                ) : selectedSubjects.length < configData.minimum_selections ? (
                                     <span className="text-orange-600 font-medium">
                                         ⚠️ Please select at least {configData.minimum_selections - selectedSubjects.length} more subject(s)
                                     </span>
@@ -258,20 +347,39 @@ export default function SubjectSelectionPage() {
 
                             <div className="flex gap-3 w-full sm:w-auto">
                                 <button
-                                    onClick={() => setSelectedSubjects([])}
-                                    className="flex-1 sm:flex-none px-6 py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium"
+                                    onClick={() => {
+                                        setSelectedSubjects([]);
+                                        setSubmitError('');
+                                    }}
+                                    disabled={isSubmitting || submitSuccess}
+                                    className={`flex-1 sm:flex-none px-6 py-3 rounded-lg font-medium transition-colors ${
+                                        isSubmitting || submitSuccess
+                                            ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                    }`}
                                 >
                                     Clear All
                                 </button>
                                 <button
                                     onClick={handleSubmit}
                                     disabled={!canSubmit}
-                                    className={`flex-1 sm:flex-none px-8 py-3 rounded-lg font-medium transition-all ${canSubmit
+                                    className={`flex-1 sm:flex-none px-8 py-3 rounded-lg font-medium transition-all flex items-center justify-center gap-2 ${
+                                        canSubmit && !isSubmitting && !submitSuccess
                                             ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white hover:shadow-lg hover:scale-[1.02]'
                                             : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                                        }`}
+                                    }`}
                                 >
-                                    Submit Selection
+                                    {isSubmitting && <Loader2 className="w-4 h-4 animate-spin" />}
+                                    {submitSuccess ? (
+                                        <>
+                                            <CheckCircle2 className="w-4 h-4" />
+                                            Submitted
+                                        </>
+                                    ) : isSubmitting ? (
+                                        'Submitting...'
+                                    ) : (
+                                        'Submit Selection'
+                                    )}
                                 </button>
                             </div>
                         </div>

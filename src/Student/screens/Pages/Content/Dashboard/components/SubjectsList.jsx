@@ -241,7 +241,8 @@ export default function SubjectsList({
         tab.id,            // 🎯 correct tabId used now!
         academicYearId,
         semesterId,
-        tabType
+        tabType,
+        profile?.student_id
       );
 
       if (response.success && Array.isArray(response.data)) {

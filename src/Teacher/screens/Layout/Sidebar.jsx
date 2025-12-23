@@ -116,6 +116,13 @@ const Sidebar = ({ isOpen, toggle }) => {
           "/student-view-project",
         ],
       },
+        {
+          to: "/subject-selection",
+          label: "Paper Selection",
+          iconActive: contentActive,
+          iconInactive: contentInactive,
+          match: ["/subject-selection"],
+        },
       {
         to: "/teacher/assessments",
         label: "Assessment",
