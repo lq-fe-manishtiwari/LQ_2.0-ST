@@ -56,6 +56,9 @@ importers:
       pdfjs-dist:
         specifier: ^5.4.449
         version: 5.4.449
+      prop-types:
+        specifier: ^15.8.1
+        version: 15.8.1
       react:
         specifier: ^19.1.1
         version: 19.2.3
@@ -74,6 +77,9 @@ importers:
       react-editor:
         specifier: ^2.0.1
         version: 2.0.1(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
+      react-error-boundary:
+        specifier: ^6.0.0
+        version: 6.0.0(react@19.2.3)
       react-i18next:
         specifier: ^16.2.4
         version: 16.5.0(i18next@25.7.3)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
@@ -1761,6 +1767,11 @@ packages:
     peerDependencies:
       react: '>= 16.8'
       react-dom: '>= 16.8'
+
+  react-error-boundary@6.0.0:
+    resolution: {integrity: sha512-gdlJjD7NWr0IfkPlaREN2d9uUZUlksrfOx7SX62VRerwXbMY6ftGCIZua1VG1aXFNOimhISsTq+Owp725b9SiA==}
+    peerDependencies:
+      react: '>=16.13.1'
 
   react-fast-compare@2.0.4:
     resolution: {integrity: sha512-suNP+J1VU1MWFKcyt7RtjiSWUjvidmQSlqu+eHslq+342xCbGTYmC0mEhPCOHxlW0CywylOC1u2DFAT+bv4dBw==}
@@ -3746,6 +3757,11 @@ snapshots:
     dependencies:
       react: 19.2.3
       react-dom: 19.2.3(react@19.2.3)
+
+  react-error-boundary@6.0.0(react@19.2.3):
+    dependencies:
+      '@babel/runtime': 7.28.4
+      react: 19.2.3
 
   react-fast-compare@2.0.4: {}
 
