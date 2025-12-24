@@ -30,7 +30,7 @@ export default function MyLeaves() {
   /* -------------------- LEAVE FORM STATE -------------------- */
   const [leaveForm, setLeaveForm] = useState({
     type: "",
-    leaveFor: "FULL_DAY",
+     leaveFor: "FULL_DAY",
     fromDate: "",
     toDate: "",
     days: "",
@@ -57,7 +57,7 @@ export default function MyLeaves() {
     const fetchData = async () => {
       try {
         const userProfile = JSON.parse(localStorage.getItem("userProfile") || "{}");
-        const collegeId = userProfile?.college_id;
+        const collegeId = userProfile?.college_id || "16";
         const userId = userProfile?.user?.user_id || userProfile?.user_id;
 
         if (!collegeId || !userId) {
@@ -69,7 +69,7 @@ export default function MyLeaves() {
         // Fetch leave types
         const typesResponse = await leaveService.getLeaveTypesByCollegeId(collegeId);
         const teacherLeaveTypes = Array.isArray(typesResponse)
-          ? typesResponse.filter((lt) => lt.user_type === "TEACHER")
+          ? typesResponse.filter((lt) => lt.user_type === "STUDENT")
           : [];
 
         setLeaveTypes(teacherLeaveTypes);
@@ -113,7 +113,7 @@ export default function MyLeaves() {
     }
   };
 
-  const handleFormChange = (e) => {
+ const handleFormChange = (e) => {
   const { name, value, files } = e.target;
 
   if (name === "attachment") {
@@ -128,6 +128,7 @@ export default function MyLeaves() {
     }));
   }
 };
+
 
   const resetFormAndCloseModal = () => {
     setShowLeaveModal(false);
@@ -150,7 +151,7 @@ export default function MyLeaves() {
     try {
       const userProfile = JSON.parse(localStorage.getItem("userProfile") || "{}");
       const user_id = userProfile?.user?.user_id || userProfile?.user_id;
-      const college_id = userProfile?.college_id;
+      const college_id = userProfile?.college_id || "16";
 
       const payload = {
         college_id,
@@ -193,9 +194,10 @@ export default function MyLeaves() {
   const diffTime = Math.abs(to - from);
   let calculatedDays = (diffTime / (1000 * 60 * 60 * 24)) + 1;
 
-  if (leaveForm.leaveFor === "HALF_DAY") {
-    calculatedDays = 0.5;
-  }
+if (leaveForm.leaveFor === "HALF_DAY") {
+  calculatedDays = 0.5;
+}
+
 
   setLeaveForm((prev) => ({
     ...prev,
@@ -217,7 +219,7 @@ export default function MyLeaves() {
       existingAttachments: Array.isArray(leave.attachment)
       ? leave.attachment
       : [],
-      attachment: [], // Files cannot be pre-filled
+      attachment: [], 
     });
 
     setShowLeaveModal(true);
@@ -255,7 +257,7 @@ export default function MyLeaves() {
     }
   };
 
-   const displayLeaveFor = (leaveFor) => {
+  const displayLeaveFor = (leaveFor) => {
   switch (leaveFor) {
     case "FULL_DAY":
       return "Normal";
@@ -265,6 +267,7 @@ export default function MyLeaves() {
       return "Normal";
   }
 };
+
 
   return (
     <div className="min-h-screen bg-slate-50 p-6">
@@ -291,7 +294,7 @@ export default function MyLeaves() {
           ) : (
             <>
               <table className="w-full">
-               <thead className="table-header">
+                 <thead className="table-header">
                   <tr className="text-blue-700 text-left">
                     <th className="p-4">Sr No</th>
                     <th className="p-4">Leave Type</th>
@@ -374,8 +377,7 @@ export default function MyLeaves() {
     {/* -------------------- APPLY / EDIT LEAVE MODAL -------------------- */}
 {showLeaveModal && (
   <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-    <div className="bg-white w-full max-w-md lg:max-w-lg rounded-xl shadow-xl border p-5 relative max-h-[85vh] overflow-y-auto">
-
+  <div className="bg-white w-full max-w-md lg:max-w-lg rounded-xl shadow-xl border p-5 relative max-h-[85vh] overflow-y-auto">
       <h2 className="text-2xl font-semibold mb-6">
         {isEditMode ? "Edit Leave" : "Apply Leave"}
       </h2>
@@ -410,7 +412,7 @@ export default function MyLeaves() {
         {/* Leave For */}
         <div>
           <label className="block text-sm font-medium mb-1">Leave For</label>
-        <select
+      <select
           name="leaveFor"
           value={leaveForm.leaveFor}
           onChange={handleFormChange}
@@ -419,6 +421,7 @@ export default function MyLeaves() {
           <option value="FULL_DAY">Normal</option>
           <option value="HALF_DAY">Half Day</option>
         </select>
+
         </div>
 
         {/* Dates */}
@@ -433,13 +436,11 @@ export default function MyLeaves() {
               value={leaveForm.fromDate}
               onChange={(e) => {
                 handleFormChange(e);
-                // Auto-set To Date if HALF_DAY
-                if (leaveForm.leaveFor === "HALF_DAY") {
-                  setLeaveForm((prev) => ({
-                    ...prev,
-                    toDate: e.target.value,
-                  }));
+                // Auto-set To Date if Half Day
+               if (leaveForm.leaveFor === "HALF_DAY") {
+                  setLeaveForm((prev) => ({ ...prev, toDate: e.target.value }));
                 }
+
               }}
               required
               min={new Date().toISOString().split("T")[0]}
@@ -547,7 +548,7 @@ export default function MyLeaves() {
               Selected files: {leaveForm.attachment.map((f) => f.name).join(", ")}
             </div>
           )}
-           {/* Existing Attachments */}
+          {/* Existing Attachments */}
             {isEditMode && leaveForm.existingAttachments.length > 0 && (
               <div className="mt-3">
                 <p className="text-sm font-medium text-gray-700 mb-1">
@@ -569,6 +570,7 @@ export default function MyLeaves() {
                 </ul>
               </div>
             )}
+
         </div>
 
         {/* Buttons */}
@@ -619,9 +621,9 @@ export default function MyLeaves() {
           showCancel
           confirmBtnText="Yes, delete it!"
           confirmBtnBsStyle="danger"
-          title="Are you sure?"
-           confirmBtnCssClass="btn-confirm"
+          confirmBtnCssClass="btn-confirm"
           cancelBtnCssClass="btn-cancel"
+          title="Are you sure?"
           onConfirm={handleDelete}
           onCancel={() => setShowConfirmDelete(false)}
           focusCancelBtn
@@ -634,9 +636,9 @@ export default function MyLeaves() {
           show={showSuccessAlert}
           success
           title="Success!"
-           confirmBtnCssClass="btn-confirm"
-          cancelBtnCssClass="btn-cancel"
           confirmBtnBsStyle="success"
+          confirmBtnCssClass="btn-confirm"
+          cancelBtnCssClass="btn-cancel"
           onConfirm={() => setShowSuccessAlert(false)}
         >
           {successMessage}
@@ -647,9 +649,9 @@ export default function MyLeaves() {
           show={showErrorAlert}
           error
           title="Error!"
-           confirmBtnCssClass="btn-confirm"
-          cancelBtnCssClass="btn-cancel"
           confirmBtnBsStyle="danger"
+          confirmBtnCssClass="btn-confirm"
+          cancelBtnCssClass="btn-cancel"
           onConfirm={() => setShowErrorAlert(false)}
         >
           {errorMessage}

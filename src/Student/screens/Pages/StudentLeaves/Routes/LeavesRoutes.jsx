@@ -2,7 +2,6 @@ import { Routes, Route, Navigate } from "react-router-dom";
 import LeavesLayout from "../LeavesLayout";
 // import SubmittedFeedback from "../Dashboard/SubmittedFeedback";
 import MyLeaves from "../Dashboard/MyLeaves";
-import ClassLeave from "../Dashboard/ClassLeave";
 
 export default function LeavesRoutes() {
   return (
@@ -12,7 +11,7 @@ export default function LeavesRoutes() {
 
       <Route element={<LeavesLayout />}>
         <Route path="dashboard" element={<MyLeaves />} />
-        <Route path="class-leave" element={<ClassLeave />} /> 
+        {/* <Route path="submitted-feedback" element={<SubmittedFeedback />} />  */}
       </Route>
     </Routes>
   );

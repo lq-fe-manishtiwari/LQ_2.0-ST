@@ -1,18 +1,30 @@
 import React, { useState, useEffect } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { Eye, X } from "lucide-react";
 import { TaskManagement } from '../../Services/TaskManagement.service';
 
 export default function ViewMyTasks() {
   const navigate = useNavigate();
   const { id } = useParams();
+  const location = useLocation();
   const [task, setTask] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  // Get userId from localStorage
+  const currentUser = JSON.parse(localStorage.getItem("userProfile"));
+  const userId = currentUser?.user?.user_id || null;
+
+  // Check if task data is passed via props/state
+  const passedTaskData = location.state?.taskData;
 
   // Fetch task data
   useEffect(() => {
-    if (id) {
+    if (passedTaskData) {
+      // Use passed data from MyTasks.jsx
+      setTask(passedTaskData.originalData || passedTaskData);
+      setLoading(false);
+    } else if (id) {
+      // Fallback to API call if no data passed
       TaskManagement.getMyTaskbyID(id)
         .then(response => {
           if (response) {
@@ -26,7 +38,7 @@ export default function ViewMyTasks() {
           setLoading(false);
         });
     }
-  }, [id]);
+  }, [id, passedTaskData]);
 
   // Format date helper
   const formatDate = (isoString) => {
@@ -51,7 +63,7 @@ export default function ViewMyTasks() {
     description: task.description || "No Description",
     assignedDate: formatDate(task.assigned_date_time),
     dueDate: formatDate(task.due_date_time),
-    assignedBy: "Self",
+    assignedBy: passedTaskData ? passedTaskData.assignedBy || "Self" : "Self",
     taskType: task.task_type?.task_type_name || "General",
     priority: task.priority?.priority_name || "Medium",
     status: task.status?.name || "Pending",

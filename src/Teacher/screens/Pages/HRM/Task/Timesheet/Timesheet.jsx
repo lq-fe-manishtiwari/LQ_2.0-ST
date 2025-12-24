@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useMemo } from "react";
 import { Download, Search, Filter, ChevronDown, ChevronLeft, ChevronRight } from "lucide-react";
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
-import { TaskManagement } from '../../Services/TaskManagement.service';
+import { TaskManagement } from '../../Services/TaskManagement.service.js';
 // import { DepartmentService } from '../../../Academics/Services/Department.service';
 // import Loader from '../Components/Loader';
 
@@ -70,7 +70,6 @@ export default function TimeSheetDashboard() {
   const [searchQuery, setSearchQuery] = useState("");
   const [filters, setFilters] = useState({
     filterOpen: false,
-    department: '',
     view: '',
     year: '',
     month: '',
@@ -80,24 +79,14 @@ export default function TimeSheetDashboard() {
     activeSubTab: ''
   });
   const [mobileTabStart, setMobileTabStart] = useState(0);
-  const [name, setName] = useState("Manish Tiwari");
-  const [date, setDate] = useState("2025-02-25");
-  const [month, setMonth] = useState("2025-08");
-  const [startDate, setStartDate] = useState("2025-02-20");
-  const [endDate, setEndDate] = useState("2025-02-25");
+  // const [name, setName] = useState("Manish Tiwari");
+  // const [userId, setUserId] = useState(2);
+  const currentUser = JSON.parse(localStorage.getItem("userProfile"));
+  const userId = currentUser?.user?.user_id || null;
   const [filteredData, setFilteredData] = useState({ days: [], summary: {} });
   const [downloadOpen, setDownloadOpen] = useState(false);
   const downloadRef = useRef(null);
-  const [departments, setDepartments] = useState([]);
-  const [deptLoading, setDeptLoading] = useState(false);
-  const [empLoading, setEmpLoading] = useState(false);
-  const activeCollege = JSON.parse(localStorage.getItem("activeCollege"));
-  const collegeId = activeCollege?.id || null;
-
-  const [employees, setEmployees] = useState([]);
-const [selectedEmployee, setSelectedEmployee] = useState(null);
-const [userId, setUserId] = useState(null);
-const [employeeId, setEmployeeId] = useState('');
+  // const [employeeId, setEmployeeId] = useState('EMP001');
 
 
   const years = ['2022', '2023', '2024', '2025'];
@@ -189,42 +178,35 @@ const [employeeId, setEmployeeId] = useState('');
       return { days: [], summary: { working: 0, present: 0, absent: 0, leave: 0 } };
     }
 
-    const days = apiResponse.date_wise_data
-      .filter(dayData => dayData.total_task_count > 0)
-      .map(dayData => {
-        const allTasks = [...(dayData.assigned_tasks || []), ...(dayData.self_tasks || [])];
-        
-        return {
-          date: dayData.date,
-          dayName: new Date(dayData.date).toLocaleDateString('en-US', { weekday: 'long' }),
-          tasks: allTasks.map(task => ({
-            title: task.task_name || 'Untitled Task',
-            description: task.description || '',
-            priority: task.priority_name || 'Medium',
-            status: task.task_status_name || 'UNKNOWN',
-            taskType: task.task_type_name || 'General',
-            assignedBy: task.assigned_by_user ? `${task.assigned_by_user.other_staff_info?.firstname || ''} ${task.assigned_by_user.other_staff_info?.lastname || ''}`.trim() || task.assigned_by_user.username : 'N/A',
-            dueDate: task.due_date_time ? new Date(task.due_date_time).toLocaleDateString() : 'N/A',
-            time: task.estimated_time || 'N/A'
-          }))
-        };
-      });
-
-    const finalDays = days.length > 0 ? days : apiResponse.date_wise_data.map(dayData => ({
-      date: dayData.date,
-      dayName: new Date(dayData.date).toLocaleDateString('en-US', { weekday: 'long' }),
-      tasks: []
-    }));
+    // Transform all dates, including empty ones
+    const days = apiResponse.date_wise_data.map(dayData => {
+      const allTasks = [...(dayData.assigned_tasks || []), ...(dayData.self_tasks || [])];
+      
+      return {
+        date: dayData.date,
+        dayName: new Date(dayData.date).toLocaleDateString('en-US', { weekday: 'long' }),
+        tasks: allTasks.map(task => ({
+          title: task.task_name || 'Untitled Task',
+          description: task.description || '',
+          priority: task.priority_name || 'Medium',
+          status: task.task_status_name || 'UNKNOWN',
+          taskType: task.task_type_name || 'General',
+          assignedBy: task.assigned_by_user ? `${task.assigned_by_user.other_staff_info?.firstname || ''} ${task.assigned_by_user.other_staff_info?.lastname || ''}`.trim() || task.assigned_by_user.username : 'N/A',
+          dueDate: task.due_date_time ? new Date(task.due_date_time).toLocaleDateString() : 'N/A',
+          time: task.estimated_time || 'N/A'
+        }))
+      };
+    });
 
     const summary = {
-      working: apiResponse.summary?.total_days_with_tasks || finalDays.length,
-      present: apiResponse.summary?.total_days_with_tasks || finalDays.length,
-      absent: 0,
+      working: apiResponse.summary?.total_days_with_tasks || days.filter(day => day.tasks.length > 0).length,
+      present: apiResponse.summary?.total_days_with_tasks || days.filter(day => day.tasks.length > 0).length,
+      absent: days.filter(day => day.tasks.length === 0).length,
       leave: 0
     };
 
-    console.log('Transformed Data:', { days: finalDays, summary });
-    return { days: finalDays, summary };
+    console.log('Transformed Data:', { days, summary });
+    return { days, summary };
   };
 
   const fetchTimesheetData = async () => {
@@ -300,48 +282,7 @@ const [employeeId, setEmployeeId] = useState('');
     }
   }, [filters.view]);
 
-  // Fetch departments from API
-  useEffect(() => {
-    const fetchDepartments = async () => {
-      if (!collegeId) return;
-      setDeptLoading(true);
-      try {
-        const data = await DepartmentService.getDepartmentByCollegeId(collegeId);
-        const deptNames = data.map(dept => dept.department_name || dept.name || 'Unknown');
-        setDepartments(deptNames);
-      } catch (err) {
-        console.error('Error fetching departments:', err);
-        setDepartments([]);
-      } finally {
-        setDeptLoading(false);
-      }
-    };
-    fetchDepartments();
-  }, [collegeId]);
 
- useEffect(() => {
-  const fetchEmployees = async () => {
-    if (!filters.department) {
-      setEmployees([]);
-      setSelectedEmployee(null);
-      return;
-    }
-
-    setEmpLoading(true);
-    try {
-      const response = await TaskManagement.getStaffByDepartment(filters.department);
-      const empList = response.data || response || [];
-      setEmployees(empList); // ✅ store full objects
-    } catch (err) {
-      console.error('Error fetching employees:', err);
-      setEmployees([]);
-    } finally {
-      setEmpLoading(false);
-    }
-  };
-
-  fetchEmployees();
-}, [filters.department]);
 
 
   const getDayName = (dateString) => {
@@ -378,25 +319,23 @@ const [employeeId, setEmployeeId] = useState('');
         heightLeft -= pdf.internal.pageSize.getHeight();
       }
 
-      pdf.save(`Timesheet-${name}-${new Date().toISOString().split('T')[0]}.pdf`);
+      pdf.save(`Timesheet-${new Date().toISOString().split('T')[0]}.pdf`);
     });
   };
 
   const downloadExcel = () => {
     const csvData = [];
     
-    csvData.push(['Employee Name', 'Employee ID', 'Date', 'Day', 'Task Title', 'Description', 'Priority', 'Status', 'Task Type', 'Assigned By', 'Due Date', 'Time Spent']);
+    csvData.push(['Date', 'Day', 'Task Title', 'Description', 'Priority', 'Status', 'Task Type', 'Assigned By', 'Due Date', 'Time Spent']);
     
-    csvData.push(['Summary', '', '', '', `Working Days: ${filteredData.summary.working || 0}`, `Present: ${filteredData.summary.present || 0}`, `Absent: ${filteredData.summary.absent || 0}`, `Leave: ${filteredData.summary.leave || 0}`, '', '', '', '']);
-    csvData.push(['', '', '', '', '', '', '', '', '', '', '', '']);
+    csvData.push(['Summary', '', `Working Days: ${filteredData.summary.working || 0}`, `Present: ${filteredData.summary.present || 0}`, `Absent: ${filteredData.summary.absent || 0}`, `Leave: ${filteredData.summary.leave || 0}`, '', '', '', '']);
+    csvData.push(['', '', '', '', '', '', '', '', '', '']);
     
     if (filteredData.days && filteredData.days.length > 0) {
       filteredData.days.forEach((day) => {
         if (day.tasks && day.tasks.length > 0) {
           day.tasks.forEach((task) => {
             csvData.push([
-              name,
-              employeeId || 'N/A',
               day.date,
               day.dayName,
               task.title,
@@ -411,8 +350,6 @@ const [employeeId, setEmployeeId] = useState('');
           });
         } else {
           csvData.push([
-            name,
-            employeeId || 'N/A',
             day.date,
             day.dayName,
             'No tasks',
@@ -436,7 +373,7 @@ const [employeeId, setEmployeeId] = useState('');
     const link = document.createElement('a');
     const url = URL.createObjectURL(blob);
     link.setAttribute('href', url);
-    link.setAttribute('download', `Timesheet-${name}-${new Date().toISOString().split('T')[0]}.csv`);
+    link.setAttribute('download', `Timesheet-${new Date().toISOString().split('T')[0]}.csv`);
     link.style.visibility = 'hidden';
     document.body.appendChild(link);
     link.click();
@@ -513,37 +450,6 @@ const [employeeId, setEmployeeId] = useState('');
       {filters.filterOpen && (
         <div className="bg-white rounded-xl shadow-md p-5 mb-6 border border-gray-200">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-            <CustomSelect
-              label="Department"
-              value={filters.department}
-              onChange={(e) => setFilters(prev => ({ ...prev, department: e.target.value }))}
-              options={departments}
-              placeholder={deptLoading ? "Loading departments..." : "Select Department"}
-              disabled={deptLoading}
-            />
-            
-           <CustomSelect
-  label="Name"
-  value={
-    selectedEmployee
-      ? `${selectedEmployee.firstname} ${selectedEmployee.lastname}`
-      : ''
-  }
-  onChange={(e) => {
-    const emp = e.target.value;
-
-    setSelectedEmployee(emp);
-    setUserId(emp.user_id);          // ✅ userId set
-    setEmployeeId(emp.employee_id);  // ✅ employeeId set
-    setName(`${emp.firstname} ${emp.lastname}`);
-  }}
-  options={employees}
-  getLabel={(emp) => `${emp.firstname} ${emp.lastname}`}
-  placeholder="Select Name"
-  disabled={!filters.department || empLoading}
-/>
-
-
             <CustomSelect
               label="Select View"
               value={filters.view}
@@ -714,23 +620,23 @@ const [employeeId, setEmployeeId] = useState('');
 
       <div id="timesheet-section" className="bg-white p-4 rounded-xl shadow">
 
-        <div className="flex justify-between items-center px-1 mb-5">
+        {/* <div className="flex justify-between items-center px-1 mb-5">
           <h2 className="text-lg font-semibold">Name : {name}</h2>
           <p className="text-gray-700 font-medium">Employee ID : {employeeId || 'N/A'}</p>
-        </div>
+        </div> */}
 
         <div className="grid grid-cols-1 md:grid-cols-4 gap-5 mb-6">
           <div className="bg-blue-100 text-blue-700 p-4 text-center rounded-xl font-semibold shadow">
-            Total Working Days : {filteredData.summary.working || 0}
+            Total Days : {filteredData.days?.length || 0}
           </div>
           <div className="bg-green-100 text-green-700 p-4 text-center rounded-xl font-semibold shadow">
-            Total Present Days : {filteredData.summary.present || 0}
+            Days with Tasks : {filteredData.summary.working || 0}
           </div>
           <div className="bg-red-100 text-red-700 p-4 text-center rounded-xl font-semibold shadow">
-            Total Absent Days : {filteredData.summary.absent || 0}
+            Days without Tasks : {filteredData.summary.absent || 0}
           </div>
           <div className="bg-yellow-100 text-yellow-700 p-4 text-center rounded-xl font-semibold shadow">
-            Leave Taken : {filteredData.summary.leave || 0}
+            Total Tasks : {filteredData.days?.reduce((total, day) => total + (day.tasks?.length || 0), 0) || 0}
           </div>
         </div>
 

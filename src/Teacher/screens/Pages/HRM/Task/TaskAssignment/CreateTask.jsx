@@ -354,37 +354,37 @@ export default function TaskForm() {
   };
 
   // Fetch Departments on Mount
-  useEffect(() => {
-    if (!collegeId) {
-      setLoadingDepartments(false);
-      return;
-    }
+  // useEffect(() => {
+  //   if (!collegeId) {
+  //     setLoadingDepartments(false);
+  //     return;
+  //   }
 
-    DepartmentService.getDepartmentByCollegeId(collegeId)
-      .then(response => {
-        const deptList = response.data || response || [];
-        const uniqueDepartments = [];
-        const seenIds = new Set();
+  //   DepartmentService.getDepartmentByCollegeId(collegeId)
+  //     .then(response => {
+  //       const deptList = response.data || response || [];
+  //       const uniqueDepartments = [];
+  //       const seenIds = new Set();
         
-        deptList.forEach(dept => {
-          const deptId = dept.department_id || dept.id;
-          if (deptId && !seenIds.has(deptId)) {
-            seenIds.add(deptId);
-            uniqueDepartments.push(dept);
-          } else if (!deptId) {
-            uniqueDepartments.push(dept);
-          }
-        });
+  //       deptList.forEach(dept => {
+  //         const deptId = dept.department_id || dept.id;
+  //         if (deptId && !seenIds.has(deptId)) {
+  //           seenIds.add(deptId);
+  //           uniqueDepartments.push(dept);
+  //         } else if (!deptId) {
+  //           uniqueDepartments.push(dept);
+  //         }
+  //       });
         
-        console.log("Departments fetched:", uniqueDepartments);
-        setDepartments(uniqueDepartments);
-        setLoadingDepartments(false);
-      })
-      .catch(err => {
-        setLoadingDepartments(false);
-        handleAPIError(err, "fetch departments");
-      });
-  }, [collegeId]);
+  //       console.log("Departments fetched:", uniqueDepartments);
+  //       setDepartments(uniqueDepartments);
+  //       setLoadingDepartments(false);
+  //     })
+  //     .catch(err => {
+  //       setLoadingDepartments(false);
+  //       handleAPIError(err, "fetch departments");
+  //     });
+  // }, [collegeId]);
 
   // Fetch Employees when Department changes
   useEffect(() => {

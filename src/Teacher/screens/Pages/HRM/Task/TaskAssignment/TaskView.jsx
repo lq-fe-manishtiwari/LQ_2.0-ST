@@ -31,7 +31,59 @@ export default function TaskView() {
       setLoading(true);
       setError(null);
 
-      const response = await TaskManagement.getTaskAssignmentbyID(taskId);
+      // Get user info from localStorage
+      const currentUser = JSON.parse(localStorage.getItem("userProfile"));
+      const isAdmin = currentUser?.userType === 'ADMINISTRATOR' || currentUser?.roles?.some(role => role.name === 'ADMIN');
+      const userId = currentUser?.userId || currentUser?.rawData?.user?.user_id;
+      
+      console.log("User type:", currentUser?.userType);
+      console.log("Is Admin:", isAdmin);
+      console.log("User ID:", userId);
+      
+      let response;
+      
+      if (isAdmin) {
+        // For ADMIN - use getMyTaskbyID (self task API)
+        response = await TaskManagement.getMyTaskbyID(taskId);
+        console.log("Self Task API Response:", response);
+        
+        if (!response || typeof response !== "object") {
+          throw new Error("Invalid API response");
+        }
+        
+        // Handle self task response format
+        setTask({
+          ...response,
+          title: response.title,
+          description: response.description,
+          assignedDate: response.assigned_date_time,
+          dueDate: response.due_date_time,
+          taskType: response.task_type?.task_type_name || "Self Task",
+          status: response.status?.name || "Pending",
+          priority: response.priority?.priority_name || "Medium"
+        });
+        
+        // For self tasks, show current user as employee
+        const firstName = currentUser?.firstName || "";
+        const lastName = currentUser?.lastName || "";
+        const userName = `${firstName} ${lastName}`.trim() || currentUser?.username || "Unknown";
+        
+        setEmployees([
+          {
+            id: userId,
+            name: userName,
+            designation: currentUser?.designation || "N/A",
+            role: "Self",
+            department: currentUser?.department?.department_name || "N/A",
+            responsibility: "Self Task"
+          }
+        ]);
+        
+        return;
+      }
+      
+      // For non-ADMIN - use existing task assignment API
+      response = await TaskManagement.getTaskAssignmentbyID(taskId);
 
       if (!response || typeof response !== "object") {
         throw new Error("Invalid API response");
@@ -47,7 +99,7 @@ export default function TaskView() {
           assignedDate: r.task?.assigned_date_time,
           dueDate: r.task?.due_date_time,
           taskType: r.task?.task_type?.task_type_name,
-          status: r.task?.task_status?.name || r.task?.task_status_name || r.assignment_status,
+          status: r.task_status?.name || r.task?.task_status?.name || r.task?.task_status_name || r.assignment_status,
           priority: r.task?.priority?.priority_name
         });
 
@@ -82,7 +134,7 @@ export default function TaskView() {
           assignedDate: r.task?.assigned_date_time,
           dueDate: r.task?.due_date_time,
           taskType: r.task?.task_type?.task_type_name,
-          status: r.task?.task_status?.name || r.task?.task_status_name || r.assignment_status,
+          status: r.task_status?.name || r.task?.task_status?.name || r.task?.task_status_name || r.assignment_status,
           priority: r.task?.priority?.priority_name
         });
 
@@ -110,7 +162,7 @@ export default function TaskView() {
         assignedDate: response.task?.assigned_date_time,
         dueDate: response.task?.due_date_time,
         taskType: response.task?.task_type?.task_type_name,
-        status: response.task?.task_status?.name || response.task?.task_status_name || response.assignment_status,
+        status: response.task_status?.name || response.task?.task_status?.name || response.task?.task_status_name || response.assignment_status,
         priority: response.task?.priority?.priority_name
       });
 
@@ -147,7 +199,7 @@ export default function TaskView() {
     const collegeId = activeCollege?.id;
 
     if (collegeId) {
-      DepartmentService.getDepartmentByCollegeId(collegeId)
+      TaskManagement.getDepartmentByCollegeId(collegeId)
         .then(response => {
           const deptList = response.data || response || [];
           setDepartments(deptList);
