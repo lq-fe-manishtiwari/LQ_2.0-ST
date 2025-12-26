@@ -222,9 +222,14 @@ export default function SubjectSelectionPage() {
                             <div className="p-2 bg-orange-100 rounded-lg">
                                 <Clock className="w-5 h-5 text-orange-600" />
                             </div>
-                            <h3 className="font-semibold text-gray-900">Deadline</h3>
+                            <h3 className="font-semibold text-gray-900">Timeline</h3>
                         </div>
                         <div className="space-y-1 text-sm">
+                            <p className="text-gray-600">
+                                Starts: <span className="font-semibold text-gray-900">
+                                    {new Date(configData.start_time).toLocaleString()}
+                                </span>
+                            </p>
                             <p className="text-gray-600">
                                 Ends: <span className="font-semibold text-gray-900">
                                     {new Date(configData.end_time).toLocaleString()}

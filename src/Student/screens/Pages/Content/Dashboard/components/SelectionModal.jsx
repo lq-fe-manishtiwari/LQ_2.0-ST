@@ -1,8 +1,14 @@
 import React from 'react';
 import { X, AlertCircle } from 'lucide-react';
 
-export default function SelectionModal({ isOpen, onClose, onGoToSelection, tabName }) {
+export default function SelectionModal({ isOpen, onClose, onGoToSelection, tabName, startTime, endTime }) {
     if (!isOpen) return null;
+
+    // Format date and time
+    const formatDateTime = (dateString) => {
+        if (!dateString) return 'N/A';
+        return new Date(dateString).toLocaleString();
+    };
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
@@ -30,10 +36,28 @@ export default function SelectionModal({ isOpen, onClose, onGoToSelection, tabNa
                     </h3>
 
                     {/* Message */}
-                    <p className="text-gray-600 text-center mb-6 leading-relaxed">
+                    <p className="text-gray-600 text-center mb-4 leading-relaxed">
                         You have a selection available in <span className="font-semibold text-blue-600">{tabName}</span>.
-                        Please complete your academic selection process within the timeline, then your content will unlock.
+                        Please complete your subject selection process within the timeline, then your content will unlock.
                     </p>
+
+                    {/* Timeline */}
+                    {(startTime || endTime) && (
+                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-6">
+                            <div className="space-y-1 text-sm">
+                                {startTime && (
+                                    <p className="text-gray-700">
+                                        <span className="font-medium">Starts:</span> {formatDateTime(startTime)}
+                                    </p>
+                                )}
+                                {endTime && (
+                                    <p className="text-gray-700">
+                                        <span className="font-medium">Ends:</span> {formatDateTime(endTime)}
+                                    </p>
+                                )}
+                            </div>
+                        </div>
+                    )}
 
                     {/* Buttons */}
                     <div className="flex gap-3">
