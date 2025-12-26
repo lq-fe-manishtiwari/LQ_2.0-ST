@@ -32,32 +32,20 @@ export default function SelectionModal({ isOpen, onClose, onGoToSelection, tabNa
 
                     {/* Title */}
                     <h3 className="text-xl font-bold text-gray-900 text-center mb-3">
-                        Selection Required
+                        Subject Selection Required
                     </h3>
 
                     {/* Message */}
-                    <p className="text-gray-600 text-center mb-4 leading-relaxed">
+                    <p className="text-gray-600 text-center mb-6 leading-relaxed">
                         You have a selection available in <span className="font-semibold text-blue-600">{tabName}</span>.
                         Please complete your subject selection process within the timeline, then your content will unlock.
+                        {(startTime || endTime) && (
+                            <span className="block mt-3 text-sm">
+                                {startTime && <span className="block">Start: <span className="font-medium text-gray-900">{formatDateTime(startTime)}</span></span>}
+                                {endTime && <span className="block mt-1">End: <span className="font-medium text-gray-900">{formatDateTime(endTime)}</span></span>}
+                            </span>
+                        )}
                     </p>
-
-                    {/* Timeline */}
-                    {(startTime || endTime) && (
-                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-6">
-                            <div className="space-y-1 text-sm">
-                                {startTime && (
-                                    <p className="text-gray-700">
-                                        <span className="font-medium">Starts:</span> {formatDateTime(startTime)}
-                                    </p>
-                                )}
-                                {endTime && (
-                                    <p className="text-gray-700">
-                                        <span className="font-medium">Ends:</span> {formatDateTime(endTime)}
-                                    </p>
-                                )}
-                            </div>
-                        </div>
-                    )}
 
                     {/* Buttons */}
                     <div className="flex gap-3">
