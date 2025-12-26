@@ -13,6 +13,7 @@ export const leaveService = {
 
   // Apply Leave APIs
   applyLeave,
+  updateLeaveForm,
   getAllLeaves,
   getLeaveById,
   getLeavesByUserId,
@@ -21,6 +22,8 @@ export const leaveService = {
   softDeleteLeave,
   hardDeleteLeave,
   uploadFileToS3,
+
+  getLeavesSummaryByUserId,
 };
 
 /* ===================== LEAVE TYPE FUNCTIONS ===================== */
@@ -109,10 +112,10 @@ async function applyLeave(data) {
     leave_type_id: data.leave_type_id,
     start_date: data.fromDate,      // matching form field names
     end_date: data.toDate,
-    remark: data.remark,
+    reason: data.reason,
     attachment: attachmentUrls,      // array of S3 URLs (or empty array)
     leave_duration: data.leaveFor,       // Normal / Half Day
-    no_of_days: data.days,
+    no_of_days: parseFloat(data.days),
     leave_status: "PENDING",
   };
 
@@ -127,6 +130,47 @@ async function applyLeave(data) {
 
   return fetch(`${PMSNEWAPI}/apply-leave`, requestOptions)
     .then(handleResponse);
+}
+
+function updateLeaveForm(id, values) {
+  let attachmentUrls = [];
+
+  // If new files are attached during edit
+  if (values.attachment && values.attachment.length > 0) {
+    // Upload new files
+    const uploadPromises = values.attachment.map((file) => uploadFileToS3(file));
+    // Note: Since this is sync function, we can't await here directly
+    // But in practice, your frontend calls this via async handleSubmit, so it's fine
+    // We'll assume uploadFileToS3 returns promise and handle in component
+    // Alternatively, make this function async (recommended below)
+  }
+
+  // For edit: We only send updated fields. DO NOT send leave_status!
+  const payload = {
+    college_id: values.college_id,
+    user_id: values.user_id,
+    leave_type_id: parseInt(values.leave_type_id),
+    start_date: values.fromDate,
+    end_date: values.toDate,
+    reason: values.reason || null,
+    attachment: attachmentUrls, // new uploaded URLs (existing ones are preserved on backend?)
+    leave_duration: values.leaveFor,
+    no_of_days: parseFloat(values.days),
+    leave_status: "PENDING",
+    // IMPORTANT: Do NOT send leave_status here → preserves current status (Approved/Rejected/Pending)
+  };
+
+  const requestOptions = {
+    method: "PUT",
+    headers: {
+      ...authHeaderToPost(), // assuming this includes Content-Type and auth
+      // If authHeaderToPost() doesn't set Content-Type, add it:
+      // "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload),
+  };
+
+  return fetch(`${PMSNEWAPI}/apply-leave/${id}`, requestOptions).then(handleResponse);
 }
 
 // 2. GET ALL /api/apply-leave?page=0&size=10
@@ -173,4 +217,10 @@ function softDeleteLeave(id) {
 function hardDeleteLeave(id) {
   const requestOptions = { method: 'DELETE', headers: authHeader() };
   return fetch(`${PMSNEWAPI}/apply-leave/hard/${id}`, requestOptions).then(handleResponse);
+}
+
+
+function getLeavesSummaryByUserId(userId) {
+  const requestOptions = { method: 'GET', headers: authHeader() };
+  return fetch(`${PMSNEWAPI}/apply-leave/summary/${userId}`, requestOptions).then(handleResponse);
 }

@@ -2,7 +2,8 @@ import React from "react";
 import { NavLink } from "react-router-dom";
 
 const tabs = [
-  { label: "My Leaves", to: "/student/leaves" },
+  { label: "Dashboard", to: "/student/leaves/dashboard" },
+  { label: "My Leaves", to: "/student/leaves/myleaves" },
   // { label: "My Submitted Forms", to: "/teacher/leaves/submitted-feedback" },
 ];
 
