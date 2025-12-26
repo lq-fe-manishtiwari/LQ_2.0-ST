@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Clock, CheckCircle2, AlertCircle, BookOpen, Loader2 } from 'lucide-react';
+import { X, Clock, CheckCircle2, AlertCircle, BookOpen, Loader2, FileText } from 'lucide-react';
 import { saveStudentSubjectSelection } from './Service/subjectSelection.service';
 import { useUserProfile } from '@/contexts/UserProfileContext';
 import SweetAlert from 'react-bootstrap-sweetalert';
@@ -87,12 +87,12 @@ export default function SubjectSelectionPage() {
         
         // Validation
         if (selectedSubjects.length < configData.minimum_selections) {
-            setSubmitError(`Please select at least ${configData.minimum_selections} subjects`);
+            setSubmitError(`Please select at least ${configData.minimum_selections} papers`);
             return;
         }
 
         if (selectedSubjects.length > configData.maximum_selections) {
-            setSubmitError(`Please select no more than ${configData.maximum_selections} subjects`);
+            setSubmitError(`Please select no more than ${configData.maximum_selections} papers`);
             return;
         }
 
@@ -124,13 +124,13 @@ export default function SubjectSelectionPage() {
 
             if (response.success) {
                 setSubmitSuccess(true);
-                console.log('Subject selection saved successfully:', response.data);
+                console.log('Paper selection saved successfully:', response.data);
                 
                 // Show success message and redirect after a delay
                 setTimeout(() => {
                     navigate(-1, {
                         state: {
-                            message: 'Subject selection submitted successfully!',
+                            message: 'Paper selection submitted successfully!',
                             type: 'success'
                         }
                     });
@@ -173,23 +173,26 @@ export default function SubjectSelectionPage() {
         !submitSuccess;
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 p-4 sm:p-6">
-            <div className="max-w-6xl mx-auto">
+        <div className="min-h-screen bg-white p-4 sm:p-6">
+            <div className="max-w-6xl mx-auto p-6 bg-white">
                 {/* Header */}
-                <div className="flex items-center gap-4 mb-6">
+                <div className="flex items-center justify-between mb-6">
+                    <div className="flex items-center gap-3">
+                        <FileText className="w-8 h-8 text-blue-600" />
+                        <h1 className="text-2xl sm:text-3xl font-bold text-blue-600">Paper Selection</h1>
+                    </div>
                     <button
                         onClick={() => navigate(-1)}
-                        className="p-2 hover:bg-white rounded-lg transition-colors shadow-sm"
+                        className="p-2 bg-blue-600 hover:bg-blue-700 rounded-full transition-colors"
                     >
-                        <ArrowLeft className="w-6 h-6 text-gray-600" />
+                        <X className="w-5 h-5 text-white" />
                     </button>
-                    <div className="flex-1">
-                        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Subject Selection</h1>
-                        <p className="text-gray-600 mt-1">
-                            {configData.academic_year_name} - {configData.semester_name} - {configData.subject_type_name}
-                            {configData.vertical_type_name && ` - ${configData.vertical_type_name}`}
-                        </p>
-                    </div>
+                </div>
+                <div className="mb-6">
+                    <p className="text-gray-600">
+                        {configData.academic_year_name} - {configData.semester_name} - {configData.subject_type_name}
+                        {configData.vertical_type_name && ` - ${configData.vertical_type_name}`}
+                    </p>
                 </div>
 
                 {/* Info Cards */}
@@ -204,10 +207,10 @@ export default function SubjectSelectionPage() {
                         </div>
                         <div className="space-y-1 text-sm">
                             <p className="text-gray-600">
-                                Minimum: <span className="font-semibold text-gray-900">{configData.minimum_selections}</span> subjects
+                                Minimum: <span className="font-semibold text-gray-900">{configData.minimum_selections}</span> papers
                             </p>
                             <p className="text-gray-600">
-                                Maximum: <span className="font-semibold text-gray-900">{configData.maximum_selections}</span> subjects
+                                Maximum: <span className="font-semibold text-gray-900">{configData.maximum_selections}</span> papers
                             </p>
                             <p className="text-gray-600">
                                 Selected: <span className={`font-semibold ${selectedSubjects.length >= configData.minimum_selections ? 'text-green-600' : 'text-orange-600'
@@ -254,7 +257,7 @@ export default function SubjectSelectionPage() {
                                 <h2 className="text-xl font-bold text-white flex items-center gap-2">
                                     {set.subject_set_name}
                                     <span className="text-sm font-normal opacity-90">
-                                        ({set.subjects?.length || 0} subjects)
+                                        ({set.subjects?.length || 0} papers)
                                     </span>
                                 </h2>
                             </div>
@@ -308,7 +311,7 @@ export default function SubjectSelectionPage() {
                                 ) : (
                                     <div className="text-center py-8 text-gray-500">
                                         <BookOpen className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                                        <p>No subjects available in this set</p>
+                                        <p>No papers available in this set</p>
                                     </div>
                                 )}
                             </div>
@@ -332,7 +335,7 @@ export default function SubjectSelectionPage() {
                         <div className="flex items-center gap-3">
                             <CheckCircle2 className="w-5 h-5 text-green-600 flex-shrink-0" />
                             <p className="text-green-800 font-medium">
-                                Subject selection submitted successfully! Redirecting...
+                                Paper selection submitted successfully! Redirecting...
                             </p>
                         </div>
                     </div>
@@ -349,11 +352,11 @@ export default function SubjectSelectionPage() {
                                     </span>
                                 ) : selectedSubjects.length < configData.minimum_selections ? (
                                     <span className="text-orange-600 font-medium">
-                                        ⚠️ Please select at least {configData.minimum_selections - selectedSubjects.length} more subject(s)
+                                        ⚠️ Please select at least {configData.minimum_selections - selectedSubjects.length} more paper(s)
                                     </span>
                                 ) : (
                                     <span className="text-green-600 font-medium">
-                                        ✓ You have selected {selectedSubjects.length} subject(s)
+                                        ✓ You have selected {selectedSubjects.length} paper(s)
                                     </span>
                                 )}
                             </div>
@@ -413,7 +416,7 @@ export default function SubjectSelectionPage() {
                         }}
                         onCancel={() => setShowClearConfirm(false)}
                     >
-                        Are you sure you want to clear all selected subjects?
+                        Are you sure you want to clear all selected papers?
                     </SweetAlert>
                 )}
 
@@ -430,7 +433,7 @@ export default function SubjectSelectionPage() {
                         onConfirm={handleSubmitConfirm}
                         onCancel={() => setShowSubmitConfirm(false)}
                     >
-                        You have selected {selectedSubjects.length} subject(s). Are you sure you want to submit?
+                        You have selected {selectedSubjects.length} paper(s). Are you sure you want to submit?
                     </SweetAlert>
                 )}
 
