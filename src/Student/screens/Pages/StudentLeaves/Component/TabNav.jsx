@@ -4,7 +4,6 @@ import { NavLink } from "react-router-dom";
 const tabs = [
   { label: "Dashboard", to: "/student/leaves/dashboard" },
   { label: "My Leaves", to: "/student/leaves/myleaves" },
-  // { label: "My Submitted Forms", to: "/teacher/leaves/submitted-feedback" },
 ];
 
 export default function TabsNav() {
@@ -16,12 +15,14 @@ export default function TabsNav() {
             key={t.to}
             to={t.to}
             className={({ isActive }) =>
-              `px-5 py-2 rounded-full text-sm font-medium transition-all
-               ${
-                 isActive
-                   ? "bg-blue-600 text-white shadow"
-                   : "bg-white text-gray-600 hover:bg-blue-50 hover:text-blue-600"
-               }`
+              `px-5 py-2 rounded-full text-sm font-medium transition-all ${
+                isActive
+                  ? "bg-blue-600 text-white shadow"
+                  : "text-gray-700 hover:opacity-90"
+              }`
+            }
+            style={({ isActive }) =>
+              !isActive ? { backgroundColor: "#FFDDE5" } : {}
             }
           >
             {t.label}
