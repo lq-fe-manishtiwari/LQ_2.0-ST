@@ -38,6 +38,7 @@ export default function MyLeaves() {
   const [editingLeaveId, setEditingLeaveId] = useState(null);
   const [editingStatus, setEditingStatus] = useState(null);
   const [oldDays, setOldDays] = useState(0);
+  const [previewFile, setPreviewFile] = useState(null);
 
   const [leaveForm, setLeaveForm] = useState({
     type: '',
@@ -433,16 +434,16 @@ export default function MyLeaves() {
   };
 
   // ── PAGINATION CALCULATIONS ───────────────────────────────────────────────
-const totalEntries = leaveRecords.length;
-const totalPages = Math.ceil(totalEntries / entriesPerPage);
+  const totalEntries = leaveRecords.length;
+  const totalPages = Math.ceil(totalEntries / entriesPerPage);
 
-const indexOfLastEntry = currentPage * entriesPerPage;
-const indexOfFirstEntry = indexOfLastEntry - entriesPerPage;
+  const indexOfLastEntry = currentPage * entriesPerPage;
+  const indexOfFirstEntry = indexOfLastEntry - entriesPerPage;
 
-const currentEntries = leaveRecords.slice(
-  indexOfFirstEntry,
-  indexOfLastEntry
-);
+  const currentEntries = leaveRecords.slice(
+    indexOfFirstEntry,
+    indexOfLastEntry
+  );
 
 
   // ── RENDER ──────────────────────────────────────────────────────────────
@@ -455,19 +456,19 @@ const currentEntries = leaveRecords.slice(
             {/* Header */}
             <div className="mb-6">
               <div className="flex items-center justify-between mb-4">
+                {/* Title on left side */}
+                <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold text-blue-700">
+                  {isEditMode ? "Edit Leave" : "Apply Leave"}
+                </h2>
+
+                {/* Back button on right side */}
                 <button
                   onClick={resetFormAndClose}
-                  className="flex items-center gap-2 text-gray-600 hover:text-gray-900 p-2 -ml-2"
+                  className="flex items-center gap-2 text-gray-600 hover:text-gray-900 p-2 -mr-2 border rounded border-blue-200"
                 >
                   <ChevronLeft className="w-5 h-5" />
                   <span className="hidden sm:inline">Back</span>
                 </button>
-
-                <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold text-blue-700 text-center flex-1">
-                  {isEditMode ? 'Edit Leave' : 'Apply Leave'}
-                </h2>
-
-                <div className="w-10" /> {/* Spacer */}
               </div>
 
               {selectedPolicy && (
@@ -484,12 +485,6 @@ const currentEntries = leaveRecords.slice(
               )}
             </div>
 
-            {showPolicy && selectedPolicy && (
-              <div className="mb-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
-                <h3 className="font-semibold text-blue-700 mb-2">Leave Policy Details</h3>
-                <p className="text-sm text-gray-700 whitespace-pre-line">{selectedPolicy}</p>
-              </div>
-            )}
 
             <form onSubmit={handleSubmit} className="space-y-6">
               {/* Leave Type */}
@@ -518,9 +513,8 @@ const currentEntries = leaveRecords.slice(
                       >
                         {lt.leave_type}{' '}
                         {lt.no_of_days_allowed
-                          ? `(Max: ${lt.no_of_days_allowed} days, ${
-                              lt.is_paid ? 'Paid' : 'Unpaid'
-                            }) ${isDisabled ? '- No balance left' : `- ${available} day${available !== 1 ? 's' : ''} left`}`
+                          ? `(Max: ${lt.no_of_days_allowed} days, ${lt.is_paid ? 'Paid' : 'Unpaid'
+                          }) ${isDisabled ? '- No balance left' : `- ${available} day${available !== 1 ? 's' : ''} left`}`
                           : `(Unlimited, ${lt.is_paid ? 'Paid' : 'Unpaid'})`}
                       </option>
                     );
@@ -600,13 +594,12 @@ const currentEntries = leaveRecords.slice(
                 />
                 {getDaysValidationMessage() && (
                   <p
-                    className={`mt-3 text-sm font-medium ${
-                      getDaysValidationMessage().includes('Exceeds') ||
+                    className={`mt-3 text-sm font-medium ${getDaysValidationMessage().includes('Exceeds') ||
                       getDaysValidationMessage().includes('No balance') ||
                       getDaysValidationMessage().includes('Invalid')
-                        ? 'text-red-600'
-                        : 'text-green-600'
-                    }`}
+                      ? 'text-red-600'
+                      : 'text-green-600'
+                      }`}
                   >
                     {getDaysValidationMessage()}
                   </p>
@@ -650,7 +643,14 @@ const currentEntries = leaveRecords.slice(
                         </div>
                         <button
                           type="button"
-                          onClick={() => window.open(URL.createObjectURL(file), '_blank')}
+                          onClick={() => {
+                            const url = URL.createObjectURL(file);
+                            setPreviewFile({
+                              name: file.name,
+                              type: file.type,
+                              url: url,
+                            });
+                          }}
                           className="inline-flex items-center gap-1 text-blue-600 hover:text-blue-800 text-xs sm:text-sm font-medium flex-shrink-0 ml-2"
                         >
                           <Eye size={14} />
@@ -707,6 +707,49 @@ const currentEntries = leaveRecords.slice(
                   {isEditMode ? 'Update Leave' : 'Apply Leave'}
                 </button>
               </div>
+
+              {/* File Preview Modal */}
+              {previewFile && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+                  <div className="bg-white rounded-xl shadow-2xl max-w-4xl w-full max-h-full overflow-hidden flex flex-col">
+                    <div className="flex justify-between items-center p-4 border-b">
+                      <h3 className="text-lg font-semibold">{previewFile.name}</h3>
+                      <button
+                        onClick={() => {
+                          setPreviewFile(null);
+                          URL.revokeObjectURL(previewFile.url);
+                        }}
+                        className="text-gray-500 hover:text-gray-700"
+                      >
+                        <XCircle className="w-6 h-6" />
+                      </button>
+                    </div>
+                    <div className="flex-1 overflow-auto bg-gray-50">
+                      {previewFile.type.startsWith('image/') ? (
+                        <img src={previewFile.url} alt={previewFile.name} className="w-full h-full object-contain" />
+                      ) : previewFile.type === 'application/pdf' ? (
+                        <iframe
+                          src={previewFile.url}
+                          className="w-full h-full"
+                          title={previewFile.name}
+                        />
+                      ) : (
+                        <div className="p-8 text-center text-gray-600">
+                          <FileText className="w-16 h-16 mx-auto mb-4 text-gray-400" />
+                          <p>Preview not available for this file type.</p>
+                          <a
+                            href={previewFile.url}
+                            download={previewFile.name}
+                            className="mt-4 inline-block px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                          >
+                            Download Instead
+                          </a>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
             </form>
           </div>
         </div>
@@ -718,8 +761,8 @@ const currentEntries = leaveRecords.slice(
           showCancel
           confirmBtnText="Yes, delete it!"
           confirmBtnBsStyle="danger"
-           confirmBtnCssClass="btn-confirm"
-             cancelBtnCssClass="btn-cancel"
+          confirmBtnCssClass="btn-confirm"
+          cancelBtnCssClass="btn-cancel"
           title="Are you sure?"
           onConfirm={handleDelete}
           onCancel={() => setShowConfirmDelete(false)}
@@ -730,8 +773,8 @@ const currentEntries = leaveRecords.slice(
           show={showSuccessAlert}
           success
           title="Success!"
-           confirmBtnCssClass="btn-confirm"
-             cancelBtnCssClass="btn-cancel"
+          confirmBtnCssClass="btn-confirm"
+          cancelBtnCssClass="btn-cancel"
           onConfirm={() => setShowSuccessAlert(false)}
         >
           {successMessage}
@@ -740,8 +783,8 @@ const currentEntries = leaveRecords.slice(
           show={showErrorAlert}
           error
           title="Error!"
-           confirmBtnCssClass="btn-confirm"
-             cancelBtnCssClass="btn-cancel"
+          confirmBtnCssClass="btn-confirm"
+          cancelBtnCssClass="btn-cancel"
           onConfirm={() => setShowErrorAlert(false)}
         >
           {errorMessage}
@@ -997,11 +1040,10 @@ const currentEntries = leaveRecords.slice(
                             <button
                               key={i + 1}
                               onClick={() => setCurrentPage(i + 1)}
-                              className={`px-3 py-1.5 rounded text-sm ${
-                                currentPage === i + 1
-                                  ? 'bg-blue-600 text-white'
-                                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                              }`}
+                              className={`px-3 py-1.5 rounded text-sm ${currentPage === i + 1
+                                ? 'bg-blue-600 text-white'
+                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                }`}
                             >
                               {i + 1}
                             </button>
@@ -1031,8 +1073,8 @@ const currentEntries = leaveRecords.slice(
           showCancel
           confirmBtnText="Yes, delete it!"
           confirmBtnBsStyle="danger"
-           confirmBtnCssClass="btn-confirm"
-             cancelBtnCssClass="btn-cancel"
+          confirmBtnCssClass="btn-confirm"
+          cancelBtnCssClass="btn-cancel"
           title="Are you sure?"
           onConfirm={handleDelete}
           onCancel={() => setShowConfirmDelete(false)}
@@ -1044,8 +1086,8 @@ const currentEntries = leaveRecords.slice(
           show={showSuccessAlert}
           success
           title="Success!"
-           confirmBtnCssClass="btn-confirm"
-             cancelBtnCssClass="btn-cancel"
+          confirmBtnCssClass="btn-confirm"
+          cancelBtnCssClass="btn-cancel"
           onConfirm={() => setShowSuccessAlert(false)}
         >
           {successMessage}
@@ -1055,8 +1097,8 @@ const currentEntries = leaveRecords.slice(
           show={showErrorAlert}
           error
           title="Error!"
-           confirmBtnCssClass="btn-confirm"
-             cancelBtnCssClass="btn-cancel"
+          confirmBtnCssClass="btn-confirm"
+          cancelBtnCssClass="btn-cancel"
           onConfirm={() => setShowErrorAlert(false)}
         >
           {errorMessage}
