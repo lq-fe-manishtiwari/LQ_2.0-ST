@@ -141,6 +141,12 @@ const StudentSidebar = ({ isOpen, toggle }) => {
         iconInactive: classInactive,
       },
       {
+        to: "/student/alumini",
+        label: "Alumni",
+        iconActive: classActive,
+        iconInactive: classInactive,
+      },
+      {
         to: "/AcademicCalender-student",
         label: "Academic Calender",
         iconActive: classActive,
