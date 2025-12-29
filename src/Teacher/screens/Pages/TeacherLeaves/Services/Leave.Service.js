@@ -133,17 +133,14 @@ async function applyLeave(data) {
     .then(handleResponse);
 }
 
-function updateLeaveForm(id, values) {
+async function updateLeaveForm(id, values) {
   let attachmentUrls = [];
 
   // If new files are attached during edit
   if (values.attachment && values.attachment.length > 0) {
     // Upload new files
-    const uploadPromises = values.attachment.map((file) => uploadFileToS3(file));
-    // Note: Since this is sync function, we can't await here directly
-    // But in practice, your frontend calls this via async handleSubmit, so it's fine
-    // We'll assume uploadFileToS3 returns promise and handle in component
-    // Alternatively, make this function async (recommended below)
+   const uploadPromises = values.attachment.map(file => uploadFileToS3(file));
+    attachmentUrls = await Promise.all(uploadPromises);
   }
 
   // For edit: We only send updated fields. DO NOT send leave_status!
