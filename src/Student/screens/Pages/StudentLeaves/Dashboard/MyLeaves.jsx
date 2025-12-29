@@ -472,24 +472,39 @@ export default function MyLeaves() {
           <div className="bg-white rounded-xl shadow-sm border p-4 sm:p-6 lg:p-8">
             {/* Header */}
             <div className="mb-6">
-              <div className="flex items-center justify-between mb-4">
-                {/* Title on left side */}
+              <div className="flex items-center justify-between mb-4 gap-3">
+                {/* Title */}
                 <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold text-blue-700">
                   {isEditMode ? "Edit Leave" : "Apply Leave"}
                 </h2>
 
-                {/* Back button on right side */}
-                <button
-                  onClick={resetFormAndClose}
-                  style={{ backgroundColor: '#FEFE27' }}
-                  className="flex items-center gap-2 text-gray-600 hover:text-gray-900 p-2 -mr-2 border rounded border-black-200"
-                >
-                  <ChevronLeft className="w-5 h-5" />
-                  <span className="hidden sm:inline">Back</span>
-                </button>
+                {/* Right side buttons */}
+                <div className="flex items-center gap-3">
+                  {/* View Leave Policy */}
+                  {selectedPolicy && (
+                    <button
+                      type="button"
+                      onClick={() => setShowPolicy(!showPolicy)}
+                      className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100 transition text-sm font-medium"
+                    >
+                      <FileWarning size={18} />
+                      View Leave Policy
+                    </button>
+                  )}
+
+                  {/* Back Button */}
+                  <button
+                    onClick={resetFormAndClose}
+                    className="flex items-center gap-2 text-gray-600 hover:text-gray-900 px-3 py-2 border rounded border-black-200"
+                  >
+                    <ChevronLeft className="w-5 h-5" />
+                    <span className="hidden sm:inline">Back</span>
+                  </button>
+                </div>
               </div>
 
-              {selectedPolicy && (
+
+              {/* {selectedPolicy && (
                 <div className="flex justify-end mb-4">
                   <button
                     type="button"
@@ -500,7 +515,22 @@ export default function MyLeaves() {
                     View Leave Policy
                   </button>
                 </div>
+              )} */}
+
+              {showPolicy && selectedPolicy && (
+                <div className="mb-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <h3 className="font-semibold text-blue-700 mb-2">
+                    Leave Policy Details
+                  </h3>
+
+                  <p className="text-sm text-gray-700 whitespace-pre-line">
+                    {typeof selectedPolicy === "string"
+                      ? selectedPolicy
+                      : selectedPolicy?.description || "No policy details available."}
+                  </p>
+                </div>
               )}
+
             </div>
 
 
