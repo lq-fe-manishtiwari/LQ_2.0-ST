@@ -276,21 +276,38 @@ export default function MyLeaves() {
   }, [leaveForm.fromDate, leaveForm.toDate, leaveForm.leaveFor, leaveForm.type, leaveTypes]);
 
   const handleEdit = (leave) => {
+    console.log("Editing leave → full object:", leave);
+    console.log("leave_status:", leave.leave_status);
+    console.log("attachment field:", leave.attachment);
+    console.log("typeof attachment:", typeof leave.attachment);
+    console.log("Array.isArray(attachment):", Array.isArray(leave.attachment));
+
     setIsEditMode(true);
     setEditingLeaveId(leave.apply_leave_id || leave.id);
     setEditingStatus(leave.leave_status);
     setOldDays(leave.days || leave.no_of_days);
 
+    let attachments = [];
+    if (Array.isArray(leave.attachment)) {
+      attachments = leave.attachment.filter(Boolean);
+    } else if (typeof leave.attachment === 'string' && leave.attachment.trim()) {
+      attachments = [leave.attachment.trim()];
+    } else if (leave.attachments) {           // ← maybe backend uses plural
+      attachments = Array.isArray(leave.attachments)
+        ? leave.attachments.filter(Boolean)
+        : [leave.attachments].filter(Boolean);
+    }
+
+    console.log("Final existingAttachments:", attachments);
+
     setLeaveForm({
-      type: leave.leave_type_id?.toString() || '',
+      type: String(leave.leave_type_id || leave.leave_type || ''),
       leaveFor: leave.leave_duration || leave.leaveFor || 'FULL_DAY',
       fromDate: leave.from || leave.start_date || leave.fromDate || '',
       toDate: leave.to || leave.end_date || leave.toDate || '',
       days: leave.days || leave.no_of_days || '',
       reason: leave.reason || leave.remark || '',
-      existingAttachments: Array.isArray(leave.attachment)
-        ? leave.attachment.filter(Boolean)
-        : [],
+      existingAttachments: attachments,
       newAttachments: [],
     });
 
@@ -464,7 +481,8 @@ export default function MyLeaves() {
                 {/* Back button on right side */}
                 <button
                   onClick={resetFormAndClose}
-                  className="flex items-center gap-2 text-gray-600 hover:text-gray-900 p-2 -mr-2 border rounded border-blue-200"
+                  style={{ backgroundColor: '#FEFE27' }}
+                  className="flex items-center gap-2 text-gray-600 hover:text-gray-900 p-2 -mr-2 border rounded border-black-200"
                 >
                   <ChevronLeft className="w-5 h-5" />
                   <span className="hidden sm:inline">Back</span>
@@ -661,28 +679,32 @@ export default function MyLeaves() {
                   </div>
                 )}
 
-                {isEditMode && leaveForm.existingAttachments.length > 0 && (
+                {/* Show existing attachments in BOTH new & edit mode when available */}
+                {leaveForm.existingAttachments?.length > 0 && (
                   <div className="mt-4">
-                    <p className="text-sm font-medium text-gray-700 mb-2">Existing Attachments</p>
+                    <p className="text-sm font-medium text-gray-700 mb-2">
+                      {isEditMode ? "Existing" : "Attached"} Attachments
+                    </p>
                     <ul className="space-y-2">
                       {leaveForm.existingAttachments.map((url, idx) => (
-                        <li
-                          key={idx}
-                          className="flex items-center justify-between bg-gray-50 border rounded-lg px-3 py-2"
-                        >
+                        <li key={idx} className="flex items-center justify-between bg-gray-50 border rounded-lg px-3 py-2">
                           <span className="flex items-center gap-2 text-xs sm:text-sm text-gray-700 truncate">
                             <FileText size={14} className="flex-shrink-0" />
                             <span className="truncate">Attachment {idx + 1}</span>
                           </span>
-                          <a
-                            href={url}
-                            target="_blank"
-                            rel="noopener noreferrer"
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const urlObj = URL.createObjectURL
+                                ? { name: `Attachment ${idx + 1}`, type: 'image/jpeg', url } // fallback type
+                                : { name: `Attachment ${idx + 1}`, type: url.endsWith('.pdf') ? 'application/pdf' : 'image/jpeg', url };
+                              setPreviewFile(urlObj);
+                            }}
                             className="inline-flex items-center gap-1 text-blue-600 hover:text-blue-800 text-xs sm:text-sm font-medium flex-shrink-0 ml-2"
                           >
                             <Eye size={14} />
                             <span className="hidden xs:inline">View</span>
-                          </a>
+                          </button>
                         </li>
                       ))}
                     </ul>
@@ -711,36 +733,46 @@ export default function MyLeaves() {
               {/* File Preview Modal */}
               {previewFile && (
                 <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-                  <div className="bg-white rounded-xl shadow-2xl max-w-4xl w-full max-h-full overflow-hidden flex flex-col">
+                  <div className="bg-white rounded-xl shadow-2xl max-w-4xl w-full h-[90vh] overflow-hidden flex flex-col">
+
+                    {/* Header */}
                     <div className="flex justify-between items-center p-4 border-b">
-                      <h3 className="text-lg font-semibold">{previewFile.name}</h3>
+                      <h3 className="text-lg font-semibold truncate">
+                        {previewFile.name}
+                      </h3>
                       <button
                         onClick={() => {
-                          setPreviewFile(null);
                           URL.revokeObjectURL(previewFile.url);
+                          setPreviewFile(null);
                         }}
                         className="text-gray-500 hover:text-gray-700"
                       >
                         <XCircle className="w-6 h-6" />
                       </button>
                     </div>
-                    <div className="flex-1 overflow-auto bg-gray-50">
-                      {previewFile.type.startsWith('image/') ? (
-                        <img src={previewFile.url} alt={previewFile.name} className="w-full h-full object-contain" />
-                      ) : previewFile.type === 'application/pdf' ? (
+
+                    {/* Content */}
+                    <div className="flex-1 bg-gray-50">
+                      {previewFile.type.startsWith("image/") ? (
+                        <img
+                          src={previewFile.url}
+                          alt={previewFile.name}
+                          className="w-full h-full object-contain"
+                        />
+                      ) : previewFile.type === "application/pdf" ? (
                         <iframe
                           src={previewFile.url}
-                          className="w-full h-full"
                           title={previewFile.name}
+                          className="w-full h-full"
                         />
                       ) : (
-                        <div className="p-8 text-center text-gray-600">
-                          <FileText className="w-16 h-16 mx-auto mb-4 text-gray-400" />
+                        <div className="h-full flex flex-col items-center justify-center text-gray-600">
+                          <FileText className="w-16 h-16 mb-4 text-gray-400" />
                           <p>Preview not available for this file type.</p>
                           <a
                             href={previewFile.url}
                             download={previewFile.name}
-                            className="mt-4 inline-block px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                            className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
                           >
                             Download Instead
                           </a>
@@ -750,6 +782,7 @@ export default function MyLeaves() {
                   </div>
                 </div>
               )}
+
             </form>
           </div>
         </div>
