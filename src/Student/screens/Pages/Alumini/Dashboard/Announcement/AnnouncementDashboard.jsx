@@ -1,16 +1,35 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Heart, Calendar } from 'lucide-react';
+import { AluminiService } from '../../Service/Alumini.service';
+import { useBatch } from '../../../../../../contexts/BatchContext';
+
+const { getAnnouncementDetails } = AluminiService;
 
 const AnnouncementDashboard = () => {
-    const initialAnnouncements = Array(9).fill(null).map((_, index) => ({
-        id: index,
-        headline: "Headlines will be seen here with the description. headlines will be seen here with the description.",
-        likesCount: 1500,
-        isLiked: false,
-        date: "25-05-2025"
-    }));
+    const { batchId, loading: batchLoading, error: batchError } = useBatch();
+    const [announcements, setAnnouncements] = useState([]);
 
-    const [announcements, setAnnouncements] = useState(initialAnnouncements);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
+
+    useEffect(() => {
+        if (!batchId) return;
+
+        const fetchAnnouncements = async () => {
+            try {
+                setLoading(true);
+                const res = await getAnnouncementDetails(batchId);
+                setAnnouncements(res || []);
+            } catch (err) {
+                console.error(err);
+                setError('Failed to load announcements');
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchAnnouncements();
+    }, [batchId]);
 
     const toggleLike = (id) => {
         setAnnouncements(prev => prev.map(item => {

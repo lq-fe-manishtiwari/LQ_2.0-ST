@@ -1,62 +1,116 @@
-import React, { useState } from 'react';
-import { Linkedin, Youtube, Instagram, Heart, Calendar, ExternalLink, Play } from 'lucide-react';
+import React, { useEffect, useRef, useState } from "react";
+import { Linkedin, Youtube, Instagram, Heart, Calendar, ExternalLink, Play } from "lucide-react";
+import { useUserProfile } from "../../../../../../contexts/UserProfileContext";
+import { useBatch } from '../../../../../../contexts/BatchContext';
+import { AluminiService } from "../../Service/Alumini.service";
+
+const { getSocialMediaDetails } = AluminiService;
 
 const SocialMediaDashboard = () => {
-    const [likedPosts, setLikedPosts] = useState({});
+  const { profile } = useUserProfile();
+  const { batchId } = useBatch(); 
 
-    const toggleLike = (platform, id) => {
-        const key = `${platform}-${id}`;
-        setLikedPosts(prev => ({
-            ...prev,
-            [key]: !prev[key]
-        }));
-    };
+  const [platforms, setPlatforms] = useState([]);
+  const [likedPosts, setLikedPosts] = useState({});
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-    const platforms = [
-        {
-            name: "LinkedIn",
-            icon: <Linkedin className="w-6 h-6 text-[#0077b5]" />,
-            themeColor: "text-[#0077b5]",
-            posts: [
-                { id: 1, account: "LinkedIn Account Name", handle: "@youtube.channek", date: "25-05-2025", likes: "1.5K", text: "This will be the heading of the post related contain. This will be the heading of the post related contain. This will be the heading......" },
-                { id: 2, account: "LinkedIn Account Name", handle: "@youtube.channek", date: "25-05-2025", likes: "1.5K", text: "This will be the heading of the post related contain. This will be the heading of the post related contain. This will be the heading......" }
-            ]
-        },
-        {
-            name: "Youtube",
-            icon: <Youtube className="w-6 h-6 text-[#ff0000]" />,
-            themeColor: "text-[#ff0000]",
-            isVideo: true,
-            posts: [
-                { id: 1, account: "Youtube Channel Name", handle: "@youtube.channek", date: "25-05-2025", likes: "1.5K", text: "This will be the heading of the post related contain. This will be the heading of the post related contain. This will be the heading......" },
-                { id: 2, account: "Youtube Channel Name", handle: "@youtube.channek", date: "25-05-2025", likes: "1.5K", text: "This will be the heading of the post related contain. This will be the heading of the post related contain. This will be the heading......" }
-            ]
-        },
-        {
-            name: "Instagram",
-            icon: <Instagram className="w-6 h-6 text-[#e4405f]" />,
-            themeColor: "text-[#e4405f]",
-            posts: [
-                { id: 1, account: "Instagram Account Name", handle: "@youtube.channek", date: "25-05-2025", likes: "1.5K", text: "This will be the heading of the post related contain. This will be the heading of the post related contain. This will be the heading......" },
-                { id: 2, account: "Instagram Account Name", handle: "@youtube.channek", date: "25-05-2025", likes: "1.5K", text: "This will be the heading of the post related contain. This will be the heading of the post related contain. This will be the heading......" }
-            ]
-        }
-    ];
+  const hasFetched = useRef(false); 
+
+  useEffect(() => {
+    if (!batchId) return; 
+
+    if (hasFetched.current) return;
+    hasFetched.current = true;
+
+    loadSocialMedia(batchId);
+  }, [batchId]);
+
+  const loadSocialMedia = async (batchId) => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const socialRes = await getSocialMediaDetails(batchId);
+
+      const mappedPlatforms = Array.isArray(socialRes)
+        ? socialRes.map((item) => ({
+            name: item.platform,
+            icon:
+              item.platform === "LinkedIn" ? (
+                <Linkedin className="w-6 h-6 text-[#0077b5]" />
+              ) : item.platform === "Youtube" ? (
+                <Youtube className="w-6 h-6 text-[#ff0000]" />
+              ) : (
+                <Instagram className="w-6 h-6 text-[#e4405f]" />
+              ),
+            isVideo: item.platform === "Youtube",
+            posts: item.posts || [],
+          }))
+        : [];
+
+      setPlatforms(mappedPlatforms);
+    } catch (err) {
+      console.error("Social Media Error:", err);
+      setError("Failed to load social media feeds");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const toggleLike = (platform, id) => {
+    const key = `${platform}-${id}`;
+    setLikedPosts((prev) => ({
+      ...prev,
+      [key]: !prev[key],
+    }));
+  };
+
+    // const platforms = [
+    //     {
+    //         name: "LinkedIn",
+    //         icon: <Linkedin className="w-6 h-6 text-[#0077b5]" />,
+    //         themeColor: "text-[#0077b5]",
+    //         posts: [
+    //             { id: 1, account: "LinkedIn Account Name", handle: "@youtube.channek", date: "25-05-2025", likes: "1.5K", text: "This will be the heading of the post related contain. This will be the heading of the post related contain. This will be the heading......" },
+    //             { id: 2, account: "LinkedIn Account Name", handle: "@youtube.channek", date: "25-05-2025", likes: "1.5K", text: "This will be the heading of the post related contain. This will be the heading of the post related contain. This will be the heading......" }
+    //         ]
+    //     },
+    //     {
+    //         name: "Youtube",
+    //         icon: <Youtube className="w-6 h-6 text-[#ff0000]" />,
+    //         themeColor: "text-[#ff0000]",
+    //         isVideo: true,
+    //         posts: [
+    //             { id: 1, account: "Youtube Channel Name", handle: "@youtube.channek", date: "25-05-2025", likes: "1.5K", text: "This will be the heading of the post related contain. This will be the heading of the post related contain. This will be the heading......" },
+    //             { id: 2, account: "Youtube Channel Name", handle: "@youtube.channek", date: "25-05-2025", likes: "1.5K", text: "This will be the heading of the post related contain. This will be the heading of the post related contain. This will be the heading......" }
+    //         ]
+    //     },
+    //     {
+    //         name: "Instagram",
+    //         icon: <Instagram className="w-6 h-6 text-[#e4405f]" />,
+    //         themeColor: "text-[#e4405f]",
+    //         posts: [
+    //             { id: 1, account: "Instagram Account Name", handle: "@youtube.channek", date: "25-05-2025", likes: "1.5K", text: "This will be the heading of the post related contain. This will be the heading of the post related contain. This will be the heading......" },
+    //             { id: 2, account: "Instagram Account Name", handle: "@youtube.channek", date: "25-05-2025", likes: "1.5K", text: "This will be the heading of the post related contain. This will be the heading of the post related contain. This will be the heading......" }
+    //         ]
+    //     }
+    // ];
 
     const PostCard = ({ post, platform, isVideo }) => {
         const isLiked = likedPosts[`${platform}-${post.id}`];
 
-        return (
+            return (
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-3 md:p-4 mb-4 md:mb-6 hover:shadow-md transition-shadow">
                 {/* Header: User Info */}
                 <div className="flex items-center gap-2 md:gap-3 mb-3 md:mb-4">
                     <div className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-[#1d4ed8] flex items-center justify-center text-white font-bold text-[10px] md:text-xs shrink-0">
                         MT
-                    </div>
-                    <div>
+                  </div>
+                  <div>
                         <h4 className="text-[12px] md:text-[13px] font-semibold text-slate-800 leading-tight">{post.account}</h4>
                         <p className="text-[10px] md:text-[11px] text-slate-400 font-medium">{post.handle}</p>
-                    </div>
+                  </div>
                 </div>
 
                 {/* Date */}
@@ -75,20 +129,20 @@ const SocialMediaDashboard = () => {
                         <div className="absolute bottom-0 left-0 right-0 h-1 bg-gray-600">
                             <div className="h-full bg-red-600 w-1/3"></div>
                         </div>
-                    </div>
+                  </div>
                 ) : (
                     <div className="aspect-video rounded-lg mb-3 md:mb-4 bg-[#d1d5db]"></div>
                 )}
 
                 {/* Actions */}
                 <div className="flex justify-between items-center mb-3">
-                    <button
+                  <button
                         onClick={() => toggleLike(platform, post.id)}
                         className={`flex items-center gap-1 md:gap-1.5 transition-colors ${isLiked ? 'text-red-500' : 'text-slate-400 hover:text-red-400'}`}
-                    >
+                  >
                         <Heart className={`w-3 md:w-3.5 h-3 md:h-3.5 ${isLiked ? 'fill-current' : ''}`} strokeWidth={2.5} />
                         <span className="text-[10px] md:text-[11px] font-medium">{post.likes}</span>
-                    </button>
+                  </button>
                     <button className="text-slate-400 hover:text-blue-500 transition-colors">
                         <ExternalLink className="w-3 md:w-3.5 h-3 md:h-3.5" strokeWidth={2.5} />
                     </button>
@@ -107,8 +161,8 @@ const SocialMediaDashboard = () => {
                     </div>
                     <div className="aspect-video rounded-lg bg-[#d1d5db]"></div>
                 </div>
-            </div>
-        );
+              </div>
+            );
     };
 
     return (
@@ -132,10 +186,10 @@ const SocialMediaDashboard = () => {
                             />
                         ))}
                     </div>
-                </div>
-            ))}
         </div>
-    );
+      ))}
+    </div>
+  );
 };
 
 export default SocialMediaDashboard;

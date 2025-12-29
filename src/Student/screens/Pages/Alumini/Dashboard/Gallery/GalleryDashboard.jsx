@@ -1,17 +1,34 @@
-import React, { useState } from 'react';
-import { Heart, Calendar, Share2, Download } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { Heart, Calendar } from 'lucide-react';
+import { AluminiService } from '../../Service/Alumini.service';
+import { useBatch } from '../../../../../../contexts/BatchContext';
+
+const { getGalleryDetails } = AluminiService;
 
 const GalleryDashboard = () => {
-    const initialItems = Array(9).fill(null).map((_, index) => ({
-        id: index,
-        description: "Some little description about the photo that is been posted.",
-        date: "25-05-2025",
-        likesCount: 1500,
-        isLiked: false,
-        image: "https://images.unsplash.com/photo-1523240795612-9a054b0db644?w=800&auto=format&fit=crop&q=60"
-    }));
+    const { batchId, loading: batchLoading, error: batchError } = useBatch();
+    const [items, setItems] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
 
-    const [items, setItems] = useState(initialItems);
+    useEffect(() => {
+        if (!batchId) return;
+
+        const fetchGallery = async () => {
+            try {
+                setLoading(true);
+                const res = await getGalleryDetails(batchId);
+                setItems(res || []);
+            } catch (err) {
+                console.error(err);
+                setError('Failed to load gallery');
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchGallery();
+    }, [batchId]);
 
     const toggleLike = (id) => {
         setItems(prev => prev.map(item => {

@@ -5,10 +5,10 @@ const TabNav = () => {
     const tabs = [
         { name: 'Alumini', path: '/student/alumini', end: true },
         { name: 'Announcement', path: '/student/alumini/announcement' },
-        { name: 'LQ Engage', path: '/student/alumini/engage' },
+        // { name: 'LQ Engage', path: '/student/alumini/engage' },
         { name: 'Events', path: '/student/alumini/events' },
         { name: 'Gallery', path: '/student/alumini/gallery' },
-        { name: 'Jobs', path: '/student/alumini/jobs' },
+        // { name: 'Jobs', path: '/student/alumini/jobs' },
         { name: 'Social Media', path: '/student/alumini/social-media' },
     ];
 

@@ -142,7 +142,7 @@ const StudentSidebar = ({ isOpen, toggle }) => {
       },
       {
         to: "/student/alumini",
-        label: "Alumini",
+        label: "Alumni",
         iconActive: classActive,
         iconInactive: classInactive,
       },

@@ -1,21 +1,34 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Heart, Calendar, MapPin } from 'lucide-react';
+import { AluminiService } from '../../Service/Alumini.service';
+import { useBatch } from '../../../../../../contexts/BatchContext';
+
+const { getEventsDetails } = AluminiService;
 
 const EventDashboard = () => {
-    const [activeTab, setActiveTab] = useState('Latest');
+    const { batchId, loading: batchLoading, error: batchError } = useBatch();
+    const [events, setEvents] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
 
-    const initialEvents = Array(8).fill(null).map((_, index) => ({
-        id: index,
-        postedOn: "19-05-2025",
-        title: "This will be the title of the event that has been scheduled",
-        eventDate: "25-05-2025",
-        location: "College Campus",
-        likesCount: 1500,
-        isLiked: false,
-        image: "https://demo-learnqoch.s3.ap-south-1.amazonaws.com/engage/1733316684-CONQUER%20'24.png"
-    }));
+    useEffect(() => {
+        if (!batchId) return;
 
-    const [events, setEvents] = useState(initialEvents);
+        const fetchEvents = async () => {
+            try {
+                setLoading(true);
+                const res = await getEventsDetails(batchId);
+                setEvents(res || []);
+            } catch (err) {
+                console.error(err);
+                setError('Failed to load events');
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchEvents();
+    }, [batchId]);
 
     const toggleLike = (id) => {
         setEvents(prev => prev.map(item => {
@@ -45,8 +58,8 @@ const EventDashboard = () => {
                 >
                     <Heart className={`w-3.5 h-3.5 ${item.isLiked ? 'fill-current' : ''}`} />
                     <span className="text-[11px] font-bold">{formatLikes(item.likesCount)}</span>
-                </button>
-            </div>
+                        </button>
+                    </div>
 
             {/* Event Image */}
             <div className="relative aspect-[4/3] rounded-xl overflow-hidden mb-3 bg-slate-100">
@@ -55,7 +68,7 @@ const EventDashboard = () => {
                     alt="Event"
                     className="w-full h-full object-cover"
                 />
-            </div>
+                    </div>
 
             {/* Title */}
             <h3 className="text-[13px] font-normal text-slate-600 mb-4 line-clamp-2 leading-relaxed">
@@ -67,7 +80,7 @@ const EventDashboard = () => {
                 <div className="flex items-center gap-1.5 text-slate-500">
                     <Calendar className="w-3.5 h-3.5" />
                     <span className="text-[11px] font-medium">{item.eventDate}</span>
-                </div>
+                    </div>
                 <div className="flex items-center gap-1.5 text-slate-500">
                     <MapPin className="w-3.5 h-3.5" />
                     <span className="text-[11px] font-medium">{item.location}</span>
