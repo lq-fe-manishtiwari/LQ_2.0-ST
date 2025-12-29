@@ -5,14 +5,17 @@ import SweetAlert from "react-bootstrap-sweetalert";
 export default function MyLeaves() {
   /* -------------------- STATE FOR LEAVE RECORDS -------------------- */
   const [leaveRecords, setLeaveRecords] = useState([]);
-  const [leaveSummary, setLeaveSummary] = useState(null); // ← Added missing state
+  const [leaveSummary, setLeaveSummary] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+
+  const [selectedPolicy, setSelectedPolicy] = useState(null);
+const [showPolicy, setShowPolicy] = useState(false);
+
 
   /* -------------------- PAGINATION -------------------- */
   const [currentPage, setCurrentPage] = useState(1);
   const entriesPerPage = 10;
-
   const totalEntries = leaveRecords.length;
   const totalPages = Math.ceil(totalEntries / entriesPerPage);
   const currentEntries = leaveRecords.slice(
@@ -24,6 +27,8 @@ export default function MyLeaves() {
   const [showFullPageForm, setShowFullPageForm] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const [editingLeaveId, setEditingLeaveId] = useState(null);
+  const [editingStatus, setEditingStatus] = useState(null);
+  const [oldDays, setOldDays] = useState(0);
 
   /* -------------------- LEAVE FORM STATE -------------------- */
   const [leaveForm, setLeaveForm] = useState({
@@ -43,10 +48,8 @@ export default function MyLeaves() {
   /* -------------------- SWEETALERT STATES -------------------- */
   const [showConfirmDelete, setShowConfirmDelete] = useState(false);
   const [deleteLeaveId, setDeleteLeaveId] = useState(null);
-
   const [showSuccessAlert, setShowSuccessAlert] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
-
   const [showErrorAlert, setShowErrorAlert] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
 
@@ -67,7 +70,7 @@ export default function MyLeaves() {
         // Fetch leave types
         const typesResponse = await leaveService.getLeaveTypesByCollegeId(collegeId);
         const teacherLeaveTypes = Array.isArray(typesResponse)
-          ? typesResponse.filter((lt) => lt.user_type === "TEACHER")
+          ? typesResponse.filter((lt) => lt.user_type === "TEACHER" && lt.is_active)
           : [];
         setLeaveTypes(teacherLeaveTypes);
 
@@ -82,7 +85,7 @@ export default function MyLeaves() {
 
         // Fetch leave summary
         const summaryResponse = await leaveService.getLeavesSummaryByUserId(userId);
-        setLeaveSummary(summaryResponse); // Now this works!
+        setLeaveSummary(summaryResponse);
 
         setLoading(false);
       } catch (err) {
@@ -91,7 +94,6 @@ export default function MyLeaves() {
         setLoading(false);
       }
     };
-
     fetchData();
   }, []);
 
@@ -108,7 +110,6 @@ export default function MyLeaves() {
       }));
       setLeaveRecords(leavesWithSr);
 
-      // Optionally refetch summary too
       const summaryResponse = await leaveService.getLeavesSummaryByUserId(userId);
       setLeaveSummary(summaryResponse);
     } catch (err) {
@@ -116,26 +117,36 @@ export default function MyLeaves() {
     }
   };
 
-  const handleFormChange = (e) => {
-    const { name, value, files } = e.target;
+const handleFormChange = (e) => {
+  const { name, value, files } = e.target;
 
-    if (name === "attachment") {
-      setLeaveForm((prev) => ({
-        ...prev,
-        newAttachments: Array.from(files),
-      }));
-    } else {
-      setLeaveForm((prev) => ({
-        ...prev,
-        [name]: value,
-      }));
-    }
-  };
+  if (name === "type") {
+    const policyObj = leaveTypes.find(
+      (lt) => lt.leave_type_id === parseInt(value)
+    );
+    setSelectedPolicy(policyObj?.leave_policy || null);
+  }
+
+  if (name === "attachment") {
+    setLeaveForm((prev) => ({
+      ...prev,
+      newAttachments: Array.from(files),
+    }));
+  } else {
+    setLeaveForm((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+  }
+};
+
 
   const resetFormAndClose = () => {
     setShowFullPageForm(false);
     setIsEditMode(false);
     setEditingLeaveId(null);
+    setEditingStatus(null);
+    setOldDays(0);
     setLeaveForm({
       type: "",
       leaveFor: "FULL_DAY",
@@ -150,7 +161,6 @@ export default function MyLeaves() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
     try {
       const userProfile = JSON.parse(localStorage.getItem("userProfile") || "{}");
       const user_id = userProfile?.user?.user_id || userProfile?.user_id;
@@ -197,32 +207,75 @@ export default function MyLeaves() {
     }
   };
 
+  // Function to count weekdays (Mon-Fri)
+  const countWeekdays = (startDate, endDate) => {
+    let count = 0;
+    let current = new Date(startDate);
+    const end = new Date(endDate);
+    while (current <= end) {
+      const day = current.getDay();
+      if (day !== 0 && day !== 6) count += 1;
+      current.setDate(current.getDate() + 1);
+    }
+    return count;
+  };
+
   // Auto-calculate days
   useEffect(() => {
-    if (!leaveForm.fromDate || !leaveForm.toDate) {
+    if (!leaveForm.fromDate || !leaveForm.toDate || !leaveForm.type) {
       setLeaveForm((prev) => ({ ...prev, days: "" }));
       return;
     }
 
+    const selectedType = leaveTypes.find(
+      (lt) => lt.leave_type_id === parseInt(leaveForm.type)
+    );
+    if (!selectedType) return;
+
     const from = new Date(leaveForm.fromDate);
     const to = new Date(leaveForm.toDate);
-    const diffTime = Math.abs(to - from);
-    let calculatedDays = (diffTime / (1000 * 60 * 60 * 24)) + 1;
+    if (to < from) {
+      setLeaveForm((prev) => ({ ...prev, days: "" }));
+      return;
+    }
+
+    const diffTime = to - from;
+    const totalCalendarDays = Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1;
+
+    let calculatedDays = 0;
 
     if (leaveForm.leaveFor === "HALF_DAY") {
-      calculatedDays = 0.5;
       setLeaveForm((prev) => ({ ...prev, toDate: prev.fromDate }));
+      calculatedDays = 0.5;
+
+      if (!selectedType.is_includes_weekends) {
+        const day = from.getDay();
+        if (day === 0 || day === 6) calculatedDays = 0;
+      }
+    } else {
+      const weekdays = countWeekdays(leaveForm.fromDate, leaveForm.toDate);
+      if (selectedType.is_includes_weekends) {
+        calculatedDays = totalCalendarDays;
+      } else {
+        if (selectedType.is_sandwich_leaves && totalCalendarDays > weekdays) {
+          calculatedDays = totalCalendarDays;
+        } else {
+          calculatedDays = weekdays;
+        }
+      }
     }
 
     setLeaveForm((prev) => ({
       ...prev,
-      days: calculatedDays.toFixed(1),
+      days: calculatedDays > 0 ? calculatedDays.toFixed(1) : "",
     }));
-  }, [leaveForm.fromDate, leaveForm.toDate, leaveForm.leaveFor]);
+  }, [leaveForm.fromDate, leaveForm.toDate, leaveForm.leaveFor, leaveForm.type, leaveTypes]);
 
   const handleEdit = (leave) => {
     setIsEditMode(true);
     setEditingLeaveId(leave.apply_leave_id || leave.id);
+    setEditingStatus(leave.leave_status);
+    setOldDays(leave.days || leave.no_of_days);
 
     setLeaveForm({
       type: leave.leave_type_id?.toString() || "",
@@ -236,7 +289,6 @@ export default function MyLeaves() {
         : [],
       newAttachments: [],
     });
-
     setShowFullPageForm(true);
   };
 
@@ -278,60 +330,136 @@ export default function MyLeaves() {
     return leaveFor === "HALF_DAY" ? "Half Day" : "Normal";
   };
 
-  const getDaysValidationMessage = () => {
-    if (!leaveForm.type || !leaveForm.days) return null;
-
-    const selectedType = leaveTypes.find(
-      (lt) => lt.leave_type_id === parseInt(leaveForm.type)
+  // Compute available days (Approved + Pending deducted)
+ const getAvailableDays = (leaveTypeId) => {
+  // Best source: leaveSummary from dedicated API
+  if (leaveSummary && leaveSummary.leave_summary) {
+    const summaryItem = leaveSummary.leave_summary.find(
+      item => item.leave_type_id === parseInt(leaveTypeId)
     );
-    const maxAllowed = selectedType?.no_of_days_allowed
-      ? parseFloat(selectedType.no_of_days_allowed)
-      : null;
+    if (summaryItem && summaryItem.balance !== undefined) {
+      return Math.max(0, parseFloat(summaryItem.balance));
+    }
+  }
+
+  // Fallback to old logic if summary not available
+  const selectedType = leaveTypes.find((lt) => lt.leave_type_id === parseInt(leaveTypeId));
+  if (!selectedType || selectedType.no_of_days_allowed == null) return Infinity;
+
+  const allowed = parseFloat(selectedType.no_of_days_allowed);
+  let approvedDays = 0;
+  let pendingDays = 0;
+
+  leaveRecords.forEach((leave) => {
+    if (leave.leave_type_id === parseInt(leaveTypeId)) {
+      const days = parseFloat(leave.days || leave.no_of_days || 0);
+      if (leave.leave_status === "Approved" || leave.leave_status === "APPROVED") {
+        approvedDays += days;
+      } else if (leave.leave_status === "Pending") {
+        pendingDays += days;
+      }
+    }
+  });
+
+  if (isEditMode && editingLeaveId) {
+    const oldD = parseFloat(oldDays || 0);
+    if (editingStatus === "Approved" || editingStatus === "APPROVED") approvedDays -= oldD;
+    else if (editingStatus === "Pending") pendingDays -= oldD;
+  }
+
+  return Math.max(0, allowed - (approvedDays + pendingDays));
+};
+
+  // Improved validation message
+  const getDaysValidationMessage = () => {
+    if (!leaveForm.type) return null;
+
+    const available = getAvailableDays(leaveForm.type);
+
+    if (available === Infinity) {
+      if (!leaveForm.days || parseFloat(leaveForm.days) <= 0) {
+        return "⚠️ Invalid date selection (e.g., weekends not counted)";
+      }
+      return `✓ ${leaveForm.days} day${leaveForm.days !== "1" ? "s" : ""} requested (Unlimited)`;
+    }
+
+    if (available <= 0) {
+      return "❌ No leave balance remaining for this type";
+    }
+
+    if (!leaveForm.days || parseFloat(leaveForm.days) <= 0) {
+      return "⚠️ Invalid date selection";
+    }
+
     const requested = parseFloat(leaveForm.days);
 
-    if (maxAllowed === null) return null;
-    if (requested > maxAllowed) {
-      return `⚠️ Exceeds limit: Requested ${requested} days (Max: ${maxAllowed})`;
+    if (requested > available + 0.0001) {
+      return `⚠️ Exceeds limit: Only ${available} day${available !== 1 ? "s" : ""} available`;
     }
-    return `✓ ${requested} day${requested !== 1 ? "s" : ""} requested`;
+
+    return `✓ ${requested} day${requested !== 1 ? "s" : ""} requested (${available} remaining)`;
   };
 
   const isSubmitDisabled = () => {
-    if (!leaveForm.type || !leaveForm.fromDate || !leaveForm.toDate || !leaveForm.days) {
+    if (
+      !leaveForm.type ||
+      !leaveForm.fromDate ||
+      !leaveForm.toDate ||
+      !leaveForm.days ||
+      parseFloat(leaveForm.days) <= 0
+    ) {
       return true;
     }
 
-    const selectedType = leaveTypes.find(
-      (lt) => lt.leave_type_id === parseInt(leaveForm.type)
-    );
-    const maxAllowed = selectedType?.no_of_days_allowed
-      ? parseFloat(selectedType.no_of_days_allowed)
-      : null;
-
-    if (maxAllowed !== null && parseFloat(leaveForm.days) > maxAllowed) {
+    const available = getAvailableDays(leaveForm.type);
+    if (available !== Infinity && parseFloat(leaveForm.days) > available + 0.0001) {
       return true;
     }
 
     return false;
   };
 
-  // Full Page Form View (unchanged except label capitalization)
+  // ==================== FULL PAGE FORM VIEW ====================
   if (showFullPageForm) {
     return (
       <div className="min-h-screen bg-slate-50 p-6">
         <div className="max-w-4xl mx-auto">
           <div className="bg-white rounded-xl shadow-sm border p-8">
-            <div className="flex justify-between items-center mb-8">
-              <h2 className="text-3xl font-bold text-blue-700">
-                {isEditMode ? "Edit Leave" : "Apply Leave"}
-              </h2>
-              <button
-                onClick={resetFormAndClose}
-                className="px-6 py-2 border border-gray-300 rounded-lg hover:bg-gray-100 transition"
-              >
-                ← Back to Leaves
-              </button>
-            </div>
+           <div className="flex justify-between items-center mb-8">
+  <div className="flex items-center gap-4">
+    <button
+      onClick={resetFormAndClose}
+      className="px-6 py-2 border border-gray-300 rounded-lg hover:bg-gray-100 transition"
+    >
+      ← Back to Leaves
+    </button>
+
+    {selectedPolicy && (
+      <button
+        type="button"
+        onClick={() => setShowPolicy(!showPolicy)}
+        className="text-blue-600 text-sm font-medium hover:underline"
+      >
+        📄 View Leave Policy
+      </button>
+    )}
+  </div>
+
+  <h2 className="text-3xl font-bold text-blue-700">
+    {isEditMode ? "Edit Leave" : "Apply Leave"}
+  </h2>
+</div>
+
+{showPolicy && selectedPolicy && (
+  <div className="mb-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
+    <h3 className="font-semibold text-blue-700 mb-2">
+      Leave Policy Details
+    </h3>
+    <p className="text-sm text-gray-700 whitespace-pre-line">
+      {selectedPolicy}
+    </p>
+  </div>
+)}
 
             <form onSubmit={handleSubmit} className="space-y-6">
               {/* Leave Type */}
@@ -347,15 +475,34 @@ export default function MyLeaves() {
                   className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
                   <option value="">Select Leave Type</option>
-                  {leaveTypes.map((lt) => (
-                    <option key={lt.leave_type_id} value={lt.leave_type_id}>
-                      {lt.leave_type}{" "}
-                      {lt.no_of_days_allowed
-                        ? `(Max: ${lt.no_of_days_allowed} days)`
-                        : "(Unlimited)"}
-                    </option>
-                  ))}
+                  {leaveTypes.map((lt) => {
+                    const available = getAvailableDays(lt.leave_type_id);
+                    const isDisabled = available <= 0 && available !== Infinity;
+
+                    return (
+                      <option
+                        key={lt.leave_type_id}
+                        value={lt.leave_type_id}
+                        disabled={isDisabled}
+                      >
+                        {lt.leave_type}{" "}
+                        {lt.no_of_days_allowed
+                          ? `(Max: ${lt.no_of_days_allowed} days, ${lt.is_paid ? "Paid" : "Unpaid"}) ${
+                              isDisabled
+                                ? "- No balance left"
+                                : `- ${available} day${available !== 1 ? "s" : ""} left`
+                            }`
+                          : `(Unlimited, ${lt.is_paid ? "Paid" : "Unpaid"})`}
+                      </option>
+                    );
+                  })}
                 </select>
+
+                {leaveForm.type && getAvailableDays(leaveForm.type) <= 0 && getAvailableDays(leaveForm.type) !== Infinity && (
+                  <p className="text-red-600 text-sm mt-2">
+                    ❌ You have no remaining balance for this leave type.
+                  </p>
+                )}
               </div>
 
               {/* Leave For */}
@@ -388,7 +535,6 @@ export default function MyLeaves() {
                     className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
-
                 <div>
                   <label className="block text-sm font-medium mb-2">
                     To Date <span className="text-red-500">*</span>
@@ -425,7 +571,9 @@ export default function MyLeaves() {
                 {getDaysValidationMessage() && (
                   <p
                     className={`mt-3 text-sm font-medium ${
-                      getDaysValidationMessage().includes("Exceeds")
+                      getDaysValidationMessage().includes("Exceeds") ||
+                      getDaysValidationMessage().includes("No balance") ||
+                      getDaysValidationMessage().includes("Invalid")
                         ? "text-red-600"
                         : "text-green-600"
                     }`}
@@ -503,8 +651,9 @@ export default function MyLeaves() {
             </form>
           </div>
         </div>
+        
 
-        {/* SweetAlerts remain the same */}
+        {/* SweetAlerts */}
         <SweetAlert
           show={showConfirmDelete}
           warning
@@ -512,25 +661,29 @@ export default function MyLeaves() {
           confirmBtnText="Yes, delete it!"
           confirmBtnBsStyle="danger"
           title="Are you sure?"
+             confirmBtnCssClass="btn-confirm"
+             cancelBtnCssClass="btn-cancel"
           onConfirm={handleDelete}
           onCancel={() => setShowConfirmDelete(false)}
         >
           This action cannot be undone.
         </SweetAlert>
-
         <SweetAlert
           show={showSuccessAlert}
           success
           title="Success!"
+             confirmBtnCssClass="btn-confirm"
+             cancelBtnCssClass="btn-cancel"
           onConfirm={() => setShowSuccessAlert(false)}
         >
           {successMessage}
         </SweetAlert>
-
         <SweetAlert
           show={showErrorAlert}
           error
           title="Error!"
+             confirmBtnCssClass="btn-confirm"
+             cancelBtnCssClass="btn-cancel"
           onConfirm={() => setShowErrorAlert(false)}
         >
           {errorMessage}
@@ -539,52 +692,10 @@ export default function MyLeaves() {
     );
   }
 
-  // Main List View with Enhanced Summary Cards
+  // ==================== MAIN LIST VIEW ====================
   return (
     <div className="min-h-screen bg-slate-50 p-6">
       <div className="max-w-7xl mx-auto">
-        {/* Overall Stats */}
-        {/* {leaveSummary && (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-8">
-            <StatCard title="Total Applied" value={leaveSummary.total_applied || 0} />
-            <StatCard title="Approved" value={leaveSummary.total_approved || 0} />
-            <StatCard title="Pending" value={leaveSummary.total_pending || 0} />
-            <StatCard title="Rejected" value={leaveSummary.total_rejected || 0} />
-          </div>
-        )} */}
-
-        {/* Leave Balance Summary */}
-        {/* {leaveSummary && leaveSummary.leave_summary && leaveSummary.leave_summary.length > 0 && (
-          <div className="mb-10">
-            <h2 className="text-2xl font-bold text-blue-700 mb-6">Leave Balance</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {leaveSummary.leave_summary.map((item) => (
-                <div
-                  key={item.leave_type_id}
-                  className="bg-white rounded-xl p-6 shadow hover:shadow-lg transition border"
-                >
-                  <h3 className="text-lg font-semibold text-gray-800">
-                    {item.leave_type_name}
-                  </h3>
-                  <div className="mt-4">
-                    <p className="text-3xl font-bold text-blue-600">
-                      {item.approved || 0} / {item.balance + (item.approved || 0)}
-                    </p>
-                    <p className="text-sm text-gray-600 mt-2">
-                      Remaining: <span className="font-medium text-green-600">{item.balance}</span> days
-                    </p>
-                    <div className="mt-3 text-xs text-gray-500">
-                      <span>Applied: {item.applied}</span> |{" "}
-                      <span>Pending: {item.pending}</span>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )} */}
-
-        {/* Header */}
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-2xl font-bold text-blue-700">My Leaves</h1>
           <button
@@ -595,7 +706,6 @@ export default function MyLeaves() {
           </button>
         </div>
 
-        {/* Leave Table */}
         <div className="bg-white rounded-xl border shadow-sm overflow-hidden">
           {loading ? (
             <div className="p-10 text-center text-gray-500">Loading leaves...</div>
@@ -606,20 +716,19 @@ export default function MyLeaves() {
           ) : (
             <>
               <table className="w-full text-sm">
-              <thead className="table-header">
-  <tr>
-    <th className="table-th">Sr No</th>
-    <th className="table-th">Leave Type</th>
-    <th className="table-th">Leave For</th>
-    <th className="table-th">From</th>
-    <th className="table-th">To</th>
-    <th className="table-th">Days</th>
-    <th className="table-th">Status</th>
-    <th className="table-th">Reason</th>
-    <th className="table-th text-center">Actions</th>
-  </tr>
-</thead>
-
+                <thead className="table-header">
+                  <tr>
+                    <th className="table-th">Sr No</th>
+                    <th className="table-th">Leave Type</th>
+                    <th className="table-th">Leave For</th>
+                    <th className="table-th">From</th>
+                    <th className="table-th">To</th>
+                    <th className="table-th">Days</th>
+                    <th className="table-th">Status</th>
+                    <th className="table-th">Reason</th>
+                    <th className="table-th">Actions</th>
+                  </tr>
+                </thead>
                 <tbody>
                   {currentEntries.map((leave) => (
                     <tr key={leave.sr} className="border-t hover:bg-blue-50">
@@ -688,7 +797,6 @@ export default function MyLeaves() {
                 </tbody>
               </table>
 
-              {/* Pagination */}
               {totalPages > 1 && (
                 <div className="flex justify-center py-4 gap-2">
                   {Array.from({ length: totalPages }, (_, i) => (
@@ -718,25 +826,29 @@ export default function MyLeaves() {
           confirmBtnText="Yes, delete it!"
           confirmBtnBsStyle="danger"
           title="Are you sure?"
+             confirmBtnCssClass="btn-confirm"
+             cancelBtnCssClass="btn-cancel"
           onConfirm={handleDelete}
           onCancel={() => setShowConfirmDelete(false)}
         >
           This action cannot be undone.
         </SweetAlert>
-
         <SweetAlert
           show={showSuccessAlert}
           success
           title="Success!"
+             confirmBtnCssClass="btn-confirm"
+             cancelBtnCssClass="btn-cancel"
           onConfirm={() => setShowSuccessAlert(false)}
         >
           {successMessage}
         </SweetAlert>
-
         <SweetAlert
           show={showErrorAlert}
           error
           title="Error!"
+             confirmBtnCssClass="btn-confirm"
+             cancelBtnCssClass="btn-cancel"
           onConfirm={() => setShowErrorAlert(false)}
         >
           {errorMessage}
@@ -745,11 +857,3 @@ export default function MyLeaves() {
     </div>
   );
 }
-
-/* -------------------- STAT CARD COMPONENT -------------------- */
-const StatCard = ({ title, value }) => (
-  <div className="bg-white rounded-xl p-6 shadow hover:shadow-lg transition text-center">
-    <p className="text-sm text-gray-600">{title}</p>
-    <p className="text-4xl font-bold text-blue-600 mt-3">{value}</p>
-  </div>
-);

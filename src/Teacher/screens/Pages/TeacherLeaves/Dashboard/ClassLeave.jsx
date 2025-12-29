@@ -238,6 +238,8 @@ export default function ClassLeave() {
         <SweetAlert
           success
           title="Success!"
+             confirmBtnCssClass="btn-confirm"
+             cancelBtnCssClass="btn-cancel"
           onConfirm={() => setAlert(null)}
         >
           Leave has been {selectedStatus === "APPROVED" ? "approved" : "rejected"} successfully.
@@ -249,6 +251,8 @@ export default function ClassLeave() {
         <SweetAlert
           danger
           title="Error!"
+             confirmBtnCssClass="btn-confirm"
+             cancelBtnCssClass="btn-cancel"
           onConfirm={() => setAlert(null)}
         >
           Failed to update leave status. Please try again.
