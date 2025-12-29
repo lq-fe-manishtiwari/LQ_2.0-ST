@@ -432,6 +432,19 @@ export default function MyLeaves() {
     return false;
   };
 
+  // ── PAGINATION CALCULATIONS ───────────────────────────────────────────────
+const totalEntries = leaveRecords.length;
+const totalPages = Math.ceil(totalEntries / entriesPerPage);
+
+const indexOfLastEntry = currentPage * entriesPerPage;
+const indexOfFirstEntry = indexOfLastEntry - entriesPerPage;
+
+const currentEntries = leaveRecords.slice(
+  indexOfFirstEntry,
+  indexOfLastEntry
+);
+
+
   // ── RENDER ──────────────────────────────────────────────────────────────
   // Full page form
   if (showFullPageForm) {
@@ -705,6 +718,8 @@ export default function MyLeaves() {
           showCancel
           confirmBtnText="Yes, delete it!"
           confirmBtnBsStyle="danger"
+           confirmBtnCssClass="btn-confirm"
+             cancelBtnCssClass="btn-cancel"
           title="Are you sure?"
           onConfirm={handleDelete}
           onCancel={() => setShowConfirmDelete(false)}
@@ -715,6 +730,8 @@ export default function MyLeaves() {
           show={showSuccessAlert}
           success
           title="Success!"
+           confirmBtnCssClass="btn-confirm"
+             cancelBtnCssClass="btn-cancel"
           onConfirm={() => setShowSuccessAlert(false)}
         >
           {successMessage}
@@ -723,6 +740,8 @@ export default function MyLeaves() {
           show={showErrorAlert}
           error
           title="Error!"
+           confirmBtnCssClass="btn-confirm"
+             cancelBtnCssClass="btn-cancel"
           onConfirm={() => setShowErrorAlert(false)}
         >
           {errorMessage}
@@ -791,17 +810,17 @@ export default function MyLeaves() {
               <div className="hidden lg:block">
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
-                    <thead className="bg-gray-50">
+                    <thead className="table-header">
                       <tr>
-                        <th className="p-4 text-left font-semibold text-gray-700">#</th>
-                        <th className="p-4 text-left font-semibold text-gray-700">Leave Type</th>
-                        <th className="p-4 text-left font-semibold text-gray-700">Duration</th>
-                        <th className="p-4 text-left font-semibold text-gray-700">From</th>
-                        <th className="p-4 text-left font-semibold text-gray-700">To</th>
-                        <th className="p-4 text-left font-semibold text-gray-700">Days</th>
-                        <th className="p-4 text-left font-semibold text-gray-700">Status</th>
-                        <th className="p-4 text-left font-semibold text-gray-700">Reason</th>
-                        <th className="p-4 text-left font-semibold text-gray-700">Actions</th>
+                        <th className="table-th p-4 text-left font-semibold">#</th>
+                        <th className="table-th p-4 text-left font-semibold">Leave Type</th>
+                        <th className="table-th p-4 text-left font-semibold">Duration</th>
+                        <th className="table-th p-4 text-left font-semibold">From</th>
+                        <th className="table-th p-4 text-left font-semibold">To</th>
+                        <th className="table-th p-4 text-left font-semibold">Days</th>
+                        <th className="table-th p-4 text-left font-semibold">Status</th>
+                        <th className="table-th p-4 text-left font-semibold">Reason</th>
+                        <th className="table-th p-4 text-left font-semibold">Actions</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -1012,6 +1031,8 @@ export default function MyLeaves() {
           showCancel
           confirmBtnText="Yes, delete it!"
           confirmBtnBsStyle="danger"
+           confirmBtnCssClass="btn-confirm"
+             cancelBtnCssClass="btn-cancel"
           title="Are you sure?"
           onConfirm={handleDelete}
           onCancel={() => setShowConfirmDelete(false)}
@@ -1023,6 +1044,8 @@ export default function MyLeaves() {
           show={showSuccessAlert}
           success
           title="Success!"
+           confirmBtnCssClass="btn-confirm"
+             cancelBtnCssClass="btn-cancel"
           onConfirm={() => setShowSuccessAlert(false)}
         >
           {successMessage}
@@ -1032,6 +1055,8 @@ export default function MyLeaves() {
           show={showErrorAlert}
           error
           title="Error!"
+           confirmBtnCssClass="btn-confirm"
+             cancelBtnCssClass="btn-cancel"
           onConfirm={() => setShowErrorAlert(false)}
         >
           {errorMessage}
