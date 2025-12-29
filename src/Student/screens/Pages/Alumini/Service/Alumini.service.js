@@ -34,7 +34,7 @@ function getAnnouncementDetails(batchId) {
     method: "GET",
     headers: authHeader(),
   };
-  return fetch(`${DevAPI}/announcement/student/batch/${batchId}`, requestOptions)
+  return fetch(`${DevAPI}/admin/announcements/by-batch/${batchId}`, requestOptions)
     .then(handleResponse);
 }
 function getEventsDetails(batchId) {
@@ -42,7 +42,7 @@ function getEventsDetails(batchId) {
     method: "GET",
     headers: authHeader(),
   };
-  return fetch(`${DevAPI}/events/student/batch/${batchId}`, requestOptions)
+  return fetch(`${DevAPI}/admin/events/by-batch/${batchId}`, requestOptions)
     .then(handleResponse);
 }
 function getGalleryDetails(batchId) {
@@ -50,7 +50,7 @@ function getGalleryDetails(batchId) {
     method: "GET",
     headers: authHeader(),
   };
-  return fetch(`${DevAPI}/gallery/student/batch/${batchId}`, requestOptions)
+  return fetch(`${DevAPI}/admin/photo-galleries/by-batch/${batchId}`, requestOptions)
     .then(handleResponse);
 }
 function getSocialMediaDetails(batchId) {
@@ -58,6 +58,6 @@ function getSocialMediaDetails(batchId) {
     method: "GET",
     headers: authHeader(),
   };
-  return fetch(`${DevAPI}/social-media/student/batch/${batchId}`, requestOptions)
+  return fetch(`${DevAPI}/admin/social-media-posts/byBatch/${batchId}`, requestOptions)
     .then(handleResponse);
 }

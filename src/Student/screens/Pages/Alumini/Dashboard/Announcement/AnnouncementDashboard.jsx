@@ -19,7 +19,19 @@ const AnnouncementDashboard = () => {
             try {
                 setLoading(true);
                 const res = await getAnnouncementDetails(batchId);
-                setAnnouncements(res || []);
+
+                // Map API response to component-friendly format
+                const mappedAnnouncements = (res.content || []).map(item => ({
+                    id: item.announcement_id,
+                    headline: item.headline,
+                    image: item.image,
+                    description: item.description,
+                    date: new Date(item.publish_date).toLocaleDateString(),
+                    likesCount: item.like_count,
+                    isLiked: item.liked
+                }));
+
+                setAnnouncements(mappedAnnouncements);
             } catch (err) {
                 console.error(err);
                 setError('Failed to load announcements');
@@ -32,16 +44,18 @@ const AnnouncementDashboard = () => {
     }, [batchId]);
 
     const toggleLike = (id) => {
-        setAnnouncements(prev => prev.map(item => {
-            if (item.id === id) {
-                return {
-                    ...item,
-                    isLiked: !item.isLiked,
-                    likesCount: item.isLiked ? item.likesCount - 1 : item.likesCount + 1
-                };
-            }
-            return item;
-        }));
+        setAnnouncements(prev =>
+            prev.map(item => {
+                if (item.id === id) {
+                    return {
+                        ...item,
+                        isLiked: !item.isLiked,
+                        likesCount: item.isLiked ? item.likesCount - 1 : item.likesCount + 1
+                    };
+                }
+                return item;
+            })
+        );
     };
 
     const formatLikes = (count) => {
@@ -50,11 +64,9 @@ const AnnouncementDashboard = () => {
 
     const AnnouncementCard = ({ item, onLike }) => (
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-3 md:p-4 flex gap-3 md:gap-4 hover:shadow-md transition-shadow duration-300">
-            {/* News Image Placeholder */}
-            <div className="min-w-[80px] h-[80px] md:min-w-[100px] md:h-[100px] bg-gradient-to-br from-blue-400 to-blue-600 rounded-lg flex flex-col items-center justify-center text-white relative overflow-hidden group shrink-0">
-                <div className="absolute inset-0 opacity-20 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')]"></div>
-                <span className="text-sm md:text-lg font-black tracking-widest z-10">NEWS</span>
-                <div className="absolute bottom-0 right-0 w-6 h-6 md:w-8 md:h-8 bg-white/20 rounded-tl-full"></div>
+            {/* Announcement Image */}
+            <div className="min-w-[80px] h-[80px] md:min-w-[100px] md:h-[100px] rounded-lg overflow-hidden flex-shrink-0">
+                <img src={item.image} alt={item.headline} className="w-full h-full object-cover" />
             </div>
 
             {/* Content */}
@@ -80,14 +92,14 @@ const AnnouncementDashboard = () => {
         </div>
     );
 
+    if (loading || batchLoading) return <p>Loading announcements...</p>;
+    if (error || batchError) return <p>{error || batchError}</p>;
+    if (announcements.length === 0) return <p>No announcements available.</p>;
+
     return (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
-            {announcements.map((item) => (
-                <AnnouncementCard
-                    key={item.id}
-                    item={item}
-                    onLike={toggleLike}
-                />
+            {announcements.map(item => (
+                <AnnouncementCard key={item.id} item={item} onLike={toggleLike} />
             ))}
         </div>
     );
