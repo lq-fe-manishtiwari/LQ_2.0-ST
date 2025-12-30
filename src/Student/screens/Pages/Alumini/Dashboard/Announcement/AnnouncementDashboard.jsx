@@ -2,12 +2,15 @@ import React, { useEffect, useState } from 'react';
 import { Heart, Calendar } from 'lucide-react';
 import { AluminiService } from '../../Service/Alumini.service';
 import { useBatch } from '../../../../../../contexts/BatchContext';
+import { useUserProfile } from '../../../../../../contexts/UserProfileContext';
 
 const { getAnnouncementDetails } = AluminiService;
 
 const AnnouncementDashboard = () => {
     const { batchId, loading: batchLoading, error: batchError } = useBatch();
+    const { getUserId } = useUserProfile();
     const [announcements, setAnnouncements] = useState([]);
+    const [likedAnnouncements, setLikedAnnouncements] = useState(new Set());
 
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -20,18 +23,25 @@ const AnnouncementDashboard = () => {
                 setLoading(true);
                 const res = await getAnnouncementDetails(batchId);
 
-                // Map API response to component-friendly format
-                const mappedAnnouncements = (res.content || []).map(item => ({
-                    id: item.announcement_id,
-                    headline: item.headline,
-                    image: item.image,
-                    description: item.description,
-                    date: new Date(item.publish_date).toLocaleDateString(),
-                    likesCount: item.like_count,
-                    isLiked: item.liked
-                }));
+                const initiallyLiked = new Set();
+
+                const mappedAnnouncements = (res.content || []).map(item => {
+                    if (item.liked === true) {
+                        initiallyLiked.add(item.announcement_id);
+                    }
+
+                    return {
+                        id: item.announcement_id,
+                        headline: item.headline,
+                        image: item.image,
+                        description: item.description,
+                        date: new Date(item.publish_date).toLocaleDateString(),
+                        likes: item.like_count || 0
+                    };
+                });
 
                 setAnnouncements(mappedAnnouncements);
+                setLikedAnnouncements(initiallyLiked);
             } catch (err) {
                 console.error(err);
                 setError('Failed to load announcements');
@@ -43,63 +53,121 @@ const AnnouncementDashboard = () => {
         fetchAnnouncements();
     }, [batchId]);
 
-    const toggleLike = (id) => {
+    const handleLike = (announcementId) => {
+          const userId = getUserId();
+        if (!announcementId || !userId) {
+        console.error('announcementId or userId missing', announcementId, userId);
+        return;
+    }
+    const isCurrentlyLiked = likedAnnouncements.has(announcementId);
+
         setAnnouncements(prev =>
-            prev.map(item => {
-                if (item.id === id) {
-                    return {
-                        ...item,
-                        isLiked: !item.isLiked,
-                        likesCount: item.isLiked ? item.likesCount - 1 : item.likesCount + 1
-                    };
-                }
-                return item;
-            })
+            prev.map(a =>
+                a.id === announcementId
+                    ? {
+                        ...a,
+                        likes: isCurrentlyLiked
+                            ? Math.max(0, a.likes - 1)
+                            : a.likes + 1
+                    }
+                    : a
+            )
         );
+
+        setLikedAnnouncements(prev => {
+            const newSet = new Set(prev);
+            isCurrentlyLiked ? newSet.delete(announcementId) : newSet.add(announcementId);
+            return newSet;
+        });
+
+        const payload = {
+            likeable_id: announcementId,
+            likeable_type: 'ANNOUNCEMENT',
+            status: isCurrentlyLiked ? 'DISLIKE' : 'LIKE'
+        };
+
+        AluminiService.postLikeDislike(userId, payload)
+            .catch(err => {
+                console.error('Like/Dislike failed', err);
+
+                // 🔁 Rollback
+                setAnnouncements(prev =>
+                    prev.map(a =>
+                        a.id === announcementId
+                            ? {
+                                ...a,
+                                likes: isCurrentlyLiked
+                                    ? a.likes + 1
+                                    : Math.max(0, a.likes - 1)
+                            }
+                            : a
+                    )
+                );
+
+                setLikedAnnouncements(prev => {
+                    const newSet = new Set(prev);
+                    isCurrentlyLiked ? newSet.add(announcementId) : newSet.delete(announcementId);
+                    return newSet;
+                });
+            });
     };
 
-    const formatLikes = (count) => {
-        return count >= 1000 ? (count / 1000).toFixed(1) + 'K' : count;
-    };
+    const formatLikes = (count) =>
+        count >= 1000 ? (count / 1000).toFixed(1) + 'K' : count;
 
-    const AnnouncementCard = ({ item, onLike }) => (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-3 md:p-4 flex gap-3 md:gap-4 hover:shadow-md transition-shadow duration-300">
-            {/* Announcement Image */}
-            <div className="min-w-[80px] h-[80px] md:min-w-[100px] md:h-[100px] rounded-lg overflow-hidden flex-shrink-0">
-                <img src={item.image} alt={item.headline} className="w-full h-full object-cover" />
-            </div>
+    const AnnouncementCard = ({ item }) => {
+        const isLiked = likedAnnouncements.has(item.id);
 
-            {/* Content */}
-            <div className="flex flex-col justify-between flex-1 min-w-0">
-                <p className="text-[12px] md:text-sm text-slate-600 font-normal leading-tight line-clamp-3">
-                    {item.headline}
-                </p>
+        return (
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-3 md:p-4 flex gap-3 md:gap-4">
+              <div className="w-[160px] h-[100px] rounded-lg overflow-hidden flex-shrink-0">
+                    <img
+                        src={item.image}
+                        alt={item.headline}
+                        className="w-full h-full object-cover"
+                    />
+                </div>
 
-                <div className="flex items-center justify-between mt-3 md:mt-4">
-                    <button
-                        onClick={() => onLike(item.id)}
-                        className={`flex items-center gap-1 md:gap-1.5 transition-colors duration-200 ${item.isLiked ? 'text-red-500' : 'text-slate-500 hover:text-red-400'}`}
-                    >
-                        <Heart className={`w-3.5 h-3.5 md:w-4 md:h-4 ${item.isLiked ? 'fill-current' : ''}`} />
-                        <span className="text-[10px] md:text-xs font-medium">{formatLikes(item.likesCount)}</span>
-                    </button>
-                    <div className="flex items-center gap-1 md:gap-1.5 text-slate-500">
-                        <Calendar className="w-3.5 h-3.5 md:w-4 md:h-4" />
-                        <span className="text-[10px] md:text-xs font-medium">{item.date}</span>
+                <div className="flex flex-col justify-between flex-1">
+                    <p className="text-xs md:text-sm text-slate-600 line-clamp-3">
+                        {item.headline}
+                    </p>
+
+                    <div className="flex items-center justify-between mt-3">
+                        <button
+                            onClick={() => handleLike(item.id)}
+                            className={`flex items-center gap-1 transition-colors ${
+                                isLiked ? 'text-red-500' : 'text-slate-500 hover:text-red-400'
+                            }`}
+                        >
+                            <Heart
+                                className={`w-4 h-4 transition-transform ${
+                                    isLiked ? 'fill-current scale-110' : ''
+                                }`}
+                            />
+                            <span className="text-xs font-medium">
+                                {formatLikes(item.likes)}
+                            </span>
+                        </button>
+
+                        <div className="flex items-center gap-1 text-slate-500">
+                            <Calendar className="w-4 h-4" />
+                            <span className="text-xs">{item.date}</span>
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
-    );
+        );
+    };
 
     if (loading || batchLoading) return <p>Loading announcements...</p>;
     if (error || batchError) return <p>{error || batchError}</p>;
     if (announcements.length === 0) return <p>No announcements available.</p>;
 
     return (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {announcements.map(item => (
-                <AnnouncementCard key={item.id} item={item} onLike={toggleLike} />
+                <AnnouncementCard key={item.id} item={item} />
             ))}
         </div>
     );

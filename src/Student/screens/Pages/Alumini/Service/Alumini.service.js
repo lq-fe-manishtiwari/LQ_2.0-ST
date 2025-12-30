@@ -1,4 +1,4 @@
-import { authHeader, handleResponse, authHeaderToPost, DevAPI } from '@/_services/api';
+import { authHeader, handleResponse, authHeaderToPost, DevAPI ,TeacherLoginAPI} from '@/_services/api';
 
 export const AluminiService = {
     getStudentHistory,
@@ -7,6 +7,7 @@ export const AluminiService = {
     getEventsDetails,
     getGalleryDetails,
     getSocialMediaDetails,
+    postLikeDislike,
 };
 
 function getStudentHistory(studentId) {
@@ -60,4 +61,16 @@ function getSocialMediaDetails(batchId) {
   };
   return fetch(`${DevAPI}/admin/social-media-posts/byBatch/${batchId}`, requestOptions)
     .then(handleResponse);
+}
+
+function postLikeDislike(userId, payload) {
+
+    const requestOptions = {
+        method: 'POST',
+        headers: authHeaderToPost(),
+        body: JSON.stringify(payload)
+    };
+    // return fetch(`/api/likes?userId=${userId}`, requestOptions)
+    return fetch(`${TeacherLoginAPI}/likes?userId=${userId}`, requestOptions)
+        .then(handleResponse);
 }

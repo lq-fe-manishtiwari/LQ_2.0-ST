@@ -114,7 +114,7 @@ const AluminiDashboard = () => {
                     <InfoItem label="Alumni Name" value={data.name} />
                     <InfoItem label="Mobile No." value={data.mobile} />
                     <InfoItem label="Passing Year" value={data.passingYear} />
-                    <InfoItem label="Batch" value={data.batch} />
+                    {/* <InfoItem label="Batch" value={data.batch} /> */}
                     <InfoItem label="City" value={data.city} />
                     <InfoItem label="Country" value={data.country} />
                     <InfoItem
@@ -133,7 +133,7 @@ const AluminiDashboard = () => {
                 <div>
                     <InfoItem label="Date of birth" value={data.dob} />
                     <InfoItem label="Email ID" value={data.email} />
-                    <InfoItem label="Program" value={data.program} />
+                    {/* <InfoItem label="Program" value={data.program} /> */}
                     <InfoItem label="Address" value={data.address} />
                     <InfoItem label="State" value={data.state} />
                     <InfoItem label="Pin code" value={data.pinCode} />

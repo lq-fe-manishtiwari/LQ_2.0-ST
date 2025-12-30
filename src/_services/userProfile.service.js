@@ -154,7 +154,9 @@ class UserProfileService {
   getUserId() {
     return this.userProfile?.user?.user_id || this.userProfile?.teacher_id || null;
   }
-
+  getStudentId() {
+  return this.userProfile?.student_id || null;
+  }
   getTeacherId() {
     return this.userProfile?.teacher_id || null;
   }
@@ -204,6 +206,7 @@ class UserProfileService {
   getEssentialIds() {
     return {
       userId: this.getUserId(),
+      studentId: this.getStudentId(),
       teacherId: this.getTeacherId(),
       collegeId: this.getCollegeId(),
       employeeId: this.getEmployeeId()

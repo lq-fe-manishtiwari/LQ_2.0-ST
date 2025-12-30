@@ -4,10 +4,11 @@ import { useUserProfile } from "../../../../../../contexts/UserProfileContext";
 import { useBatch } from '../../../../../../contexts/BatchContext';
 import { AluminiService } from "../../Service/Alumini.service";
 
-const { getSocialMediaDetails } = AluminiService;
+const { getSocialMediaDetails, postLikeDislike } = AluminiService;
 
 const SocialMediaDashboard = () => {
   const { batchId } = useBatch(); 
+  const { getUserId } = useUserProfile();
   const [platforms, setPlatforms] = useState([]);
   const [likedPosts, setLikedPosts] = useState({});
   const [loading, setLoading] = useState(true);
@@ -81,12 +82,58 @@ const SocialMediaDashboard = () => {
     }
   };
 
+  // ❤️ Like/Dislike handler with API
   const toggleLike = (platform, id) => {
     const key = `${platform}-${id}`;
+    const userId = getUserId();
+    if (!userId) return;
+
+    const isCurrentlyLiked = likedPosts[key];
+
+    // Optimistic update
     setLikedPosts((prev) => ({
       ...prev,
       [key]: !prev[key],
     }));
+
+    setPlatforms(prev =>
+      prev.map(p => ({
+        ...p,
+        posts: p.posts.map(post =>
+          post.id === id && p.name === platform
+            ? { ...post, likes: isCurrentlyLiked ? post.likes - 1 : post.likes + 1 }
+            : post
+        )
+      }))
+    );
+
+    // Call API
+    const payload = {
+      likeable_id: id,
+      likeable_type: 'SOCIAL_MEDIA_POST',
+      status: isCurrentlyLiked ? 'DISLIKE' : 'LIKE'
+    };
+
+    postLikeDislike(userId, payload).catch(err => {
+      console.error("Social Media Like/Dislike failed", err);
+
+      // Rollback
+      setLikedPosts((prev) => ({
+        ...prev,
+        [key]: isCurrentlyLiked,
+      }));
+
+      setPlatforms(prev =>
+        prev.map(p => ({
+          ...p,
+          posts: p.posts.map(post =>
+            post.id === id && p.name === platform
+              ? { ...post, likes: isCurrentlyLiked ? post.likes + 1 : post.likes - 1 }
+              : post
+          )
+        }))
+      );
+    });
   };
 
   const PostCard = ({ post, platform, isVideo }) => {
