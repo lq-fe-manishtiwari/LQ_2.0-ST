@@ -191,7 +191,7 @@ export default function MyLeaves() {
         attachment: leaveForm.newAttachments,
       };
 
-     if (isEditMode) {
+      if (isEditMode) {
          const updatePayload = {
         ...basePayload,
             existing_attachments: leaveForm.existingAttachments, // ← CRITICAL!
@@ -311,7 +311,7 @@ export default function MyLeaves() {
       fromDate: leave.from || leave.start_date || leave.fromDate || '',
       toDate: leave.to || leave.end_date || leave.toDate || '',
       days: leave.days || leave.no_of_days || '',
-      reason: leave.reason || leave.remark || '',
+      reason: leave.reason || '',
       existingAttachments: attachments,
       newAttachments: [],
     });
@@ -370,90 +370,79 @@ export default function MyLeaves() {
     return leaveFor === 'HALF_DAY' ? 'Half Day' : 'Full Day';
   };
 
-  const getAvailableDays = (leaveTypeId) => {
-    if (leaveSummary && leaveSummary.leave_summary) {
-      const summaryItem = leaveSummary.leave_summary.find(
-        (item) => item.leave_type_id === parseInt(leaveTypeId)
-      );
-      if (summaryItem && summaryItem.balance !== undefined) {
-        return Math.max(0, parseFloat(summaryItem.balance));
-      }
+const getAvailableDays = (leaveTypeId) => {
+  if (!leaveSummary || !leaveSummary.leave_summary) return Infinity;
+
+  const summaryItem = leaveSummary.leave_summary.find(
+    (item) => item.leave_type_id === parseInt(leaveTypeId)
+  );
+
+  if (!summaryItem || summaryItem.balance === undefined) return Infinity;
+
+  let balance = parseFloat(summaryItem.balance);
+
+  // If we're editing a leave of this type, add back the old days
+  // so user can at least keep the same number of days
+  if (isEditMode && editingLeaveId) {
+    const currentLeave = leaveRecords.find(
+      (leave) => (leave.apply_leave_id || leave.id) === editingLeaveId
+    );
+
+    if (currentLeave && currentLeave.leave_type_id === parseInt(leaveTypeId)) {
+      const oldDays = parseFloat(currentLeave.days || currentLeave.no_of_days || 0);
+      balance += oldDays; // Temporarily give back the old days
     }
+  }
 
-    const selectedType = leaveTypes.find((lt) => lt.leave_type_id === parseInt(leaveTypeId));
-    if (!selectedType || selectedType.no_of_days_allowed == null) return Infinity;
+  return Math.max(0, balance);
+};
 
-    const allowed = parseFloat(selectedType.no_of_days_allowed);
-    let approvedDays = 0;
-    let pendingDays = 0;
+const getDaysValidationMessage = () => {
+  if (!leaveForm.type) return null;
 
-    leaveRecords.forEach((leave) => {
-      if (leave.leave_type_id === parseInt(leaveTypeId)) {
-        const days = parseFloat(leave.days || leave.no_of_days || 0);
-        if (leave.leave_status === 'Approved' || leave.leave_status === 'APPROVED') {
-          approvedDays += days;
-        } else if (leave.leave_status === 'Pending') {
-          pendingDays += days;
-        }
-      }
-    });
+  const available = getAvailableDays(leaveForm.type);
+  const requested = parseFloat(leaveForm.days || 0);
 
-    if (isEditMode && editingLeaveId) {
-      const oldD = parseFloat(oldDays || 0);
-      if (editingStatus === 'Approved' || editingStatus === 'APPROVED') approvedDays -= oldD;
-      else if (editingStatus === 'Pending') pendingDays -= oldD;
-    }
+  if (requested <= 0) {
+    return '⚠️ Invalid date selection';
+  }
 
-    return Math.max(0, allowed - (approvedDays + pendingDays));
-  };
+  if (available === Infinity) {
+    return `✓ ${requested.toFixed(1)} day${requested !== 1 ? 's' : ''} requested (Unlimited)`;
+  }
 
-  const getDaysValidationMessage = () => {
-    if (!leaveForm.type) return null;
+  if (requested > available + 0.0001) {
+    return `❌ Exceeds limit: Only ${available.toFixed(1)} day${available !== 1 ? 's' : ''} available`;
+  }
 
-    const available = getAvailableDays(leaveForm.type);
+  return `✓ ${requested.toFixed(1)} day${requested !== 1 ? 's' : ''} requested (${available.toFixed(1)} remaining)`;
+};
 
-    if (available === Infinity) {
-      if (!leaveForm.days || parseFloat(leaveForm.days) <= 0) {
-        return '⚠️ Invalid date selection (e.g., weekends not counted)';
-      }
-      return `✓ ${leaveForm.days} day${leaveForm.days !== '1' ? 's' : ''} requested (Unlimited)`;
-    }
+ const isSubmitDisabled = () => {
+  // Basic required fields
+  if (!leaveForm.type || !leaveForm.fromDate || !leaveForm.toDate || !leaveForm.days) {
+    return true;
+  }
 
-    if (available <= 0) {
-      return '❌ No leave balance remaining for this type';
-    }
+  const requestedDays = parseFloat(leaveForm.days);
 
-    if (!leaveForm.days || parseFloat(leaveForm.days) <= 0) {
-      return '⚠️ Invalid date selection';
-    }
+  if (requestedDays <= 0) {
+    return true;
+  }
 
-    const requested = parseFloat(leaveForm.days);
+  const available = getAvailableDays(leaveForm.type);
 
-    if (requested > available + 0.0001) {
-      return `⚠️ Exceeds limit: Only ${available} day${available !== 1 ? 's' : ''} available`;
-    }
+  // Unlimited leave → always allow
+  if (available === Infinity) return false;
 
-    return `✓ ${requested} day${requested !== 1 ? 's' : ''} requested (${available} remaining)`;
-  };
+  // Core rule: new days must not exceed (old days + current balance)
+  // Since we added back old days in getAvailableDays(), this now works perfectly
+  if (requestedDays > available + 0.0001) {
+    return true;
+  }
 
-  const isSubmitDisabled = () => {
-    if (
-      !leaveForm.type ||
-      !leaveForm.fromDate ||
-      !leaveForm.toDate ||
-      !leaveForm.days ||
-      parseFloat(leaveForm.days) <= 0
-    ) {
-      return true;
-    }
-
-    const available = getAvailableDays(leaveForm.type);
-    if (available !== Infinity && parseFloat(leaveForm.days) > available + 0.0001) {
-      return true;
-    }
-
-    return false;
-  };
+  return false;
+};
 
   // ── PAGINATION CALCULATIONS ───────────────────────────────────────────────
   const totalEntries = leaveRecords.length;
@@ -508,20 +497,6 @@ export default function MyLeaves() {
                 </div>
               </div>
 
-
-              {/* {selectedPolicy && (
-                <div className="flex justify-end mb-4">
-                  <button
-                    type="button"
-                    onClick={() => setShowPolicy(!showPolicy)}
-                    className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100 transition text-sm font-medium w-full sm:w-auto"
-                  >
-                    <FileWarning size={18} />
-                    View Leave Policy
-                  </button>
-                </div>
-              )} */}
-
               {showPolicy && selectedPolicy && (
                 <div className="mb-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
                   <h3 className="font-semibold text-blue-700 mb-2">
@@ -553,25 +528,25 @@ export default function MyLeaves() {
                   className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
                 >
                   <option value="">Select Leave Type</option>
-                  {leaveTypes.map((lt) => {
-                    const available = getAvailableDays(lt.leave_type_id);
-                    const isDisabled = available <= 0 && available !== Infinity;
+                {leaveTypes.map((lt) => {
+  const available = getAvailableDays(lt.leave_type_id);
+  const isDisabled = available <= 0 && available !== Infinity;
 
-                    return (
-                      <option
-                        key={lt.leave_type_id}
-                        value={lt.leave_type_id}
-                        disabled={isDisabled}
-                        className="text-sm"
-                      >
-                        {lt.leave_type}{' '}
-                        {lt.no_of_days_allowed
-                          ? `(Max: ${lt.no_of_days_allowed} days, ${lt.is_paid ? 'Paid' : 'Unpaid'
-                          }) ${isDisabled ? '- No balance left' : `- ${available} day${available !== 1 ? 's' : ''} left`}`
-                          : `(Unlimited, ${lt.is_paid ? 'Paid' : 'Unpaid'})`}
-                      </option>
-                    );
-                  })}
+  return (
+    <option
+      key={lt.leave_type_id}
+      value={lt.leave_type_id}
+      disabled={isDisabled}
+    >
+      {lt.leave_type}{' '}
+      {lt.no_of_days_allowed != null
+        ? `(Max: ${lt.no_of_days_allowed} days, ${lt.is_paid ? 'Paid' : 'Unpaid'}) → ${available === Infinity ? 'Unlimited' : `${available.toFixed(1)} day${available !== 1 ? 's' : ''} left`}`
+        : `(Unlimited, ${lt.is_paid ? 'Paid' : 'Unpaid'})`
+      }
+      {isDisabled && ' - No balance'}
+    </option>
+  );
+})}
                 </select>
 
                 {leaveForm.type &&
@@ -953,7 +928,7 @@ export default function MyLeaves() {
                               {leave.leave_status}
                             </span>
                           </td>
-                           <td className="p-4">
+                          <td className="p-4">
   <div className="space-y-2 max-w-xs">
 
     {/* Approver's Remark */}
@@ -1168,7 +1143,7 @@ export default function MyLeaves() {
           onConfirm={handleDelete}
           onCancel={() => setShowConfirmDelete(false)}
         >
-          This action cannot be undo.
+          This action cannot be undone.
         </SweetAlert>
 
         <SweetAlert
