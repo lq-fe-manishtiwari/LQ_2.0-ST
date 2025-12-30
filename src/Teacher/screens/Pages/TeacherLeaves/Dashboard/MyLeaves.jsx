@@ -371,26 +371,46 @@ export default function MyLeaves() {
   };
 
 const getAvailableDays = (leaveTypeId) => {
-  if (!leaveSummary || !leaveSummary.leave_summary) return Infinity;
+  if (!leaveSummary || !leaveSummary.leave_summary || !leaveTypes.length) return Infinity;
 
+  // Find the leave type definition
+  const leaveType = leaveTypes.find(
+    (lt) => lt.leave_type_id === parseInt(leaveTypeId)
+  );
+
+  if (!leaveType) return Infinity;
+
+  // If this leave type has no limit → truly unlimited
+  if (leaveType.no_of_days_allowed == null || leaveType.no_of_days_allowed === '') {
+    return Infinity;
+  }
+
+  // Find summary entry for this leave type
   const summaryItem = leaveSummary.leave_summary.find(
     (item) => item.leave_type_id === parseInt(leaveTypeId)
   );
 
-  if (!summaryItem || summaryItem.balance === undefined) return Infinity;
+  let balance = Infinity; // default fallback
 
-  let balance = parseFloat(summaryItem.balance);
+  if (summaryItem && summaryItem.balance !== undefined) {
+    balance = parseFloat(summaryItem.balance);
+  } else {
+    // Not in summary → assume full entitlement (no leaves taken yet)
+    balance = parseFloat(leaveType.no_of_days_allowed) || 0;
+  }
 
-  // If we're editing a leave of this type, add back the old days
-  // so user can at least keep the same number of days
+  // When editing a leave of the same type, add back the old days
   if (isEditMode && editingLeaveId) {
     const currentLeave = leaveRecords.find(
       (leave) => (leave.apply_leave_id || leave.id) === editingLeaveId
     );
 
-    if (currentLeave && currentLeave.leave_type_id === parseInt(leaveTypeId)) {
-      const oldDays = parseFloat(currentLeave.days || currentLeave.no_of_days || 0);
-      balance += oldDays; // Temporarily give back the old days
+    if (
+      currentLeave &&
+      currentLeave.leave_type_id === parseInt(leaveTypeId)
+    ) {
+      const oldDaysNum = parseFloat(currentLeave.days || currentLeave.no_of_days || 0);
+      balance += oldDaysNum;
     }
   }
 
