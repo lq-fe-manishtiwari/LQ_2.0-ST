@@ -192,9 +192,14 @@ export default function MyLeaves() {
       };
 
       if (isEditMode) {
-        await leaveService.updateLeaveForm(editingLeaveId, basePayload);
-        setSuccessMessage('Leave updated successfully!');
-      } else {
+         const updatePayload = {
+        ...basePayload,
+            existing_attachments: leaveForm.existingAttachments, // ← CRITICAL!
+            attachment: leaveForm.newAttachments, // only new files
+          };
+
+          await leaveService.updateLeaveForm(editingLeaveId, updatePayload);
+        } else {
         await leaveService.applyLeave({
           ...basePayload,
           leave_status: 'Pending',
@@ -816,7 +821,7 @@ export default function MyLeaves() {
           onConfirm={handleDelete}
           onCancel={() => setShowConfirmDelete(false)}
         >
-          This action cannot be undone.
+          This action cannot be undo.
         </SweetAlert>
         <SweetAlert
           show={showSuccessAlert}
@@ -911,7 +916,7 @@ export default function MyLeaves() {
                         <th className="table-th p-4 text-left font-semibold">To</th>
                         <th className="table-th p-4 text-left font-semibold">Days</th>
                         <th className="table-th p-4 text-left font-semibold">Status</th>
-                        <th className="table-th p-4 text-left font-semibold">Reason</th>
+                        <th className="table-th p-4 text-left font-semibold">Details</th>
                         <th className="table-th p-4 text-left font-semibold">Actions</th>
                       </tr>
                     </thead>
@@ -934,7 +939,28 @@ export default function MyLeaves() {
                               {leave.leave_status}
                             </span>
                           </td>
-                          <td className="p-4 max-w-xs truncate">{leave.reason || leave.remark || '-'}</td>
+                          <td className="p-4">
+  <div className="space-y-2 max-w-xs">
+
+    {/* Approver's Remark */}
+    {leave.remark && (
+      <div className={`mt-2 p-2 rounded-lg ${leave.leave_status === 'Rejected' || leave.leave_status === 'REJECTED'
+          ? 'bg-red-50 border border-red-200'
+          : 'bg-green-50 border border-green-200'
+        }`}>
+        <p className="text-xs font-medium text-gray-600">Approver Remark:</p>
+        <p className="text-sm font-medium" title={leave.remark}>
+          {leave.remark}
+        </p>
+      </div>
+    )}
+
+    {/* If neither exists */}
+    {!leave.reason && !leave.remark && (
+      <span className="text-gray-400 italic text-sm">No details provided</span>
+    )}
+  </div>
+</td>
                           <td className="p-4">
                             <div className="flex items-center gap-2">
                               <button

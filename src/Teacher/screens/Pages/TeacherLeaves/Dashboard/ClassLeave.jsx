@@ -189,7 +189,8 @@ export default function ClassLeave() {
           toDate: leave.end_date,
           days: leave.no_of_days,
           status: leave.leave_status,
-          studentReason: leave.remark || "",
+          studentReason: leave.reason || "",
+          teacherRemark: leave.remark || "",
           attachments: Array.isArray(leave.attachment)
             ? leave.attachment.filter(Boolean)
             : [],
@@ -234,7 +235,7 @@ export default function ClassLeave() {
   const openReviewForm = (leave) => {
     setCurrentLeave(leave);
     setSelectedStatus(leave.status);
-    setTeacherRemark("");
+    setTeacherRemark(leave.teacherRemark || "");
     setShowReviewForm(true);
   };
 
@@ -265,7 +266,7 @@ export default function ClassLeave() {
 
       setLeaves((prev) =>
         prev.map((l) =>
-          l.id === currentLeave.id ? { ...l, status: selectedStatus } : l
+          l.id === currentLeave.id ? { ...l, status: selectedStatus,teacherRemark: teacherRemark.trim(), } : l
         )
       );
 
@@ -274,6 +275,8 @@ export default function ClassLeave() {
         <SweetAlert
           success
           title="Success!"
+             confirmBtnCssClass="btn-confirm"
+          cancelBtnCssClass="btn-cancel"
           onConfirm={() => setAlert(null)}
         >
           Leave has been{" "}
@@ -283,7 +286,8 @@ export default function ClassLeave() {
     } catch (err) {
       console.error("Failed to update leave:", err);
       setAlert(
-        <SweetAlert danger title="Error!" onConfirm={() => setAlert(null)}>
+        <SweetAlert danger title="Error!"    confirmBtnCssClass="btn-confirm"
+          cancelBtnCssClass="btn-cancel" onConfirm={() => setAlert(null)}>
           Failed to update leave status. Please try again.
         </SweetAlert>
       );

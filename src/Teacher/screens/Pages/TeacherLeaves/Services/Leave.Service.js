@@ -134,16 +134,23 @@ async function applyLeave(data) {
 }
 
 async function updateLeaveForm(id, values) {
-  let attachmentUrls = [];
+  let newAttachmentUrls = [];
 
-  // If new files are attached during edit
+  // Step 1: Upload new files (if any)
   if (values.attachment && values.attachment.length > 0) {
-    // Upload new files
-   const uploadPromises = values.attachment.map(file => uploadFileToS3(file));
-    attachmentUrls = await Promise.all(uploadPromises);
+    const uploadPromises = values.attachment.map(file => uploadFileToS3(file));
+    newAttachmentUrls = await Promise.all(uploadPromises);
   }
 
-  // For edit: We only send updated fields. DO NOT send leave_status!
+  // Step 2: Get existing attachment URLs from the original leave data
+  // IMPORTANT: You MUST pass the existing attachments from the frontend state!
+  const existingAttachmentUrls = values.existing_attachments || []; 
+  // This should come from the leave record you're editing (e.g., leave.attachment array of URLs)
+
+  // Step 3: Combine existing + new URLs
+  const allAttachmentUrls = [...existingAttachmentUrls, ...newAttachmentUrls];
+
+  // Step 4: Build payload — crucially include ALL attachments
   const payload = {
     college_id: values.college_id,
     user_id: values.user_id,
@@ -151,19 +158,19 @@ async function updateLeaveForm(id, values) {
     start_date: values.fromDate,
     end_date: values.toDate,
     reason: values.reason || null,
-    attachment: attachmentUrls, // new uploaded URLs (existing ones are preserved on backend?)
-    leave_period: values.leaveFor,
+    attachment: allAttachmentUrls, // ← This now includes both old + new!
+    leave_duration: values.leaveFor,
     no_of_days: parseFloat(values.days),
+    // DO NOT send leave_status → lets backend preserve current status
+    // Remove this line completely:
     leave_status: "PENDING",
-    // IMPORTANT: Do NOT send leave_status here → preserves current status (Approved/Rejected/Pending)
   };
 
   const requestOptions = {
     method: "PUT",
     headers: {
-      ...authHeaderToPost(), // assuming this includes Content-Type and auth
-      // If authHeaderToPost() doesn't set Content-Type, add it:
-      // "Content-Type": "application/json",
+      ...authHeaderToPost(),
+      "Content-Type": "application/json", // Ensure this is set!
     },
     body: JSON.stringify(payload),
   };
