@@ -1,15 +1,94 @@
 import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { feedbackService } from "@/_services/feedbackService";
+import { TeacherService } from "../Teacher.Service";
 
 export default function MySubmitted() {
-    const [feedbackList, setFeedbackList] = useState([]);
+    const navigate = useNavigate();
+    const [submittedForms, setSubmittedForms] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [userProfile, setUserProfile] = useState(null);
 
     useEffect(() => {
-        // TODO: Fetch submitted feedback data from API
-        // Placeholder data for now
-        setLoading(false);
-        setFeedbackList([]);
+        loadUserProfile();
     }, []);
+
+    useEffect(() => {
+        if (userProfile) {
+            loadSubmittedForms();
+        }
+    }, [userProfile]);
+
+    const loadUserProfile = async () => {
+        const storedProfile = localStorage.getItem('userProfile');
+        const contentFilters = localStorage.getItem('contentDashboardFilters');
+
+        if (storedProfile) {
+            let profile = JSON.parse(storedProfile);
+            const teacherId = profile?.teacher_id || profile?.user?.user_id;
+
+            if (teacherId) {
+                try {
+                    const response = await TeacherService.getTeacherAllocatedPrograms(teacherId);
+                    // Handle response structure (can be {success: true, data: ...} or direct data)
+                    const data = response?.data || response;
+                    const allocations = [...(data?.class_teacher_allocation || []), ...(data?.normal_allocation || [])];
+
+                    if (allocations.length > 0) {
+                        const activeAllocation = allocations[0]; // Using first allocation as primary context
+                        profile = {
+                            ...profile,
+                            academicYearId: activeAllocation.academic_year_id,
+                            semesterId: activeAllocation.semester_id,
+                            programId: activeAllocation.program_id,
+                            batchId: activeAllocation.batch_id,
+                            divisionId: activeAllocation.division_id,
+                            departmentId: activeAllocation.department_id
+                        };
+                    }
+                } catch (error) {
+                    console.error('Error fetching teacher allocations:', error);
+                }
+            }
+
+            // Merge filters from content dashboard if they exist
+            if (contentFilters) {
+                const filters = JSON.parse(contentFilters);
+                profile = {
+                    ...profile,
+                    programId: filters.program || profile.programId,
+                    batchId: filters.batch || profile.batchId,
+                    semesterId: filters.semester || profile.semesterId,
+                    academicYearId: filters.academicYear || profile.academicYearId
+                };
+            }
+
+            setUserProfile(profile);
+        } else {
+            console.error('User profile not found');
+        }
+    };
+
+    const loadSubmittedForms = async () => {
+        setLoading(true);
+        try {
+            const response = await feedbackService.getMyFeedbackForms(userProfile);
+            const formsData = response?.data || [];
+
+            // Filter only submitted forms
+            const submitted = formsData.filter(f => f.has_submitted);
+            setSubmittedForms(submitted);
+        } catch (error) {
+            console.error('Error loading submitted forms:', error);
+            setSubmittedForms([]);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleViewSubmission = (responseId) => {
+        navigate(`../view/${responseId}`);
+    };
 
     if (loading) {
         return (
@@ -23,9 +102,10 @@ export default function MySubmitted() {
         <div className="space-y-4">
             <div className="flex justify-between items-center mb-4">
                 <h3 className="text-lg font-semibold text-gray-800">My Submitted Feedback</h3>
+                <span className="text-sm text-gray-500">{submittedForms.length} submission(s)</span>
             </div>
 
-            {feedbackList.length === 0 ? (
+            {submittedForms.length === 0 ? (
                 <div className="text-center py-12">
                     <div className="text-gray-400 mb-2">
                         <svg
@@ -42,23 +122,38 @@ export default function MySubmitted() {
                             />
                         </svg>
                     </div>
-                    <p className="text-gray-500 text-sm">No submitted feedback found</p>
+                    <p className="text-gray-500 text-sm">No submitted feedback yet</p>
+                    <p className="text-gray-400 text-xs mt-1">Complete pending forms to see them here</p>
                 </div>
             ) : (
                 <div className="grid gap-4">
-                    {feedbackList.map((feedback) => (
+                    {submittedForms.map((form) => (
                         <div
-                            key={feedback.id}
+                            key={form.feedback_form_id}
                             className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow"
                         >
-                            <h4 className="font-medium text-gray-900">{feedback.title}</h4>
-                            <p className="text-sm text-gray-500 mt-1">{feedback.description}</p>
-                            <div className="flex items-center justify-between mt-3">
-                                <span className="text-xs text-gray-400">
-                                    Submitted: {feedback.submittedDate}
-                                </span>
-                                <button className="text-blue-600 text-sm hover:underline">
-                                    View Details
+                            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+                                <div className="flex-1">
+                                    <div className="flex items-center gap-2 mb-1">
+                                        <h4 className="font-medium text-gray-900">{form.form_name}</h4>
+                                        <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-green-100 text-green-800">
+                                            Submitted
+                                        </span>
+                                    </div>
+                                    <p className="text-sm text-gray-500 mt-1">Code: {form.code || 'N/A'}</p>
+                                    <div className="flex items-center gap-4 mt-3">
+                                        <span className="text-xs text-gray-400">
+                                            <i className="bi bi-check-circle mr-1"></i>
+                                            Submitted on: {form.submitted_at ? new Date(form.submitted_at).toLocaleString() : 'N/A'}
+                                        </span>
+                                    </div>
+                                </div>
+                                <button
+                                    onClick={() => handleViewSubmission(form.response_id)}
+                                    className="px-4 py-2 bg-gray-600 text-white text-sm rounded-md hover:bg-gray-700 transition-colors whitespace-nowrap self-start sm:self-auto flex items-center gap-2"
+                                >
+                                    <i className="bi bi-eye"></i>
+                                    View
                                 </button>
                             </div>
                         </div>
