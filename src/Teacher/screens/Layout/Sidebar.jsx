@@ -98,6 +98,15 @@ const Sidebar = ({ isOpen, toggle }) => {
       //     "/timetable-edit",
       //   ],
       // },
+      {
+        to: "/teacher/timetable",
+        label: "TimeTable",
+        iconActive: assessmentActive,
+        iconInactive: assessmentInactive,
+        match: [
+          "/teacher/timetable",
+        ],
+      },
 
 
       {
