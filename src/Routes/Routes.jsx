@@ -23,6 +23,7 @@ import PMSRoutes from '../Teacher/screens/Pages/PerformanceManagementSystem/Rout
 import ContentRoutes from '../Student/screens/Pages/Content/Routes/ContentRoutes.jsx';
 import HRMRoutes from '../Teacher/screens/Pages/HRM/Routes/HRMRoute.jsx';
 import SubjectSelectionRoutes from '../Teacher/screens/pages/SubjectSelection/Routes/SubjectSelectionRoutes.jsx';
+import TimeTableRoutes from '../Student/screens/Pages/TimeTable/Routes/TimeTableRoutes.jsx';
 
 // ────── Route guards ──────
 const ProtectedRoute = ({ children }) => {
@@ -130,6 +131,18 @@ function App() {
             </ProtectedRoute>
           }
         />
+
+        <Route
+          path="/timetable/*"
+          element={
+            <ProtectedRoute>
+              <StudentHomepage>
+                <TimeTableRoutes/>
+              </StudentHomepage>
+            </ProtectedRoute>
+          }
+        />
+
         <Route
           path="/curriculum/*"
           element={

@@ -79,6 +79,15 @@ const StudentSidebar = ({ isOpen, toggle }) => {
         iconInactive: dashboardInactive,
       },
       {
+        to: "/timetable",
+        label: "TimeTable",
+        iconActive: contentActive,
+        iconInactive: contentInactive,
+        match: [
+          "/timetable",
+        ],
+      },
+      {
         to: "/curriculum",
         label: "Content",
         iconActive: contentActive,
