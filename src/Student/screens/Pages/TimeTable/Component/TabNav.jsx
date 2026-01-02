@@ -14,17 +14,19 @@ export default function TabsNav() {
           .filter((t) => !t.rightAlign)
           .map((t) => (
             <NavLink
-              key={t.to}
-              to={t.to}
-              className={({ isActive }) =>
-                `tab-link flex items-center whitespace-nowrap px-3 py-2 ${
-                  isActive ? "tab-active" : "tab-inactive"
-                }`
-              }
-              style={{ minWidth: "180px" }}
-            >
-              {t.label}
-            </NavLink>
+            key={t.to}
+            to={t.to}
+            className={({ isActive }) =>
+              `tab-link flex items-center justify-center text-center whitespace-nowrap px-3 py-2 ${
+                isActive ? "tab-active" : "tab-inactive"
+              }`
+            }
+            style={{ minWidth: "180px" }}
+          >
+            {t.label}
+          </NavLink>
+          
+
           ))}
       </div>
 
