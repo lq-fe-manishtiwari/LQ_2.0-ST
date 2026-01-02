@@ -23,7 +23,7 @@ import PMSRoutes from "../Pages/PerformanceManagementSystem/Routes/PMSRoutes.jsx
 import ExamManagementRoutes from "../Pages/ExamManageMent/Routes/ExamManagementRoutes.jsx";
 import LeavesRoutes from "../Pages/TeacherLeaves/Routes/LeavesRoutes.jsx";
 import HRMRoutes from "../Pages/HRM/Routes/HRMRoute.jsx";
-import TimeTableRoutes from "../Pages/TimeTable/Routes/TimetableRoutes.jsx";
+import TimeTableRoutes from "../Pages/TimeTable/Routes/TimeTableRoutes.jsx";
 
 export default function TeacherRoutes() {
   return (
