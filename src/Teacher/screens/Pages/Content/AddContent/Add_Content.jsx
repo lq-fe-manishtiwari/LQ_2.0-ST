@@ -219,10 +219,8 @@ export default function AddContent() {
             const result = await contentService.AddContent(submitData);
 
             setAlertConfig({
-                title: 'Success!',
-                text: 'Content added successfully!',
-                type: 'success',
-                confirmBtnText: 'OK',
+                success: true,
+                title: 'Content Added Successfully!',
                 confirmBtnCssClass: 'btn-confirm',
                 onConfirm: () => {
                     setShowAlert(false);
