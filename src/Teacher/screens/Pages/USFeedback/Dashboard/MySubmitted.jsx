@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { feedbackService } from "@/_services/feedbackService";
 import { useUserProfile } from "@/contexts/UserProfileContext";
+import Pagination from "@/components/Pagination";
 
 export default function MySubmitted() {
     const navigate = useNavigate();
@@ -9,13 +10,21 @@ export default function MySubmitted() {
     const [submittedForms, setSubmittedForms] = useState([]);
     const [loading, setLoading] = useState(true);
 
+    // Pagination state
+    const [currentPage, setCurrentPage] = useState(0);
+    const [totalPages, setTotalPages] = useState(0);
+    const [totalElements, setTotalElements] = useState(0);
+    const [isFirst, setIsFirst] = useState(true);
+    const [isLast, setIsLast] = useState(true);
+    const pageSize = 10;
+
     useEffect(() => {
         if (isLoaded) {
-            loadSubmittedForms();
+            loadSubmittedForms(currentPage);
         }
-    }, [isLoaded]);
+    }, [isLoaded, currentPage]);
 
-    const loadSubmittedForms = async () => {
+    const loadSubmittedForms = async (page) => {
         setLoading(true);
         try {
             // Construct profile object for service with required IDs
@@ -27,18 +36,34 @@ export default function MySubmitted() {
                 departmentId: getDepartmentId()
             };
 
-            const response = await feedbackService.getMyFeedbackForms(userContext);
-            const formsData = response?.data || [];
+            const response = await feedbackService.getMyFeedbackForms(userContext, page, pageSize);
+            console.log(response);
+            // Handle paginated response
+            if (response?.data?.content) {
+                console.log(response.content);
+                // Filter only submitted forms
+                const submitted = response.data.content.filter(f => f.has_submitted);
+                setSubmittedForms(submitted);
 
-            // Filter only submitted forms
-            const submitted = formsData.filter(f => f.has_submitted);
-            setSubmittedForms(submitted);
+                // Update pagination state
+                setTotalPages(response.data.total_pages || 0);
+                setTotalElements(response.data.total_elements || 0);
+                setCurrentPage(response.data.number || 0);
+                setIsFirst(response.data.first !== undefined ? response.data.first : true);
+                setIsLast(response.data.last !== undefined ? response.data.last : true);
+            } else {
+                setSubmittedForms([]);
+            }
         } catch (error) {
             console.error('Error loading submitted forms:', error);
             setSubmittedForms([]);
         } finally {
             setLoading(false);
         }
+    };
+
+    const handlePageChange = (newPage) => {
+        setCurrentPage(newPage);
     };
 
     const handleViewSubmission = (responseId) => {
@@ -57,7 +82,7 @@ export default function MySubmitted() {
         <div className="space-y-4">
             <div className="flex justify-between items-center mb-4">
                 <h3 className="text-lg font-semibold text-gray-800">My Submitted Feedback</h3>
-                <span className="text-sm text-gray-500">{submittedForms.length} submission(s)</span>
+                <span className="text-sm text-gray-500">{totalElements} submission(s)</span>
             </div>
 
             {submittedForms.length === 0 ? (
@@ -81,39 +106,51 @@ export default function MySubmitted() {
                     <p className="text-gray-400 text-xs mt-1">Complete pending forms to see them here</p>
                 </div>
             ) : (
-                <div className="grid gap-4">
-                    {submittedForms.map((form) => (
-                        <div
-                            key={form.feedback_form_id}
-                            className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow"
-                        >
-                            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
-                                <div className="flex-1">
-                                    <div className="flex items-center gap-2 mb-1">
-                                        <h4 className="font-medium text-gray-900">{form.form_name}</h4>
-                                        <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-green-100 text-green-800">
-                                            Submitted
-                                        </span>
+                <>
+                    <div className="grid gap-4">
+                        {submittedForms.map((form) => (
+                            <div
+                                key={form.feedback_form_id}
+                                className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow"
+                            >
+                                <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+                                    <div className="flex-1">
+                                        <div className="flex items-center gap-2 mb-1">
+                                            <h4 className="font-medium text-gray-900">{form.form_name}</h4>
+                                            <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-green-100 text-green-800">
+                                                Submitted
+                                            </span>
+                                        </div>
+                                        <p className="text-sm text-gray-500 mt-1">Code: {form.code || 'N/A'}</p>
+                                        <div className="flex items-center gap-4 mt-3">
+                                            <span className="text-xs text-gray-400">
+                                                <i className="bi bi-check-circle mr-1"></i>
+                                                Submitted on: {form.submitted_at ? new Date(form.submitted_at).toLocaleString() : 'N/A'}
+                                            </span>
+                                        </div>
                                     </div>
-                                    <p className="text-sm text-gray-500 mt-1">Code: {form.code || 'N/A'}</p>
-                                    <div className="flex items-center gap-4 mt-3">
-                                        <span className="text-xs text-gray-400">
-                                            <i className="bi bi-check-circle mr-1"></i>
-                                            Submitted on: {form.submitted_at ? new Date(form.submitted_at).toLocaleString() : 'N/A'}
-                                        </span>
-                                    </div>
+                                    <button
+                                        onClick={() => handleViewSubmission(form.response_id)}
+                                        className="px-4 py-2 bg-gray-600 text-white text-sm rounded-md hover:bg-gray-700 transition-colors whitespace-nowrap self-start sm:self-auto flex items-center gap-2"
+                                    >
+                                        <i className="bi bi-eye"></i>
+                                        View
+                                    </button>
                                 </div>
-                                <button
-                                    onClick={() => handleViewSubmission(form.response_id)}
-                                    className="px-4 py-2 bg-gray-600 text-white text-sm rounded-md hover:bg-gray-700 transition-colors whitespace-nowrap self-start sm:self-auto flex items-center gap-2"
-                                >
-                                    <i className="bi bi-eye"></i>
-                                    View
-                                </button>
                             </div>
-                        </div>
-                    ))}
-                </div>
+                        ))}
+                    </div>
+
+                    {/* Pagination Component */}
+                    <Pagination
+                        currentPage={currentPage}
+                        totalPages={totalPages}
+                        totalElements={totalElements}
+                        onPageChange={handlePageChange}
+                        isFirst={isFirst}
+                        isLast={isLast}
+                    />
+                </>
             )}
         </div>
     );

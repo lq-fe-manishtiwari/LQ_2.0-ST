@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { feedbackService } from "@/_services/feedbackService";
 import { useUserProfile } from "@/contexts/UserProfileContext";
+import Pagination from "@/components/Pagination";
 
 export default function Pending() {
     const navigate = useNavigate();
@@ -9,13 +10,21 @@ export default function Pending() {
     const [pendingForms, setPendingForms] = useState([]);
     const [loading, setLoading] = useState(true);
 
+    // Pagination state
+    const [currentPage, setCurrentPage] = useState(0);
+    const [totalPages, setTotalPages] = useState(0);
+    const [totalElements, setTotalElements] = useState(0);
+    const [isFirst, setIsFirst] = useState(true);
+    const [isLast, setIsLast] = useState(true);
+    const pageSize = 10;
+
     useEffect(() => {
         if (isLoaded) {
-            loadPendingForms();
+            loadPendingForms(currentPage);
         }
-    }, [isLoaded]);
+    }, [isLoaded, currentPage]);
 
-    const loadPendingForms = async () => {
+    const loadPendingForms = async (page) => {
         setLoading(true);
         try {
             // Construct profile object for service with required IDs
@@ -27,18 +36,34 @@ export default function Pending() {
                 departmentId: getDepartmentId()
             };
 
-            const response = await feedbackService.getMyFeedbackForms(userContext);
-            const formsData = response?.data || [];
+            const response = await feedbackService.getMyFeedbackForms(userContext, page, pageSize);
 
-            // Filter only pending forms (not submitted)
-            const pending = formsData.filter(f => !f.has_submitted);
-            setPendingForms(pending);
+            // Handle paginated response
+            if (response?.data?.content) {
+                console.log(response.data.content);
+                // Filter only pending forms (not submitted)
+                const pending = response.data.content.filter(f => !f.has_submitted);
+                setPendingForms(pending);
+
+                // Update pagination state
+                setTotalPages(response.data.total_pages || 0);
+                setTotalElements(response.data.total_elements || 0);
+                setCurrentPage(response.data.number || 0);
+                setIsFirst(response.data.first !== undefined ? response.data.first : true);
+                setIsLast(response.data.last !== undefined ? response.data.last : true);
+            } else {
+                setPendingForms([]);
+            }
         } catch (error) {
             console.error('Error loading pending forms:', error);
             setPendingForms([]);
         } finally {
             setLoading(false);
         }
+    };
+
+    const handlePageChange = (newPage) => {
+        setCurrentPage(newPage);
     };
 
     const handleFillForm = (formId) => {
@@ -57,7 +82,7 @@ export default function Pending() {
         <div className="space-y-4">
             <div className="flex justify-between items-center mb-4">
                 <h3 className="text-lg font-semibold text-gray-800">Pending Feedback Forms</h3>
-                <span className="text-sm text-gray-500">{pendingForms.length} form(s)</span>
+                <span className="text-sm text-gray-500">{totalElements} form(s)</span>
             </div>
 
             {pendingForms.length === 0 ? (
@@ -81,38 +106,50 @@ export default function Pending() {
                     <p className="text-gray-400 text-xs mt-1">You're all caught up!</p>
                 </div>
             ) : (
-                <div className="grid gap-4">
-                    {pendingForms.map((form) => (
-                        <div
-                            key={form.feedback_form_id}
-                            className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow"
-                        >
-                            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
-                                <div className="flex-1">
-                                    <h4 className="font-medium text-gray-900">{form.form_name}</h4>
-                                    <p className="text-sm text-gray-500 mt-1">Code: {form.code || 'N/A'}</p>
-                                    <div className="flex items-center gap-4 mt-3">
-                                        <span className="text-xs text-gray-400">
-                                            <i className="bi bi-calendar-event mr-1"></i>
-                                            Start: {form.start_date || 'N/A'}
-                                        </span>
-                                        <span className="text-xs text-gray-400">
-                                            <i className="bi bi-calendar-x mr-1"></i>
-                                            End: {form.end_date || 'N/A'}
-                                        </span>
+                <>
+                    <div className="grid gap-4">
+                        {pendingForms.map((form) => (
+                            <div
+                                key={form.feedback_form_id}
+                                className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow"
+                            >
+                                <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+                                    <div className="flex-1">
+                                        <h4 className="font-medium text-gray-900">{form.form_name}</h4>
+                                        <p className="text-sm text-gray-500 mt-1">Code: {form.code || 'N/A'}</p>
+                                        <div className="flex items-center gap-4 mt-3">
+                                            <span className="text-xs text-gray-400">
+                                                <i className="bi bi-calendar-event mr-1"></i>
+                                                Start: {form.start_date || 'N/A'}
+                                            </span>
+                                            <span className="text-xs text-gray-400">
+                                                <i className="bi bi-calendar-x mr-1"></i>
+                                                End: {form.end_date || 'N/A'}
+                                            </span>
+                                        </div>
                                     </div>
+                                    <button
+                                        onClick={() => handleFillForm(form.feedback_form_id)}
+                                        className="px-4 py-2 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 transition-colors whitespace-nowrap self-start sm:self-auto flex items-center gap-2"
+                                    >
+                                        <i className="bi bi-pencil-square"></i>
+                                        Fill Form
+                                    </button>
                                 </div>
-                                <button
-                                    onClick={() => handleFillForm(form.feedback_form_id)}
-                                    className="px-4 py-2 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 transition-colors whitespace-nowrap self-start sm:self-auto flex items-center gap-2"
-                                >
-                                    <i className="bi bi-pencil-square"></i>
-                                    Fill Form
-                                </button>
                             </div>
-                        </div>
-                    ))}
-                </div>
+                        ))}
+                    </div>
+
+                    {/* Pagination Component */}
+                    <Pagination
+                        currentPage={currentPage}
+                        totalPages={totalPages}
+                        totalElements={totalElements}
+                        onPageChange={handlePageChange}
+                        isFirst={isFirst}
+                        isLast={isLast}
+                    />
+                </>
             )}
         </div>
     );

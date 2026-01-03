@@ -49,9 +49,11 @@ export const feedbackService = {
 /**
  * Get feedback forms assigned to logged-in user
  * @param {Object} userProfile - User profile data
- * @returns {Promise<Array>} List of assigned feedback forms
+ * @param {number} page - Page number (0-indexed)
+ * @param {number} size - Page size (default 10)
+ * @returns {Promise<Object>} Paginated list of assigned feedback forms
  */
-async function getMyFeedbackForms(userProfile) {
+async function getMyFeedbackForms(userProfile, page = 0, size = 10) {
     try {
         const requestOptions = { method: 'GET', headers: authHeader() };
 
@@ -62,6 +64,8 @@ async function getMyFeedbackForms(userProfile) {
         const params = new URLSearchParams({
             userId: userId,
             userType: userType === 'TEACHER' ? 'Teacher' : userType, // Normalize for backend
+            page: page.toString(),
+            size: size.toString()
         });
 
         if (userType === 'TEACHER') {
