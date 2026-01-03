@@ -1,78 +1,33 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { feedbackService } from "@/_services/feedbackService";
-import { TeacherService } from "../Teacher.Service";
+import { useUserProfile } from "@/contexts/UserProfileContext";
 
 export default function MySubmitted() {
     const navigate = useNavigate();
+    const { profile, isLoaded, getUserId, getUserType, getDepartmentId } = useUserProfile();
     const [submittedForms, setSubmittedForms] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [userProfile, setUserProfile] = useState(null);
 
     useEffect(() => {
-        loadUserProfile();
-    }, []);
-
-    useEffect(() => {
-        if (userProfile) {
+        if (isLoaded) {
             loadSubmittedForms();
         }
-    }, [userProfile]);
-
-    const loadUserProfile = async () => {
-        const storedProfile = localStorage.getItem('userProfile');
-        const contentFilters = localStorage.getItem('contentDashboardFilters');
-
-        if (storedProfile) {
-            let profile = JSON.parse(storedProfile);
-            const teacherId = profile?.teacher_id || profile?.user?.user_id;
-
-            if (teacherId) {
-                try {
-                    const response = await TeacherService.getTeacherAllocatedPrograms(teacherId);
-                    // Handle response structure (can be {success: true, data: ...} or direct data)
-                    const data = response?.data || response;
-                    const allocations = [...(data?.class_teacher_allocation || []), ...(data?.normal_allocation || [])];
-
-                    if (allocations.length > 0) {
-                        const activeAllocation = allocations[0]; // Using first allocation as primary context
-                        profile = {
-                            ...profile,
-                            academicYearId: activeAllocation.academic_year_id,
-                            semesterId: activeAllocation.semester_id,
-                            programId: activeAllocation.program_id,
-                            batchId: activeAllocation.batch_id,
-                            divisionId: activeAllocation.division_id,
-                            departmentId: activeAllocation.department_id
-                        };
-                    }
-                } catch (error) {
-                    console.error('Error fetching teacher allocations:', error);
-                }
-            }
-
-            // Merge filters from content dashboard if they exist
-            if (contentFilters) {
-                const filters = JSON.parse(contentFilters);
-                profile = {
-                    ...profile,
-                    programId: filters.program || profile.programId,
-                    batchId: filters.batch || profile.batchId,
-                    semesterId: filters.semester || profile.semesterId,
-                    academicYearId: filters.academicYear || profile.academicYearId
-                };
-            }
-
-            setUserProfile(profile);
-        } else {
-            console.error('User profile not found');
-        }
-    };
+    }, [isLoaded]);
 
     const loadSubmittedForms = async () => {
         setLoading(true);
         try {
-            const response = await feedbackService.getMyFeedbackForms(userProfile);
+            // Construct profile object for service with required IDs
+            const userContext = {
+                user: {
+                    user_id: getUserId(),
+                    user_type: getUserType()
+                },
+                departmentId: getDepartmentId()
+            };
+
+            const response = await feedbackService.getMyFeedbackForms(userContext);
             const formsData = response?.data || [];
 
             // Filter only submitted forms

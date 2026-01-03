@@ -53,22 +53,29 @@ export const feedbackService = {
  */
 async function getMyFeedbackForms(userProfile) {
     try {
-        console.log(userProfile);
-
         const requestOptions = { method: 'GET', headers: authHeader() };
+
+        const userType = (userProfile?.user?.user_type || userProfile?.userType || '').toUpperCase();
+        const userId = userProfile?.user?.user_id || userProfile?.userId;
 
         // Build query string
         const params = new URLSearchParams({
-            userId: userProfile?.user?.user_id,
-            userType: userProfile?.user?.user_type,
+            userId: userId,
+            userType: userType === 'TEACHER' ? 'Teacher' : userType, // Normalize for backend
         });
 
-        if (userProfile.programId) params.append('programId', userProfile.programId);
-        if (userProfile.batchId) params.append('batchId', userProfile.batchId);
-        if (userProfile.semesterId) params.append('semesterId', userProfile.semesterId);
-        if (userProfile.departmentId) params.append('departmentId', userProfile.departmentId);
-        if (userProfile.academicYearId) params.append('academicYearId', userProfile.academicYearId);
-        if (userProfile.divisionId) params.append('divisionId', userProfile.divisionId);
+        if (userType === 'TEACHER') {
+            // For teachers, only send departmentId as requested
+            if (userProfile.departmentId) params.append('departmentId', userProfile.departmentId);
+        } else {
+            // For others (Students, Parents, etc.), send all filters
+            if (userProfile.programId) params.append('programId', userProfile.programId);
+            if (userProfile.batchId) params.append('batchId', userProfile.batchId);
+            if (userProfile.semesterId) params.append('semesterId', userProfile.semesterId);
+            if (userProfile.departmentId) params.append('departmentId', userProfile.departmentId);
+            if (userProfile.academicYearId) params.append('academicYearId', userProfile.academicYearId);
+            if (userProfile.divisionId) params.append('divisionId', userProfile.divisionId);
+        }
 
         const url = `${AcademicAPI}/admin/academic/feedback/my-forms?${params.toString()}`;
         const response = await fetch(url, requestOptions);

@@ -1,27 +1,22 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { feedbackService } from "@/_services/feedbackService";
+import { useUserProfile } from "@/contexts/UserProfileContext";
 
 export default function FillFeedbackForm() {
     const { formId } = useParams();
     const navigate = useNavigate();
+    const { isLoaded, getUserId, getUserType } = useUserProfile();
     const [form, setForm] = useState(null);
     const [loading, setLoading] = useState(true);
     const [submitting, setSubmitting] = useState(false);
     const [answers, setAnswers] = useState({});
-    const [userProfile, setUserProfile] = useState(null);
 
     useEffect(() => {
-        loadUserProfile();
-        loadForm();
-    }, [formId]);
-
-    const loadUserProfile = () => {
-        const storedProfile = localStorage.getItem('userProfile');
-        if (storedProfile) {
-            setUserProfile(JSON.parse(storedProfile));
+        if (isLoaded) {
+            loadForm();
         }
-    };
+    }, [formId, isLoaded]);
 
     const loadForm = async () => {
         setLoading(true);
@@ -67,10 +62,7 @@ export default function FillFeedbackForm() {
     const handleSubmit = async (e) => {
         e.preventDefault();
 
-        if (!userProfile) {
-            alert('User profile not found. Please login again.');
-            return;
-        }
+
 
         // Validate required questions
         const unansweredRequired = [];
@@ -95,8 +87,8 @@ export default function FillFeedbackForm() {
         try {
             const submissionData = {
                 feedback_form_id: parseInt(formId),
-                user_id: userProfile?.user?.user_id,
-                user_type: userProfile?.user?.user_type,
+                user_id: getUserId(),
+                user_type: getUserType(),
                 answers: Object.values(answers).map(a => ({
                     question_id: a.questionId,
                     answer_text: a.answerText,
