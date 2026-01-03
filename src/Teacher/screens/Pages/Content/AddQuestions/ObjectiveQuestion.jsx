@@ -1,7 +1,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { ChevronDown } from 'lucide-react';
-// import { Editor } from "react-editor";
+import { Editor } from "react-editor";
 import SweetAlert from 'react-bootstrap-sweetalert';
 import { collegeService } from '../services/college.service';
 import { contentService } from '../services/content.service.js';
