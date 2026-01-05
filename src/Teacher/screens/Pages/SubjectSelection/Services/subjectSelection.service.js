@@ -306,7 +306,7 @@ class SubjectSelectionService {
             }
 
             const requestOptions = { method: "GET", headers: authHeader() };
-            const url = `${AcademicAPI}/api/subjects/by-tab/${tabId}/academic-year/${academicYearId}/semester/${semesterId}${params.toString() ? `?${params.toString()}` : ''}`;
+            const url = `${AcademicAPI}/admin/academic/api/subjects/by-tab/${tabId}/academic-year/${academicYearId}/semester/${semesterId}${params.toString() ? `?${params.toString()}` : ''}`;
 
             console.log("Fetching subjects from:", url);
             const response = await fetch(url, requestOptions);
