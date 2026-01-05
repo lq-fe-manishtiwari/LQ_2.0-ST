@@ -257,26 +257,38 @@ const MyViewDashboard = () => {
                     <h3 className="text-base font-bold text-slate-800 mb-3">Subject Name</h3>
 
                     {/* Teacher and Room */}
-                    <div className="flex flex-col md:flex-row gap-4 md:gap-8">
-                        <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center shrink-0">
-                                <User size={14} className="text-slate-500" />
-                            </div>
-                            <div>
-                                <span className="text-xs text-slate-500">Teacher</span>
-                                <p className="text-sm font-medium">Teacher Name</p>
-                            </div>
-                        </div>
-                        <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center shrink-0">
-                                <Building2 size={14} className="text-slate-500" />
-                            </div>
-                            <div>
-                                <span className="text-xs text-slate-500">Room</span>
-                                <p className="text-sm font-medium">Classroom</p>
-                            </div>
-                        </div>
-                    </div>
+                  <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 md:gap-8">
+  <div className="flex flex-col md:flex-row gap-4 md:gap-8">
+    <div className="flex items-center gap-3">
+      <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center shrink-0">
+        <User size={14} className="text-slate-500" />
+      </div>
+      <div>
+        <span className="text-xs text-slate-500">Teacher</span>
+        <p className="text-sm font-medium">Teacher Name</p>
+      </div>
+    </div>
+    <div className="flex items-center gap-3">
+      <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center shrink-0">
+        <Building2 size={14} className="text-slate-500" />
+      </div>
+      <div>
+        <span className="text-xs text-slate-500">Room</span>
+        <p className="text-sm font-medium">Classroom</p>
+      </div>
+    </div>
+  </div>
+  {/* Right Side Update Button */}
+  <button
+    type="button"
+    onClick={() => navigate('/teacher/timetable/View-Upadate-Timetable')}
+    className="text-xs px-3 py-1 bg-orange-500 hover:bg-orange-600 text-white rounded-full flex items-center gap-1 transition whitespace-nowrap self-start md:self-center"
+  >
+    Update
+  </button>
+
+</div>
+
                 </div>
             </div>
         </div>
