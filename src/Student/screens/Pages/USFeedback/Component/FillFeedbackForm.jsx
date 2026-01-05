@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { feedbackService } from "@/_services/feedbackService";
+import SweetAlert from "react-bootstrap-sweetalert";
 
 export default function FillFeedbackForm() {
     const { formId } = useParams();
@@ -10,6 +11,7 @@ export default function FillFeedbackForm() {
     const [submitting, setSubmitting] = useState(false);
     const [answers, setAnswers] = useState({});
     const [userProfile, setUserProfile] = useState(null);
+    const [showSuccessAlert, setShowSuccessAlert] = useState(false);
 
     useEffect(() => {
         loadUserProfile();
@@ -109,8 +111,7 @@ export default function FillFeedbackForm() {
 
             console.log('Submitting feedback:', submissionData);
             await feedbackService.submitFeedbackResponse(submissionData);
-            alert('Feedback submitted successfully!');
-            navigate('../my-submitted');
+            setShowSuccessAlert(true);
         } catch (error) {
             console.error('Error submitting feedback:', error);
             alert(error?.message || 'Failed to submit feedback');
@@ -356,6 +357,21 @@ export default function FillFeedbackForm() {
                     </button>
                 </div>
             </form>
+
+            {/* Success Alert */}
+            {showSuccessAlert && (
+                <SweetAlert
+                    success
+                    title="Success!"
+                    onConfirm={() => {
+                        setShowSuccessAlert(false);
+                        navigate('../my-submitted');
+                    }}
+                    confirmBtnCssClass="btn-confirm"
+                >
+                    Feedback submitted successfully!
+                </SweetAlert>
+            )}
         </div>
     );
 }
