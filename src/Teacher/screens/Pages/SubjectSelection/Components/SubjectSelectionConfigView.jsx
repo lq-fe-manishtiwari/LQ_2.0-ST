@@ -38,7 +38,7 @@ const SubjectSelectionConfigView = ({
             subjectIds: (set.subjects || []).map(s => s.id || s.subject_id),
             subjectSetId: set.subject_set_id || null
         })) || [],
-        subject_set_id: existingConfig.subject_sets?.[0]?.subject_set_id || existingConfig.subject_set_id || existingConfig.id || null,
+        // subject_set_id: existingConfig.subject_sets?.[0]?.subject_set_id || existingConfig.subject_set_id || existingConfig.id || null,
     } : {
         subjectTypeId: subjectType?.id,
         verticalId: vertical?.id || null,
@@ -51,7 +51,7 @@ const SubjectSelectionConfigView = ({
         selectionType: "Same Set Only",
         numberOfSets: "",
         subjectSetRequest: [],
-        subject_set_id: null,
+        // subject_set_id: null,
     };
 
     const [config, setConfig] = useState(initialConfig);
@@ -68,7 +68,7 @@ const SubjectSelectionConfigView = ({
         e.preventDefault();
         const payload = {
             ...config,
-            subject_set_id: config.subject_set_id,
+            // subject_set_id: config.subject_set_id,
             subjectSetRequest: config.subjectSetRequest || []
         };
         onSave(payload);

@@ -523,7 +523,7 @@ export default function SubjectSelectionDashboard() {
 
                 // Subject sets
                 subjectSetRequest: configData.subjectSetRequest || [],
-                subjectSetId: configData.subject_set_id || null,
+                // subjectSetId: configData.subject_set_id || null,
 
                 // Other fields
                 selectionType: configData.selectionType || null,
@@ -549,7 +549,8 @@ export default function SubjectSelectionDashboard() {
                     subject_set_name: set.setName,
                     subject_ids: set.subjectIds,
                     selection_type: completePayload.selectionType || null,
-                    subject_set_id: completePayload.subjectSetId || null,
+                    // subject_set_id: completePayload.subjectSetId || null,
+                    subject_set_id: set.subjectSetId || null,
                 }))
             };
 
