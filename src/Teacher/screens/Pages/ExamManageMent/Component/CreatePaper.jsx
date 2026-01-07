@@ -51,23 +51,20 @@ const CreatePaper = ({ dutyId, examSchedule, subjectId, subjectName, onClose }) 
 
   // Auto-fill tool name, start/end time, and duration directly from props
   useEffect(() => {
+    console.log('examSchedule in CreatePaper:', examSchedule);
+    console.log('subjectId in CreatePaper:', subjectId);
+    
     if (!examSchedule || !subjectId) return;
 
     // Tool name / ID
-    if (examSchedule.tool?.toolId) {
-      setFormData((prev) => ({
-        ...prev,
-        exam_tool_id: examSchedule.tool.toolId,
-      }));
-      setSelectedToolName(examSchedule.tool.toolName || "Theory");
-    } else {
-      setSelectedToolName(examSchedule.examToolTypeName || "Theory");
-    }
+    setSelectedToolName(examSchedule.examToolTypeName || "Theory");
 
     // Find the course that matches the selected subject
     const matchingCourse = examSchedule.courses?.find(
-      (course) => Number(course.subjectId) === Number(subjectId)
+      (course) => String(course.subjectId) === String(subjectId)
     );
+
+    console.log('matchingCourse found:', matchingCourse);
 
     if (matchingCourse) {
       const start = toDateTimeLocal(matchingCourse.startExamDateTime);
@@ -166,15 +163,19 @@ const CreatePaper = ({ dutyId, examSchedule, subjectId, subjectName, onClose }) 
 
     setLoading(true);
     try {
+      const activeCollege = JSON.parse(localStorage.getItem("activeCollege"));
+      const collegeId = activeCollege?.id;
+
       const paperData = {
         paper_name: formData.paper_name,
         paper_description: formData.paper_description,
-        exam_schedule_id: formData.exam_schedule_id,
-        subject_id: formData.subject_id,
-        exam_tool_id: formData.exam_tool_id,
+        exam_schedule_id: Number(formData.exam_schedule_id),
+        subject_id: Number(formData.subject_id),
+        exam_tool_id: Number(formData.exam_tool_id || 1),
+        college_id: Number(collegeId),
         start_date_time: formData.start_date_time,
         end_date_time: formData.end_date_time,
-        exam_duration: formData.exam_duration,
+        exam_duration: Number(formData.exam_duration),
         remark: formData.remark,
         min_marks: Number(formData.min_marks),
         max_marks: Number(formData.max_marks),
@@ -182,7 +183,6 @@ const CreatePaper = ({ dutyId, examSchedule, subjectId, subjectName, onClose }) 
           section_name: sec.section_name,
           total_marks: Number(sec.total_marks),
           questions: sec.questions,
-          selectedQuestions: sec.selectedQuestions,
         })),
       };
 
@@ -522,4 +522,4 @@ const CreatePaper = ({ dutyId, examSchedule, subjectId, subjectName, onClose }) 
   );
 };
 
-export default CreatePaper;
+export default CreatePaper; 
