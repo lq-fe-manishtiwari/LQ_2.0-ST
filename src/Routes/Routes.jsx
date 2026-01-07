@@ -21,7 +21,7 @@ import StudentRoutes from '../Student/screens/Routes/StudentRoutes.jsx';
 import ProfileRoutes from '../Student/screens/Pages/Profile/Routes/ProfileRoutes.jsx';
 import PMSRoutes from '../Teacher/screens/Pages/PerformanceManagementSystem/Routes/PMSRoutes.jsx';
 import ContentRoutes from '../Student/screens/Pages/Content/Routes/ContentRoutes.jsx';
-import ExamRoutes from '../Student/screens/Pages/Exam/Routes/ExamRoutes.jsx';
+// import ExamRoutes from '../Student/screens/Pages/Exam/Routes/ExamRoutes.jsx';
 import HRMRoutes from '../Teacher/screens/Pages/HRM/Routes/HRMRoute.jsx';
 import SubjectSelectionRoutes from "../Teacher/screens/Pages/SubjectSelection/Routes/SubjectSelectionRoutes.jsx";
 
@@ -143,7 +143,7 @@ function App() {
           }
         />
 
-<Route
+{/* <Route
           path="/Exam/*"
           element={
             <ProtectedRoute>
@@ -152,7 +152,7 @@ function App() {
               </StudentHomepage>
             </ProtectedRoute>
           }
-        />
+        /> */}
 
         <Route
           path="/pms/*"

@@ -22,8 +22,9 @@ const StudentRoutes = () => {
       <Route path="subject-selection" element={<SubjectSelectionPage />} />
       <Route path="alumini/*" element={<AluminiRoutes />} />
       <Route path="us-feedback/*" element={<USFeedbackRoutes />} />
+      <Route path="exam/*" element={<ExamRoutes />} />
       {/* Add more student pages */}
-      <Route path="Exam/*" element={<ExamRoutes />} />
+      
       
     </Routes>
   );
