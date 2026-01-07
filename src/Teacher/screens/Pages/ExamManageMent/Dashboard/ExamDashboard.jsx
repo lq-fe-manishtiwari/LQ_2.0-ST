@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import SweetAlert from "react-bootstrap-sweetalert";
 import { examgService } from "../../ExamManageMent/Services/Exam.service";
+import { fetchExamScheduleById } from "../Services/examSchedule.graphql.service";
 
 // 🔹 Local modal components
 import CreatePaper from "../Component/CreatePaper";
@@ -15,6 +16,8 @@ const ExamDashboard = () => {
   const [showMarksModal, setShowMarksModal] = useState(false);
   const [activeComponent, setActiveComponent] = useState(null);
   const [selectedDuty, setSelectedDuty] = useState(null);
+  const [selectedExamScheduleId, setSelectedExamScheduleId] = useState(null); // store schedule id
+  const [bulkData, setBulkData] = useState(null); // Data for BulkUpload
 
   const activeCollege = JSON.parse(localStorage.getItem("activeCollege"));
   const collegeId = activeCollege?.id;
@@ -41,8 +44,9 @@ const ExamDashboard = () => {
     dateStr ? new Date(dateStr).toLocaleDateString() : "-";
 
   // 🔹 Handle Start button click
-  const handleAction = (duty) => {
+  const handleAction = (duty, examScheduleId) => {
     setSelectedDuty(duty);
+    setSelectedExamScheduleId(examScheduleId); // store exam schedule id
 
     switch (duty.duty_type) {
       case "CREATE_PAPERS":
@@ -62,10 +66,55 @@ const ExamDashboard = () => {
     }
   };
 
+  // 🔹 Handle Bulk Upload
+  const handleBulkUpload = async (examScheduleId) => {
+    if (!examScheduleId) {
+      console.error("Exam Schedule ID is missing!");
+      return;
+    }
+
+    try {
+      const response = await fetchExamScheduleById(examScheduleId);
+
+      if (!response) {
+        console.error("No exam schedule found");
+        return;
+      }
+
+      // Map courses and other data to match BulkUpload component expectation
+      const bulkSchedule = {
+        examScheduleId: response.examScheduleId || response.exam_schedule_id,
+        examScheduleName: response.examScheduleName || response.exam_schedule_name,
+        startDate: response.startDate,
+        endDate: response.endDate,
+        academicYear: response.academicYear?.name,
+        semester: response.semester?.name,
+        division: response.division?.divisionName,
+        courses:
+          response.courses?.map((course) => ({
+            examScheduleCourseId: course.examScheduleCourseId || course.exam_schedule_course_id,
+            subjectId: course.subjectId || course.subject_id,
+            examDate: course.examDate,
+            startExamDateTime: course.startExamDateTime,
+            endExamDateTime: course.endExamDateTime,
+            currentStudentStrength: course.currentStudentStrength,
+            classrooms: course.classrooms || [],
+          })) || [],
+      };
+
+      setBulkData(bulkSchedule);
+      setActiveComponent("BULK_UPLOAD");
+    } catch (err) {
+      console.error("Failed to fetch exam schedule for bulk upload", err);
+    }
+  };
+
   const closeAll = () => {
     setActiveComponent(null);
     setShowMarksModal(false);
     setSelectedDuty(null);
+    setSelectedExamScheduleId(null);
+    setBulkData(null);
   };
 
   return (
@@ -99,48 +148,35 @@ const ExamDashboard = () => {
               </tr>
             ) : (
               exams.flatMap((item, examIndex) =>
-                item.teacher_subject_duties?.flatMap(
-                  (subject, subjectIndex) =>
-                    subject.duty_assignments?.map((duty, dutyIndex) => (
-                      <tr
-                        key={`${examIndex}-${subjectIndex}-${dutyIndex}`}
-                        className="border-t"
-                      >
-                        <td className="px-4 py-3">
-                          {item.exam_schedule_name}
-                        </td>
-
-                        <td className="px-4 py-3">
-                          {subject.subject_name}
-                        </td>
-
-                        <td className="px-4 py-3">
-                          {item.teacher_first_name}{" "}
-                          {item.teacher_last_name}
-                        </td>
-
-                        <td className="px-4 py-3">
-                          {formatDate(duty.start_date)}
-                        </td>
-
-                        <td className="px-4 py-3">
-                          {formatDate(duty.end_date)}
-                        </td>
-
-                        <td className="px-4 py-3">
-                          {duty.duty_type}
-                        </td>
-
-                        <td className="px-4 py-3">
-                          <button
-                            onClick={() => handleAction(duty)}
-                            className="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700"
-                          >
-                            Start
-                          </button>
-                        </td>
-                      </tr>
-                    ))
+                item.teacher_subject_duties?.flatMap((subject, subjectIndex) =>
+                  subject.duty_assignments?.map((duty, dutyIndex) => (
+                    <tr
+                      key={`${examIndex}-${subjectIndex}-${dutyIndex}`}
+                      className="border-t"
+                    >
+                      <td className="px-4 py-3">{item.exam_schedule_name}</td>
+                      <td className="px-4 py-3">{subject.subject_name}</td>
+                      <td className="px-4 py-3">
+                        {item.teacher_first_name} {item.teacher_last_name}
+                      </td>
+                      <td className="px-4 py-3">{formatDate(duty.start_date)}</td>
+                      <td className="px-4 py-3">{formatDate(duty.end_date)}</td>
+                      <td className="px-4 py-3">{duty.duty_type}</td>
+                      <td className="px-4 py-3">
+                        <button
+                          onClick={() =>
+                            handleAction(
+                              duty,
+                              item.exam_schedule_id || item.examScheduleId
+                            )
+                          }
+                          className="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700"
+                        >
+                          Start
+                        </button>
+                      </td>
+                    </tr>
+                  ))
                 )
               )
             )}
@@ -149,7 +185,7 @@ const ExamDashboard = () => {
       </div>
 
       {/* 🔵 MARKS ENTRY METHOD MODAL (SweetAlert) */}
-      {showMarksModal && (
+      {showMarksModal && selectedDuty && (
         <SweetAlert
           title="Marks Entry Method"
           showCancel
@@ -161,9 +197,11 @@ const ExamDashboard = () => {
             setShowMarksModal(false);
             setActiveComponent("MARKS_ENTRY");
           }}
-          onCancel={() => {
+          onCancel={async () => {
             setShowMarksModal(false);
-            setActiveComponent("BULK_UPLOAD");
+            await handleBulkUpload(
+              selectedDuty?.exam_schedule_id || selectedExamScheduleId
+            ); // pass directly
           }}
           onEscapeKey={closeAll}
           onOutsideClick={closeAll}
@@ -175,30 +213,34 @@ const ExamDashboard = () => {
       )}
 
       {/* 🔽 ACTIVE COMPONENTS */}
-      {activeComponent === "CREATE_PAPERS" && (
+      {activeComponent === "CREATE_PAPERS" && selectedDuty && (
         <CreatePaper
           dutyId={selectedDuty?.teacher_exam_duty_assignment_id}
+          examScheduleId={selectedExamScheduleId}
           onClose={closeAll}
         />
       )}
 
-      {activeComponent === "PAPER_REVALUATION" && (
+      {activeComponent === "PAPER_REVALUATION" && selectedDuty && (
         <Evaluation
           dutyId={selectedDuty?.teacher_exam_duty_assignment_id}
+          examScheduleId={selectedExamScheduleId}
           onClose={closeAll}
         />
       )}
 
-      {activeComponent === "MARKS_ENTRY" && (
+      {activeComponent === "MARKS_ENTRY" && bulkData && selectedDuty && (
         <MarksEntry
           dutyId={selectedDuty?.teacher_exam_duty_assignment_id}
+          examSchedule={bulkData} 
           onClose={closeAll}
         />
       )}
 
-      {activeComponent === "BULK_UPLOAD" && (
+      {activeComponent === "BULK_UPLOAD" && bulkData && selectedDuty && (
         <BulkUpload
           dutyId={selectedDuty?.teacher_exam_duty_assignment_id}
+          examSchedule={bulkData} // pass fetched schedule
           onClose={closeAll}
         />
       )}
