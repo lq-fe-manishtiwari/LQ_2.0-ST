@@ -13,7 +13,7 @@ export default function ExamRoutes() {
             <Route path="/" element={<Navigate to="dashboard" replace />} />
 
             <Route element={<ExamLayout/>}>
-                <Route path="/regularform" element={<ExamDashboard />} />
+                <Route path="/dashboard" element={<ExamDashboard />} />
                 {/* <Route path="pending" element={<Pending />} /> */}
             </Route>
 

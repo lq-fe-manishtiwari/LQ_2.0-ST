@@ -184,7 +184,7 @@ const StudentSidebar = ({ isOpen, toggle }) => {
         iconInactive: classInactive,
       },
       {
-        to: "/exam",
+        to: "/student/exam",
         label: "Examination",
         iconActive: classActive,
         iconInactive: classInactive,
