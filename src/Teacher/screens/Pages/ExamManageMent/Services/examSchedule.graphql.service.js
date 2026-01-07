@@ -59,10 +59,7 @@ const GET_EXAM_SCHEDULES_BY_COLLEGE_ID = gql`
         collegeId
         startDate
         endDate
-        tool {
-          toolId
-          toolName
-        }
+       examToolTypeName
         courses {
           examScheduleCourseId
           subjectId
@@ -70,6 +67,10 @@ const GET_EXAM_SCHEDULES_BY_COLLEGE_ID = gql`
           startExamDateTime
           endExamDateTime
           currentStudentStrength
+           tool {
+          toolId
+          toolName
+        }
           classrooms {
             examScheduleCourseClassroomId
             classroomId
@@ -111,10 +112,7 @@ const GET_EXAM_SCHEDULES_BY_ACADEMIC_YEAR = gql`
         collegeId
         startDate
         endDate
-        tool {
-          toolId
-          toolName
-        }
+       examToolTypeName
         courses {
           examScheduleCourseId
           subjectId
@@ -122,6 +120,10 @@ const GET_EXAM_SCHEDULES_BY_ACADEMIC_YEAR = gql`
           startExamDateTime
           endExamDateTime
           currentStudentStrength
+           tool {
+          toolId
+          toolName
+        }
           classrooms {
             examScheduleCourseClassroomId
             classroomId
@@ -170,10 +172,7 @@ const GET_EXAM_SCHEDULE_BY_ID = gql`
       collegeId
       startDate
       endDate
-      tool {
-        toolId
-        toolName
-      }
+      examToolTypeName
       courses {
         examScheduleCourseId
         subjectId
@@ -181,6 +180,10 @@ const GET_EXAM_SCHEDULE_BY_ID = gql`
         startExamDateTime
         endExamDateTime
         currentStudentStrength
+         tool {
+        toolId
+        toolName
+      }
         classrooms {
           classroomId
           teacherId
@@ -266,3 +269,7 @@ export const fetchExamScheduleById = async (examScheduleId) => {
 
   return parseScheduleDates(data.examSchedule);
 };
+
+
+
+// /api/admin/exam-tools/search?examType=INTERNAL&toolTypeNameId=1&subjectId=74
