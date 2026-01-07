@@ -17,6 +17,7 @@ const ExamDashboard = () => {
   const [activeComponent, setActiveComponent] = useState(null);
   const [selectedDuty, setSelectedDuty] = useState(null);
   const [selectedExamScheduleId, setSelectedExamScheduleId] = useState(null);
+  const [selectedSubject, setSelectedSubject] = useState(null)
   const [bulkData, setBulkData] = useState(null);
 
   const activeCollege = JSON.parse(localStorage.getItem("activeCollege"));
@@ -83,9 +84,10 @@ const ExamDashboard = () => {
   };
 
   // 🔹 Handle Start button click
-  const handleAction = (duty, examScheduleId) => {
+  const handleAction = (duty, examScheduleId, subject) => {
     setSelectedDuty(duty);
     setSelectedExamScheduleId(examScheduleId);
+    setSelectedSubject(subject);
 
     switch (duty.duty_type) {
       case "CREATE_PAPERS":
@@ -144,6 +146,7 @@ const ExamDashboard = () => {
     setShowMarksModal(false);
     setSelectedDuty(null);
     setSelectedExamScheduleId(null);
+    setSelectedSubject(null);
     setBulkData(null);
   };
 
@@ -197,7 +200,8 @@ const ExamDashboard = () => {
                           onClick={() =>
                             handleAction(
                               duty,
-                              item.exam_schedule_id || item.examScheduleId
+                              item.exam_schedule_id || item.examScheduleId,
+                              subject
                             )
                           }
                           className="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700"
@@ -245,6 +249,8 @@ const ExamDashboard = () => {
         <CreatePaper
           dutyId={selectedDuty?.teacher_exam_duty_assignment_id}
           examScheduleId={selectedExamScheduleId}
+          subjectId={selectedSubject?.subject_id}
+          subjectName={selectedSubject?.subject_name}
           onClose={closeAll}
         />
       )}
