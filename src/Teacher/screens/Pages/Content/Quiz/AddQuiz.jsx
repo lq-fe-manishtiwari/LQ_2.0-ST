@@ -432,6 +432,7 @@ export default function AddQuiz() {
           confirmBtnText="Yes"
           cancelBtnText="No"
           showCancel
+          cancelBtnCssClass="btn-cancel"
           confirmBtnCssClass="btn-confirm"
           onConfirm={() => {
             setAlert(null);
@@ -485,7 +486,7 @@ export default function AddQuiz() {
             {/* Academic Selection */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <CustomSelect
-                label="Program *"
+                label={<span>Program <span className="text-red-500">*</span></span>}
                 value={formData.program}
                 onChange={(e) => handleChange({ target: { name: 'program', value: e.target.value } })}
                 options={programs}
@@ -493,7 +494,7 @@ export default function AddQuiz() {
               />
 
               <CustomSelect
-                label="Academic Year - Semester *"
+                label={<span>Academic Year - Semester <span className="text-red-500">*</span></span>}
                 value={formData.semester}
                 onChange={(e) => handleChange({ target: { name: 'semester', value: e.target.value } })}
                 options={semesters}
@@ -513,7 +514,7 @@ export default function AddQuiz() {
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <CustomSelect
-                label="Paper *"
+                label={<span>Paper <span className="text-red-500">*</span></span>}
                 value={formData.paper}
                 onChange={(e) => handleChange({ target: { name: 'paper', value: e.target.value } })}
                 options={papers}
@@ -522,7 +523,7 @@ export default function AddQuiz() {
               />
 
               <CustomSelect
-                label="Module *"
+                label={<span>Module <span className="text-red-500">*</span></span>}
                 value={formData.module}
                 onChange={(e) => handleChange({ target: { name: 'module', value: e.target.value } })}
                 options={modules.map(m => ({ label: m.module_name, value: String(m.module_id) }))}
@@ -540,7 +541,7 @@ export default function AddQuiz() {
               />
             </div>
 
-            <label className="block mt-6 font-medium">Quiz Name *</label>
+            <label className="block mt-6 font-medium">Quiz Name <span className="text-red-500">*</span></label>
             <input
               type="text"
               name="quizName"
@@ -550,7 +551,7 @@ export default function AddQuiz() {
               placeholder="Enter Quiz Name"
             />
 
-            <label className="block font-medium">Duration (minutes) *</label>
+            <label className="block font-medium">Duration (minutes) <span className="text-red-500">*</span></label>
             <input
               type="number"
               name="duration"
@@ -561,7 +562,7 @@ export default function AddQuiz() {
 
             <div className="mb-6">
               <div className="flex items-center justify-between mb-4">
-                <label className="block font-medium">Select Questions *</label>
+                <label className="block font-medium">Select Questions <span className="text-red-500">*</span></label>
                 {questionsList.length > 0 && (
                   <div className="flex items-center gap-2">
                     <input

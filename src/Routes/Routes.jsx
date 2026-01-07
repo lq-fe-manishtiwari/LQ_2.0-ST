@@ -24,6 +24,7 @@ import ContentRoutes from '../Student/screens/Pages/Content/Routes/ContentRoutes
 import HRMRoutes from '../Teacher/screens/Pages/HRM/Routes/HRMRoute.jsx';
 import SubjectSelectionRoutes from '../Teacher/screens/Pages/SubjectSelection/Routes/SubjectSelectionRoutes.jsx';
 import TimeTableRoutes from '../Student/screens/Pages/TimeTable/Routes/TimeTableRoutes.jsx';
+import SubjectSelectionRoutes from '../Teacher/screens/Pages/SubjectSelection/Routes/SubjectSelectionRoutes.jsx'
 
 // ────── Route guards ──────
 const ProtectedRoute = ({ children }) => {
@@ -58,7 +59,7 @@ function App() {
           }
         />
 
-          <Route path="/admin-forgot-password" element={
+        <Route path="/admin-forgot-password" element={
           <PublicRoute>
             <AdminForgotPassword />
           </PublicRoute>
@@ -66,7 +67,7 @@ function App() {
 
         {/* ────── TEACHER ────── */}
         <Route path="/dashboard" element={<ProtectedRoute><TeacherHomepage><TeacherRoutes /></TeacherHomepage></ProtectedRoute>} />
-     {/* TEACHER – Class area (exact + any sub-page) */}
+        {/* TEACHER – Class area (exact + any sub-page) */}
         <Route
           path="/teacher/*"
           element={
@@ -77,11 +78,11 @@ function App() {
             </ProtectedRoute>
           }
         />
-          <Route
+        <Route
           path="/subject-selection/*"
           element={
-        
-              <ProtectedRoute>
+
+            <ProtectedRoute>
               <TeacherHomepage>
                 <SubjectSelectionRoutes />
               </TeacherHomepage>
@@ -126,7 +127,7 @@ function App() {
           element={
             <ProtectedRoute>
               <StudentHomepage>
-                <ProfileRoutes/>
+                <ProfileRoutes />
               </StudentHomepage>
             </ProtectedRoute>
           }
@@ -137,7 +138,7 @@ function App() {
           element={
             <ProtectedRoute>
               <StudentHomepage>
-                <TimeTableRoutes/>
+                <TimeTableRoutes />
               </StudentHomepage>
             </ProtectedRoute>
           }
@@ -148,7 +149,7 @@ function App() {
           element={
             <ProtectedRoute>
               <StudentHomepage>
-                <ContentRoutes/>
+                <ContentRoutes />
               </StudentHomepage>
             </ProtectedRoute>
           }
@@ -175,7 +176,7 @@ function App() {
           }
         />
 
-        
+
 
 
         {/* ────── FALLBACK ────── */}

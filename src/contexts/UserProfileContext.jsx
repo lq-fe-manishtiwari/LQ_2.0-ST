@@ -36,7 +36,7 @@ export const UserProfileProvider = ({ children }) => {
       // Check if user has a valid token
       const refreshToken = localStorage.getItem('refreshToken');
       const currentUser = localStorage.getItem('currentUser');
-      
+
       if (!refreshToken || !currentUser) {
         console.log('UserProfileProvider: No auth tokens found, skipping profile fetch');
         return;
@@ -45,7 +45,7 @@ export const UserProfileProvider = ({ children }) => {
       try {
         const parsedToken = JSON.parse(refreshToken);
         const parsedUser = JSON.parse(currentUser);
-        
+
         // Basic validation of token structure
         if (!parsedToken.token || !parsedUser.jti) {
           console.log('UserProfileProvider: Invalid auth tokens, skipping profile fetch');
@@ -87,6 +87,7 @@ export const UserProfileProvider = ({ children }) => {
     getUserId: () => userProfileService.getUserId(),
     getTeacherId: () => userProfileService.getTeacherId(),
     getCollegeId: () => userProfileService.getCollegeId(),
+    getDepartmentId: () => userProfileService.getDepartmentId(),
     getEmployeeId: () => userProfileService.getEmployeeId(),
     getFullName: () => userProfileService.getFullName(),
     getEmail: () => userProfileService.getEmail(),

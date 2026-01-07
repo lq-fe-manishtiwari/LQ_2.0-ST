@@ -9,6 +9,7 @@ import LeavesRoutes from "../Pages/StudentLeaves/Routes/LeavesRoutes.jsx";
 import SubjectSelectionPage from '../Pages/SubjectSelection/SubjectSelectionPage.jsx';
 import AluminiRoutes from '../Pages/Alumini/Routes/Routes.jsx';
 import TimeTableRoutes from '../Pages/TimeTable/Routes/TimeTableRoutes.jsx';
+import USFeedbackRoutes from '../Pages/USFeedback/Routes/USFeedbackRoutes.jsx';
 
 const StudentRoutes = () => {
   return (
@@ -21,11 +22,12 @@ const StudentRoutes = () => {
       <Route path="leaves/*" element={<LeavesRoutes />} />
       <Route path="subject-selection" element={<SubjectSelectionPage />} />
       <Route path="alumini/*" element={<AluminiRoutes />} />
+      <Route path="us-feedback/*" element={<USFeedbackRoutes />} />
       {/* Add more student pages */}
     </Routes>
   );
 };
 
-      
+
 
 export default StudentRoutes;

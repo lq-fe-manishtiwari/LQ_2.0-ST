@@ -125,13 +125,13 @@ const Sidebar = ({ isOpen, toggle }) => {
           "/student-view-project",
         ],
       },
-        {
-          to: "/subject-selection",
-          label: "Paper Selection",
-          iconActive: contentActive,
-          iconInactive: contentInactive,
-          match: ["/subject-selection"],
-        },
+      {
+        to: "/subject-selection",
+        label: "Paper Selection",
+        iconActive: contentActive,
+        iconInactive: contentInactive,
+        match: ["/subject-selection"],
+      },
       {
         to: "/teacher/assessments",
         label: "Assessment",
@@ -148,12 +148,12 @@ const Sidebar = ({ isOpen, toggle }) => {
         ],
       },
       {
-        to: "/teacher/feedback",
+        to: "/teacher/us-feedback",
         label: "Feedback",
         iconActive: assessmentActive,
         iconInactive: assessmentInactive,
         match: [
-          "/teacher/feedback",
+          "/teacher/us-feedback",
         ],
       },
       {
@@ -194,7 +194,7 @@ const Sidebar = ({ isOpen, toggle }) => {
         iconActive: classActive,
         iconInactive: classInactive,
       },
-    
+
       {
         to: "/teacher-library",
         label: "My Library",
@@ -215,7 +215,7 @@ const Sidebar = ({ isOpen, toggle }) => {
         match: [
           "/teacher/hrm",
         ],
-       },
+      },
       {
         to: "/teacher-certificate",
         label: "Certificate",
@@ -235,7 +235,7 @@ const Sidebar = ({ isOpen, toggle }) => {
         iconActive: classActive,
         iconInactive: classInactive,
       },
-       {
+      {
         to: "/teacher/leaves",
         label: "Leaves",
         iconActive: classActive,

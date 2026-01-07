@@ -1,8 +1,14 @@
 import React from 'react';
 import { X, AlertCircle } from 'lucide-react';
 
-export default function SelectionModal({ isOpen, onClose, onGoToSelection, tabName }) {
+export default function SelectionModal({ isOpen, onClose, onGoToSelection, tabName, startTime, endTime }) {
     if (!isOpen) return null;
+
+    // Format date and time
+    const formatDateTime = (dateString) => {
+        if (!dateString) return 'N/A';
+        return new Date(dateString).toLocaleString();
+    };
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
@@ -26,13 +32,19 @@ export default function SelectionModal({ isOpen, onClose, onGoToSelection, tabNa
 
                     {/* Title */}
                     <h3 className="text-xl font-bold text-gray-900 text-center mb-3">
-                        Selection Required
+                        Paper Selection Required
                     </h3>
 
                     {/* Message */}
                     <p className="text-gray-600 text-center mb-6 leading-relaxed">
                         You have a selection available in <span className="font-semibold text-blue-600">{tabName}</span>.
-                        Please complete your academic selection process within the timeline, then your content will unlock.
+                        Please complete your Paper selection process within the timeline, then your content will unlock.
+                        {(startTime || endTime) && (
+                            <span className="block mt-3 text-sm">
+                                {startTime && <span className="block">Start: <span className="font-medium text-gray-900">{formatDateTime(startTime)}</span></span>}
+                                {endTime && <span className="block mt-1">End: <span className="font-medium text-gray-900">{formatDateTime(endTime)}</span></span>}
+                            </span>
+                        )}
                     </p>
 
                     {/* Buttons */}

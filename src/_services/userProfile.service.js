@@ -8,7 +8,7 @@ class UserProfileService {
     this.subscribers = new Set();
     this.fetchPromise = null; // Track ongoing fetch promise
     this.hasFetched = false; // Track if we've already fetched once
-    
+
     // Initialize from localStorage on startup
     this._loadFromStorage();
   }
@@ -18,7 +18,7 @@ class UserProfileService {
     try {
       const storedProfile = localStorage.getItem('userProfile');
       const storedHasFetched = localStorage.getItem('userProfileFetched');
-      
+
       if (storedProfile && storedHasFetched === 'true') {
         this.userProfile = JSON.parse(storedProfile);
         this.hasFetched = true;
@@ -73,14 +73,14 @@ class UserProfileService {
     try {
       const refreshToken = localStorage.getItem('refreshToken');
       const currentUser = localStorage.getItem('currentUser');
-      
+
       if (!refreshToken || !currentUser) {
         return false;
       }
 
       const parsedToken = JSON.parse(refreshToken);
       const parsedUser = JSON.parse(currentUser);
-      
+
       return !!(parsedToken.token && parsedUser.jti);
     } catch (error) {
       console.error('Error checking authentication:', error);
@@ -114,7 +114,7 @@ class UserProfileService {
 
     // Create and store the fetch promise
     this.fetchPromise = this._performFetch();
-    
+
     try {
       const result = await this.fetchPromise;
       this.hasFetched = true;
@@ -132,20 +132,20 @@ class UserProfileService {
       this.userProfile = profileData;
       this.loading = false;
       this.error = null;
-      
+
       // Save to localStorage
       this._saveToStorage();
-      
+
       console.log('User profile fetched successfully:', profileData);
       this.notify();
-      
+
       return { profile: profileData, loading: false, error: null };
     } catch (error) {
       console.error('Failed to fetch user profile:', error);
       this.loading = false;
       this.error = error.message || 'Failed to fetch user profile';
       this.notify();
-      
+
       return { profile: null, loading: false, error: this.error };
     }
   }
@@ -155,7 +155,7 @@ class UserProfileService {
     return this.userProfile?.user?.user_id || this.userProfile?.teacher_id || null;
   }
   getStudentId() {
-  return this.userProfile?.student_id || null;
+    return this.userProfile?.student_id || null;
   }
   getTeacherId() {
     return this.userProfile?.teacher_id || null;
@@ -163,6 +163,10 @@ class UserProfileService {
 
   getCollegeId() {
     return this.userProfile?.college_id || null;
+  }
+
+  getDepartmentId() {
+    return this.userProfile?.department_id || this.userProfile?.department?.department_id || null;
   }
 
   getEmployeeId() {
@@ -209,6 +213,7 @@ class UserProfileService {
       studentId: this.getStudentId(),
       teacherId: this.getTeacherId(),
       collegeId: this.getCollegeId(),
+      departmentId: this.getDepartmentId(),
       employeeId: this.getEmployeeId()
     };
   }
@@ -220,11 +225,11 @@ class UserProfileService {
     this.error = null;
     this.hasFetched = false;
     this.fetchPromise = null;
-    
+
     // Clear from localStorage
     localStorage.removeItem('userProfile');
     localStorage.removeItem('userProfileFetched');
-    
+
     this.notify();
   }
 
@@ -250,7 +255,7 @@ class UserProfileService {
     this.fetchPromise = null;
     this.loading = false;
     this.error = null;
-    
+
     // Fetch profile now that user is authenticated
     return await this.fetchProfile();
   }
