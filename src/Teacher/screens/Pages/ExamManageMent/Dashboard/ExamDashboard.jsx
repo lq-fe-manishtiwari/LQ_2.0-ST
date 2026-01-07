@@ -83,26 +83,73 @@ const ExamDashboard = () => {
     }
   };
 
-  // 🔹 Handle Start button click
-  const handleAction = (duty, examScheduleId, subject) => {
-    setSelectedDuty(duty);
-    setSelectedExamScheduleId(examScheduleId);
-    setSelectedSubject(subject);
 
-    switch (duty.duty_type) {
-      case "CREATE_PAPERS":
-        setActiveComponent("CREATE_PAPERS");
-        break;
-      case "PAPER_REVALUATION":
-        setActiveComponent("PAPER_REVALUATION");
-        break;
-      case "MARKS_ENTRY":
-        setShowMarksModal(true);
-        break;
-      default:
-        break;
-    }
-  };
+  const fetchAndSetSchedule = async (examScheduleId, component) => {
+  if (!examScheduleId) return;
+
+  setLoading(true);
+  try {
+    const response = await fetchExamScheduleById(examScheduleId);
+    if (!response) throw new Error("Exam schedule not found");
+
+    const schedule = {
+      examScheduleId: response.examScheduleId || response.exam_schedule_id,
+      examScheduleName: response.examScheduleName || response.exam_schedule_name,
+      startDate: response.startDate,
+      endDate: response.endDate,
+      academicYear: response.academicYear?.name,
+      semester: response.semester?.name,
+      division: response.division?.divisionName,
+      examToolTypeName:response.examToolTypeName,
+      examTypeId:response.examTypeId,
+      courses:
+        response.courses?.map(course => ({
+          examScheduleCourseId:
+            course.examScheduleCourseId || course.exam_schedule_course_id,
+          subjectId: course.subjectId || course.subject_id,
+          examDate: course.examDate,
+          startExamDateTime: course.startExamDateTime,
+          endExamDateTime: course.endExamDateTime,
+          currentStudentStrength: course.currentStudentStrength,
+          classrooms: course.classrooms || [],
+        })) || [],
+    };
+
+    setBulkData(schedule);
+    setActiveComponent(component);
+  } catch (err) {
+    console.error("Failed to fetch exam schedule", err);
+  } finally {
+    setLoading(false);
+  }
+};
+
+  // 🔹 Handle Start button click
+ const handleAction = async (duty, examScheduleId, subject) => {
+  setSelectedDuty(duty);
+  setSelectedExamScheduleId(examScheduleId);
+  setSelectedSubject(subject);
+
+  switch (duty.duty_type) {
+    case "CREATE_PAPERS":
+      await fetchAndSetSchedule(examScheduleId, "CREATE_PAPERS");
+      break;
+
+    case "PAPER_REVALUATION":
+      setActiveComponent("PAPER_REVALUATION");
+      break;
+
+    case "MARKS_ENTRY":
+      setShowMarksModal(true);
+      break;
+
+    default:
+      break;
+  }
+};
+
+
+
 
   // 🔹 Handle Bulk Upload
   const handleBulkUpload = async (examScheduleId) => {
@@ -227,14 +274,14 @@ const ExamDashboard = () => {
           cancelBtnText="Bulk Upload"
           confirmBtnCssClass="bg-blue-600 text-white px-4 py-2 rounded"
           cancelBtnCssClass="bg-green-600 text-white px-4 py-2 rounded"
-          onConfirm={async () => {
-            setShowMarksModal(false);
-            await fetchSchedule(selectedExamScheduleId); // individual
-          }}
+         onConfirm={async () => {
+  setShowMarksModal(false);
+  await fetchAndSetSchedule(selectedExamScheduleId, "MARKS_ENTRY");
+}}
           onCancel={async () => {
-            setShowMarksModal(false);
-            await handleBulkUpload(selectedExamScheduleId); // bulk
-          }}
+  setShowMarksModal(false);
+  await fetchAndSetSchedule(selectedExamScheduleId, "BULK_UPLOAD");
+}}
           onEscapeKey={closeAll}
           onOutsideClick={closeAll}
         >
@@ -245,15 +292,16 @@ const ExamDashboard = () => {
       )}
 
       {/* 🔽 ACTIVE COMPONENTS */}
-      {activeComponent === "CREATE_PAPERS" && selectedDuty && (
-        <CreatePaper
-          dutyId={selectedDuty?.teacher_exam_duty_assignment_id}
-          examScheduleId={selectedExamScheduleId}
-          subjectId={selectedSubject?.subject_id}
-          subjectName={selectedSubject?.subject_name}
-          onClose={closeAll}
-        />
-      )}
+      {activeComponent === "CREATE_PAPERS" && bulkData && selectedDuty && (
+  <CreatePaper
+    dutyId={selectedDuty.teacher_exam_duty_assignment_id}
+    examSchedule={bulkData}
+    subjectId={selectedSubject?.subject_id}
+    subjectName={selectedSubject?.subject_name}
+    onClose={closeAll}
+  />
+)}
+
 
       {activeComponent === "PAPER_REVALUATION" && selectedDuty && (
         <Evaluation

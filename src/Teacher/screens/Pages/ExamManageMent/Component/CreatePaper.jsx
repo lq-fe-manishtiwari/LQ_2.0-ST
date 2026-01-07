@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from "react";
 import { Plus, Trash2 } from "lucide-react";
-import { fetchExamScheduleById } from "../Services/examSchedule.graphql.service";
 import { examPaperService } from "../Services/ExamPaper.Service";
 
 const HARD_CODED_QUESTIONS = [
@@ -21,7 +20,7 @@ const HARD_CODED_QUESTIONS = [
   },
 ];
 
-const CreatePaper = ({ dutyId, examScheduleId, subjectId, subjectName, onClose }) => {
+const CreatePaper = ({ dutyId, examSchedule, subjectId, subjectName, onClose }) => {
   const [sections, setSections] = useState([]);
   const [showPreview, setShowPreview] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -29,7 +28,7 @@ const CreatePaper = ({ dutyId, examScheduleId, subjectId, subjectName, onClose }
   const [formData, setFormData] = useState({
     paper_name: "",
     paper_description: "",
-    exam_schedule_id: examScheduleId || "",
+    exam_schedule_id: examSchedule?.examScheduleId || "",
     subject_id: subjectId || "",
     exam_tool_id: "",
     start_date_time: "",
@@ -40,52 +39,59 @@ const CreatePaper = ({ dutyId, examScheduleId, subjectId, subjectName, onClose }
     max_marks: "",
   });
 
-  const [examScheduleData, setExamScheduleData] = useState(null);
-  const [apiLoading, setApiLoading] = useState(false);
-
   const [selectedToolName, setSelectedToolName] = useState("");
 
-  // Load exam schedule data
+  // Helper to format datetime for <input type="datetime-local">
+  const toDateTimeLocal = (dateInput) => {
+    if (!dateInput) return "";
+    const date = new Date(dateInput);
+    if (isNaN(date.getTime())) return "";
+    return date.toISOString().slice(0, 16); // "YYYY-MM-DDTHH:mm"
+  };
+
+  // Auto-fill tool name, start/end time, and duration directly from props
   useEffect(() => {
-    const fetchScheduleData = async () => {
-      if (!examScheduleId) return;
+    if (!examSchedule || !subjectId) return;
 
-      setApiLoading(true);
-      try {
-        const response = await fetchExamScheduleById(examScheduleId);
-        if (response) {
-          const scheduleData = {
-            examScheduleId: response.examScheduleId,
-            examScheduleName: response.examScheduleName,
-            academicYear: response.academicYear,
-            semester: response.semester,
-            division: response.division,
-            tool: response.tool,
-            courses: response.courses?.map(course => ({
-              examScheduleCourseId: course.examScheduleCourseId,
-              subjectId: course.subjectId,
-              subjectName: course.subject?.subjectName || `Subject ${course.subjectId}`,
-              examDate: course.examDate,
-              startExamDateTime: course.startExamDateTime,
-              endExamDateTime: course.endExamDateTime
-            })) || []
-          };
-          setExamScheduleData(scheduleData);
-        }
-      } catch (error) {
-        console.error('Failed to fetch exam schedule:', error);
-      } finally {
-        setApiLoading(false);
+    // Tool name / ID
+    if (examSchedule.tool?.toolId) {
+      setFormData((prev) => ({
+        ...prev,
+        exam_tool_id: examSchedule.tool.toolId,
+      }));
+      setSelectedToolName(examSchedule.tool.toolName || "Theory");
+    } else {
+      setSelectedToolName(examSchedule.examToolTypeName || "Theory");
+    }
+
+    // Find the course that matches the selected subject
+    const matchingCourse = examSchedule.courses?.find(
+      (course) => Number(course.subjectId) === Number(subjectId)
+    );
+
+    if (matchingCourse) {
+      const start = toDateTimeLocal(matchingCourse.startExamDateTime);
+      const end = toDateTimeLocal(matchingCourse.endExamDateTime);
+
+      let duration = "";
+      if (start && end) {
+        const diffMs = new Date(end) - new Date(start);
+        duration = (diffMs / (1000 * 60 * 60)).toFixed(1); // hours with 1 decimal
       }
-    };
 
-    fetchScheduleData();
-  }, [examScheduleId]);
+      setFormData((prev) => ({
+        ...prev,
+        start_date_time: start,
+        end_date_time: end,
+        exam_duration: duration,
+      }));
+    }
+  }, [examSchedule, subjectId]);
 
-  // Add Section
+  // Add a new section
   const addSection = () => {
     const newId = sections.length + 1;
-    const newLetter = String.fromCharCode(65 + sections.length);
+    const newLetter = String.fromCharCode(65 + sections.length); // A, B, C...
     setSections([
       ...sections,
       {
@@ -98,10 +104,12 @@ const CreatePaper = ({ dutyId, examScheduleId, subjectId, subjectName, onClose }
     ]);
   };
 
+  // Remove a section
   const removeSection = (id) => {
     setSections(sections.filter((sec) => sec.id !== id));
   };
 
+  // Update section fields
   const updateSection = (id, field, value) => {
     setSections(
       sections.map((section) =>
@@ -110,11 +118,13 @@ const CreatePaper = ({ dutyId, examScheduleId, subjectId, subjectName, onClose }
     );
   };
 
+  // Toggle question selection in a section
   const toggleQuestion = (sectionId, question) => {
     setSections((prev) =>
       prev.map((section) => {
         if (section.id !== sectionId) return section;
-        const exists = section.selectedQuestions.find((q) => q.id === question.id);
+
+        const exists = section.selectedQuestions.some((q) => q.id === question.id);
         return {
           ...section,
           selectedQuestions: exists
@@ -131,56 +141,7 @@ const CreatePaper = ({ dutyId, examScheduleId, subjectId, subjectName, onClose }
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  // Set tool when schedule data loads
-  useEffect(() => {
-    if (!examScheduleData) {
-      setSelectedToolName("");
-      return;
-    }
-    setFormData((prev) => ({
-      ...prev,
-      exam_tool_id: examScheduleData.tool?.toolId || "",
-    }));
-    setSelectedToolName(examScheduleData.tool?.toolName || "");
-  }, [examScheduleData]);
-
-  // Auto-fill dates & duration when subject selected
-  useEffect(() => {
-    if (!examScheduleData || !formData.subject_id) {
-      setFormData((prev) => ({
-        ...prev,
-        start_date_time: "",
-        end_date_time: "",
-        exam_duration: "",
-      }));
-      return;
-    }
-
-    const selectedCourse = examScheduleData.courses?.find(
-      (c) => Number(c.subjectId) === Number(formData.subject_id)
-    );
-
-    if (!selectedCourse) return;
-
-    const toDateTimeLocal = (iso) => (iso && typeof iso === 'string' ? iso.slice(0, 16) : "");
-
-    const start = toDateTimeLocal(selectedCourse.startExamDateTime);
-    const end = toDateTimeLocal(selectedCourse.endExamDateTime);
-
-    let duration = "";
-    if (start && end) {
-      const diffMs = new Date(end) - new Date(start);
-      duration = (diffMs / (1000 * 60 * 60)).toFixed(1);
-    }
-
-    setFormData((prev) => ({
-      ...prev,
-      start_date_time: start,
-      end_date_time: end,
-      exam_duration: duration,
-    }));
-  }, [examScheduleData, formData.subject_id]);
-
+  // Form validation
   const isFormValid = () => {
     return (
       formData.paper_name &&
@@ -195,14 +156,15 @@ const CreatePaper = ({ dutyId, examScheduleId, subjectId, subjectName, onClose }
     );
   };
 
+  // Submit handler
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!isFormValid()) {
       alert("Please fill all required fields.");
       return;
     }
-    setLoading(true);
 
+    setLoading(true);
     try {
       const paperData = {
         paper_name: formData.paper_name,
@@ -214,14 +176,14 @@ const CreatePaper = ({ dutyId, examScheduleId, subjectId, subjectName, onClose }
         end_date_time: formData.end_date_time,
         exam_duration: formData.exam_duration,
         remark: formData.remark,
-        min_marks: formData.min_marks,
-        max_marks: formData.max_marks,
-        sections: sections.map(sec => ({
+        min_marks: Number(formData.min_marks),
+        max_marks: Number(formData.max_marks),
+        sections: sections.map((sec) => ({
           section_name: sec.section_name,
           total_marks: Number(sec.total_marks),
           questions: sec.questions,
-          selectedQuestions: sec.selectedQuestions
-        }))
+          selectedQuestions: sec.selectedQuestions,
+        })),
       };
 
       await examPaperService.saveExampaper(paperData);
@@ -239,48 +201,32 @@ const CreatePaper = ({ dutyId, examScheduleId, subjectId, subjectName, onClose }
     <div className="fixed inset-0 bg-black bg-opacity-40 flex justify-center items-center z-50 overflow-y-auto">
       <div className="bg-gray-50 w-full max-w-5xl my-8 mx-4 rounded-xl shadow-2xl max-h-[95vh] overflow-y-auto">
         <div className="p-8">
-          {/* Exam Schedule Details Card - All fields in ONE ROW */}
-          {apiLoading ? (
-            <div className="bg-gray-50 rounded-lg p-4 mb-6 text-center">
-              <p className="text-gray-600">Loading exam schedule details...</p>
-            </div>
-          ) : examScheduleData && (
-            <div className="bg-blue-50 rounded-lg p-5 mb-8">
-              <h3 className="text-lg font-semibold text-blue-800 mb-4">Exam Schedule Details</h3>
-              <div className="flex flex-wrap items-center gap-6 text-sm">
-                <div className="flex items-center gap-2">
-                  <span className="font-medium text-gray-600">Exam Schedule:</span>
-                  <p className="text-gray-900 font-semibold">
-                    {examScheduleData.examScheduleName || "N/A"}
-                  </p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="font-medium text-gray-600">Subject:</span>
-                  <p className="text-gray-900 font-semibold">
-                    {subjectName || "N/A"}
-                  </p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="font-medium text-gray-600">Academic Year:</span>
-                  <p className="text-gray-800">
-                    {examScheduleData.academicYear?.name || "N/A"}
-                  </p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="font-medium text-gray-600">Semester:</span>
-                  <p className="text-gray-800">
-                    {examScheduleData.semester?.name || "N/A"}
-                  </p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="font-medium text-gray-600">Division:</span>
-                  <p className="text-gray-800">
-                    {examScheduleData.division?.divisionName || "N/A"}
-                  </p>
-                </div>
+          {/* Exam Schedule Details Card */}
+          <div className="bg-blue-50 rounded-lg p-5 mb-8">
+            <h3 className="text-lg font-semibold text-blue-800 mb-4">Exam Schedule Details</h3>
+            <div className="flex flex-wrap items-center gap-6 text-sm">
+              <div className="flex items-center gap-2">
+                <span className="font-medium text-gray-600">Exam Schedule:</span>
+                <p className="text-gray-900 font-semibold">{examSchedule?.examScheduleName || "N/A"}</p>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="font-medium text-gray-600">Subject:</span>
+                <p className="text-gray-900 font-semibold">{subjectName || "N/A"}</p>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="font-medium text-gray-600">Academic Year:</span>
+                <p className="text-gray-800">{examSchedule?.academicYear || "N/A"}</p>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="font-medium text-gray-600">Semester:</span>
+                <p className="text-gray-800">{examSchedule?.semester || "N/A"}</p>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="font-medium text-gray-600">Division:</span>
+                <p className="text-gray-800">{examSchedule?.division || "N/A"}</p>
               </div>
             </div>
-          )}
+          </div>
 
           <h2 className="text-2xl font-bold text-blue-800 mb-8">Create Question Paper</h2>
 
@@ -542,10 +488,14 @@ const CreatePaper = ({ dutyId, examScheduleId, subjectId, subjectName, onClose }
                       ) : (
                         section.selectedQuestions.map((q, idx) => (
                           <div key={q.id} className="mb-5">
-                            <p className="font-medium">{idx + 1}. {q.question}</p>
+                            <p className="font-medium">
+                              {idx + 1}. {q.question}
+                            </p>
                             <ul className="ml-6 mt-2 space-y-1">
                               {q.options.map((opt, i) => (
-                                <li key={i}>{String.fromCharCode(65 + i)}. {opt}</li>
+                                <li key={i}>
+                                  {String.fromCharCode(65 + i)}. {opt}
+                                </li>
                               ))}
                             </ul>
                           </div>
