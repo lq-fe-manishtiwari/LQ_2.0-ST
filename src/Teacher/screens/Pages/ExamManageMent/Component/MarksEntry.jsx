@@ -2,45 +2,57 @@ import React, { useState, useEffect } from "react";
 import SweetAlert from "react-bootstrap-sweetalert";
 import { examMarksEntryService } from "../Services/ExamMarksEntry.Service";
 
-export default function MarksEntry({ dutyId, examSchedule, onClose }) {
+export default function MarksEntry({
+  dutyId,
+  examSchedule,
+  subjectId,
+  subjectName,
+  onClose,
+}) {
   const [students, setStudents] = useState([]);
   const [marksData, setMarksData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [sweetAlert, setSweetAlert] = useState(null);
 
-  /* ----------------- Load Students ----------------- */
+  /* ----------------- Load Students & Existing Marks ----------------- */
   useEffect(() => {
     const fetchStudents = async () => {
-      if (!examSchedule?.examScheduleId) return;
+      if (!examSchedule?.examScheduleId || !subjectId) return;
 
       setLoading(true);
       try {
         const res = await examMarksEntryService.getMarksBySchedule(
-          examSchedule.examScheduleId
+          examSchedule.examScheduleId,
+          subjectId
         );
 
         const studentsList = res.data?.students || res.data || [];
 
+        // Sort by roll number
         studentsList.sort(
           (a, b) => parseInt(a.roll_number || 0) - parseInt(b.roll_number || 0)
         );
 
         setStudents(studentsList);
 
+        // Map students and extract marks from subject_marks[0] if exists
         setMarksData(
-          studentsList.map((s) => ({
-            student_id: s.student_id,
-            student_firstname: s.student_firstname || "",
-            student_middlename: s.student_middlename || "",
-            student_lastname: s.student_lastname || "",
-            roll_number: s.roll_number || "",
-            permanent_registration_number:
-              s.permanent_registration_number || "",
-            marks_obtained: s.marks_obtained ?? "",
-            attendance_status: s.attendance_status || "PRESENT",
-            exam_marks_id: s.exam_marks_id || null,
-          }))
+          studentsList.map((s) => {
+            const mark = s.subject_marks?.[0] || {}; // Get first (and only) subject mark
+
+            return {
+              student_id: s.student_id,
+              student_firstname: s.student_firstname || "",
+              student_middlename: s.student_middlename || "",
+              student_lastname: s.student_lastname || "",
+              roll_number: s.roll_number || "",
+              permanent_registration_number: s.permanent_registration_number || "",
+              marks_obtained: mark.marks_obtained ?? "", // Pre-fill if exists
+              attendance_status: mark.attendance_status || "PRESENT",
+              exam_marks_id: mark.exam_marks_id || null,
+            };
+          })
         );
       } catch (err) {
         console.error("Failed to load students", err);
@@ -52,9 +64,9 @@ export default function MarksEntry({ dutyId, examSchedule, onClose }) {
     };
 
     fetchStudents();
-  }, [examSchedule]);
+  }, [examSchedule?.examScheduleId, subjectId]);
 
-  /* ----------------- Handle Inline Change ----------------- */
+  /* ----------------- Handle Input Change ----------------- */
   const handleChange = (studentId, field, value) => {
     setMarksData((prev) =>
       prev.map((m) =>
@@ -63,7 +75,19 @@ export default function MarksEntry({ dutyId, examSchedule, onClose }) {
     );
   };
 
-  /* ----------------- Submit ----------------- */
+  /* ----------------- Enter Key Navigation ----------------- */
+  const handleMarksEnter = (e, index) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      const nextInput = document.querySelector(`input[data-index="${index + 1}"]`);
+      if (nextInput) {
+        nextInput.focus();
+        nextInput.select(); // Optional: select text for quick overwrite
+      }
+    }
+  };
+
+  /* ----------------- Submit Marks ----------------- */
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -81,7 +105,7 @@ export default function MarksEntry({ dutyId, examSchedule, onClose }) {
           title="No Marks Entered"
           onConfirm={() => setSweetAlert(null)}
         >
-          Please enter marks for at least one student.
+          Please enter or update marks for at least one student.
         </SweetAlert>
       );
       return;
@@ -92,7 +116,7 @@ export default function MarksEntry({ dutyId, examSchedule, onClose }) {
     try {
       const payload = filledMarks.map((s) => ({
         exam_schedule_id: examSchedule.examScheduleId,
-        subject_id: s.subject_id || null, // Optional if examSchedule has subject_id
+        subject_id: Number(subjectId),
         marks_obtained: Number(s.marks_obtained),
         attendance_status: s.attendance_status || "PRESENT",
         ...(s.exam_marks_id
@@ -122,7 +146,7 @@ export default function MarksEntry({ dutyId, examSchedule, onClose }) {
           title="Submission Failed"
           onConfirm={() => setSweetAlert(null)}
         >
-          Failed to submit marks. Please try again.
+          {err.response?.data?.message || "Failed to submit marks. Please try again."}
         </SweetAlert>
       );
     } finally {
@@ -134,101 +158,144 @@ export default function MarksEntry({ dutyId, examSchedule, onClose }) {
     <>
       {sweetAlert}
 
-      <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center">
-        <div className="bg-white w-[95%] max-w-6xl rounded-xl shadow-lg">
+      <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center overflow-y-auto">
+        <div className="bg-white w-[95%] max-w-6xl rounded-xl shadow-2xl my-8">
           {/* Header */}
-          <div className="p-6 bg-blue-700 text-white flex justify-between items-center">
-            <h2 className="text-xl font-bold">Marks Entry</h2>
-            <button onClick={onClose} className="text-2xl font-bold">
-              ×
-            </button>
+          <div className="p-6 bg-gradient-to-r from-blue-700 to-blue-800 text-white rounded-t-xl">
+            <div className="flex justify-between items-start">
+              <div>
+                <h2 className="text-2xl font-bold mb-4">Marks Entry</h2>
+
+                <div className="space-y-3 text-sm md:text-base">
+                  <div>
+                    <span className="font-semibold">Exam Schedule:</span>{" "}
+                    <span className="font-medium">
+                      {examSchedule?.examScheduleName || "N/A"}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="font-semibold">Paper:</span>{" "}
+                    <span className="font-medium text-lg">{subjectName || "N/A"}</span>
+                  </div>
+                </div>
+              </div>
+
+              <button
+                onClick={onClose}
+                className="text-3xl font-bold hover:bg-white/20 rounded-full w-10 h-10 flex items-center justify-center transition"
+              >
+                ×
+              </button>
+            </div>
           </div>
 
           {/* Body */}
-          <div className="p-6 max-h-[80vh] overflow-y-auto">
+          <div className="p-6">
             {loading && (
-              <p className="text-blue-600">Loading students...</p>
+              <div className="text-center py-10">
+                <p className="text-blue-600 text-lg">Loading students...</p>
+              </div>
             )}
 
             {!loading && students.length === 0 && (
-              <p className="text-gray-600">No students found.</p>
+              <div className="text-center py-10">
+                <p className="text-gray-600 text-lg">
+                  No students found for this exam and subject.
+                </p>
+              </div>
             )}
 
             {!loading && students.length > 0 && (
               <form onSubmit={handleSubmit}>
-                <div className="overflow-x-auto">
-                  <table className="min-w-full bg-white border rounded-lg shadow-sm">
-                    <thead className="bg-blue-800 text-white">
-                      <tr>
-                        <th className="px-4 py-3">Roll No</th>
-                        <th className="px-4 py-3">Student Name</th>
-                        <th className="px-4 py-3">Reg. Number</th>
-                        <th className="px-4 py-3">Marks</th>
-                        <th className="px-4 py-3">Attendance</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {marksData.map((s) => (
-                        <tr key={s.student_id}>
-                          <td className="p-3 border-b text-center">
-                            {s.roll_number}
-                          </td>
-                          <td className="p-3 border-b">
-                            {`${s.student_firstname} ${s.student_middlename} ${s.student_lastname}`}
-                          </td>
-                          <td className="p-3 border-b">
-                            {s.permanent_registration_number}
-                          </td>
-                          <td className="p-3 border-b">
-                            <input
-                              type="number"
-                              min="0"
-                              value={s.marks_obtained}
-                              onChange={(e) =>
-                                handleChange(
-                                  s.student_id,
-                                  "marks_obtained",
-                                  e.target.value === ""
-                                    ? ""
-                                    : Number(e.target.value)
-                                )
-                              }
-                              className="w-full border px-2 py-1 rounded"
-                            />
-                          </td>
-                          <td className="p-3 border-b">
-                            <select
-                              value={s.attendance_status}
-                              onChange={(e) =>
-                                handleChange(
-                                  s.student_id,
-                                  "attendance_status",
-                                  e.target.value
-                                )
-                              }
-                              className="w-full border px-2 py-1 rounded"
-                            >
-                              <option value="PRESENT">Present</option>
-                              <option value="ABSENT">Absent</option>
-                              <option value="MALPRACTICE">Malpractice</option>
-                              <option value="REVIEW_FOR_ENTRY">
-                                Review for Entry
-                              </option>
-                            </select>
-                          </td>
+                <div className="bg-white rounded-xl shadow border overflow-hidden">
+                  <div className="overflow-x-auto max-h-[60vh]">
+                    <table className="min-w-full text-sm text-gray-700">
+                      <thead className="sticky top-0 bg-blue-900 text-white z-10">
+                        <tr>
+                          <th className="px-6 py-4 text-center w-20">Roll</th>
+                          <th className="px-6 py-4 text-left">Student Name</th>
+                          <th className="px-6 py-4 text-left">Reg. No</th>
+                          <th className="px-6 py-4 text-center w-32">Marks Obtained</th>
+                          <th className="px-6 py-4 text-center w-40">Attendance</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                      </thead>
+
+                      <tbody>
+                        {marksData.map((s, index) => (
+                          <tr
+                            key={s.student_id}
+                            className={`border-b transition hover:bg-blue-50 ${
+                              index % 2 === 0 ? "bg-gray-50" : "bg-white"
+                            }`}
+                          >
+                            <td className="px-6 py-3 text-center font-medium">
+                              {s.roll_number || "-"}
+                            </td>
+
+                            <td className="px-6 py-3">
+                              {`${s.student_firstname} ${s.student_middlename || ""} ${s.student_lastname}`.trim()}
+                            </td>
+
+                            <td className="px-6 py-3 text-gray-600">
+                              {s.permanent_registration_number || "-"}
+                            </td>
+
+                            <td className="px-6 py-3">
+                              <input
+                                type="number"
+                                min="0"
+                                step="0.5"
+                                value={s.marks_obtained}
+                                data-index={index}
+                                onChange={(e) =>
+                                  handleChange(
+                                    s.student_id,
+                                    "marks_obtained",
+                                    e.target.value === "" ? "" : Number(e.target.value)
+                                  )
+                                }
+                                onKeyDown={(e) => handleMarksEnter(e, index)}
+                                className="w-24 mx-auto rounded-md border px-3 py-2 text-center focus:ring-2 focus:ring-blue-500 focus:outline-none focus:border-blue-500"
+                                placeholder="0"
+                              />
+                            </td>
+
+                            <td className="px-6 py-3">
+                              <select
+                                value={s.attendance_status}
+                                onChange={(e) =>
+                                  handleChange(s.student_id, "attendance_status", e.target.value)
+                                }
+                                className="w-full rounded-md border px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                              >
+                                <option value="PRESENT">Present</option>
+                                <option value="ABSENT">Absent</option>
+                                <option value="MALPRACTICE">Malpractice</option>
+                                <option value="REVIEW_FOR_ENTRY">Review for Entry</option>
+                              </select>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
 
-                <div className="flex justify-end mt-6">
+                <div className="flex justify-center mt-8 space-x-6">
+                  <button
+                    type="button"
+                    onClick={onClose}
+                    className="px-8 py-3 border border-gray-300 rounded-lg hover:bg-gray-100 transition"
+                  >
+                    Cancel
+                  </button>
+
                   <button
                     type="submit"
                     disabled={submitting || loading}
-                    className="px-8 py-3 bg-blue-600 text-white rounded-lg"
+                    className="px-10 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-60 font-medium transition shadow"
                   >
-                    {submitting ? "Submitting..." : "Submit Marks"}
+                    {submitting ? "Saving..." : "Save Marks"}
                   </button>
                 </div>
               </form>

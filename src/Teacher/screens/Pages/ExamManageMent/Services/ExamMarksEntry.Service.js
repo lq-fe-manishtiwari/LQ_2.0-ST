@@ -18,7 +18,7 @@ function getMarksBySchedule(examScheduleId,subject_id) {
   };
 
   return fetch(
-    `${ExamMGMAPI}/admin/exam-marks/exam-schedule/${examScheduleId}`,
+    `${ExamMGMAPI}/admin/exam-marks/exam-schedule/${examScheduleId}/subject/${subject_id}`,
     requestOptions
   ).then(handleResponse);
 }

@@ -315,6 +315,8 @@ const ExamDashboard = () => {
         <MarksEntry
           dutyId={selectedDuty?.teacher_exam_duty_assignment_id}
           examSchedule={bulkData} 
+          subjectId={selectedSubject?.subject_id}
+          subjectName={selectedSubject?.subject_name}
           onClose={closeAll}
         />
       )}
@@ -323,6 +325,8 @@ const ExamDashboard = () => {
         <BulkUpload
           dutyId={selectedDuty?.teacher_exam_duty_assignment_id}
           examSchedule={bulkData} 
+          subjectId={selectedSubject?.subject_id}
+          subjectName={selectedSubject?.subject_name}
           onClose={closeAll}
         />
       )}
