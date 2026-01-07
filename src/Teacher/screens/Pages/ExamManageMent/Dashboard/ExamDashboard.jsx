@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
+import SweetAlert from "react-bootstrap-sweetalert";
 import { examgService } from "../../ExamManageMent/Services/Exam.service";
 
-// 🔹 Local components (modal-style)
+// 🔹 Local modal components
 import CreatePaper from "../Component/CreatePaper";
 import Evaluation from "../Component/Evaluation";
 import MarksEntry from "../Component/MarksEntry";
@@ -39,7 +40,7 @@ const ExamDashboard = () => {
   const formatDate = (dateStr) =>
     dateStr ? new Date(dateStr).toLocaleDateString() : "-";
 
-  // 🔹 Handle Start button
+  // 🔹 Handle Start button click
   const handleAction = (duty) => {
     setSelectedDuty(duty);
 
@@ -147,45 +148,33 @@ const ExamDashboard = () => {
         </table>
       </div>
 
-      {/* 🔵 MARKS ENTRY OPTION MODAL */}
+      {/* 🔵 MARKS ENTRY METHOD MODAL (SweetAlert) */}
       {showMarksModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
-          <div className="bg-white p-6 rounded-lg w-96">
-            <h2 className="text-lg font-semibold mb-4">
-              Marks Entry Method
-            </h2>
-
-            <button
-              className="w-full mb-3 py-2 bg-green-600 text-white rounded"
-              onClick={() => {
-                setShowMarksModal(false);
-                setActiveComponent("BULK_UPLOAD");
-              }}
-            >
-              Bulk Upload
-            </button>
-
-            <button
-              className="w-full py-2 bg-blue-600 text-white rounded"
-              onClick={() => {
-                setShowMarksModal(false);
-                setActiveComponent("MARKS_ENTRY");
-              }}
-            >
-              Individual Entry
-            </button>
-
-            <button
-              className="w-full mt-3 text-gray-500"
-              onClick={closeAll}
-            >
-              Cancel
-            </button>
-          </div>
-        </div>
+        <SweetAlert
+          title="Marks Entry Method"
+          showCancel
+          confirmBtnText="Individual Entry"
+          cancelBtnText="Bulk Upload"
+          confirmBtnCssClass="bg-blue-600 text-white px-4 py-2 rounded"
+          cancelBtnCssClass="bg-green-600 text-white px-4 py-2 rounded"
+          onConfirm={() => {
+            setShowMarksModal(false);
+            setActiveComponent("MARKS_ENTRY");
+          }}
+          onCancel={() => {
+            setShowMarksModal(false);
+            setActiveComponent("BULK_UPLOAD");
+          }}
+          onEscapeKey={closeAll}
+          onOutsideClick={closeAll}
+        >
+          <p className="text-gray-600">
+            Please choose how you want to enter marks.
+          </p>
+        </SweetAlert>
       )}
 
-      {/* 🔽 RENDER ACTIVE COMPONENTS */}
+      {/* 🔽 ACTIVE COMPONENTS */}
       {activeComponent === "CREATE_PAPERS" && (
         <CreatePaper
           dutyId={selectedDuty?.teacher_exam_duty_assignment_id}
