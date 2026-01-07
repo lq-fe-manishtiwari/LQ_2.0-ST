@@ -28,10 +28,11 @@ const ConfigureSubjectSetsModal = ({
                 id: Date.now() + index,
                 name: set.subject_set_name || `Set ${index + 1}`,
                 subjects: set.subjects || [],
-                isEditingName: false
+                isEditingName: false,
+                subjectSetId: set.subject_set_id || null
             }));
         }
-        return [{ id: 1, name: "Set 1", subjects: [], isEditingName: false }];
+        return [{ id: 1, name: "Set 1", subjects: [], isEditingName: false, subjectSetId: null  }];
     };
 
     const [sets, setSets] = useState(getInitialSets());
@@ -86,7 +87,7 @@ const ConfigureSubjectSetsModal = ({
 
     const addNewSet = () => {
         const newSetNumber = sets.length + 1;
-        setSets([...sets, { id: Date.now(), name: `Set ${newSetNumber}`, subjects: [], isEditingName: false }]);
+        setSets([...sets, { id: Date.now(), name: `Set ${newSetNumber}`, subjects: [], isEditingName: false, subjectSetId: null  }]);
     };
 
     const removeSet = (setId) => {
@@ -95,7 +96,7 @@ const ConfigureSubjectSetsModal = ({
     };
 
     const resetAllSets = () => {
-        setSets([{ id: 1, name: "Set 1", subjects: [], isEditingName: false }]);
+        setSets([{ id: 1, name: "Set 1", subjects: [], isEditingName: false, subjectSetId: null  }]);
     };
 
     const toggleSetNameEdit = (setId) => {
@@ -120,6 +121,7 @@ const ConfigureSubjectSetsModal = ({
                 setNumber: index + 1,
                 setName: set.name,
                 subjectIds: set.subjects.map(s => s.id || s.subject_id),
+                subjectSetId: set.subjectSetId || null,
             })),
         };
         onSave(configuration);

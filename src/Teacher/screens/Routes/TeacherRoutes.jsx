@@ -19,6 +19,7 @@ import ClassRoutes from "../Pages/Class/Routes/ClassRoutes.jsx";
 import AssessmentRoutes from "../Pages/Assessment/Routes/AssessmentRoutes.jsx";
 import ContentRoutes from "../Pages/Content/Routes/ContentRoutes.jsx";
 import FeedbackRoutes from "../Pages/Feedback/Routes/FeedbackRoutes.jsx";
+import USFeedbackRoutes from "../Pages/USFeedback/Routes/USFeedbackRoutes.jsx";
 import PMSRoutes from "../Pages/PerformanceManagementSystem/Routes/PMSRoutes.jsx";
 import ExamManagementRoutes from "../Pages/ExamManageMent/Routes/ExamManagementRoutes.jsx";
 import LeavesRoutes from "../Pages/TeacherLeaves/Routes/LeavesRoutes.jsx";
@@ -33,7 +34,7 @@ export default function TeacherRoutes() {
       {/* Teacher Profile with Nested Tabs */}
       <Route path="teacher-profile" element={<TeacherProfile />}>
         {/* <Route index element={<MyAttendance />} /> Default tab */}
-        {/* {/* <Route path="MyAttendance" element={<MyAttendance />} /> */}
+        {/* {/* <Route path="MyAttendance" element={<MyAttendance />} />*/}
         {/* <Route path="Personal" element={<Personal />} />
         <Route path="Communication" element={<Communication />} />
         <Route path="EmploymentHistory" element={<EmploymentHistory />} />
@@ -48,10 +49,11 @@ export default function TeacherRoutes() {
       <Route path="assessments/*" element={<AssessmentRoutes />} />
       <Route path="content/*" element={<ContentRoutes />} />
       <Route path="feedback/*" element={<FeedbackRoutes />} />
+      <Route path="us-feedback/*" element={<USFeedbackRoutes />} />
       <Route path="teacher-hrm/*" element={<HRMRoutes />} />
       <Route path="pms/*" element={<PMSRoutes />} />
       <Route path="exam/*" element={<ExamManagementRoutes />} />
-      <Route path="leaves/*" element={<LeavesRoutes/>} />
+      <Route path="leaves/*" element={<LeavesRoutes />} />
 
     </Routes>
   );

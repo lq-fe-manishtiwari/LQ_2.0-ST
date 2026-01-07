@@ -24,6 +24,7 @@ export default function SubjectsList({
   const [showModal, setShowModal] = useState(false);
   const [isLocked, setIsLocked] = useState(false); // Track if current tab is locked
   const [currentTabName, setCurrentTabName] = useState('');
+  const [configData, setConfigData] = useState(null);
 
   // Refs to prevent duplicate API calls
   const lastFetchedTab = useRef(null);
@@ -191,16 +192,20 @@ export default function SubjectsList({
           console.log('🔒 CONDITIONS MET! Locking tab and showing modal for:', tab.name);
           console.log('Setting currentTabName to:', tab.name);
           console.log('Setting isLocked to: true');
-          console.log('Setting showModal to: true');
 
           setCurrentTabName(tab.name);
           setIsLocked(true);
 
-          // Use setTimeout to ensure state updates complete
-          setTimeout(() => {
-            console.log('⏰ Executing showModal(true) after timeout');
-            setShowModal(true);
-          }, 50);
+          // Fetch config data for modal and show modal only after data is loaded
+          ContentService.getSubjectSelectionConfig(responseData.config_id)
+            .then(configResponse => {
+              if (configResponse.success) {
+                console.log('✅ Config data loaded:', configResponse.data);
+                setConfigData(configResponse.data);
+                setShowModal(true);
+              }
+            })
+            .catch(err => console.error('Error fetching config for modal:', err));
         } else {
           console.log('✅ Tab unlocked - Reason:',
             !responseData.has_selection ? 'has_selection is false but no config_id' : 'has_selection is true'
@@ -342,6 +347,8 @@ export default function SubjectsList({
         onClose={handleCancelSelection}
         onGoToSelection={handleGoToSelection}
         tabName={currentTabName}
+        startTime={configData?.start_time}
+        endTime={configData?.end_time}
       />
 
       {/* SUBJECT GRID */}

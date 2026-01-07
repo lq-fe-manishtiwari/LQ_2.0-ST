@@ -89,18 +89,12 @@ class SubjectSelectionService {
      * Get batches by program ID using Academic batch service
      * @param {string} programId - Program ID
      */
-    // async getBatchesByProgramId(programId) {
-    //     try {
-    //         if (!programId) {
-    //             return [];
-    //         }
-    //         const batches = await batchService.getBatchByProgramId(programId);
-    //         return Array.isArray(batches) ? batches : [];
-    //     } catch (error) {
-    //         console.error("Error fetching batches:", error);
-    //         return [];
-    //     }
-    // }
+    async getBatchesByProgramId(programId) {
+        // /: /api/batches/{id}
+        const requestOptions = { method: 'GET', headers: authHeader() };
+        return fetch(`${AcademicAPI}/admin/academic/batches/${programId}`, requestOptions)
+            .then(handleResponse);
+    }
 
     /**
      * Extract academic years and semesters from batch data
@@ -312,7 +306,7 @@ class SubjectSelectionService {
             }
 
             const requestOptions = { method: "GET", headers: authHeader() };
-            const url = `${AcademicAPI}/api/subjects/by-tab/${tabId}/academic-year/${academicYearId}/semester/${semesterId}${params.toString() ? `?${params.toString()}` : ''}`;
+            const url = `${AcademicAPI}/admin/academic/api/subjects/by-tab/${tabId}/academic-year/${academicYearId}/semester/${semesterId}${params.toString() ? `?${params.toString()}` : ''}`;
 
             console.log("Fetching subjects from:", url);
             const response = await fetch(url, requestOptions);
