@@ -180,11 +180,13 @@ const Sidebar = ({ isOpen, toggle }) => {
         show: chapterTopicAccess === "true" || chapterTopicAccess === true,
       },
       {
-        to: "/AcademicCalender",
-        label: "Academic Calender",
+        to: "/teacher/academic-calendar",
+        label: "Academic Calendar",
         iconActive: classActive,
         iconInactive: classInactive,
+        match: ["/teacher/academic-calendar"]
       },
+      
 
       {
         to: "/teacher-library",

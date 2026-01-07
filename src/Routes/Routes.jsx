@@ -24,6 +24,8 @@ import ContentRoutes from '../Student/screens/Pages/Content/Routes/ContentRoutes
 import HRMRoutes from '../Teacher/screens/Pages/HRM/Routes/HRMRoute.jsx';
 import SubjectSelectionRoutes from '../Teacher/screens/Pages/SubjectSelection/Routes/SubjectSelectionRoutes.jsx'
 
+import AcademicCalendarRoute from "../Teacher/screens/Pages/AcademicCalendar/Routes/AcademicCalendarRoute.jsx"
+import AcademicCalendarRoutes from "../Student/screens/Pages/AcademicCalendar/Routes/AcademicCalendarRoutes.jsx"
 // ────── Route guards ──────
 const ProtectedRoute = ({ children }) => {
   const isLoggedIn = !!localStorage.getItem('refreshToken');
@@ -57,7 +59,7 @@ function App() {
           }
         />
 
-          <Route path="/admin-forgot-password" element={
+        <Route path="/admin-forgot-password" element={
           <PublicRoute>
             <AdminForgotPassword />
           </PublicRoute>
@@ -65,7 +67,7 @@ function App() {
 
         {/* ────── TEACHER ────── */}
         <Route path="/dashboard" element={<ProtectedRoute><TeacherHomepage><TeacherRoutes /></TeacherHomepage></ProtectedRoute>} />
-     {/* TEACHER – Class area (exact + any sub-page) */}
+        {/* TEACHER – Class area (exact + any sub-page) */}
         <Route
           path="/teacher/*"
           element={
@@ -76,11 +78,11 @@ function App() {
             </ProtectedRoute>
           }
         />
-          <Route
+        <Route
           path="/subject-selection/*"
           element={
-        
-              <ProtectedRoute>
+
+            <ProtectedRoute>
               <TeacherHomepage>
                 <SubjectSelectionRoutes />
               </TeacherHomepage>
@@ -98,6 +100,18 @@ function App() {
             </ProtectedRoute>
           }
         />
+        {/* ────── TEACHER – Academic Calendar ────── */}
+        <Route
+          path="/teacher/academic-calendar/*"
+          element={
+            <ProtectedRoute>
+              <TeacherHomepage>
+                <AcademicCalendarRoute />
+              </TeacherHomepage>
+            </ProtectedRoute>
+          }
+        />
+
 
         {/* ────── STUDENT ────── */}
         <Route
@@ -125,7 +139,7 @@ function App() {
           element={
             <ProtectedRoute>
               <StudentHomepage>
-                <ProfileRoutes/>
+                <ProfileRoutes />
               </StudentHomepage>
             </ProtectedRoute>
           }
@@ -135,7 +149,7 @@ function App() {
           element={
             <ProtectedRoute>
               <StudentHomepage>
-                <ContentRoutes/>
+                <ContentRoutes />
               </StudentHomepage>
             </ProtectedRoute>
           }
@@ -162,7 +176,23 @@ function App() {
           }
         />
 
-        
+        <Route
+          path="/student/academic-calendar/*"
+          element={
+            <ProtectedRoute>
+              <StudentHomepage>
+                <AcademicCalendarRoutes />
+              </StudentHomepage>
+            </ProtectedRoute>
+          }
+        />
+
+
+
+
+
+
+
 
 
         {/* ────── FALLBACK ────── */}
