@@ -9,6 +9,9 @@ const ExamDashboard = () => {
   const activeCollege = JSON.parse(localStorage.getItem("activeCollege"));
   const collegeId = activeCollege?.id;
 
+   const teacher = JSON.parse(localStorage.getItem("userProfile"));
+   const teacherId = teacher?.teacher_id;
+
   useEffect(() => {
     if (!collegeId) {
       console.warn("College ID not found in localStorage");
@@ -17,7 +20,7 @@ const ExamDashboard = () => {
     }
 
     examgService
-      .getTeacherDutyAllocationsByCollege(collegeId)
+      .getTeacherDutyAllocationsByTeacher(teacherId)
       .then((res) => {
         setExams(res || []);
         setLoading(false);
