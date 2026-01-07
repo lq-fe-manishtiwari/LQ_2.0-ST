@@ -16,8 +16,8 @@ const ExamDashboard = () => {
   const [showMarksModal, setShowMarksModal] = useState(false);
   const [activeComponent, setActiveComponent] = useState(null);
   const [selectedDuty, setSelectedDuty] = useState(null);
-  const [selectedExamScheduleId, setSelectedExamScheduleId] = useState(null); // store schedule id
-  const [bulkData, setBulkData] = useState(null); // Data for BulkUpload
+  const [selectedExamScheduleId, setSelectedExamScheduleId] = useState(null);
+  const [bulkData, setBulkData] = useState(null);
 
   const activeCollege = JSON.parse(localStorage.getItem("activeCollege"));
   const collegeId = activeCollege?.id;
@@ -25,6 +25,7 @@ const ExamDashboard = () => {
   const teacher = JSON.parse(localStorage.getItem("userProfile"));
   const teacherId = teacher?.teacher_id;
 
+  // 🔹 Load exams
   useEffect(() => {
     if (!collegeId || !teacherId) {
       setLoading(false);
@@ -43,24 +44,59 @@ const ExamDashboard = () => {
   const formatDate = (dateStr) =>
     dateStr ? new Date(dateStr).toLocaleDateString() : "-";
 
+  // 🔹 Fetch schedule for bulk or marks entry
+  const fetchSchedule = async (examScheduleId) => {
+    if (!examScheduleId) return;
+
+    setLoading(true);
+    try {
+      const response = await fetchExamScheduleById(examScheduleId);
+      if (!response) throw new Error("Exam schedule not found");
+
+      const bulkSchedule = {
+        examScheduleId: response.examScheduleId || response.exam_schedule_id,
+        examScheduleName: response.examScheduleName || response.exam_schedule_name,
+        startDate: response.startDate,
+        endDate: response.endDate,
+        academicYear: response.academicYear?.name,
+        semester: response.semester?.name,
+        division: response.division?.divisionName,
+        courses:
+          response.courses?.map((course) => ({
+            examScheduleCourseId: course.examScheduleCourseId || course.exam_schedule_course_id,
+            subjectId: course.subjectId || course.subject_id,
+            examDate: course.examDate,
+            startExamDateTime: course.startExamDateTime,
+            endExamDateTime: course.endExamDateTime,
+            currentStudentStrength: course.currentStudentStrength,
+            classrooms: course.classrooms || [],
+          })) || [],
+      };
+
+      setBulkData(bulkSchedule);
+      setActiveComponent("MARKS_ENTRY");
+    } catch (err) {
+      console.error("Failed to fetch schedule", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // 🔹 Handle Start button click
   const handleAction = (duty, examScheduleId) => {
     setSelectedDuty(duty);
-    setSelectedExamScheduleId(examScheduleId); // store exam schedule id
+    setSelectedExamScheduleId(examScheduleId);
 
     switch (duty.duty_type) {
       case "CREATE_PAPERS":
         setActiveComponent("CREATE_PAPERS");
         break;
-
       case "PAPER_REVALUATION":
         setActiveComponent("PAPER_REVALUATION");
         break;
-
       case "MARKS_ENTRY":
         setShowMarksModal(true);
         break;
-
       default:
         break;
     }
@@ -68,20 +104,12 @@ const ExamDashboard = () => {
 
   // 🔹 Handle Bulk Upload
   const handleBulkUpload = async (examScheduleId) => {
-    if (!examScheduleId) {
-      console.error("Exam Schedule ID is missing!");
-      return;
-    }
-
+    if (!examScheduleId) return;
+    setLoading(true);
     try {
       const response = await fetchExamScheduleById(examScheduleId);
+      if (!response) return;
 
-      if (!response) {
-        console.error("No exam schedule found");
-        return;
-      }
-
-      // Map courses and other data to match BulkUpload component expectation
       const bulkSchedule = {
         examScheduleId: response.examScheduleId || response.exam_schedule_id,
         examScheduleName: response.examScheduleName || response.exam_schedule_name,
@@ -105,7 +133,9 @@ const ExamDashboard = () => {
       setBulkData(bulkSchedule);
       setActiveComponent("BULK_UPLOAD");
     } catch (err) {
-      console.error("Failed to fetch exam schedule for bulk upload", err);
+      console.error("Failed to fetch schedule for bulk upload", err);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -184,7 +214,7 @@ const ExamDashboard = () => {
         </table>
       </div>
 
-      {/* 🔵 MARKS ENTRY METHOD MODAL (SweetAlert) */}
+      {/* 🔵 MARKS ENTRY METHOD MODAL */}
       {showMarksModal && selectedDuty && (
         <SweetAlert
           title="Marks Entry Method"
@@ -193,15 +223,13 @@ const ExamDashboard = () => {
           cancelBtnText="Bulk Upload"
           confirmBtnCssClass="bg-blue-600 text-white px-4 py-2 rounded"
           cancelBtnCssClass="bg-green-600 text-white px-4 py-2 rounded"
-          onConfirm={() => {
+          onConfirm={async () => {
             setShowMarksModal(false);
-            setActiveComponent("MARKS_ENTRY");
+            await fetchSchedule(selectedExamScheduleId); // individual
           }}
           onCancel={async () => {
             setShowMarksModal(false);
-            await handleBulkUpload(
-              selectedDuty?.exam_schedule_id || selectedExamScheduleId
-            ); // pass directly
+            await handleBulkUpload(selectedExamScheduleId); // bulk
           }}
           onEscapeKey={closeAll}
           onOutsideClick={closeAll}
@@ -240,7 +268,7 @@ const ExamDashboard = () => {
       {activeComponent === "BULK_UPLOAD" && bulkData && selectedDuty && (
         <BulkUpload
           dutyId={selectedDuty?.teacher_exam_duty_assignment_id}
-          examSchedule={bulkData} // pass fetched schedule
+          examSchedule={bulkData} 
           onClose={closeAll}
         />
       )}
