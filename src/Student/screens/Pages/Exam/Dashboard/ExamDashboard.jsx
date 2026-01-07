@@ -1,35 +1,90 @@
-import React from "react";
-import { useNavigate } from "react-router-dom";
+import React from 'react';
+import {
+  PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
+} from 'recharts';
 
-const ExamDashboard = () => {
+const StudentExamDashboard = () => {
+
+  const examStatusData = [
+    { name: 'Form Filled', value: 1, color: '#3b82f6' },
+    { name: 'Result Declared', value: 1, color: '#10b981' },
+    { name: 'Revaluation', value: 1, color: '#f59e0b' },
+    { name: 'ATKT', value: 1, color: '#ef4444' },
+  ];
+
+  const subjectResultData = [
+    { subject: 'Mathematics', percentage: 78 },
+    { subject: 'Physics', percentage: 42 },
+    { subject: 'Chemistry', percentage: 65 },
+    { subject: 'Computer Science', percentage: 81 },
+    { subject: 'Electronics', percentage: 55 },
+  ];
+
   return (
-    <div className="p-6 bg-white rounded-lg">
-      {/* Top Bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-        {/* Search */}
-        <input
-          type="text"
-          placeholder="Search..."
-          className="w-full sm:w-[300px] px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-        />
+    <div className="min-h-screen bg-gray-50 p-6">
+      <div className="max-w-7xl mx-auto">
 
-        {/* Button */}
-        <button className="bg-blue-600 hover:bg-blue-700 text-white font-medium px-6 py-2 rounded-lg">
-          Fill Form
-        </button>
+        {/* Header */}
+        <h1 className="text-3xl font-bold text-gray-800 mb-2">My Exam Dashboard</h1>
+        <p className="text-gray-600 mb-8">View your subject-wise performance and exam status</p>
+
+        {/* Summary Cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-8">
+          <Card title="Overall %" value="64%" color="blue" />
+          <Card title="Passed Subjects" value="3 / 5" color="green" />
+          <Card title="ATKT Subjects" value="1" color="red" />
+          <Card title="Revaluation" value="1" color="yellow" />
+        </div>
+
+        {/* Charts */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+          {/* Exam Status */}
+          <div className="bg-white rounded-xl shadow-sm p-6">
+            <h2 className="text-xl font-semibold mb-4">Exam Status</h2>
+            <ResponsiveContainer width="100%" height={300}>
+              <PieChart>
+                <Pie
+                  data={examStatusData}
+                  dataKey="value"
+                  cx="50%"
+                  cy="50%"
+                  outerRadius={100}
+                  label={({ name }) => name}
+                >
+                  {examStatusData.map((entry, index) => (
+                    <Cell key={index} fill={entry.color} />
+                  ))}
+                </Pie>
+                <Tooltip />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+
+          {/* Subject-wise Percentage */}
+          <div className="bg-white rounded-xl shadow-sm p-6">
+            <h2 className="text-xl font-semibold mb-4">Subject-wise Percentage</h2>
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart data={subjectResultData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="subject" />
+                <YAxis domain={[0, 100]} />
+                <Tooltip />
+                <Bar dataKey="percentage" fill="#6366f1" radius={[6, 6, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
       </div>
-
-      {/* Title */}
-      <h2 className="text-4xl font-semibold text-gray-500 mb-2">
-        Submitted Exam Forms
-      </h2>
-
-      {/* Empty State */}
-      <p className="text-lg text-gray-500">
-        No exam forms found.
-      </p>
     </div>
   );
 };
 
-export default ExamDashboard;
+const Card = ({ title, value, color }) => (
+  <div className={`bg-white p-6 rounded-xl shadow-sm border-l-4 border-${color}-500`}>
+    <p className="text-gray-600 text-lg">{title}</p>
+    <p className={`text-4xl font-bold text-${color}-600 mt-2`}>{value}</p>
+  </div>
+);
+
+export default StudentExamDashboard;
