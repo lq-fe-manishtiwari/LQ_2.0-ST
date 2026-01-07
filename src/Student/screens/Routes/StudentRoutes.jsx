@@ -8,6 +8,7 @@ import ContentRoutes from '../Pages/Content/Routes/ContentRoutes.jsx';
 import LeavesRoutes from "../Pages/StudentLeaves/Routes/LeavesRoutes.jsx";
 import SubjectSelectionPage from '../Pages/SubjectSelection/SubjectSelectionPage.jsx';
 import AluminiRoutes from '../Pages/Alumini/Routes/Routes.jsx';
+import ExamRoutes from '../Pages/Exam/Routes/ExamRoutes.jsx';
 
 const StudentRoutes = () => {
   return (
@@ -20,6 +21,8 @@ const StudentRoutes = () => {
       <Route path="subject-selection" element={<SubjectSelectionPage />} />
       <Route path="alumini/*" element={<AluminiRoutes />} />
       {/* Add more student pages */}
+      <Route path="Exam/*" element={<ExamRoutes />} />
+      
     </Routes>
   );
 };
