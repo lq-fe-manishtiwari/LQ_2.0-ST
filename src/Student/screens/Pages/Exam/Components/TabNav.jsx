@@ -2,6 +2,7 @@ import React from "react";
 import { NavLink } from "react-router-dom";
 
 const tabs = [
+    { label: "Dashboard", to: "/student/exam/dashboard" },
     { label: "Regular Form", to: "/student/exam/regularform" },
     { label: "Result", to: "/student/exam/result" },
     { label: "Re-Evaluation", to: "/student/exam/re-evaluation" },
