@@ -295,7 +295,10 @@ const ExamDashboard = () => {
       {activeComponent === "CREATE_PAPERS" && bulkData && selectedDuty && (
   <CreatePaper
     dutyId={selectedDuty.teacher_exam_duty_assignment_id}
-    examSchedule={bulkData}
+    examSchedule={(() => {
+      console.log('bulkData passed to CreatePaper:', bulkData);
+      return bulkData;
+    })()}
     subjectId={selectedSubject?.subject_id}
     subjectName={selectedSubject?.subject_name}
     onClose={closeAll}
