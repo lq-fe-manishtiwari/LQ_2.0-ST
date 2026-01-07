@@ -9,7 +9,7 @@ export default function SubjectSelectionPage() {
     const location = useLocation();
     const navigate = useNavigate();
     const { configData, configId, academicYearId, semesterId, studentId } = location.state || {};
-    
+
     // Get student ID from profile context
     const { profile } = useUserProfile();
     const currentStudentId = profile?.student_id || studentId;
@@ -84,7 +84,7 @@ export default function SubjectSelectionPage() {
     const handleSubmit = async () => {
         // Clear previous errors
         setSubmitError('');
-        
+
         // Validation
         if (selectedSubjects.length < configData.minimum_selections) {
             setSubmitError(`Please select at least ${configData.minimum_selections} papers`);
@@ -125,7 +125,7 @@ export default function SubjectSelectionPage() {
             if (response.success) {
                 setSubmitSuccess(true);
                 console.log('Paper selection saved successfully:', response.data);
-                
+
                 // Show success message and redirect after a delay
                 setTimeout(() => {
                     navigate(-1, {
@@ -245,7 +245,7 @@ export default function SubjectSelectionPage() {
                         </div>
                     </div>
 
-      
+
                 </div>
 
                 {/* Subject Sets */}
@@ -274,18 +274,17 @@ export default function SubjectSelectionPage() {
                                                     key={subject.subject_id}
                                                     onClick={() => handleSubjectToggle(subject.subject_id)}
                                                     disabled={isSubmitting || submitSuccess}
-                                                    className={`relative p-4 rounded-lg border-2 transition-all duration-200 text-left ${
-                                                        isSubmitting || submitSuccess
+                                                    className={`relative p-4 rounded-lg border-2 transition-all duration-200 text-left ${isSubmitting || submitSuccess
                                                             ? 'border-gray-200 bg-gray-100 cursor-not-allowed opacity-60'
                                                             : isSelected
                                                                 ? 'border-blue-500 bg-blue-50 shadow-md scale-[1.02] hover:border-blue-600'
                                                                 : 'border-gray-200 bg-white hover:border-blue-300 hover:shadow-sm'
-                                                    }`}
+                                                        }`}
                                                 >
                                                     {/* Selection Indicator */}
                                                     <div className={`absolute top-3 right-3 w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all ${isSelected
-                                                            ? 'bg-blue-600 border-blue-600'
-                                                            : 'bg-white border-gray-300'
+                                                        ? 'bg-blue-600 border-blue-600'
+                                                        : 'bg-white border-gray-300'
                                                         }`}>
                                                         {isSelected && (
                                                             <CheckCircle2 className="w-4 h-4 text-white" />
@@ -365,22 +364,20 @@ export default function SubjectSelectionPage() {
                                 <button
                                     onClick={() => setShowClearConfirm(true)}
                                     disabled={isSubmitting || submitSuccess || selectedSubjects.length === 0}
-                                    className={`flex-1 sm:flex-none px-6 py-3 rounded-lg font-medium transition-colors ${
-                                        isSubmitting || submitSuccess || selectedSubjects.length === 0
+                                    className={`flex-1 sm:flex-none px-6 py-3 rounded-lg font-medium transition-colors ${isSubmitting || submitSuccess || selectedSubjects.length === 0
                                             ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
                                             : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                                    }`}
+                                        }`}
                                 >
                                     Clear All
                                 </button>
                                 <button
                                     onClick={() => setShowSubmitConfirm(true)}
                                     disabled={!canSubmit}
-                                    className={`flex-1 sm:flex-none px-8 py-3 rounded-lg font-medium transition-all flex items-center justify-center gap-2 ${
-                                        canSubmit && !isSubmitting && !submitSuccess
+                                    className={`flex-1 sm:flex-none px-8 py-3 rounded-lg font-medium transition-all flex items-center justify-center gap-2 ${canSubmit && !isSubmitting && !submitSuccess
                                             ? 'bg-blue-600 text-white hover:shadow-lg hover:scale-[1.02]'
                                             : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                                    }`}
+                                        }`}
                                 >
                                     {isSubmitting && <Loader2 className="w-4 h-4 animate-spin" />}
                                     {submitSuccess ? (
@@ -429,7 +426,7 @@ export default function SubjectSelectionPage() {
                         cancelBtnText="Cancel"
                         confirmBtnCssClass="btn-confirm"
                         cancelBtnCssClass="btn-cancel"
-                        title="Submit Subject Selection?"
+                        title="Submit Paper Selection?"
                         onConfirm={handleSubmitConfirm}
                         onCancel={() => setShowSubmitConfirm(false)}
                     >

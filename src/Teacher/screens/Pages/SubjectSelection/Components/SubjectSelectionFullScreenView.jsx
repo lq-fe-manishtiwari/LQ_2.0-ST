@@ -584,7 +584,7 @@ const SubjectSelectionFullScreenView = ({
 
                 setStudentsData(updatedStudents);
                 setHasUnsavedChanges(false);
-                setAlertMessage("Subject selection saved successfully!");
+                setAlertMessage("Paper selection saved successfully!");
                 setShowSaveSuccessAlert(true);
 
                 // Refresh data from API to get latest state
@@ -781,7 +781,7 @@ const SubjectSelectionFullScreenView = ({
                                 <div className="text-center lg:text-left">
                                     <p className="text-xs sm:text-sm text-gray-600">Active Students</p>
                                     <p className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900">
-                                        {studentsData.filter(s => s.status === 'SUBMITTED' || s.hasSelection).length}
+                                        {studentsData.length}
                                     </p>
                                 </div>
                             </div>
@@ -795,7 +795,7 @@ const SubjectSelectionFullScreenView = ({
                                 <div className="text-center lg:text-left">
                                     <p className="text-xs sm:text-sm text-gray-600">Completed</p>
                                     <p className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900">
-                                        {studentsData.filter(s => s.selectedSubjects.length === s.maxSelections).length}
+                                        {studentsData.filter(s => s.hasSelection).length}
                                     </p>
                                 </div>
                             </div>
@@ -809,7 +809,7 @@ const SubjectSelectionFullScreenView = ({
                                 <div className="text-center lg:text-left">
                                     <p className="text-xs sm:text-sm text-gray-600">Pending</p>
                                     <p className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900">
-                                        {studentsData.filter(s => s.selectedSubjects.length > 0 && s.selectedSubjects.length < s.maxSelections).length}
+                                        {studentsData.filter(s => !s.hasSelection).length}
                                     </p>
                                 </div>
                             </div>
@@ -956,166 +956,51 @@ const SubjectSelectionFullScreenView = ({
 
                     {/* Students Table Section */}
                     <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-                    {/* Loading State */}
-                    {loading && (
-                        <div className="text-center py-12">
-                            <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mb-4"></div>
-                            <p className="text-gray-600">Loading students...</p>
-                        </div>
-                    )}
-
-                    {/* Error State */}
-                    {error && (
-                        <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center m-4">
-                            <p className="text-red-600 mb-4">{error}</p>
-                            <button
-                                onClick={fetchStudentsData}
-                                className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors"
-                            >
-                                Retry
-                            </button>
-                        </div>
-                    )}
-
-                    {/* Mobile-First Students List */}
-                    {!loading && !error && (
-                        <div className="block sm:hidden">
-                            <div className="divide-y divide-gray-200">
-                                {currentStudents.map((student) => (
-                                    <div key={student.id} className="p-4 hover:bg-gray-50 cursor-pointer" onClick={() => handleStudentClick(student)}>
-                                        <div className="flex items-center justify-between">
-                                            <div className="flex items-center space-x-3 flex-1 min-w-0">
-                                                {/* Checkbox for bulk selection */}
-                                                {bulkSelectionMode && (
-                                                    <div className="flex-shrink-0">
-                                                        <input
-                                                            type="checkbox"
-                                                            checked={selectedStudents.includes(student.id)}
-                                                            onChange={(e) => {
-                                                                e.stopPropagation();
-                                                                handleToggleStudentSelection(student.id);
-                                                            }}
-                                                            onClick={(e) => e.stopPropagation()}
-                                                            className="h-5 w-5 text-blue-600 rounded border-gray-300 focus:ring-blue-500 cursor-pointer"
-                                                        />
-                                                    </div>
-                                                )}
-
-                                                <div className="flex-shrink-0 h-10 w-10">
-                                                    <div className="h-10 w-10 rounded-full bg-gradient-to-r from-blue-400 to-blue-600 flex items-center justify-center">
-                                                        <span className="text-white font-medium text-sm">
-                                                            {student.name.charAt(0).toUpperCase()}
-                                                        </span>
-                                                    </div>
-                                                </div>
-                                                <div className="flex-1 min-w-0">
-                                                    <div className="text-sm font-medium text-gray-900 truncate">
-                                                        {student.name}
-                                                    </div>
-                                                    <div className="text-xs text-gray-500 truncate">
-                                                        {student.rollNumber}
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <div className="flex flex-col items-end space-y-1">
-                                                <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${student.status === 'SUBMITTED' || student.hasSelection
-                                                    ? 'bg-green-100 text-green-800'
-                                                    : 'bg-red-100 text-red-800'
-                                                    }`}>
-                                                    {student.status === 'SUBMITTED' || student.hasSelection ? 'Submitted' : 'Pending'}
-                                                </span>
-                                                <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getSelectionStatusColor(student.selectedSubjects.length, student.maxSelections)
-                                                    }`}>
-                                                    {student.selectedSubjects.length}/{student.maxSelections}
-                                                </span>
-                                            </div>
-                                        </div>
-                                        <div className="mt-2">
-                                            <div className="w-full bg-gray-200 rounded-full h-2">
-                                                <div
-                                                    className={`h-2 rounded-full ${student.selectedSubjects.length === student.maxSelections
-                                                        ? 'bg-green-600'
-                                                        : student.selectedSubjects.length > 0
-                                                            ? 'bg-blue-600'
-                                                            : 'bg-gray-400'
-                                                        }`}
-                                                    style={{
-                                                        width: `${(student.selectedSubjects.length / student.maxSelections) * 100}%`
-                                                    }}
-                                                ></div>
-                                            </div>
-                                            <div className="text-xs text-gray-500 mt-1 text-center">
-                                                {Math.round((student.selectedSubjects.length / student.maxSelections) * 100)}% complete
-                                            </div>
-                                        </div>
-                                    </div>
-                                ))}
+                        {/* Loading State */}
+                        {loading && (
+                            <div className="text-center py-12">
+                                <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mb-4"></div>
+                                <p className="text-gray-600">Loading students...</p>
                             </div>
-                        </div>
-                    )}
+                        )}
 
-                    {/* Desktop Table */}
-                    {!loading && !error && (
-                        <div className="hidden sm:block overflow-hidden rounded-lg">
-                            <table className="min-w-full divide-y divide-gray-200">
-                                <thead className="bg-blue-600">
-                                    <tr>
-                                        {/* Checkbox column header */}
-                                        {bulkSelectionMode && (
-                                            <th className="px-4 lg:px-6 py-3 text-left">
-                                                <div className="flex items-center gap-2">
-                                                    <input
-                                                        type="checkbox"
-                                                        checked={currentStudents.every(s => selectedStudents.includes(s.id)) && currentStudents.length > 0}
-                                                        onChange={handleSelectAll}
-                                                        className="h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500 cursor-pointer"
-                                                        title="Select current page"
-                                                    />
-                                                    <span className="text-xs text-white hidden md:inline">Page</span>
-                                                </div>
-                                            </th>
-                                        )}
-                                        <th className="px-4 lg:px-6 py-3 text-left text-sm font-medium text-white tracking-wider">
-                                            Student
-                                        </th>
-                                        <th className="px-4 lg:px-6 py-3 text-left text-sm font-medium text-white tracking-wider">
-                                            Roll Number
-                                        </th>
-                                        <th className="hidden lg:table-cell px-6 py-3 text-left text-sm font-medium text-white tracking-wider">
-                                            Contact
-                                        </th>
+                        {/* Error State */}
+                        {error && (
+                            <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center m-4">
+                                <p className="text-red-600 mb-4">{error}</p>
+                                <button
+                                    onClick={fetchStudentsData}
+                                    className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors"
+                                >
+                                    Retry
+                                </button>
+                            </div>
+                        )}
 
-                                        <th className="px-4 lg:px-6 py-3 text-left text-sm font-medium text-white tracking-wider">
-                                            Selections
-                                        </th>
-                                        <th className="hidden md:table-cell px-4 lg:px-6 py-3 text-left text-sm font-medium text-white tracking-wider">
-                                            Progress
-                                        </th>
-                                        <th className="px-4 lg:px-6 py-3 text-left text-sm font-medium text-white tracking-wider">
-                                            Action
-                                        </th>
-                                    </tr>
-                                </thead>
-                                <tbody className="bg-white divide-y divide-gray-200">
+                        {/* Mobile-First Students List */}
+                        {!loading && !error && (
+                            <div className="block sm:hidden">
+                                <div className="divide-y divide-gray-200">
                                     {currentStudents.map((student) => (
-                                        <tr key={student.id} className="hover:bg-gray-50 cursor-pointer" onClick={() => handleStudentClick(student)}>
-                                            {/* Checkbox column */}
-                                            {bulkSelectionMode && (
-                                                <td className="px-4 lg:px-6 py-4 whitespace-nowrap">
-                                                    <input
-                                                        type="checkbox"
-                                                        checked={selectedStudents.includes(student.id)}
-                                                        onChange={(e) => {
-                                                            e.stopPropagation();
-                                                            handleToggleStudentSelection(student.id);
-                                                        }}
-                                                        onClick={(e) => e.stopPropagation()}
-                                                        className="h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500 cursor-pointer"
-                                                    />
-                                                </td>
-                                            )}
-                                            <td className="px-4 lg:px-6 py-4 whitespace-nowrap">
-                                                <div className="flex items-center">
+                                        <div key={student.id} className="p-4 hover:bg-gray-50 cursor-pointer" onClick={() => handleStudentClick(student)}>
+                                            <div className="flex items-center justify-between">
+                                                <div className="flex items-center space-x-3 flex-1 min-w-0">
+                                                    {/* Checkbox for bulk selection */}
+                                                    {bulkSelectionMode && (
+                                                        <div className="flex-shrink-0">
+                                                            <input
+                                                                type="checkbox"
+                                                                checked={selectedStudents.includes(student.id)}
+                                                                onChange={(e) => {
+                                                                    e.stopPropagation();
+                                                                    handleToggleStudentSelection(student.id);
+                                                                }}
+                                                                onClick={(e) => e.stopPropagation()}
+                                                                className="h-5 w-5 text-blue-600 rounded border-gray-300 focus:ring-blue-500 cursor-pointer"
+                                                            />
+                                                        </div>
+                                                    )}
+
                                                     <div className="flex-shrink-0 h-10 w-10">
                                                         <div className="h-10 w-10 rounded-full bg-gradient-to-r from-blue-400 to-blue-600 flex items-center justify-center">
                                                             <span className="text-white font-medium text-sm">
@@ -1123,30 +1008,29 @@ const SubjectSelectionFullScreenView = ({
                                                             </span>
                                                         </div>
                                                     </div>
-                                                    <div className="ml-3">
-                                                        <div className="text-sm font-medium text-gray-900 truncate max-w-32 lg:max-w-none">
+                                                    <div className="flex-1 min-w-0">
+                                                        <div className="text-sm font-medium text-gray-900 truncate">
                                                             {student.name}
                                                         </div>
-                                                        <div className="text-xs text-gray-500 truncate max-w-32 lg:max-w-none">
-                                                            {student.email}
+                                                        <div className="text-xs text-gray-500 truncate">
+                                                            {student.rollNumber}
                                                         </div>
                                                     </div>
                                                 </div>
-                                            </td>
-                                            <td className="px-4 lg:px-6 py-4 whitespace-nowrap">
-                                                <div className="text-sm font-medium text-gray-900">{student.rollNumber}</div>
-                                            </td>
-                                            <td className="hidden lg:table-cell px-6 py-4 whitespace-nowrap">
-                                                <div className="text-sm text-gray-900">{student.phone}</div>
-                                            </td>
-
-                                            <td className="px-4 lg:px-6 py-4 whitespace-nowrap">
-                                                <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getSelectionStatusColor(student.selectedSubjects.length, student.maxSelections)
-                                                    }`}>
-                                                    {student.selectedSubjects.length}/{student.maxSelections} selected
-                                                </span>
-                                            </td>
-                                            <td className="hidden md:table-cell px-4 lg:px-6 py-4 whitespace-nowrap">
+                                                <div className="flex flex-col items-end space-y-1">
+                                                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${student.status === 'SUBMITTED' || student.hasSelection
+                                                        ? 'bg-green-100 text-green-800'
+                                                        : 'bg-red-100 text-red-800'
+                                                        }`}>
+                                                        {student.status === 'SUBMITTED' || student.hasSelection ? 'Submitted' : 'Pending'}
+                                                    </span>
+                                                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getSelectionStatusColor(student.selectedSubjects.length, student.maxSelections)
+                                                        }`}>
+                                                        {student.selectedSubjects.length}/{student.maxSelections}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                            <div className="mt-2">
                                                 <div className="w-full bg-gray-200 rounded-full h-2">
                                                     <div
                                                         className={`h-2 rounded-full ${student.selectedSubjects.length === student.maxSelections
@@ -1160,107 +1044,223 @@ const SubjectSelectionFullScreenView = ({
                                                         }}
                                                     ></div>
                                                 </div>
-                                                <div className="text-xs text-gray-500 mt-1">
+                                                <div className="text-xs text-gray-500 mt-1 text-center">
                                                     {Math.round((student.selectedSubjects.length / student.maxSelections) * 100)}% complete
                                                 </div>
-                                            </td>
-                                            <td className="px-4 lg:px-6 py-4 whitespace-nowrap">
-                                                <button
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        handleStudentClick(student);
-                                                    }}
-                                                    className="text-blue-600 hover:text-blue-900 flex items-center gap-1 text-sm"
-                                                >
-                                                    <Edit3 size={14} />
-                                                    <span className="hidden sm:inline">Manage</span>
-                                                </button>
-                                            </td>
-                                        </tr>
+                                            </div>
+                                        </div>
                                     ))}
-                                </tbody>
-                            </table>
-                        </div>
-                    )}
-
-                    {!loading && !error && filteredStudents.length === 0 && (
-                        <div className="text-center py-12">
-                            <Users size={48} className="mx-auto text-gray-400 mb-4" />
-                            <p className="text-gray-600 text-lg">No students found</p>
-                            <p className="text-gray-500 text-sm mt-2">
-                                Try adjusting your search or filter criteria
-                            </p>
-                        </div>
-                    )}
-
-                    {/* Pagination */}
-                    {!loading && !error && filteredStudents.length > studentsPerPage && (
-                        <div className="border-t border-gray-200 px-4 py-3 sm:px-6">
-                            <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-                                {/* Mobile Pagination Info */}
-                                <div className="text-sm text-gray-700 order-2 sm:order-1">
-                                    Showing <span className="font-medium">{startIndex + 1}</span> to{' '}
-                                    <span className="font-medium">{Math.min(endIndex, filteredStudents.length)}</span> of{' '}
-                                    <span className="font-medium">{filteredStudents.length}</span> students
-                                </div>
-
-                                {/* Pagination Controls */}
-                                <div className="flex items-center gap-2 order-1 sm:order-2">
-                                    {/* Previous Button */}
-                                    <button
-                                        onClick={handlePrevPage}
-                                        disabled={currentPage === 1}
-                                        className={`p-2 rounded-md border ${currentPage === 1
-                                            ? 'border-gray-200 text-gray-400 cursor-not-allowed'
-                                            : 'border-gray-300 text-gray-700 hover:bg-gray-50'
-                                            }`}
-                                        title="Previous page"
-                                    >
-                                        <ChevronLeft size={16} />
-                                    </button>
-
-                                    {/* Page Numbers */}
-                                    <div className="hidden sm:flex items-center gap-1">
-                                        {getPageNumbers().map((page, index) => (
-                                            <React.Fragment key={index}>
-                                                {page === '...' ? (
-                                                    <span className="px-3 py-2 text-gray-500">...</span>
-                                                ) : (
-                                                    <button
-                                                        onClick={() => handlePageChange(page)}
-                                                        className={`px-3 py-2 rounded-md border text-sm font-medium ${currentPage === page
-                                                            ? 'border-blue-500 bg-blue-50 text-blue-600'
-                                                            : 'border-gray-300 text-gray-700 hover:bg-gray-50'
-                                                            }`}
-                                                    >
-                                                        {page}
-                                                    </button>
-                                                )}
-                                            </React.Fragment>
-                                        ))}
-                                    </div>
-
-                                    {/* Mobile Page Info */}
-                                    <div className="sm:hidden px-3 py-2 text-sm text-gray-700 bg-gray-50 rounded-md border">
-                                        {currentPage} / {totalPages}
-                                    </div>
-
-                                    {/* Next Button */}
-                                    <button
-                                        onClick={handleNextPage}
-                                        disabled={currentPage === totalPages}
-                                        className={`p-2 rounded-md border ${currentPage === totalPages
-                                            ? 'border-gray-200 text-gray-400 cursor-not-allowed'
-                                            : 'border-gray-300 text-gray-700 hover:bg-gray-50'
-                                            }`}
-                                        title="Next page"
-                                    >
-                                        <ChevronRight size={16} />
-                                    </button>
                                 </div>
                             </div>
-                        </div>
-                    )}
+                        )}
+
+                        {/* Desktop Table */}
+                        {!loading && !error && (
+                            <div className="hidden sm:block overflow-hidden rounded-lg">
+                                <table className="min-w-full divide-y divide-gray-200">
+                                    <thead className="bg-blue-600">
+                                        <tr>
+                                            {/* Checkbox column header */}
+                                            {bulkSelectionMode && (
+                                                <th className="px-4 lg:px-6 py-3 text-left">
+                                                    <div className="flex items-center gap-2">
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={currentStudents.every(s => selectedStudents.includes(s.id)) && currentStudents.length > 0}
+                                                            onChange={handleSelectAll}
+                                                            className="h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500 cursor-pointer"
+                                                            title="Select current page"
+                                                        />
+                                                        <span className="text-xs text-white hidden md:inline">Page</span>
+                                                    </div>
+                                                </th>
+                                            )}
+                                            <th className="px-4 lg:px-6 py-3 text-left text-sm font-medium text-white tracking-wider">
+                                                Student
+                                            </th>
+                                            <th className="px-4 lg:px-6 py-3 text-left text-sm font-medium text-white tracking-wider">
+                                                Roll Number
+                                            </th>
+                                            <th className="hidden lg:table-cell px-6 py-3 text-left text-sm font-medium text-white tracking-wider">
+                                                Contact
+                                            </th>
+
+                                            <th className="px-4 lg:px-6 py-3 text-left text-sm font-medium text-white tracking-wider">
+                                                Selections
+                                            </th>
+                                            <th className="hidden md:table-cell px-4 lg:px-6 py-3 text-left text-sm font-medium text-white tracking-wider">
+                                                Progress
+                                            </th>
+                                            <th className="px-4 lg:px-6 py-3 text-left text-sm font-medium text-white tracking-wider">
+                                                Action
+                                            </th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="bg-white divide-y divide-gray-200">
+                                        {currentStudents.map((student) => (
+                                            <tr key={student.id} className="hover:bg-gray-50 cursor-pointer" onClick={() => handleStudentClick(student)}>
+                                                {/* Checkbox column */}
+                                                {bulkSelectionMode && (
+                                                    <td className="px-4 lg:px-6 py-4 whitespace-nowrap">
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={selectedStudents.includes(student.id)}
+                                                            onChange={(e) => {
+                                                                e.stopPropagation();
+                                                                handleToggleStudentSelection(student.id);
+                                                            }}
+                                                            onClick={(e) => e.stopPropagation()}
+                                                            className="h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500 cursor-pointer"
+                                                        />
+                                                    </td>
+                                                )}
+                                                <td className="px-4 lg:px-6 py-4 whitespace-nowrap">
+                                                    <div className="flex items-center">
+                                                        <div className="flex-shrink-0 h-10 w-10">
+                                                            <div className="h-10 w-10 rounded-full bg-gradient-to-r from-blue-400 to-blue-600 flex items-center justify-center">
+                                                                <span className="text-white font-medium text-sm">
+                                                                    {student.name.charAt(0).toUpperCase()}
+                                                                </span>
+                                                            </div>
+                                                        </div>
+                                                        <div className="ml-3">
+                                                            <div className="text-sm font-medium text-gray-900 truncate max-w-32 lg:max-w-none">
+                                                                {student.name}
+                                                            </div>
+                                                            <div className="text-xs text-gray-500 truncate max-w-32 lg:max-w-none">
+                                                                {student.email}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td className="px-4 lg:px-6 py-4 whitespace-nowrap">
+                                                    <div className="text-sm font-medium text-gray-900">{student.rollNumber}</div>
+                                                </td>
+                                                <td className="hidden lg:table-cell px-6 py-4 whitespace-nowrap">
+                                                    <div className="text-sm text-gray-900">{student.phone}</div>
+                                                </td>
+
+                                                <td className="px-4 lg:px-6 py-4 whitespace-nowrap">
+                                                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getSelectionStatusColor(student.selectedSubjects.length, student.maxSelections)
+                                                        }`}>
+                                                        {student.selectedSubjects.length}/{student.maxSelections} selected
+                                                    </span>
+                                                </td>
+                                                <td className="hidden md:table-cell px-4 lg:px-6 py-4 whitespace-nowrap">
+                                                    <div className="w-full bg-gray-200 rounded-full h-2">
+                                                        <div
+                                                            className={`h-2 rounded-full ${student.selectedSubjects.length === student.maxSelections
+                                                                ? 'bg-green-600'
+                                                                : student.selectedSubjects.length > 0
+                                                                    ? 'bg-blue-600'
+                                                                    : 'bg-gray-400'
+                                                                }`}
+                                                            style={{
+                                                                width: `${(student.selectedSubjects.length / student.maxSelections) * 100}%`
+                                                            }}
+                                                        ></div>
+                                                    </div>
+                                                    <div className="text-xs text-gray-500 mt-1">
+                                                        {Math.round((student.selectedSubjects.length / student.maxSelections) * 100)}% complete
+                                                    </div>
+                                                </td>
+                                                <td className="px-4 lg:px-6 py-4 whitespace-nowrap">
+                                                    <button
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            handleStudentClick(student);
+                                                        }}
+                                                        className="text-blue-600 hover:text-blue-900 flex items-center gap-1 text-sm"
+                                                    >
+                                                        <Edit3 size={14} />
+                                                        <span className="hidden sm:inline">Manage</span>
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        )}
+
+                        {!loading && !error && filteredStudents.length === 0 && (
+                            <div className="text-center py-12">
+                                <Users size={48} className="mx-auto text-gray-400 mb-4" />
+                                <p className="text-gray-600 text-lg">No students found</p>
+                                <p className="text-gray-500 text-sm mt-2">
+                                    Try adjusting your search or filter criteria
+                                </p>
+                            </div>
+                        )}
+
+                        {/* Pagination */}
+                        {!loading && !error && filteredStudents.length > studentsPerPage && (
+                            <div className="border-t border-gray-200 px-4 py-3 sm:px-6">
+                                <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+                                    {/* Mobile Pagination Info */}
+                                    <div className="text-sm text-gray-700 order-2 sm:order-1">
+                                        Showing <span className="font-medium">{startIndex + 1}</span> to{' '}
+                                        <span className="font-medium">{Math.min(endIndex, filteredStudents.length)}</span> of{' '}
+                                        <span className="font-medium">{filteredStudents.length}</span> students
+                                    </div>
+
+                                    {/* Pagination Controls */}
+                                    <div className="flex items-center gap-2 order-1 sm:order-2">
+                                        {/* Previous Button */}
+                                        <button
+                                            onClick={handlePrevPage}
+                                            disabled={currentPage === 1}
+                                            className={`p-2 rounded-md border ${currentPage === 1
+                                                ? 'border-gray-200 text-gray-400 cursor-not-allowed'
+                                                : 'border-gray-300 text-gray-700 hover:bg-gray-50'
+                                                }`}
+                                            title="Previous page"
+                                        >
+                                            <ChevronLeft size={16} />
+                                        </button>
+
+                                        {/* Page Numbers */}
+                                        <div className="hidden sm:flex items-center gap-1">
+                                            {getPageNumbers().map((page, index) => (
+                                                <React.Fragment key={index}>
+                                                    {page === '...' ? (
+                                                        <span className="px-3 py-2 text-gray-500">...</span>
+                                                    ) : (
+                                                        <button
+                                                            onClick={() => handlePageChange(page)}
+                                                            className={`px-3 py-2 rounded-md border text-sm font-medium ${currentPage === page
+                                                                ? 'border-blue-500 bg-blue-50 text-blue-600'
+                                                                : 'border-gray-300 text-gray-700 hover:bg-gray-50'
+                                                                }`}
+                                                        >
+                                                            {page}
+                                                        </button>
+                                                    )}
+                                                </React.Fragment>
+                                            ))}
+                                        </div>
+
+                                        {/* Mobile Page Info */}
+                                        <div className="sm:hidden px-3 py-2 text-sm text-gray-700 bg-gray-50 rounded-md border">
+                                            {currentPage} / {totalPages}
+                                        </div>
+
+                                        {/* Next Button */}
+                                        <button
+                                            onClick={handleNextPage}
+                                            disabled={currentPage === totalPages}
+                                            className={`p-2 rounded-md border ${currentPage === totalPages
+                                                ? 'border-gray-200 text-gray-400 cursor-not-allowed'
+                                                : 'border-gray-300 text-gray-700 hover:bg-gray-50'
+                                                }`}
+                                            title="Next page"
+                                        >
+                                            <ChevronRight size={16} />
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>
@@ -1279,7 +1279,7 @@ const SubjectSelectionFullScreenView = ({
                                 </div>
                                 <div className="min-w-0 flex-1">
                                     <h2 className="text-lg sm:text-xl font-bold truncate">{selectedStudent.name}</h2>
-                                    <p className="text-blue-100 text-xs sm:text-sm truncate">{selectedStudent.rollNumber} • Subject Selection Management</p>
+                                    <p className="text-blue-100 text-xs sm:text-sm truncate">{selectedStudent.rollNumber} • Paper Selection Management</p>
                                 </div>
                             </div>
                             <button
@@ -1326,7 +1326,7 @@ const SubjectSelectionFullScreenView = ({
                                 <div>
                                     <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-3 sm:mb-4 flex items-center gap-2">
                                         <Check size={18} className="sm:w-5 sm:h-5 text-green-600" />
-                                        Selected Subjects ({localSelectedSubjects.length}/{selectedStudent.maxSelections})
+                                        Selected Papers ({localSelectedSubjects.length}/{selectedStudent.maxSelections})
                                         {hasUnsavedChanges && (
                                             <span className="text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full">
                                                 Unsaved
@@ -1355,7 +1355,7 @@ const SubjectSelectionFullScreenView = ({
                                     ) : (
                                         <div className="text-center py-6 sm:py-8 bg-gray-50 rounded-lg">
                                             <BookOpen size={40} className="sm:w-12 sm:h-12 mx-auto text-gray-400 mb-4" />
-                                            <p className="text-gray-600 text-sm sm:text-base">No subjects selected yet</p>
+                                            <p className="text-gray-600 text-sm sm:text-base">No Paper selected yet</p>
                                         </div>
                                     )}
                                 </div>
@@ -1364,7 +1364,7 @@ const SubjectSelectionFullScreenView = ({
                                 <div>
                                     <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-3 sm:mb-4 flex items-center gap-2">
                                         <Plus size={16} className="sm:w-5 sm:h-5 text-blue-600" />
-                                        Available Subjects by Set
+                                        Available Papers by Set
                                     </h3>
 
                                     {localSelectedSubjects.length < selectedStudent.maxSelections ? (() => {
@@ -1426,7 +1426,7 @@ const SubjectSelectionFullScreenView = ({
                             <div className="mt-6 sm:mt-8 pt-4 sm:pt-6 border-t border-gray-200">
                                 <div className="flex flex-col sm:flex-row justify-between items-center gap-3 sm:gap-0">
                                     <div className="text-xs sm:text-sm text-gray-600 text-center sm:text-left">
-                                        Progress: {localSelectedSubjects.length}/{selectedStudent.maxSelections} subjects selected
+                                        Progress: {localSelectedSubjects.length}/{selectedStudent.maxSelections} Paper selected
                                         {hasUnsavedChanges && (
                                             <span className="block text-yellow-600 font-medium">
                                                 You have unsaved changes
@@ -1925,7 +1925,7 @@ const SubjectSelectionFullScreenView = ({
                 <SweetAlert
                     success
                     title="Success!"
-                     confirmBtnCssClass="btn-confirm"
+                    confirmBtnCssClass="btn-confirm"
                     onConfirm={() => {
                         setShowSaveSuccessAlert(false);
                         setAlertMessage('');
@@ -1935,7 +1935,7 @@ const SubjectSelectionFullScreenView = ({
                         setShowStudentModal(false);
                     }}
                     confirmBtnText="OK"
-                    // confirmBtnBsStyle="success"
+                // confirmBtnBsStyle="success"
                 >
                     {alertMessage}
                 </SweetAlert>
