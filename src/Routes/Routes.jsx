@@ -26,6 +26,8 @@ import SubjectSelectionRoutes from '../Teacher/screens/Pages/SubjectSelection/Ro
 import TimeTableRoutes from '../Student/screens/Pages/TimeTable/Routes/TimeTableRoutes.jsx';
 import SubjectSelectionRoutes from '../Teacher/screens/Pages/SubjectSelection/Routes/SubjectSelectionRoutes.jsx'
 
+import AcademicCalendarRoute from "../Teacher/screens/Pages/AcademicCalendar/Routes/AcademicCalendarRoute.jsx"
+import AcademicCalendarRoutes from "../Student/screens/Pages/AcademicCalendar/Routes/AcademicCalendarRoutes.jsx"
 // ────── Route guards ──────
 const ProtectedRoute = ({ children }) => {
   const isLoggedIn = !!localStorage.getItem('refreshToken');
@@ -100,6 +102,18 @@ function App() {
             </ProtectedRoute>
           }
         />
+        {/* ────── TEACHER – Academic Calendar ────── */}
+        <Route
+          path="/teacher/academic-calendar/*"
+          element={
+            <ProtectedRoute>
+              <TeacherHomepage>
+                <AcademicCalendarRoute />
+              </TeacherHomepage>
+            </ProtectedRoute>
+          }
+        />
+
 
         {/* ────── STUDENT ────── */}
         <Route
@@ -175,6 +189,22 @@ function App() {
             </ProtectedRoute>
           }
         />
+
+        <Route
+          path="/student/academic-calendar/*"
+          element={
+            <ProtectedRoute>
+              <StudentHomepage>
+                <AcademicCalendarRoutes />
+              </StudentHomepage>
+            </ProtectedRoute>
+          }
+        />
+
+
+
+
+
 
 
 
