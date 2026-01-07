@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from "react";
 import PropTypes from "prop-types";
-import { ArrowLeft, Users, Clock, Settings, BookOpen, Target, Search, Filter, X, Plus, Check, Edit3, ChevronLeft, ChevronRight } from "lucide-react";
+import { ArrowLeft, Users, Clock, Settings, BookOpen, Target, Search, Filter, X, Plus, Check, Edit3, ChevronLeft, ChevronRight, AlertTriangle, CheckSquare, ChevronDown, ChevronRight as ChevronRightIcon, Save } from "lucide-react";
 import { subjectSelectionService } from "../Services/subjectSelection.service";
+import SweetAlert from 'react-bootstrap-sweetalert';
 
 /**
  * SubjectSelectionFullScreenView Component
@@ -30,6 +31,12 @@ const SubjectSelectionFullScreenView = ({
     const [saveError, setSaveError] = useState(null);
     const [saveSuccess, setSuccessMessage] = useState(null);
 
+    // SweetAlert states
+    const [showSaveSuccessAlert, setShowSaveSuccessAlert] = useState(false);
+    const [showSaveErrorAlert, setShowSaveErrorAlert] = useState(false);
+    const [alertMessage, setAlertMessage] = useState('');
+    const [errorMessage, setErrorMessage] = useState('');
+
     // Multi-select state for bulk operations
     const [selectedStudents, setSelectedStudents] = useState([]); // Array of student IDs
     const [bulkSelectionMode, setBulkSelectionMode] = useState(false);
@@ -37,7 +44,7 @@ const SubjectSelectionFullScreenView = ({
 
     // Pagination state
     const [currentPage, setCurrentPage] = useState(1);
-    const [studentsPerPage] = useState(10); // Students per page
+    const [studentsPerPage, setStudentsPerPage] = useState(25); // Students per page - increased for bulk uploads
 
 
     // Fetch students data when component mounts
@@ -86,7 +93,7 @@ const SubjectSelectionFullScreenView = ({
                     name: fullName,
                     rollNumber: student.roll_number || 'N/A',
                     email: student.email || 'N/A',
-                    phone: student.phone || 'N/A',
+                    phone: student.mobile || 'N/A',
                     status: student.status || (student.has_selection ? 'SUBMITTED' : 'PENDING'),
                     selectedSubjects: Array.isArray(selectedSubjects) ? selectedSubjects : [],
                     maxSelections: configData?.maximum_selections || 5,
@@ -251,11 +258,31 @@ const SubjectSelectionFullScreenView = ({
 
     const handleSelectAll = () => {
         if (selectedStudents.length === currentStudents.length) {
-            // Deselect all
-            setSelectedStudents([]);
+            // Deselect all current page
+            const currentIds = currentStudents.map(s => s.id);
+            setSelectedStudents(prev => prev.filter(id => !currentIds.includes(id)));
         } else {
             // Select all current page students
-            setSelectedStudents(currentStudents.map(s => s.id));
+            const currentIds = currentStudents.map(s => s.id);
+            setSelectedStudents(prev => {
+                const newIds = [...prev];
+                currentIds.forEach(id => {
+                    if (!newIds.includes(id)) {
+                        newIds.push(id);
+                    }
+                });
+                return newIds;
+            });
+        }
+    };
+
+    const handleSelectAllFiltered = () => {
+        if (selectedStudents.length === filteredStudents.length) {
+            // Deselect all filtered
+            setSelectedStudents([]);
+        } else {
+            // Select all filtered students across all pages
+            setSelectedStudents(filteredStudents.map(s => s.id));
         }
     };
 
@@ -291,6 +318,10 @@ const SubjectSelectionFullScreenView = ({
     const [bulkHasChanges, setBulkHasChanges] = useState(false);
     const [bulkSaving, setBulkSaving] = useState(false);
     const [currentBulkStudent, setCurrentBulkStudent] = useState(null); // For individual editing
+    const [bulkStudentSearch, setBulkStudentSearch] = useState(''); // Search in bulk modal
+    const [bulkStudentPage, setBulkStudentPage] = useState(1); // Pagination in bulk modal
+    const [showStudentSummary, setShowStudentSummary] = useState(false); // Toggle student summary section
+    const bulkStudentsPerPage = 12; // Show 12 students at a time in grid
 
     // Get common subjects across all selected students
     const getCommonSubjects = () => {
@@ -426,9 +457,13 @@ const SubjectSelectionFullScreenView = ({
             const response = await subjectSelectionService.bulkSaveOrUpdateSubjectSelections(bulkRequest);
 
             if (response) {
-                console.log("Bulk save successful:", response);
+                console.log("Bulk save response:", response);
 
-                // Update local state
+                const successCount = response.successful_count || 0;
+                const failedCount = response.failed_count || 0;
+                const failedEntries = response.failed_entries || [];
+
+                // Update local state for successful entries
                 const updatedStudents = studentsData.map(student => {
                     if (selectedStudents.includes(student.id)) {
                         const newSelections = bulkSubjectSelections[student.id] || [];
@@ -445,7 +480,15 @@ const SubjectSelectionFullScreenView = ({
 
                 setStudentsData(updatedStudents);
                 setBulkHasChanges(false);
-                setSuccessMessage(`Successfully updated ${selectedStudents.length} students!`);
+
+                // Show appropriate message based on results
+                if (failedCount > 0) {
+                    setErrorMessage(`${successCount} student(s) updated successfully.\n${failedCount} student(s) failed to update.`);
+                    setShowSaveErrorAlert(true);
+                } else {
+                    setAlertMessage(`Successfully updated ${successCount} student(s)!`);
+                    setShowSaveSuccessAlert(true);
+                }
 
                 // Refresh data
                 setTimeout(async () => {
@@ -455,19 +498,12 @@ const SubjectSelectionFullScreenView = ({
                         console.error("Error refreshing data:", error);
                     }
                 }, 1000);
-
-                // Auto close modal after success
-                setTimeout(() => {
-                    setShowBulkModal(false);
-                    setSelectedStudents([]);
-                    setBulkSelectionMode(false);
-                    setSuccessMessage(null);
-                }, 2000);
             }
 
         } catch (error) {
             console.error("Error in bulk save:", error);
-            setSaveError(error.message || "Failed to save bulk changes");
+            setErrorMessage(error.message || "Failed to save bulk changes");
+            setShowSaveErrorAlert(true);
         } finally {
             setBulkSaving(false);
         }
@@ -548,7 +584,8 @@ const SubjectSelectionFullScreenView = ({
 
                 setStudentsData(updatedStudents);
                 setHasUnsavedChanges(false);
-                setSuccessMessage("Subject selection saved successfully!");
+                setAlertMessage("Subject selection saved successfully!");
+                setShowSaveSuccessAlert(true);
 
                 // Refresh data from API to get latest state
                 setTimeout(async () => {
@@ -558,31 +595,22 @@ const SubjectSelectionFullScreenView = ({
                         console.error("Error refreshing data after save:", error);
                     }
                 }, 1000);
-
-                // Auto-hide success message after 3 seconds
-                setTimeout(() => {
-                    setSuccessMessage(null);
-                }, 3000);
             }
 
         } catch (error) {
             console.error("Error saving student subject selection:", error);
 
             // Set error message for UI display
-            let errorMessage = "Failed to save changes. Please try again.";
+            let errMsg = "Failed to save changes. Please try again.";
 
             if (error.message) {
-                errorMessage = error.message;
+                errMsg = error.message;
             } else if (error.response && error.response.data && error.response.data.message) {
-                errorMessage = error.response.data.message;
+                errMsg = error.response.data.message;
             }
 
-            setSaveError(errorMessage);
-
-            // Auto-hide error message after 5 seconds
-            setTimeout(() => {
-                setSaveError(null);
-            }, 5000);
+            setErrorMessage(errMsg);
+            setShowSaveErrorAlert(true);
 
         } finally {
             setSaving(false);
@@ -612,13 +640,26 @@ const SubjectSelectionFullScreenView = ({
         return allAvailableSubjects.filter(subject => !selectedSubjectIds.includes(subject.id));
     };
 
+    // Group subjects by set
+    const groupSubjectsBySet = (subjects) => {
+        const grouped = {};
+        subjects.forEach(subject => {
+            const setName = subject.set_name || 'Other';
+            if (!grouped[setName]) {
+                grouped[setName] = [];
+            }
+            grouped[setName].push(subject);
+        });
+        return grouped;
+    };
+
     return (
         <div className="min-h-screen bg-gray-50">
             {/* Mobile-Responsive Header */}
-            <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-lg">
+            <div className="bg-blue-600 text-white shadow-xl rounded-md">
                 <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-8">
-                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between py-4 sm:py-6 gap-3 sm:gap-0">
-                        <div className="flex items-center gap-3 sm:gap-4 w-full sm:w-auto">
+                    <div className="flex items-center justify-between py-4 sm:py-6">
+                        <div className="flex items-center gap-3 sm:gap-4 flex-1 min-w-0">
                             <button
                                 onClick={(e) => {
                                     e.preventDefault();
@@ -626,23 +667,27 @@ const SubjectSelectionFullScreenView = ({
                                         onBack();
                                     }
                                 }}
-                                className="p-2 hover:bg-blue-800 rounded-full transition-colors flex-shrink-0"
+                                className="p-2 hover:bg-blue-800 rounded-full transition-all duration-200 hover:scale-110 flex-shrink-0"
                                 title="Back to Dashboard"
                             >
                                 <ArrowLeft size={20} className="sm:w-6 sm:h-6" />
                             </button>
                             <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
-                                <Settings size={20} className="sm:w-6 sm:h-6 flex-shrink-0" />
-                                <div className="min-w-0">
+                                <div className="p-2 bg-white/10 rounded-lg backdrop-blur-sm flex-shrink-0">
+                                    <Settings size={20} className="sm:w-6 sm:h-6" />
+                                </div>
+                                <div className="min-w-0 flex-1">
                                     <h1 className="text-lg sm:text-xl lg:text-2xl font-bold truncate">{displayName}</h1>
-                                    <p className="text-blue-100 text-xs sm:text-sm hidden sm:block">Subject Selection Configuration & Student Management</p>
-                                    <p className="text-blue-100 text-xs sm:hidden">Configuration & Students</p>
+                                    <p className="text-blue-100 text-xs sm:text-sm mt-1 hidden sm:block">Paper Selection Configuration & Student Management</p>
+                                    <p className="text-blue-100 text-xs sm:hidden mt-1">Configuration & Students</p>
                                 </div>
                             </div>
                         </div>
-                        <div className="text-right sm:text-right w-full sm:w-auto">
-                            <p className="text-blue-100 text-xs sm:text-sm">Total Students</p>
-                            <p className="text-xl sm:text-2xl font-bold">{studentsData.length}</p>
+                        <div className="flex-shrink-0">
+                            <div className="flex items-center gap-2 px-4 py-2 bg-white/20 backdrop-blur-sm rounded-full">
+                                <Users size={18} className="sm:w-5 sm:h-5 animate-pulse" />
+                                <span className="text-xl sm:text-2xl font-bold transition-all duration-300">{studentsData.length}</span>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -773,23 +818,23 @@ const SubjectSelectionFullScreenView = ({
                 </div>
 
                 {/* Mobile-Responsive Students Section */}
-                <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-                    {/* Students Header with Search and Filter */}
-                    <div className="p-4 sm:p-6 border-b border-gray-200">
+                <div className="space-y-4">
+                    {/* Filter Controls Section */}
+                    <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-6">
                         <div className="flex flex-col gap-4">
                             <div>
-                                <h2 className="text-lg sm:text-xl font-semibold text-gray-900 flex items-center gap-2">
+                                <h2 className="text-lg sm:text-xl font-semibold text-gray-900 flex items-center gap-2 flex-wrap">
                                     <Users size={18} className="sm:w-5 sm:h-5" />
                                     Students ({filteredStudents.length})
                                     {bulkSelectionMode && selectedStudents.length > 0 && (
-                                        <span className="ml-2 px-3 py-1 bg-blue-100 text-blue-800 text-sm font-medium rounded-full">
-                                            {selectedStudents.length} selected
+                                        <span className="ml-2 px-3 py-1 bg-blue-100 text-blue-800 text-sm font-medium rounded-full animate-pulse">
+                                            {selectedStudents.length} / {filteredStudents.length} selected
                                         </span>
                                     )}
                                 </h2>
                                 <p className="text-xs sm:text-sm text-gray-600 mt-1">
                                     {bulkSelectionMode
-                                        ? "Select students to assign subjects in bulk"
+                                        ? "Select students to assign subjects in bulk. You can select across multiple pages."
                                         : "Click on any student to manage their subject selections"
                                     }
                                     {filteredStudents.length > studentsPerPage && !bulkSelectionMode && (
@@ -800,57 +845,117 @@ const SubjectSelectionFullScreenView = ({
                                 </p>
                             </div>
 
-                            <div className="flex flex-col sm:flex-row gap-3">
-                                {/* Bulk Mode Toggle */}
-                                <button
-                                    onClick={handleToggleBulkMode}
-                                    className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${bulkSelectionMode
-                                        ? 'bg-red-100 text-red-700 border border-red-300 hover:bg-red-200'
-                                        : 'bg-blue-100 text-blue-700 border border-blue-300 hover:bg-blue-200'
-                                        }`}
-                                >
-                                    {bulkSelectionMode ? '✕ Cancel Bulk Mode' : '☑ Bulk Selection Mode'}
-                                </button>
-
-                                {/* Bulk Actions - Show only in bulk mode with selections */}
-                                {bulkSelectionMode && selectedStudents.length > 0 && (
+                            <div className="flex flex-col gap-3">
+                                {/* Top Row: Bulk Controls */}
+                                <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">
+                                    {/* Bulk Mode Toggle */}
                                     <button
-                                        onClick={handleBulkSubjectSelection}
-                                        className="px-4 py-2 bg-green-600 text-white rounded-md text-sm font-medium hover:bg-green-700 transition-colors"
+                                        onClick={handleToggleBulkMode}
+                                        className={`px-4 py-2 rounded-md text-sm font-medium transition-colors shadow-sm ${bulkSelectionMode
+                                            ? 'bg-red-100 text-red-700 border-2 border-red-400 hover:bg-red-200'
+                                            : 'bg-blue-600 text-white border-2 border-blue-600 hover:bg-blue-700'
+                                            }`}
                                     >
-                                        Assign Subjects ({selectedStudents.length})
+                                        {bulkSelectionMode ? (
+                                            <>
+                                                <X size={16} className="inline" />
+                                                {' '}Cancel Bulk Mode
+                                            </>
+                                        ) : (
+                                            <>
+                                                <CheckSquare size={16} className="inline" />
+                                                {' '}Enable Bulk Selection
+                                            </>
+                                        )}
                                     </button>
-                                )}
 
-                                {/* Search */}
-                                <div className="relative flex-1 sm:flex-initial">
-                                    <Search size={16} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-                                    <input
-                                        type="text"
-                                        placeholder="Search students..."
-                                        value={searchTerm}
-                                        onChange={(e) => setSearchTerm(e.target.value)}
-                                        className="pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 w-full sm:w-64 text-sm"
-                                    />
+                                    {/* Select All Filtered - Show only in bulk mode */}
+                                    {bulkSelectionMode && filteredStudents.length > 0 && (
+                                        <button
+                                            onClick={handleSelectAllFiltered}
+                                            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors shadow-sm border-2 ${selectedStudents.length === filteredStudents.length
+                                                ? 'bg-yellow-100 text-yellow-800 border-yellow-400 hover:bg-yellow-200'
+                                                : 'bg-purple-100 text-purple-700 border-purple-400 hover:bg-purple-200'
+                                                }`}
+                                        >
+                                            {selectedStudents.length === filteredStudents.length ? (
+                                                <>
+                                                    <Check size={16} className="inline" />
+                                                    {' '}All {filteredStudents.length} Selected
+                                                </>
+                                            ) : (
+                                                `Select All ${filteredStudents.length} Filtered`
+                                            )}
+                                        </button>
+                                    )}
+
+                                    {/* Bulk Actions - Show only in bulk mode with selections */}
+                                    {bulkSelectionMode && selectedStudents.length > 0 && (
+                                        <button
+                                            onClick={handleBulkSubjectSelection}
+                                            className="px-4 py-2 bg-green-600 text-white rounded-md text-sm font-medium hover:bg-green-700 transition-colors shadow-sm border-2 border-green-600"
+                                        >
+                                            Assign Subjects to {selectedStudents.length} Student{selectedStudents.length > 1 ? 's' : ''}
+                                        </button>
+                                    )}
                                 </div>
 
-                                {/* Status Filter */}
-                                <div className="relative">
-                                    <Filter size={16} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-                                    <select
-                                        value={statusFilter}
-                                        onChange={(e) => setStatusFilter(e.target.value)}
-                                        className="pl-10 pr-8 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white w-full sm:w-auto text-sm"
-                                    >
-                                        <option value="all">All Status</option>
-                                        <option value="active">Active</option>
-                                        <option value="inactive">Inactive</option>
-                                    </select>
+                                {/* Bottom Row: Search and Filter */}
+                                <div className="flex flex-col sm:flex-row gap-3">
+                                    {/* Search */}
+                                    <div className="relative flex-1 sm:min-w-64">
+                                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                            <Search className="w-5 h-5 text-gray-400" />
+                                        </div>
+                                        <input
+                                            type="search"
+                                            placeholder="Search by name, roll number, or email..."
+                                            value={searchTerm}
+                                            onChange={(e) => setSearchTerm(e.target.value)}
+                                            className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 placeholder-gray-400 text-gray-900 bg-white shadow-sm"
+                                        />
+                                    </div>
+
+                                    {/* Status Filter */}
+                                    <div className="relative">
+                                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                            <Filter className="w-5 h-5 text-blue-600" />
+                                        </div>
+                                        <select
+                                            value={statusFilter}
+                                            onChange={(e) => setStatusFilter(e.target.value)}
+                                            className="pl-10 pr-8 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white w-full sm:w-auto text-sm shadow-sm transition-all duration-200"
+                                        >
+                                            <option value="all">All Status</option>
+                                            <option value="active">Active</option>
+                                            <option value="inactive">Inactive</option>
+                                        </select>
+                                    </div>
+
+                                    {/* Items per page selector */}
+                                    <div className="relative">
+                                        <select
+                                            value={studentsPerPage}
+                                            onChange={(e) => {
+                                                setStudentsPerPage(Number(e.target.value));
+                                                setCurrentPage(1);
+                                            }}
+                                            className="px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white w-full sm:w-auto text-sm shadow-sm transition-all duration-200"
+                                        >
+                                            <option value="10">10 per page</option>
+                                            <option value="25">25 per page</option>
+                                            <option value="50">50 per page</option>
+                                            <option value="100">100 per page</option>
+                                            <option value="200">200 per page</option>
+                                        </select>
+                                    </div>
                                 </div>
                             </div>
                         </div>
                     </div>
 
+                    {/* Students Table Section */}
+                    <div className="bg-white rounded-lg shadow-sm border border-gray-200">
                     {/* Loading State */}
                     {loading && (
                         <div className="text-center py-12">
@@ -951,39 +1056,42 @@ const SubjectSelectionFullScreenView = ({
 
                     {/* Desktop Table */}
                     {!loading && !error && (
-                        <div className="hidden sm:block overflow-x-auto">
+                        <div className="hidden sm:block overflow-hidden rounded-lg">
                             <table className="min-w-full divide-y divide-gray-200">
-                                <thead className="bg-gray-50">
+                                <thead className="bg-blue-600">
                                     <tr>
                                         {/* Checkbox column header */}
                                         {bulkSelectionMode && (
                                             <th className="px-4 lg:px-6 py-3 text-left">
-                                                <input
-                                                    type="checkbox"
-                                                    checked={selectedStudents.length === currentStudents.length && currentStudents.length > 0}
-                                                    onChange={handleSelectAll}
-                                                    className="h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500 cursor-pointer"
-                                                    title="Select All"
-                                                />
+                                                <div className="flex items-center gap-2">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={currentStudents.every(s => selectedStudents.includes(s.id)) && currentStudents.length > 0}
+                                                        onChange={handleSelectAll}
+                                                        className="h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500 cursor-pointer"
+                                                        title="Select current page"
+                                                    />
+                                                    <span className="text-xs text-white hidden md:inline">Page</span>
+                                                </div>
                                             </th>
                                         )}
-                                        <th className="px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        <th className="px-4 lg:px-6 py-3 text-left text-sm font-medium text-white tracking-wider">
                                             Student
                                         </th>
-                                        <th className="px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        <th className="px-4 lg:px-6 py-3 text-left text-sm font-medium text-white tracking-wider">
                                             Roll Number
                                         </th>
-                                        <th className="hidden lg:table-cell px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        <th className="hidden lg:table-cell px-6 py-3 text-left text-sm font-medium text-white tracking-wider">
                                             Contact
                                         </th>
 
-                                        <th className="px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        <th className="px-4 lg:px-6 py-3 text-left text-sm font-medium text-white tracking-wider">
                                             Selections
                                         </th>
-                                        <th className="hidden md:table-cell px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        <th className="hidden md:table-cell px-4 lg:px-6 py-3 text-left text-sm font-medium text-white tracking-wider">
                                             Progress
                                         </th>
-                                        <th className="px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        <th className="px-4 lg:px-6 py-3 text-left text-sm font-medium text-white tracking-wider">
                                             Action
                                         </th>
                                     </tr>
@@ -1087,7 +1195,7 @@ const SubjectSelectionFullScreenView = ({
 
                     {/* Pagination */}
                     {!loading && !error && filteredStudents.length > studentsPerPage && (
-                        <div className="bg-white border-t border-gray-200 px-4 py-3 sm:px-6">
+                        <div className="border-t border-gray-200 px-4 py-3 sm:px-6">
                             <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
                                 {/* Mobile Pagination Info */}
                                 <div className="text-sm text-gray-700 order-2 sm:order-1">
@@ -1153,6 +1261,7 @@ const SubjectSelectionFullScreenView = ({
                             </div>
                         </div>
                     )}
+                    </div>
                 </div>
             </div>
 
@@ -1251,37 +1360,60 @@ const SubjectSelectionFullScreenView = ({
                                     )}
                                 </div>
 
-                                {/* Available Subjects */}
+                                {/* Available Subjects - Grouped by Set */}
                                 <div>
                                     <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-3 sm:mb-4 flex items-center gap-2">
-                                        <Plus size={18} className="sm:w-5 sm:h-5 text-blue-600" />
-                                        Available Subjects
+                                        <Plus size={16} className="sm:w-5 sm:h-5 text-blue-600" />
+                                        Available Subjects by Set
                                     </h3>
 
-                                    {localSelectedSubjects.length < selectedStudent.maxSelections ? (
-                                        <div className="space-y-3 max-h-64 sm:max-h-80 overflow-y-auto">
-                                            {getAvailableSubjects().map((subject) => (
-                                                <div key={subject.id} className="flex items-center justify-between p-3 sm:p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                                                    <div className="min-w-0 flex-1">
-                                                        <h4 className="font-medium text-gray-900 text-sm sm:text-base truncate">{subject.name}</h4>
-                                                        <p className="text-xs sm:text-sm text-gray-600">
-                                                            {subject.code} • {subject.paper_code} • {subject.set_name}
-                                                        </p>
+                                    {localSelectedSubjects.length < selectedStudent.maxSelections ? (() => {
+                                        const availableSubjects = getAvailableSubjects();
+                                        const groupedSubjects = groupSubjectsBySet(availableSubjects);
+                                        const setNames = Object.keys(groupedSubjects);
+
+                                        return (
+                                            <div className="space-y-3 sm:space-y-4 max-h-64 sm:max-h-80 overflow-y-auto">
+                                                {setNames.map((setName) => (
+                                                    <div key={setName} className="border border-blue-200 rounded-lg overflow-hidden shadow-sm">
+                                                        {/* Set Header */}
+                                                        <div className="bg-gradient-to-r from-blue-50 to-cyan-50 px-3 py-2 sm:py-2.5 border-b border-blue-200">
+                                                            <h4 className="font-semibold text-blue-900 text-xs sm:text-sm flex items-center gap-2">
+                                                                <span className="inline-block w-1.5 h-1.5 sm:w-2 sm:h-2 bg-blue-600 rounded-full"></span>
+                                                                <span className="flex-1 truncate">{setName}</span>
+                                                                <span className="text-xs text-blue-700 font-normal bg-white px-2 py-0.5 rounded-full flex-shrink-0">
+                                                                    {groupedSubjects[setName].length}
+                                                                </span>
+                                                            </h4>
+                                                        </div>
+                                                        {/* Set Subjects */}
+                                                        <div className="bg-white divide-y divide-gray-100">
+                                                            {groupedSubjects[setName].map((subject) => (
+                                                                <div key={subject.id} className="flex items-center justify-between p-2 sm:p-3 hover:bg-blue-50 transition-colors">
+                                                                    <div className="min-w-0 flex-1 pr-2">
+                                                                        <h5 className="font-medium text-gray-900 text-xs sm:text-sm truncate">{subject.name}</h5>
+                                                                        <p className="text-xs text-gray-600 truncate">
+                                                                            {subject.code} • {subject.paper_code}
+                                                                        </p>
+                                                                    </div>
+                                                                    <button
+                                                                        onClick={() => handleAddSubject(subject)}
+                                                                        className="p-1.5 sm:p-2 text-blue-600 hover:bg-blue-100 rounded-full transition-colors flex-shrink-0"
+                                                                        title="Add Subject"
+                                                                    >
+                                                                        <Plus size={14} className="sm:w-4 sm:h-4" />
+                                                                    </button>
+                                                                </div>
+                                                            ))}
+                                                        </div>
                                                     </div>
-                                                    <button
-                                                        onClick={() => handleAddSubject(subject)}
-                                                        className="p-2 text-blue-600 hover:bg-blue-100 rounded-full transition-colors flex-shrink-0 ml-2"
-                                                        title="Add Subject"
-                                                    >
-                                                        <Plus size={16} />
-                                                    </button>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    ) : (
+                                                ))}
+                                            </div>
+                                        );
+                                    })() : (
                                         <div className="text-center py-6 sm:py-8 bg-gray-50 rounded-lg">
-                                            <Target size={40} className="sm:w-12 sm:h-12 mx-auto text-gray-400 mb-4" />
-                                            <p className="text-gray-600 text-sm sm:text-base">Maximum selections reached</p>
+                                            <Target size={32} className="sm:w-10 sm:h-10 mx-auto text-gray-400 mb-3 sm:mb-4" />
+                                            <p className="text-gray-600 text-xs sm:text-sm sm:text-base">Maximum selections reached</p>
                                             <p className="text-gray-500 text-xs sm:text-sm mt-2">
                                                 Remove some subjects to add new ones
                                             </p>
@@ -1350,30 +1482,59 @@ const SubjectSelectionFullScreenView = ({
             {/* Bulk Subject Selection Modal */}
             {showBulkModal && (
                 <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-2 sm:p-4">
-                    <div className="bg-white rounded-lg shadow-2xl w-full max-w-6xl max-h-[95vh] overflow-y-auto">
-                        {/* Modal Header */}
-                        <div className="sticky top-0 z-10 bg-gradient-to-r from-green-600 to-green-700 text-white p-4 sm:p-6 border-b border-gray-200 rounded-t-lg">
-                            <div className="flex items-center justify-between">
-                                <div>
-                                    <h2 className="text-lg sm:text-xl font-bold">Bulk Subject Assignment</h2>
+                    <div className="bg-white rounded-lg shadow-2xl w-full max-w-7xl max-h-[95vh] flex flex-col">
+                        {/* Modal Header - Sticky */}
+                        <div className="sticky top-0 z-10 bg-gradient-to-r from-green-600 to-green-700 text-white p-4 sm:p-6 rounded-t-lg flex-shrink-0">
+                            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                                <div className="flex-1">
+                                    <h2 className="text-lg sm:text-xl font-bold">
+                                        <BookOpen size={20} className="inline" />
+                                        {' '}Bulk Subject Assignment
+                                    </h2>
                                     <p className="text-green-100 text-xs sm:text-sm mt-1">
-                                        Managing {selectedStudents.length} students
+                                        Managing {selectedStudents.length} student{selectedStudents.length > 1 ? 's' : ''}
                                     </p>
                                 </div>
-                                <button
-                                    onClick={() => {
-                                        if (bulkHasChanges) {
-                                            const confirm = window.confirm("You have unsaved changes. Close anyway?");
-                                            if (!confirm) return;
-                                        }
-                                        setShowBulkModal(false);
-                                        setBulkHasChanges(false);
-                                        setCurrentBulkStudent(null);
-                                    }}
-                                    className="p-2 hover:bg-green-800 rounded-full transition-colors"
-                                >
-                                    <X size={20} />
-                                </button>
+                                <div className="flex items-center gap-2">
+                                    {/* Individual Student Selector */}
+                                    {currentBulkStudent === null ? (
+                                        <select
+                                            onChange={(e) => setCurrentBulkStudent(e.target.value ? Number(e.target.value) : null)}
+                                            className="px-3 py-2 bg-white text-gray-900 rounded-md border border-green-400 text-sm focus:outline-none focus:ring-2 focus:ring-green-300"
+                                            value=""
+                                        >
+                                            <option value="">Edit Individual Student</option>
+                                            {studentsData.filter(s => selectedStudents.includes(s.id)).map(student => (
+                                                <option key={student.id} value={student.id}>
+                                                    {student.name} ({student.rollNumber})
+                                                </option>
+                                            ))}
+                                        </select>
+                                    ) : (
+                                        <button
+                                            onClick={() => setCurrentBulkStudent(null)}
+                                            className="px-3 py-2 bg-white text-green-700 rounded-md text-sm font-medium hover:bg-green-50 transition-colors"
+                                        >
+                                            ← Back to Bulk
+                                        </button>
+                                    )}
+                                    <button
+                                        onClick={() => {
+                                            if (bulkHasChanges) {
+                                                const confirm = window.confirm("You have unsaved changes. Close anyway?");
+                                                if (!confirm) return;
+                                            }
+                                            setShowBulkModal(false);
+                                            setBulkHasChanges(false);
+                                            setCurrentBulkStudent(null);
+                                            setBulkStudentSearch('');
+                                            setBulkStudentPage(1);
+                                        }}
+                                        className="p-2 hover:bg-green-800 rounded-full transition-colors"
+                                    >
+                                        <X size={20} />
+                                    </button>
+                                </div>
                             </div>
                         </div>
 
@@ -1396,35 +1557,8 @@ const SubjectSelectionFullScreenView = ({
                             </div>
                         )}
 
-                        {/* Tab Navigation */}
-                        <div className="border-b border-gray-200">
-                            <div className="flex overflow-x-auto">
-                                <button
-                                    onClick={() => setCurrentBulkStudent(null)}
-                                    className={`px-4 py-3 text-sm font-medium whitespace-nowrap ${currentBulkStudent === null
-                                        ? 'border-b-2 border-green-600 text-green-600'
-                                        : 'text-gray-600 hover:text-gray-900'
-                                        }`}
-                                >
-                                    📊 Bulk Operations
-                                </button>
-                                {studentsData.filter(s => selectedStudents.includes(s.id)).map(student => (
-                                    <button
-                                        key={student.id}
-                                        onClick={() => setCurrentBulkStudent(student.id)}
-                                        className={`px-4 py-3 text-sm font-medium whitespace-nowrap ${currentBulkStudent === student.id
-                                            ? 'border-b-2 border-blue-600 text-blue-600'
-                                            : 'text-gray-600 hover:text-gray-900'
-                                            }`}
-                                    >
-                                        👤 {student.name}
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
-
-                        {/* Modal Content */}
-                        <div className="p-4 sm:p-6">
+                        {/* Modal Content - Scrollable */}
+                        <div className="flex-1 overflow-y-auto p-4 sm:p-6">
                             {/* Bulk Operations View */}
                             {currentBulkStudent === null && (
                                 <div className="space-y-6">
@@ -1459,82 +1593,165 @@ const SubjectSelectionFullScreenView = ({
                                         )}
                                     </div>
 
-                                    {/* Available Subjects for Bulk Assignment */}
+                                    {/* Available Subjects for Bulk Assignment - Grouped by Set */}
                                     <div>
                                         <h3 className="text-lg font-semibold text-gray-900 mb-3 flex items-center gap-2">
                                             <Plus size={18} className="text-blue-600" />
-                                            Assign to All Students
+                                            Assign to All Students (By Set)
                                         </h3>
-                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-96 overflow-y-auto">
-                                            {allAvailableSubjects.map((subject) => (
-                                                <div key={subject.id} className="flex items-center justify-between p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                                                    <div className="flex-1 min-w-0">
-                                                        <h4 className="font-medium text-gray-900 text-sm truncate">{subject.name}</h4>
-                                                        <p className="text-xs text-gray-600 truncate">
-                                                            {subject.code} • {subject.paper_code} • {subject.set_name}
-                                                        </p>
+                                        <div className="space-y-3 max-h-96 overflow-y-auto">
+                                            {(() => {
+                                                const groupedSubjects = groupSubjectsBySet(allAvailableSubjects);
+                                                const setNames = Object.keys(groupedSubjects);
+
+                                                return setNames.map((setName) => (
+                                                    <div key={setName} className="border-2 border-indigo-200 rounded-lg overflow-hidden">
+                                                        {/* Set Header */}
+                                                        <div className="bg-gradient-to-r from-indigo-100 to-indigo-200 px-4 py-2.5 border-b-2 border-indigo-300">
+                                                            <h4 className="font-bold text-indigo-900 text-sm flex items-center gap-2">
+                                                                <span className="inline-block w-2.5 h-2.5 bg-indigo-700 rounded-full"></span>
+                                                                {setName}
+                                                                <span className="text-xs text-indigo-700 font-medium ml-auto bg-white px-2 py-0.5 rounded-full">
+                                                                    {groupedSubjects[setName].length} subjects
+                                                                </span>
+                                                            </h4>
+                                                        </div>
+                                                        {/* Set Subjects in Grid */}
+                                                        <div className="bg-white p-2 grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                                            {groupedSubjects[setName].map((subject) => (
+                                                                <div key={subject.id} className="flex items-center justify-between p-2 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 transition-colors">
+                                                                    <div className="flex-1 min-w-0 pr-2">
+                                                                        <h5 className="font-medium text-gray-900 text-xs truncate">{subject.name}</h5>
+                                                                        <p className="text-xs text-gray-600 truncate">
+                                                                            {subject.code} • {subject.paper_code}
+                                                                        </p>
+                                                                    </div>
+                                                                    <button
+                                                                        onClick={() => handleBulkAddSubject(subject)}
+                                                                        className="p-1.5 text-blue-600 hover:bg-blue-200 rounded-full transition-colors flex-shrink-0"
+                                                                        title="Add to all students"
+                                                                    >
+                                                                        <Plus size={14} />
+                                                                    </button>
+                                                                </div>
+                                                            ))}
+                                                        </div>
                                                     </div>
-                                                    <button
-                                                        onClick={() => handleBulkAddSubject(subject)}
-                                                        className="p-2 text-blue-600 hover:bg-blue-100 rounded-full transition-colors ml-2 flex-shrink-0"
-                                                        title="Add to all students"
-                                                    >
-                                                        <Plus size={16} />
-                                                    </button>
-                                                </div>
-                                            ))}
+                                                ));
+                                            })()}
                                         </div>
                                     </div>
 
-                                    {/* Student-wise Summary */}
+                                    {/* Student-wise Summary - Collapsible with Pagination */}
                                     <div>
-                                        <h3 className="text-lg font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                                            <Users size={18} className="text-purple-600" />
-                                            Individual Summary
-                                        </h3>
-                                        <div className="space-y-3">
-                                            {studentsData.filter(s => selectedStudents.includes(s.id)).map(student => (
-                                                <div key={student.id} className="p-4 bg-gray-50 border border-gray-200 rounded-lg">
-                                                    <div className="flex items-center justify-between mb-2">
-                                                        <div className="flex items-center gap-3">
-                                                            <div className="h-8 w-8 rounded-full bg-gradient-to-r from-purple-400 to-purple-600 flex items-center justify-center">
-                                                                <span className="text-white font-medium text-xs">
-                                                                    {student.name.charAt(0).toUpperCase()}
-                                                                </span>
-                                                            </div>
-                                                            <div>
-                                                                <p className="font-medium text-gray-900 text-sm">{student.name}</p>
-                                                                <p className="text-xs text-gray-600">{student.rollNumber}</p>
-                                                            </div>
-                                                        </div>
-                                                        <div className="flex items-center gap-2">
-                                                            <span className={`px-2 py-1 text-xs font-semibold rounded-full ${getSelectionStatusColor(
-                                                                (bulkSubjectSelections[student.id] || []).length,
-                                                                student.maxSelections
-                                                            )
-                                                                }`}>
-                                                                {(bulkSubjectSelections[student.id] || []).length}/{student.maxSelections}
-                                                            </span>
-                                                            <button
-                                                                onClick={() => setCurrentBulkStudent(student.id)}
-                                                                className="text-xs text-blue-600 hover:underline"
-                                                            >
-                                                                Edit →
-                                                            </button>
+                                        <div
+                                            className="flex items-center justify-between cursor-pointer p-3 bg-purple-50 border border-purple-200 rounded-lg hover:bg-purple-100 transition-colors mb-3"
+                                            onClick={() => setShowStudentSummary(!showStudentSummary)}
+                                        >
+                                            <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                                                <Users size={18} className="text-purple-600" />
+                                                Individual Summary ({selectedStudents.length} students)
+                                            </h3>
+                                            <span className="text-purple-600">
+                                                {showStudentSummary ? <ChevronDown size={20} className="inline" /> : <ChevronRightIcon size={20} className="inline" />}
+                                            </span>
+                                        </div>
+
+                                        {showStudentSummary && (() => {
+                                            const filteredBulkStudents = studentsData
+                                                .filter(s => selectedStudents.includes(s.id))
+                                                .filter(s =>
+                                                    bulkStudentSearch === '' ||
+                                                    s.name.toLowerCase().includes(bulkStudentSearch.toLowerCase()) ||
+                                                    s.rollNumber.toLowerCase().includes(bulkStudentSearch.toLowerCase())
+                                                );
+
+                                            const totalBulkPages = Math.ceil(filteredBulkStudents.length / bulkStudentsPerPage);
+                                            const startIdx = (bulkStudentPage - 1) * bulkStudentsPerPage;
+                                            const currentBulkStudents = filteredBulkStudents.slice(startIdx, startIdx + bulkStudentsPerPage);
+
+                                            return (
+                                                <div>
+                                                    {/* Search Bar */}
+                                                    <div className="mb-3">
+                                                        <div className="relative">
+                                                            <Search size={16} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                                                            <input
+                                                                type="text"
+                                                                placeholder="Search students..."
+                                                                value={bulkStudentSearch}
+                                                                onChange={(e) => {
+                                                                    setBulkStudentSearch(e.target.value);
+                                                                    setBulkStudentPage(1);
+                                                                }}
+                                                                className="pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 w-full text-sm"
+                                                            />
                                                         </div>
                                                     </div>
-                                                    {(bulkSubjectSelections[student.id] || []).length > 0 && (
-                                                        <div className="flex flex-wrap gap-1 mt-2">
-                                                            {(bulkSubjectSelections[student.id] || []).map((subject, idx) => (
-                                                                <span key={idx} className="px-2 py-1 bg-white border border-gray-300 rounded text-xs text-gray-700">
-                                                                    {subject.subject_name || subject}
+
+                                                    {/* Compact Grid Layout */}
+                                                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mb-3">
+                                                        {currentBulkStudents.map(student => (
+                                                            <div key={student.id} className="p-3 bg-gray-50 border border-gray-200 rounded-lg hover:shadow-md transition-shadow">
+                                                                <div className="flex items-start justify-between mb-2">
+                                                                    <div className="flex items-center gap-2 min-w-0 flex-1">
+                                                                        <div className="h-8 w-8 rounded-full bg-gradient-to-r from-purple-400 to-purple-600 flex items-center justify-center flex-shrink-0">
+                                                                            <span className="text-white font-medium text-xs">
+                                                                                {student.name.charAt(0).toUpperCase()}
+                                                                            </span>
+                                                                        </div>
+                                                                        <div className="min-w-0 flex-1">
+                                                                            <p className="font-medium text-gray-900 text-sm truncate" title={student.name}>{student.name}</p>
+                                                                            <p className="text-xs text-gray-600 truncate">{student.rollNumber}</p>
+                                                                        </div>
+                                                                    </div>
+                                                                    <span className={`px-2 py-1 text-xs font-semibold rounded-full flex-shrink-0 ${getSelectionStatusColor(
+                                                                        (bulkSubjectSelections[student.id] || []).length,
+                                                                        student.maxSelections
+                                                                    )}`}>
+                                                                        {(bulkSubjectSelections[student.id] || []).length}/{student.maxSelections}
+                                                                    </span>
+                                                                </div>
+                                                                <button
+                                                                    onClick={() => setCurrentBulkStudent(student.id)}
+                                                                    className="w-full text-xs text-blue-600 hover:bg-blue-50 py-1 rounded transition-colors font-medium"
+                                                                >
+                                                                    Edit Subjects →
+                                                                </button>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+
+                                                    {/* Pagination */}
+                                                    {totalBulkPages > 1 && (
+                                                        <div className="flex items-center justify-between pt-3 border-t border-gray-200">
+                                                            <p className="text-sm text-gray-600">
+                                                                Showing {startIdx + 1}-{Math.min(startIdx + bulkStudentsPerPage, filteredBulkStudents.length)} of {filteredBulkStudents.length}
+                                                            </p>
+                                                            <div className="flex gap-2">
+                                                                <button
+                                                                    onClick={() => setBulkStudentPage(p => Math.max(1, p - 1))}
+                                                                    disabled={bulkStudentPage === 1}
+                                                                    className="px-3 py-1 border rounded text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                                                                >
+                                                                    ←
+                                                                </button>
+                                                                <span className="px-3 py-1 text-sm">
+                                                                    {bulkStudentPage} / {totalBulkPages}
                                                                 </span>
-                                                            ))}
+                                                                <button
+                                                                    onClick={() => setBulkStudentPage(p => Math.min(totalBulkPages, p + 1))}
+                                                                    disabled={bulkStudentPage === totalBulkPages}
+                                                                    className="px-3 py-1 border rounded text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                                                                >
+                                                                    →
+                                                                </button>
+                                                            </div>
                                                         </div>
                                                     )}
                                                 </div>
-                                            ))}
-                                        </div>
+                                            );
+                                        })()}
                                     </div>
                                 </div>
                             )}
@@ -1585,35 +1802,58 @@ const SubjectSelectionFullScreenView = ({
                                             )}
                                         </div>
 
-                                        {/* Available Subjects */}
+                                        {/* Available Subjects - Grouped by Set */}
                                         <div>
-                                            <h3 className="text-lg font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                                                <Plus size={18} className="text-blue-600" />
-                                                Available Subjects
+                                            <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                                                <Plus size={16} className="sm:w-5 sm:h-5 text-blue-600" />
+                                                Available Subjects by Set
                                             </h3>
-                                            {studentSelections.length < student.maxSelections ? (
-                                                <div className="space-y-3 max-h-96 overflow-y-auto">
-                                                    {availableForStudent.map((subject) => (
-                                                        <div key={subject.id} className="flex items-center justify-between p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                                                            <div className="flex-1 min-w-0">
-                                                                <h4 className="font-medium text-gray-900 text-sm truncate">{subject.name}</h4>
-                                                                <p className="text-xs text-gray-600 truncate">
-                                                                    {subject.code} • {subject.paper_code} • {subject.set_name}
-                                                                </p>
+                                            {studentSelections.length < student.maxSelections ? (() => {
+                                                const groupedSubjects = groupSubjectsBySet(availableForStudent);
+                                                const setNames = Object.keys(groupedSubjects);
+
+                                                return (
+                                                    <div className="space-y-3 max-h-96 overflow-y-auto">
+                                                        {setNames.map((setName) => (
+                                                            <div key={setName} className="border border-blue-200 rounded-lg overflow-hidden shadow-sm">
+                                                                {/* Set Header */}
+                                                                <div className="bg-gradient-to-r from-blue-50 to-cyan-50 px-3 py-2 sm:py-2.5 border-b border-blue-200">
+                                                                    <h4 className="font-semibold text-blue-900 text-xs sm:text-sm flex items-center gap-2">
+                                                                        <span className="inline-block w-1.5 h-1.5 sm:w-2 sm:h-2 bg-blue-600 rounded-full"></span>
+                                                                        <span className="flex-1 truncate">{setName}</span>
+                                                                        <span className="text-xs text-blue-700 font-normal bg-white px-2 py-0.5 rounded-full flex-shrink-0">
+                                                                            {groupedSubjects[setName].length}
+                                                                        </span>
+                                                                    </h4>
+                                                                </div>
+                                                                {/* Set Subjects */}
+                                                                <div className="bg-white divide-y divide-gray-100">
+                                                                    {groupedSubjects[setName].map((subject) => (
+                                                                        <div key={subject.id} className="flex items-center justify-between p-2 sm:p-3 hover:bg-blue-50 transition-colors">
+                                                                            <div className="flex-1 min-w-0 pr-2">
+                                                                                <h5 className="font-medium text-gray-900 text-xs sm:text-sm truncate">{subject.name}</h5>
+                                                                                <p className="text-xs text-gray-600 truncate">
+                                                                                    {subject.code} • {subject.paper_code}
+                                                                                </p>
+                                                                            </div>
+                                                                            <button
+                                                                                onClick={() => handleIndividualAddSubject(currentBulkStudent, subject)}
+                                                                                className="p-1.5 sm:p-2 text-blue-600 hover:bg-blue-100 rounded-full transition-colors flex-shrink-0"
+                                                                                title="Add subject"
+                                                                            >
+                                                                                <Plus size={14} className="sm:w-4 sm:h-4" />
+                                                                            </button>
+                                                                        </div>
+                                                                    ))}
+                                                                </div>
                                                             </div>
-                                                            <button
-                                                                onClick={() => handleIndividualAddSubject(currentBulkStudent, subject)}
-                                                                className="p-2 text-blue-600 hover:bg-blue-100 rounded-full transition-colors ml-2"
-                                                            >
-                                                                <Plus size={16} />
-                                                            </button>
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            ) : (
-                                                <div className="text-center py-8 bg-gray-50 rounded-lg">
-                                                    <Target size={40} className="mx-auto text-gray-400 mb-2" />
-                                                    <p className="text-gray-600 text-sm">Maximum selections reached</p>
+                                                        ))}
+                                                    </div>
+                                                );
+                                            })() : (
+                                                <div className="text-center py-6 sm:py-8 bg-gray-50 rounded-lg">
+                                                    <Target size={32} className="sm:w-10 sm:h-10 mx-auto text-gray-400 mb-2" />
+                                                    <p className="text-gray-600 text-xs sm:text-sm">Maximum selections reached</p>
                                                 </div>
                                             )}
                                         </div>
@@ -1622,46 +1862,101 @@ const SubjectSelectionFullScreenView = ({
                             })()}
                         </div>
 
-                        {/* Modal Footer */}
-                        <div className="sticky bottom-0 bg-white border-t border-gray-200 p-4 sm:p-6 rounded-b-lg">
+                        {/* Modal Footer - Sticky */}
+                        <div className="sticky bottom-0 bg-white border-t-2 border-gray-300 p-4 sm:p-5 flex-shrink-0 shadow-lg">
                             <div className="flex flex-col sm:flex-row justify-between items-center gap-3">
                                 <div className="text-sm text-gray-600">
                                     {bulkHasChanges ? (
-                                        <span className="text-yellow-600 font-medium">⚠ You have unsaved changes</span>
+                                        <span className="text-yellow-600 font-medium flex items-center gap-1">
+                                            <AlertTriangle size={16} className="inline" />
+                                            {' '}Unsaved changes for {selectedStudents.length} student{selectedStudents.length > 1 ? 's' : ''}
+                                        </span>
                                     ) : (
-                                        <span>No changes made</span>
+                                        <span className="text-gray-500">No unsaved changes</span>
                                     )}
                                 </div>
                                 <div className="flex gap-3 w-full sm:w-auto">
                                     <button
                                         onClick={() => {
                                             if (bulkHasChanges) {
-                                                const confirm = window.confirm("Discard changes?");
+                                                const confirm = window.confirm("You have unsaved changes. Close anyway?");
                                                 if (!confirm) return;
                                             }
                                             setShowBulkModal(false);
                                             setBulkHasChanges(false);
                                             setCurrentBulkStudent(null);
+                                            setBulkStudentSearch('');
+                                            setBulkStudentPage(1);
+                                            setShowStudentSummary(false);
                                         }}
-                                        className="flex-1 sm:flex-initial px-6 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors"
+                                        className="flex-1 sm:flex-initial px-5 py-2.5 border-2 border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors font-medium"
                                     >
-                                        Cancel
+                                        Close
                                     </button>
                                     <button
                                         onClick={handleBulkSave}
                                         disabled={!bulkHasChanges || bulkSaving}
-                                        className={`flex-1 sm:flex-initial px-6 py-2 rounded-md transition-colors ${bulkHasChanges && !bulkSaving
-                                            ? 'bg-green-600 text-white hover:bg-green-700'
-                                            : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                        className={`flex-1 sm:flex-initial px-5 py-2.5 rounded-md transition-colors font-medium shadow-sm ${bulkHasChanges && !bulkSaving
+                                            ? 'bg-green-600 text-white hover:bg-green-700 border-2 border-green-600'
+                                            : 'bg-gray-300 text-gray-500 cursor-not-allowed border-2 border-gray-300'
                                             }`}
                                     >
-                                        {bulkSaving ? 'Saving...' : `Save All Changes (${selectedStudents.length})`}
+                                        {bulkSaving ? (
+                                            <>
+                                                <Clock size={16} className="inline animate-spin" />
+                                                {' '}Saving...
+                                            </>
+                                        ) : (
+                                            <>
+                                                <Save size={16} className="inline" />
+                                                {' '}Save All Changes
+                                            </>
+                                        )}
                                     </button>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
+            )}
+
+            {/* SweetAlert Success */}
+            {showSaveSuccessAlert && (
+                <SweetAlert
+                    success
+                    title="Success!"
+                     confirmBtnCssClass="btn-confirm"
+                    onConfirm={() => {
+                        setShowSaveSuccessAlert(false);
+                        setAlertMessage('');
+                        setShowBulkModal(false);
+                        setSelectedStudents([]);
+                        setBulkSelectionMode(false);
+                        setShowStudentModal(false);
+                    }}
+                    confirmBtnText="OK"
+                    // confirmBtnBsStyle="success"
+                >
+                    {alertMessage}
+                </SweetAlert>
+            )}
+
+            {/* SweetAlert Error */}
+            {showSaveErrorAlert && (
+                <SweetAlert
+                    error
+                    title="Error!"
+                    confirmBtnCssClass="btn-confirm"
+                    onConfirm={() => {
+                        setShowSaveErrorAlert(false);
+                        setErrorMessage('');
+                    }}
+                    confirmBtnText="OK"
+                >
+                    <div style={{ textAlign: 'center' }}>
+                        {errorMessage}
+                    </div>
+                </SweetAlert>
             )}
         </div>
     );

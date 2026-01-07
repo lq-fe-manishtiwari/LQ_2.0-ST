@@ -128,7 +128,7 @@ const StudentSidebar = ({ isOpen, toggle }) => {
         iconInactive: quicknotesInactive,
         match: ["/student-quickNotesList", "/student-view-note"],
       },
-       {
+      {
         to: "/student/leaves",
         label: "Leaves",
         iconActive: classActive,
@@ -165,10 +165,11 @@ const StudentSidebar = ({ isOpen, toggle }) => {
         iconInactive: classInactive,
       },
       {
-        to: "/student-feedback",
+        to: "/student/us-feedback",
         label: "Feedback",
         iconActive: assessmentActive,
         iconInactive: assessmentInactive,
+        match: ["/student/us-feedback"],
       },
       {
         to: "/certificate",
@@ -183,7 +184,7 @@ const StudentSidebar = ({ isOpen, toggle }) => {
         iconInactive: classInactive,
       },
       {
-        to: "/Exam",
+        to: "/exam",
         label: "Examination",
         iconActive: classActive,
         iconInactive: classInactive,

@@ -2,13 +2,11 @@ import React from "react";
 import { NavLink } from "react-router-dom";
 
 const tabs = [
-    { label: "Regular Form", to: "/student/exam/regularform" },
-    { label: "Result", to: "/student/exam/result" },
-    { label: "Re-Evaluation", to: "/student/exam/re-evaluation" },
-    { label: "ATKT", to: "/student/exam/atkt" },
+    { label: "My Submitted", to: "/student/us-feedback/my-submitted" },
+    { label: "Pending", to: "/student/us-feedback/pending" },
 ];
 
-export default function TabNav() {
+export default function TabsNav() {
     return (
         <div className="flex justify-between w-full">
             {/* Left Side Tabs */}
