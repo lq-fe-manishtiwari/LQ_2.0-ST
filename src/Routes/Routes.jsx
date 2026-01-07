@@ -24,7 +24,6 @@ import ContentRoutes from '../Student/screens/Pages/Content/Routes/ContentRoutes
 import HRMRoutes from '../Teacher/screens/Pages/HRM/Routes/HRMRoute.jsx';
 import SubjectSelectionRoutes from '../Teacher/screens/Pages/SubjectSelection/Routes/SubjectSelectionRoutes.jsx';
 import TimeTableRoutes from '../Student/screens/Pages/TimeTable/Routes/TimeTableRoutes.jsx';
-import SubjectSelectionRoutes from '../Teacher/screens/Pages/SubjectSelection/Routes/SubjectSelectionRoutes.jsx'
 
 // ────── Route guards ──────
 const ProtectedRoute = ({ children }) => {
