@@ -10,6 +10,9 @@ import SubjectSelectionPage from '../Pages/SubjectSelection/SubjectSelectionPage
 import AluminiRoutes from '../Pages/Alumini/Routes/Routes.jsx';
 import TimeTableRoutes from '../Pages/TimeTable/Routes/TimeTableRoutes.jsx';
 import USFeedbackRoutes from '../Pages/USFeedback/Routes/USFeedbackRoutes.jsx';
+import MyCommittees from '../Pages/Committee/MyCommittees.jsx';
+import CommitteeDetails from '../Pages/Committee/CommitteeDetails.jsx';
+import MeetingDetails from '../Pages/Committee/MeetingDetails.jsx';
 
 const StudentRoutes = () => {
   return (
@@ -23,6 +26,9 @@ const StudentRoutes = () => {
       <Route path="subject-selection" element={<SubjectSelectionPage />} />
       <Route path="alumini/*" element={<AluminiRoutes />} />
       <Route path="us-feedback/*" element={<USFeedbackRoutes />} />
+      <Route path="committees" element={<MyCommittees />} />
+      <Route path="committee/:committeeId" element={<CommitteeDetails />} />
+      <Route path="committee/meeting/:meetingId" element={<MeetingDetails />} />
       {/* Add more student pages */}
     </Routes>
   );

@@ -25,6 +25,9 @@ import ExamManagementRoutes from "../Pages/ExamManageMent/Routes/ExamManagementR
 import LeavesRoutes from "../Pages/TeacherLeaves/Routes/LeavesRoutes.jsx";
 import HRMRoutes from "../Pages/HRM/Routes/HRMRoute.jsx";
 import TimeTableRoutes from "../Pages/TimeTable/Routes/TimeTableRoutes.jsx";
+import MyCommittees from "../Pages/Committee/MyCommittees.jsx";
+import CommitteeDetails from "../Pages/Committee/CommitteeDetails.jsx";
+import MeetingDetails from "../Pages/Committee/MeetingDetails.jsx";
 
 export default function TeacherRoutes() {
   return (
@@ -56,6 +59,9 @@ export default function TeacherRoutes() {
       <Route path="pms/*" element={<PMSRoutes />} />
       <Route path="exam/*" element={<ExamManagementRoutes />} />
       <Route path="leaves/*" element={<LeavesRoutes />} />
+      <Route path="committees" element={<MyCommittees />} />
+      <Route path="committee/:committeeId" element={<CommitteeDetails />} />
+      <Route path="committee/meeting/:meetingId" element={<MeetingDetails />} />
 
     </Routes>
   );

@@ -181,6 +181,13 @@ const StudentSidebar = ({ isOpen, toggle }) => {
         match: ["/student/us-feedback"],
       },
       {
+        to: "/committees",
+        label: "My Committees",
+        iconActive: classActive,
+        iconInactive: classInactive,
+        match: ["/committees", "/committee"],
+      },
+      {
         to: "/certificate",
         label: "Certificate",
         iconActive: classActive,

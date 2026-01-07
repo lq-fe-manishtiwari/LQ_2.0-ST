@@ -157,6 +157,13 @@ const Sidebar = ({ isOpen, toggle }) => {
         ],
       },
       {
+        to: "/teacher/committees",
+        label: "Committee",
+        iconActive: classActive,
+        iconInactive: classInactive,
+        match: ["/teacher/committees", "/teacher/committee"],
+      },
+      {
         to: "/teacher-analytics",
         label: "Insights",
         iconActive: analyticsActive,
