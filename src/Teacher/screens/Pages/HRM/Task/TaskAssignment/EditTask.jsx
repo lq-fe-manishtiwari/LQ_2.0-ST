@@ -4,8 +4,8 @@ import { X, Pencil, ChevronDown, Eye, Trash2, Edit } from "lucide-react";
 import SweetAlert from 'react-bootstrap-sweetalert';
 import RoleModal from '../../Components/RoleModal';
 // import {DepartmentService} from '../../../Academics/Services/Department.service';
-import {Settings} from '../../Settings/Settings.service';
-import {TaskManagement} from '../../Services/TaskManagement.service';
+import { Settings } from '../../Settings/Settings.service';
+import { TaskManagement } from '../../Services/TaskManagement.service';
 
 // Multi-Select Responsibility Component
 // const MultiSelectResponsibility = ({ label, selectedItems, options, onChange, onRemove }) => {
@@ -137,12 +137,12 @@ const CustomSelect = ({ label, value, onChange, options, placeholder, disabled =
                   </div>
                 );
               }
-              
+
               // Handle object options
               const optionKey = `${option.id || option.value || index}-${option.name || option.label || 'unknown'}`;
               const optionValue = option.value || option.id || option;
               const optionDisplay = option.label || option.name || option.value || option.id || 'Unknown';
-              
+
               return (
                 <div
                   key={optionKey}
@@ -176,7 +176,7 @@ export default function EditTask() {
   const [taskTypes, setTaskTypes] = useState([]);
   const [statuses, setStatuses] = useState([]);
   const [priorities, setPriorities] = useState([]);
-  
+
   // Loading states
   const [loadingDepartments, setLoadingDepartments] = useState(true);
   const [loadingEmployees, setLoadingEmployees] = useState(false);
@@ -206,20 +206,20 @@ export default function EditTask() {
   const [showErrorAlert, setShowErrorAlert] = useState(false);
   const [alertMessage, setAlertMessage] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  
+
   // Delete Alert States
   const [showAlert, setShowAlert] = useState(false);
   const [employeeToDelete, setEmployeeToDelete] = useState(null);
   const [showDeleteSuccessAlert, setShowDeleteSuccessAlert] = useState(false);
   const [showDeleteErrorAlert, setShowDeleteErrorAlert] = useState(false);
-  
+
   // Assigned employees state
   const [assignedEmployees, setAssignedEmployees] = useState([]);
-  
+
   // Pagination state
   const entriesPerPage = 10;
   const [currentPage, setCurrentPage] = useState(1);
-  
+
   // Pagination calculations
   const totalEntries = assignedEmployees.length;
   const totalPages = Math.ceil(totalEntries / entriesPerPage);
@@ -229,14 +229,14 @@ export default function EditTask() {
 
   const handlePrev = () => currentPage > 1 && setCurrentPage((p) => p - 1);
   const handleNext = () => currentPage < totalPages && setCurrentPage((p) => p + 1);
-  
+
   // Modal state
   const [showRoleModal, setShowRoleModal] = useState(false);
   const [selectedEmployee, setSelectedEmployee] = useState(null);
-  
+
   // Multi-select responsibilities state
   const [selectedResponsibilities, setSelectedResponsibilities] = useState([]);
-  
+
   // Responsibility options
   const responsibilityOptions = [
     'Project Management',
@@ -274,7 +274,7 @@ export default function EditTask() {
       .then(response => {
         const deptList = response.data || response || [];
         console.log("Department API Response:", deptList);
-        
+
         // Format departments for CustomSelect - FIXED
         const formattedDepts = deptList.map(dept => ({
           id: dept.department_id || dept.id,
@@ -282,14 +282,14 @@ export default function EditTask() {
           value: dept.department_id || dept.id,
           department_name: dept.department_name || dept.name // Keep original name
         }));
-        
+
         console.log("Formatted Departments:", formattedDepts);
         setDepartments(formattedDepts);
-        
+
         // Update assigned employees with department names
         setAssignedEmployees(prev => prev.map(emp => {
-          const dept = formattedDepts.find(d => 
-            String(d.value) === String(emp.department) || 
+          const dept = formattedDepts.find(d =>
+            String(d.value) === String(emp.department) ||
             String(d.id) === String(emp.department)
           );
           return {
@@ -297,7 +297,7 @@ export default function EditTask() {
             departmentName: dept ? dept.name : emp.departmentName
           };
         }));
-        
+
         setLoadingDepartments(false);
       })
       .catch(err => {
@@ -327,9 +327,9 @@ export default function EditTask() {
           value: emp.staff_id || emp.id || emp.employee_id || `emp-${index}`,
           user_id: emp.user_id || index
         }));
-        
+
         // Remove duplicates based on user_id
-        const uniqueEmps = formattedEmps.filter((emp, index, self) => 
+        const uniqueEmps = formattedEmps.filter((emp, index, self) =>
           index === self.findIndex(e => e.user_id === emp.user_id)
         );
         setEmployees(uniqueEmps);
@@ -355,11 +355,11 @@ export default function EditTask() {
           value: role.role_id || role.id
         }));
         setRoles(formattedRoles);
-        
+
         // Update assigned employees with role names
         setAssignedEmployees(prev => prev.map(emp => {
-          const role = formattedRoles.find(r => 
-            String(r.value) === String(emp.role) || 
+          const role = formattedRoles.find(r =>
+            String(r.value) === String(emp.role) ||
             String(r.id) === String(emp.role)
           );
           return {
@@ -367,7 +367,7 @@ export default function EditTask() {
             roleName: role ? role.name : emp.roleName
           };
         }));
-        
+
         setLoadingRoles(false);
       })
       .catch(err => {
@@ -496,7 +496,10 @@ export default function EditTask() {
             const firstName = item.user?.teacher_info?.firstname || item.user?.other_staff_info?.firstname || "";
             const lastName = item.user?.teacher_info?.lastname || item.user?.other_staff_info?.lastname || "";
             const employeeName = `${firstName} ${lastName}`.trim() || item.user?.username || "Unknown";
-            
+
+            // Extract role name from user_pms_role
+            const roleName = item.user_pms_role?.role_name || "No Role";
+
             const empDetails = {
               id: item.task_assignment_id?.toString() || `emp-${Date.now()}`,
               user_id: item.user?.user_id,
@@ -505,7 +508,7 @@ export default function EditTask() {
               department: item.department_id?.toString(),
               departmentName: "Loading...", // Will be resolved when departments load
               role: item.role_id?.toString(),
-              roleName: "Loading...", // Will be resolved when roles load
+              roleName: roleName, // Use role name from API
               responsibility: item.remarks || "N/A"
             };
             return empDetails;
@@ -527,24 +530,24 @@ export default function EditTask() {
   // Helper function to get department name - FIXED
   const getDepartmentName = (departmentId) => {
     if (!departmentId) return "No Department";
-    
-    const dept = departments.find(d => 
-      String(d.value) === String(departmentId) || 
+
+    const dept = departments.find(d =>
+      String(d.value) === String(departmentId) ||
       String(d.id) === String(departmentId)
     );
-    
+
     return dept ? dept.name : `Department ${departmentId}`;
   };
 
   // Helper function to get role name
   const getRoleName = (roleId) => {
     if (!roleId) return "No Role";
-    
-    const role = roles.find(r => 
-      String(r.value) === String(roleId) || 
+
+    const role = roles.find(r =>
+      String(r.value) === String(roleId) ||
       String(r.id) === String(roleId)
     );
-    
+
     return role ? role.name : `Role ${roleId}`;
   };
 
@@ -555,28 +558,28 @@ export default function EditTask() {
       setShowErrorAlert(true);
       return false;
     }
-    
+
     const assignedDate = new Date(form.assignedDate);
     const dueDate = new Date(form.dueDate);
-    
+
     if (isNaN(assignedDate.getTime())) {
       setAlertMessage('Please enter a valid assigned date.');
       setShowErrorAlert(true);
       return false;
     }
-    
+
     if (isNaN(dueDate.getTime())) {
       setAlertMessage('Please enter a valid due date.');
       setShowErrorAlert(true);
       return false;
     }
-    
+
     if (assignedDate >= dueDate) {
       setAlertMessage('Due date must be after assigned date.');
       setShowErrorAlert(true);
       return false;
     }
-    
+
     return true;
   };
 
@@ -643,7 +646,7 @@ export default function EditTask() {
     try {
       const updatedBy = user?.id || user?.user_id || 1;
       await TaskManagement.updateTaskStatus(id, newStatusId, updatedBy);
-      
+
       setForm(prev => ({ ...prev, status: newStatusId }));
       setAlertMessage('Task status updated successfully!');
       setShowSuccessAlert(true);
@@ -711,7 +714,7 @@ export default function EditTask() {
     setEmployeeToDelete(id);
     setShowAlert(true);
   };
-  
+
   const handleConfirmDelete = () => {
     setShowAlert(false);
     setAssignedEmployees(assignedEmployees.filter(emp => emp.id !== employeeToDelete));
@@ -721,7 +724,7 @@ export default function EditTask() {
       setShowDeleteSuccessAlert(true);
     }, 500);
   };
-  
+
   const handleCancelDelete = () => {
     setShowAlert(false);
     setEmployeeToDelete(null);
@@ -759,17 +762,17 @@ export default function EditTask() {
 
     // Find employee details - try multiple search criteria
     let employeeObj = employees.find(e => String(e.value) === String(form.employee));
-    
+
     // If not found by value, try by id
     if (!employeeObj) {
       employeeObj = employees.find(e => String(e.id) === String(form.employee));
     }
-    
+
     // If still not found, try by user_id
     if (!employeeObj) {
       employeeObj = employees.find(e => String(e.user_id) === String(form.employee));
     }
-    
+
     if (!employeeObj) {
       console.error("Employee not found. Form employee:", form.employee, "Available employees:", employees);
       setAlertMessage('Selected employee not found. Please select an employee from the dropdown.');
@@ -778,10 +781,10 @@ export default function EditTask() {
     }
 
     // Check if employee is already assigned by user_id
-    const isAlreadyAssigned = assignedEmployees.some(emp => 
+    const isAlreadyAssigned = assignedEmployees.some(emp =>
       String(emp.user_id) === String(employeeObj.user_id) && String(emp.role) === String(form.role)
     );
-    
+
     if (isAlreadyAssigned) {
       setAlertMessage('This employee with the same role is already assigned to the task.');
       setShowErrorAlert(true);
@@ -789,10 +792,10 @@ export default function EditTask() {
     }
 
     let employeeName = employeeObj.name || form.employee;
-    
+
     // Get department name using helper function
     const deptName = getDepartmentName(form.department);
-    
+
     // Get role name using helper function
     const roleName = getRoleName(form.role);
 
@@ -810,7 +813,7 @@ export default function EditTask() {
 
     console.log("Adding new employee:", newEmployee);
     setAssignedEmployees([...assignedEmployees, newEmployee]);
-    
+
     // Clear assigned to fields
     setForm({
       ...form,
@@ -846,7 +849,7 @@ export default function EditTask() {
   // Edit employee - populate form fields
   const handleEditEmployee = (employee) => {
     console.log("Editing employee:", employee);
-    
+
     // Set form fields
     setForm({
       ...form,
@@ -854,7 +857,7 @@ export default function EditTask() {
       employee: employee.employee, // Keep the original employee value
       role: employee.role
     });
-    
+
     // Set responsibilities if they exist
     if (employee.responsibility && employee.responsibility !== 'N/A') {
       const responsibilities = employee.responsibility.split(', ');
@@ -862,7 +865,7 @@ export default function EditTask() {
     } else {
       setSelectedResponsibilities([]);
     }
-    
+
     // Remove the employee from the list so they can be re-added with changes
     setAssignedEmployees(assignedEmployees.filter(emp => emp.id !== employee.id));
   };
@@ -1246,7 +1249,7 @@ export default function EditTask() {
                   // Use helper functions to get names
                   const departmentName = getDepartmentName(employee.department);
                   const roleName = getRoleName(employee.role);
-                  
+
                   return (
                     <tr key={employee.id} className="hover:bg-gray-50 transition-colors">
                       <td className="px-6 py-4 text-sm text-gray-900 text-center">{employee.employeeName || employee.employee}</td>
@@ -1263,13 +1266,13 @@ export default function EditTask() {
                       </td> */}
                       <td className="px-6 py-4 text-center">
                         <div className="flex items-center justify-center gap-2">
-                          <button 
+                          <button
                             onClick={() => handleEditEmployee(employee)}
                             className="p-2 rounded-lg bg-yellow-50 text-yellow-600 hover:bg-yellow-100 transition"
                           >
                             <Edit className="w-4 h-4" />
                           </button>
-                          <button 
+                          <button
                             onClick={() => handleRemoveEmployee(employee.id)}
                             className="p-2 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition"
                           >
@@ -1284,18 +1287,17 @@ export default function EditTask() {
             </tbody>
           </table>
         </div>
-        
+
         {/* Pagination */}
         {totalEntries > 0 && (
           <div className="flex justify-between items-center px-6 py-4 border-t border-gray-200 text-sm text-gray-600">
             <button
               onClick={handlePrev}
               disabled={currentPage === 1}
-              className={`px-4 py-2 rounded-md text-white ${
-                currentPage === 1 
-                  ? 'bg-blue-200 text-gray-400 cursor-not-allowed' 
+              className={`px-4 py-2 rounded-md text-white ${currentPage === 1
+                  ? 'bg-blue-200 text-gray-400 cursor-not-allowed'
                   : 'bg-blue-600 hover:bg-blue-700'
-              }`}
+                }`}
             >
               Previous
             </button>
@@ -1307,11 +1309,10 @@ export default function EditTask() {
             <button
               onClick={handleNext}
               disabled={currentPage === totalPages}
-              className={`px-4 py-2 rounded-md text-white ${
-                currentPage === totalPages 
-                  ? 'bg-blue-200 text-gray-400 cursor-not-allowed' 
+              className={`px-4 py-2 rounded-md text-white ${currentPage === totalPages
+                  ? 'bg-blue-200 text-gray-400 cursor-not-allowed'
                   : 'bg-blue-600 hover:bg-blue-700'
-              }`}
+                }`}
             >
               Next
             </button>
@@ -1333,7 +1334,7 @@ export default function EditTask() {
             // Use helper functions to get names
             const departmentName = getDepartmentName(employee.department);
             const roleName = getRoleName(employee.role);
-            
+
             return (
               <div key={employee.id} className="bg-white rounded-xl shadow-md border border-gray-200 p-5 hover:shadow-lg transition-all">
                 <div className="flex justify-between items-start mb-3">
@@ -1353,13 +1354,13 @@ export default function EditTask() {
                   >
                     <Eye className="w-4 h-4" />
                   </button> */}
-                  <button 
+                  <button
                     onClick={() => handleEditEmployee(employee)}
                     className="p-2.5 rounded-lg bg-yellow-50 text-yellow-600 hover:bg-yellow-100 transition"
                   >
                     <Edit className="w-4 h-4" />
                   </button>
-                  <button 
+                  <button
                     onClick={() => handleRemoveEmployee(employee.id)}
                     className="p-2.5 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition"
                   >
@@ -1414,7 +1415,7 @@ export default function EditTask() {
               Only task status can be updated
             </p>
           </div>
-          <button 
+          <button
             onClick={() => {
               setAlertMessage('Task status updated successfully!');
               setShowSuccessAlert(true);
@@ -1441,7 +1442,7 @@ export default function EditTask() {
           {alertMessage}
         </SweetAlert>
       )}
-      
+
       {/* Error Alert */}
       {showErrorAlert && (
         <SweetAlert
@@ -1482,7 +1483,7 @@ export default function EditTask() {
           {alertMessage}
         </SweetAlert>
       )}
-      
+
       {/* Delete Error Alert */}
       {showDeleteErrorAlert && (
         <SweetAlert
@@ -1497,11 +1498,11 @@ export default function EditTask() {
       )}
 
       {/* Roles & Responsibility Modal */}
-      <RoleModal 
+      <RoleModal
         isOpen={showRoleModal}
         onClose={() => setShowRoleModal(false)}
         employee={selectedEmployee}
-      /> 
+      />
     </div>
   );
 }

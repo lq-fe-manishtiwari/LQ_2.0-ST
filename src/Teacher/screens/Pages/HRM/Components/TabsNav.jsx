@@ -4,8 +4,8 @@ import { Plus, Settings, Upload } from "lucide-react";
 // import BulkUploadModal from "../Components/BulkUploadModal";
 
 const tabs = [
-  { label: "Dashboard", to: "/teacher/hrm/dashboard" },
-  { label: "Academic Diary", to: "/teacher/hrm/academic-diary" },
+  // { label: "Dashboard", to: "/teacher/hrm/dashboard" },
+  // { label: "Academic Diary", to: "/teacher/hrm/academic-diary" },
   { label: "Tasks", to: "/teacher/hrm/tasks" },
   { label: "Salary", to: "/teacher/hrm/salary" },
 ];
@@ -25,8 +25,7 @@ export default function TabsNav() {
               to={t.to}
               style={{ width: "9rem" }}
               className={({ isActive }) =>
-                `tab-link text-center flex-1 sm:flex-none px-3 py-2 text-xs sm:text-sm ${
-                  isActive ? "tab-active" : "tab-inactive"
+                `tab-link text-center flex-1 sm:flex-none px-3 py-2 text-xs sm:text-sm ${isActive ? "tab-active" : "tab-inactive"
                 }`
               }
             >
@@ -36,15 +35,15 @@ export default function TabsNav() {
         </div>
 
         <button
-            onClick={() => navigate("/hrm/settings")}
-            className="flex items-center gap-2 text-gray-800 font-medium px-3 py-2 rounded-lg transition"
-          >
-            <Settings size={18} />
-          </button>
+          onClick={() => navigate("/hrm/settings")}
+          className="flex items-center gap-2 text-gray-800 font-medium px-3 py-2 rounded-lg transition"
+        >
+          <Settings size={18} />
+        </button>
 
       </div>
 
-      
+
 
       {/* Modal Section */}
       {/* {showBulkUpload && (

@@ -345,7 +345,7 @@ export default function MyTaskEdit() {
         program_id: parseInt(academicFilters.program),
         subject_id: parseInt(academicFilters.subject)
       } : {
-        task_category: "NON-ACADEMIC"
+        task_category: ""
       })
     };
 

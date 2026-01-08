@@ -5,8 +5,8 @@ import Loader from '../../Components/Loader';
 import SweetAlert from 'react-bootstrap-sweetalert';
 import RoleModal from '../../Components/RoleModal';
 // import {DepartmentService} from '../../../Academics/Services/Department.service';
-import {Settings} from '../../Settings/Settings.service';
-import {TaskManagement} from '../../Services/TaskManagement.service';
+import { Settings } from '../../Settings/Settings.service';
+import { TaskManagement } from '../../Services/TaskManagement.service';
 
 export default function TaskView() {
   const { id } = useParams();
@@ -19,7 +19,7 @@ export default function TaskView() {
 
   const [showRoleModal, setShowRoleModal] = useState(false);
   const [selectedEmployee, setSelectedEmployee] = useState(null);
-  
+
   const [departments, setDepartments] = useState([]);
   const [roles, setRoles] = useState([]);
 
@@ -35,22 +35,22 @@ export default function TaskView() {
       const currentUser = JSON.parse(localStorage.getItem("userProfile"));
       const isAdmin = currentUser?.userType === 'ADMINISTRATOR' || currentUser?.roles?.some(role => role.name === 'ADMIN');
       const userId = currentUser?.userId || currentUser?.rawData?.user?.user_id;
-      
+
       console.log("User type:", currentUser?.userType);
       console.log("Is Admin:", isAdmin);
       console.log("User ID:", userId);
-      
+
       let response;
-      
+
       if (isAdmin) {
         // For ADMIN - use getMyTaskbyID (self task API)
         response = await TaskManagement.getMyTaskbyID(taskId);
         console.log("Self Task API Response:", response);
-        
+
         if (!response || typeof response !== "object") {
           throw new Error("Invalid API response");
         }
-        
+
         // Handle self task response format
         setTask({
           ...response,
@@ -62,26 +62,26 @@ export default function TaskView() {
           status: response.status?.name || "Pending",
           priority: response.priority?.priority_name || "Medium"
         });
-        
+
         // For self tasks, show current user as employee
         const firstName = currentUser?.firstName || "";
         const lastName = currentUser?.lastName || "";
         const userName = `${firstName} ${lastName}`.trim() || currentUser?.username || "Unknown";
-        
+
         setEmployees([
           {
             id: userId,
             name: userName,
-            designation: currentUser?.designation || "N/A",
+            designation: currentUser?.designation || "-",
             role: "Self",
-            department: currentUser?.department?.department_name || "N/A",
+            department: currentUser?.department?.department_name || "-",
             responsibility: "Self Task"
           }
         ]);
-        
+
         return;
       }
-      
+
       // For non-ADMIN - use existing task assignment API
       response = await TaskManagement.getTaskAssignmentbyID(taskId);
 
@@ -92,6 +92,15 @@ export default function TaskView() {
       if (response.data) {
         const r = response.data;
 
+        // Extract assigned by name from firstname, middlename, lastname
+        const assignedByFirstName = r.firstname || "";
+        const assignedByMiddleName = r.middlename || "";
+        const assignedByLastName = r.lastname || "";
+        const assignedByName = [assignedByFirstName, assignedByMiddleName, assignedByLastName]
+          .filter(Boolean)
+          .join(" ")
+          .trim() || "Admin";
+
         setTask({
           ...r,
           title: r.task?.task_name,
@@ -100,7 +109,8 @@ export default function TaskView() {
           dueDate: r.task?.due_date_time,
           taskType: r.task?.task_type?.task_type_name,
           status: r.task_status?.name || r.task?.task_status?.name || r.task?.task_status_name || r.assignment_status,
-          priority: r.task?.priority?.priority_name
+          priority: r.task?.priority?.priority_name,
+          assignedBy: assignedByName
         });
 
         if (r.assignedEmployees) {
@@ -109,15 +119,18 @@ export default function TaskView() {
           const firstName = r.user?.teacher_info?.firstname || r.user?.other_staff_info?.firstname || '';
           const lastName = r.user?.teacher_info?.lastname || r.user?.other_staff_info?.lastname || '';
           const userName = `${firstName} ${lastName}`.trim() || r.user?.username || `User ${r.user?.user_id}`;
-          
+
+          // Extract role name from user_pms_role
+          const roleName = r.user_pms_role?.role_name || "No Role";
+
           setEmployees([
             {
               id: r.user?.user_id,
               name: userName,
-              designation: r.designation || "N/A",
-              role: r.role_id,
+              designation: r.designation || "-",
+              role: roleName,
               department: r.department_id,
-              responsibility: r.remarks || 'N/A'
+              responsibility: r.remarks || '-'
             }
           ]);
         }
@@ -127,6 +140,15 @@ export default function TaskView() {
       if (response.task) {
         const r = response;
 
+        // Extract assigned by name from firstname, middlename, lastname
+        const assignedByFirstName = r.firstname || "";
+        const assignedByMiddleName = r.middlename || "";
+        const assignedByLastName = r.lastname || "";
+        const assignedByName = [assignedByFirstName, assignedByMiddleName, assignedByLastName]
+          .filter(Boolean)
+          .join(" ")
+          .trim() || "Admin";
+
         setTask({
           ...r,
           title: r.task?.task_name,
@@ -135,25 +157,38 @@ export default function TaskView() {
           dueDate: r.task?.due_date_time,
           taskType: r.task?.task_type?.task_type_name,
           status: r.task_status?.name || r.task?.task_status?.name || r.task?.task_status_name || r.assignment_status,
-          priority: r.task?.priority?.priority_name
+          priority: r.task?.priority?.priority_name,
+          assignedBy: assignedByName
         });
 
         const firstName = r.user?.teacher_info?.firstname || r.user?.other_staff_info?.firstname || '';
         const lastName = r.user?.teacher_info?.lastname || r.user?.other_staff_info?.lastname || '';
         const userName = `${firstName} ${lastName}`.trim() || r.user?.username || `User ${r.user?.user_id}`;
-        
+
+        // Extract role name from user_pms_role
+        const roleName = r.user_pms_role?.role_name || "No Role";
+
         setEmployees([
           {
             id: r.user?.user_id,
             name: userName,
-            designation: r.designation || "N/A",
-            role: r.role_id,
+            designation: r.designation || "-",
+            role: roleName,
             department: r.department_id,
-            responsibility: r.remarks || 'N/A'
+            responsibility: r.remarks || '-'
           }
         ]);
         return;
       }
+
+      // Extract assigned by name from firstname, middlename, lastname
+      const assignedByFirstName = response.firstname || "";
+      const assignedByMiddleName = response.middlename || "";
+      const assignedByLastName = response.lastname || "";
+      const assignedByName = [assignedByFirstName, assignedByMiddleName, assignedByLastName]
+        .filter(Boolean)
+        .join(" ")
+        .trim() || "Admin";
 
       setTask({
         ...response,
@@ -163,21 +198,25 @@ export default function TaskView() {
         dueDate: response.task?.due_date_time,
         taskType: response.task?.task_type?.task_type_name,
         status: response.task_status?.name || response.task?.task_status?.name || response.task?.task_status_name || response.assignment_status,
-        priority: response.task?.priority?.priority_name
+        priority: response.task?.priority?.priority_name,
+        assignedBy: assignedByName
       });
 
       const firstName = response.user?.teacher_info?.firstname || response.user?.other_staff_info?.firstname || '';
       const lastName = response.user?.teacher_info?.lastname || response.user?.other_staff_info?.lastname || '';
       const userName = `${firstName} ${lastName}`.trim() || response.user?.username || `User ${response.user?.user_id}`;
-      
+
+      // Extract role name from user_pms_role
+      const roleName = response.user_pms_role?.role_name || "No Role";
+
       setEmployees([
         {
           id: response.user?.user_id,
           name: userName,
-          designation: response.designation || "N/A",
-          role: response.role_id,
+          designation: response.designation || "-",
+          role: roleName,
           department: response.department_id,
-          responsibility: response.remarks || 'N/A'
+          responsibility: response.remarks || '-'
         }
       ]);
 
@@ -230,43 +269,43 @@ export default function TaskView() {
 
   const getRoleNameFromId = (roleId) => {
     if (!roleId) return "No Role";
-    
+
     const role = roles.find(r => (r.role_id || r.id) == roleId);
     if (role) {
       return role.role_name || role.name || `Role ${roleId}`;
     }
-    
+
     if (typeof roleId === 'string') {
       return roleId;
     }
-    
+
     return `Role ${roleId}`;
   };
 
   const getDepartmentNameFromId = (deptId) => {
     if (!deptId) return "No Department";
-    
+
     const dept = departments.find(d => {
       const id = d.department_id || d.id;
       return id?.toString() === deptId?.toString();
     });
-    
+
     if (dept) {
       return dept.name || dept.department_name || `Department ${deptId}`;
     }
-    
+
     if (typeof deptId === 'string' && isNaN(deptId)) {
       return deptId;
     }
-    
+
     return `Department ${deptId}`;
   };
 
   const handleViewRoles = (employee) => {
     const employeeName = employee.name || employee.employeeName || employee.user_name ||
-                        `${employee.firstname || ''} ${employee.lastname || ''}`.trim() ||
-                        employee.username || 'Unknown Employee';
-    
+      `${employee.firstname || ''} ${employee.lastname || ''}`.trim() ||
+      employee.username || 'Unknown Employee';
+
     const employeeWithNames = {
       ...employee,
       employeeName: employeeName,
@@ -282,9 +321,9 @@ export default function TaskView() {
   };
 
   const formatDate = (value) => {
-    if (!value) return "N/A";
+    if (!value) return "-";
     const date = new Date(value);
-    if (isNaN(date.getTime())) return "N/A";
+    if (isNaN(date.getTime())) return "-";
 
     const d = String(date.getDate()).padStart(2, "0");
     const m = String(date.getMonth() + 1).padStart(2, "0");
@@ -420,7 +459,7 @@ export default function TaskView() {
             <div className="break-words">
               <span className="font-semibold text-gray-700">Title:</span>
               <p className="text-gray-900 mt-1 text-lg font-medium">
-                {data.title || "N/A"}
+                {data.title || "-"}
               </p>
             </div>
 
@@ -436,7 +475,7 @@ export default function TaskView() {
             <div>
               <span className="font-semibold text-gray-700">Assigned By:</span>
               <p className="text-gray-900 mt-1">
-                {data.assigned_by || data.assignedBy || "N/A"}
+                {data.assignedBy || "Admin"}
               </p>
             </div>
 
@@ -445,13 +484,12 @@ export default function TaskView() {
                 Priority:
               </span>
               <span
-                className={`inline-block px-3 py-1.5 rounded-full text-sm font-medium ${
-                  (data.priority || "normal").toLowerCase() === "high"
-                    ? "bg-red-100 text-red-800"
-                    : (data.priority || "normal").toLowerCase() === "medium"
+                className={`inline-block px-3 py-1.5 rounded-full text-sm font-medium ${(data.priority || "normal").toLowerCase() === "high"
+                  ? "bg-red-100 text-red-800"
+                  : (data.priority || "normal").toLowerCase() === "medium"
                     ? "bg-yellow-100 text-yellow-800"
                     : "bg-green-100 text-green-800"
-                }`}
+                  }`}
               >
                 {data.priority || "Normal"}
               </span>
@@ -473,9 +511,8 @@ export default function TaskView() {
                 Due Date & Time:
               </span>
               <p
-                className={`mt-1 font-medium ${
-                  isTaskOverdue(data) ? "text-red-600" : "text-gray-900"
-                }`}
+                className={`mt-1 font-medium ${isTaskOverdue(data) ? "text-red-600" : "text-gray-900"
+                  }`}
               >
                 {formatDate(data.dueDate)}
               </p>
@@ -489,7 +526,7 @@ export default function TaskView() {
             <div>
               <span className="font-semibold text-gray-700">Task Type:</span>
               <p className="text-gray-900 mt-1">
-                {data.taskType || "N/A"}
+                {data.taskType || "-"}
               </p>
             </div>
 
@@ -498,20 +535,19 @@ export default function TaskView() {
                 Status:
               </span>
               <span
-                className={`inline-block px-3 py-1.5 rounded-full text-sm font-medium ${
-                  (data.status || "").toLowerCase() === "complete" ||
+                className={`inline-block px-3 py-1.5 rounded-full text-sm font-medium ${(data.status || "").toLowerCase() === "complete" ||
                   (data.status || "").toLowerCase() === "completed"
-                    ? "bg-green-100 text-green-800"
-                    : (data.status || "").toLowerCase() === "inprogress" ||
-                      (data.status || "").toLowerCase() === "in-progress" ||
-                      (data.status || "").toLowerCase() === "active" ||
-                      (data.status || "").toLowerCase() === "pending" ||
-                      (data.status || "").toLowerCase() === "assigned"
+                  ? "bg-green-100 text-green-800"
+                  : (data.status || "").toLowerCase() === "inprogress" ||
+                    (data.status || "").toLowerCase() === "in-progress" ||
+                    (data.status || "").toLowerCase() === "active" ||
+                    (data.status || "").toLowerCase() === "pending" ||
+                    (data.status || "").toLowerCase() === "assigned"
                     ? "bg-orange-100 text-orange-800"
                     : (data.status || "").toLowerCase() === "incomplete"
-                    ? "bg-red-100 text-red-800"
-                    : "bg-gray-100 text-gray-800"
-                }`}
+                      ? "bg-red-100 text-red-800"
+                      : "bg-gray-100 text-gray-800"
+                  }`}
               >
                 {data.status || "Unknown"}
               </span>
@@ -540,16 +576,16 @@ export default function TaskView() {
                     className="hover:bg-gray-50 transition-colors"
                   >
                     <td className="px-6 py-4 text-sm text-gray-900 text-center">
-                      {employee.name || employee.employeeName || "N/A"}
+                      {employee.name || employee.employeeName || "-"}
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-700 text-center">
-                      {employee.designation || "N/A"}
+                      {employee.designation || "-"}
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-700 text-center">
-                      {getRoleNameFromId(employee.role) || "N/A"}
+                      {employee.role || "-"}
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-700 text-center">
-                      {getDepartmentNameFromId(employee.department) || "N/A"}
+                      {getDepartmentNameFromId(employee.department) || "-"}
                     </td>
                   </tr>
                 ))
@@ -593,10 +629,10 @@ export default function TaskView() {
               <div className="flex justify-between items-start mb-3">
                 <div>
                   <p className="font-semibold text-gray-900">
-                    {employee.name || employee.employeeName || "N/A"}
+                    {employee.name || employee.employeeName || "-"}
                   </p>
                   <p className="text-sm text-gray-500">
-                    {employee.designation || "N/A"}
+                    {employee.designation || "-"}
                   </p>
                 </div>
               </div>
@@ -604,11 +640,11 @@ export default function TaskView() {
               <div className="space-y-2 text-sm text-gray-700 mb-4">
                 <div>
                   <span className="font-medium">Role:</span>{" "}
-                  {getRoleNameFromId(employee.role) || "N/A"}
+                  {employee.role || "-"}
                 </div>
                 <div>
                   <span className="font-medium">Department:</span>{" "}
-                  {getDepartmentNameFromId(employee.department) || "N/A"}
+                  {getDepartmentNameFromId(employee.department) || "-"}
                 </div>
               </div>
             </div>

@@ -63,12 +63,12 @@ export default function ViewMyTasks() {
     description: task.description || "No Description",
     assignedDate: formatDate(task.assigned_date_time),
     dueDate: formatDate(task.due_date_time),
-    assignedBy: passedTaskData ? passedTaskData.assignedBy || "Self" : "Self",
+    assignedBy: "Self",
     taskType: task.task_type?.task_type_name || "General",
     priority: task.priority?.priority_name || "Medium",
     status: task.status?.name || "Pending",
     overdue: task.overdue ? `${task.days_until_due} Days` : null,
-    taskCategory: task.task_category || "NON_ACADEMIC",
+    taskCategory: task.task_category || "",
     // Academic Details
     program: task.academic_year?.program_name || task.program?.program_name || "-",
     batch: task.academic_year?.batch_name || task.batch?.batch_name || "-",
@@ -197,10 +197,10 @@ export default function ViewMyTasks() {
               <span className="font-semibold text-gray-700 block mb-2">Priority:</span>
               <span
                 className={`inline-block px-3 py-1.5 rounded-full text-sm font-medium ${data.priority === "High"
-                    ? "bg-red-100 text-red-800"
-                    : data.priority === "Medium"
-                      ? "bg-yellow-100 text-yellow-800"
-                      : "bg-green-100 text-green-800"
+                  ? "bg-red-100 text-red-800"
+                  : data.priority === "Medium"
+                    ? "bg-yellow-100 text-yellow-800"
+                    : "bg-green-100 text-green-800"
                   }`}
               >
                 {data.priority}
@@ -238,12 +238,12 @@ export default function ViewMyTasks() {
             <div>
               <span className="font-semibold text-gray-700 block mb-2">Status:</span>
               <span className={`inline-block px-3 py-1.5 rounded-full text-sm font-medium ${data.status === 'Complete' || data.status === 'Completed'
-                  ? 'bg-green-100 text-green-800'
-                  : data.status === 'In-Progress' || data.status === 'Active'
-                    ? 'bg-blue-100 text-blue-800'
-                    : data.status === 'Incomplete'
-                      ? 'bg-orange-100 text-orange-800'
-                      : 'bg-gray-100 text-gray-800'
+                ? 'bg-green-100 text-green-800'
+                : data.status === 'In-Progress' || data.status === 'Active'
+                  ? 'bg-blue-100 text-blue-800'
+                  : data.status === 'Incomplete'
+                    ? 'bg-orange-100 text-orange-800'
+                    : 'bg-gray-100 text-gray-800'
                 }`}>
                 {data.status}
               </span>

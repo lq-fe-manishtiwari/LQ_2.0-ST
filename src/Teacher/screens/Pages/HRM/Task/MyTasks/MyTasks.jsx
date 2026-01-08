@@ -167,7 +167,26 @@ const MyTaskTable = ({
   totalPages = 0,
   statusChanging = {},
 }) => {
-  // Helper function to check if task is overdue
+  const isTaskDelayed = (task) => {
+    if (!task?.dueDate) return false;
+
+    const status = (task.status || "").toLowerCase();
+
+    // Check for active statuses (Pending, Incomplete, In Progress, Active)
+    if (status !== "pending" && status !== "incomplete" && status !== "inprogress" && status !== "in-progress" && status !== "active") {
+      return false;
+    }
+
+    const due = new Date(task.dueDate);
+    const today = new Date();
+
+    today.setHours(0, 0, 0, 0);
+    due.setHours(0, 0, 0, 0);
+
+    return due < today;
+  };
+
+  // Helper function to check if task is overdue (kept for due date highlighting compatibility if needed, though status logic usually overrides)
   const isTaskOverdue = (task) => {
     if (task.status === 'Complete') return false;
     const dueDate = new Date(task.dueDate);
@@ -228,65 +247,80 @@ const MyTaskTable = ({
                   </td>
                 </tr>
               ) : (
-                tasks.map((task) => (
-                  <tr key={task.id} className="hover:bg-gray-50 transition-colors">
-                    <td className="px-6 py-4 text-sm text-gray-700 max-w-[120px] truncate" title={task.program}>{task.program}</td>
-                    <td className="px-6 py-4 text-sm text-gray-700 max-w-[120px] truncate" title={`${task.batch} ${task.classYear ? `(${task.classYear})` : ''}`}>
-                      {task.batch} {task.classYear ? `(${task.classYear})` : ''}
-                    </td>
-                    <td className="px-6 py-4 text-sm text-gray-700 max-w-[120px] truncate" title={task.subject}>{task.subject}</td>
-                    <td className="px-6 py-4 text-sm text-gray-700 max-w-[120px] truncate" title={task.department}>{task.department}</td>
-                    <td className="px-6 py-4 text-sm text-gray-900 max-w-[150px] truncate" title={task.taskTitle}>{task.taskTitle}</td>
-                    <td className="px-6 py-4 text-sm text-gray-700 max-w-[100px] truncate" title={task.taskType}>{task.taskType}</td>
-                    <td className={`px-6 py-4 text-sm font-semibold ${isTaskOverdue(task) ? 'text-red-600' : 'text-gray-700'
-                      }`}>{task.dueOn}</td>
-                    <td className="px-6 py-4 text-center">
-                      <span className={`inline-flex items-center px-3 py-1.5 rounded-full text-xs font-medium ${task.priority === 'High' ? 'bg-red-100 text-red-800' :
-                        task.priority === 'Medium' ? 'bg-yellow-100 text-yellow-800' :
-                          'bg-green-100 text-green-800'
-                        }`}>
-                        {task.priority}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-center">
-                      <span
-                        className={`inline-flex items-center px-3 py-1.5 rounded-full text-xs font-medium ${task.status === 'Complete'
-                          ? 'bg-green-100 text-green-800'
-                          : task.status === 'Pending'
-                            ? 'bg-blue-100 text-blue-800'
-                            : task.status === 'Incomplete'
-                              ? 'bg-orange-100 text-orange-800'
-                              : 'bg-red-100 text-red-800'
-                          }`}
-                      >
-                        {task.status === 'Complete' ? <ToggleRight className="w-4 h-4 mr-1" /> : <ToggleLeft className="w-4 h-4 mr-1" />}
-                        {task.status}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-center">
-                      <div className="flex items-center justify-center gap-2">
+                [...tasks].map((task) => {
+                  const statusLabel = isTaskDelayed(task) ? "Delayed" : task.status;
+                  return (
+                    <tr key={task.id} className="hover:bg-gray-50 transition-colors">
+                      <td className="px-6 py-4 text-sm text-gray-700 max-w-[120px] truncate" title={task.program}>{task.program}</td>
+                      <td className="px-6 py-4 text-sm text-gray-700 max-w-[120px] truncate" title={`${task.batch} ${task.classYear ? `(${task.classYear})` : ''}`}>
+                        {task.batch} {task.classYear ? `(${task.classYear})` : ''}
+                      </td>
+                      <td className="px-6 py-4 text-sm text-gray-700 max-w-[120px] truncate" title={task.subject}>{task.subject}</td>
+                      <td className="px-6 py-4 text-sm text-gray-700 max-w-[120px] truncate" title={task.department}>{task.department}</td>
+                      <td className="px-6 py-4 text-sm text-gray-900 max-w-[150px] truncate" title={task.taskTitle}>{task.taskTitle}</td>
+                      <td className="px-6 py-4 text-sm text-gray-700 max-w-[100px] truncate" title={task.taskType}>{task.taskType}</td>
+                      <td className={`px-6 py-4 text-sm font-semibold whitespace-nowrap ${isTaskOverdue(task) ? 'text-red-600' : 'text-gray-700'
+                        }`}>{task.dueOn}</td>
+                      <td className="px-6 py-4 text-center">
+                        <span className={`inline-flex items-center px-3 py-1.5 rounded-full text-xs font-medium ${task.priority === 'High' ? 'bg-red-100 text-red-800' :
+                          task.priority === 'Medium' ? 'bg-yellow-100 text-yellow-800' :
+                            'bg-green-100 text-green-800'
+                          }`}>
+                          {task.priority}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 text-center">
                         <button
-                          onClick={() => onView(task)}
-                          className="p-2 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition"
+                          onClick={() => onToggleActive(task.id)}
+                          disabled={statusChanging[task.id]}
+                          className={`inline-flex items-center px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap ${statusChanging[task.id]
+                            ? 'bg-gray-100 text-gray-500 cursor-not-allowed'
+                            : task.status === 'Completed' || task.status === 'Complete'
+                              ? 'bg-green-100 text-green-800 hover:bg-green-200'
+                              : task.status === 'Pending'
+                                ? 'bg-blue-100 text-blue-800 hover:bg-blue-200'
+                                : task.status === 'Incomplete'
+                                  ? 'bg-orange-100 text-orange-800 hover:bg-orange-200'
+                                  : 'bg-red-100 text-red-800 hover:bg-red-200'
+                            }`}
                         >
-                          <Eye className="w-4 h-4" />
+                          {statusChanging[task.id] ? (
+                            <>
+                              Updating...
+                            </>
+                          ) : (
+                            <>
+                              {task.status === 'Complete' ? <ToggleRight className="w-4 h-4 mr-1" /> : <ToggleLeft className="w-4 h-4 mr-1" />}
+                              {statusChanging[task.id] ? 'Updating...' : statusLabel}
+                            </>
+                          )}
                         </button>
-                        <button
-                          onClick={() => onEdit(task)}
-                          className="p-2 rounded-lg bg-yellow-50 text-yellow-600 hover:bg-yellow-100 transition"
-                        >
-                          <Edit className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => onDelete(task.id)}
-                          className="p-2 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))
+                      </td>
+                      <td className="px-6 py-4 text-center">
+                        <div className="flex items-center justify-center gap-2">
+                          <button
+                            onClick={() => onView(task)}
+                            className="p-2 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition"
+                          >
+                            <Eye className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => onEdit(task)}
+                            className="p-2 rounded-lg bg-yellow-50 text-yellow-600 hover:bg-yellow-100 transition"
+                          >
+                            <Edit className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => onDelete(task.id)}
+                            className="p-2 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>
@@ -382,19 +416,31 @@ const MyTaskTable = ({
                     </span>
                   </div>
                   <div><span className="font-medium">Status:</span>
-                    <span
-                      className={`ml-1 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${task.status === 'Complete'
-                          ? 'bg-green-100 text-green-800'
+                    <button
+                      onClick={() => onToggleActive(task.id)}
+                      disabled={statusChanging[task.id]}
+                      className={`ml-1 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium transition-all ${statusChanging[task.id]
+                        ? 'bg-gray-100 text-gray-500 cursor-not-allowed'
+                        : task.status === 'Complete'
+                          ? 'bg-green-100 text-green-800 hover:bg-green-200'
                           : task.status === 'Pending'
-                            ? 'bg-blue-100 text-blue-800'
+                            ? 'bg-blue-100 text-blue-800 hover:bg-blue-200'
                             : task.status === 'Incomplete'
-                              ? 'bg-orange-100 text-orange-800'
-                              : 'bg-red-100 text-red-800'
+                              ? 'bg-orange-100 text-orange-800 hover:bg-orange-200'
+                              : 'bg-red-100 text-red-800 hover:bg-red-200'
                         }`}
                     >
-                      {task.status === 'Complete' ? <ToggleRight className="w-3 h-3 mr-1" /> : <ToggleLeft className="w-3 h-3 mr-1" />}
-                      {task.status}
-                    </span>
+                      {statusChanging[task.id] ? (
+                        <>
+                          Updating...
+                        </>
+                      ) : (
+                        <>
+                          {task.status === 'Complete' ? <ToggleRight className="w-3 h-3 mr-1" /> : <ToggleLeft className="w-3 h-3 mr-1" />}
+                          {isTaskDelayed(task) ? "Delayed" : task.status}
+                        </>
+                      )}
+                    </button>
                   </div>
                   <div className="col-span-2">
                     <span className={`font-medium ${isTaskOverdue(task) ? 'text-red-600' : 'text-gray-700'
@@ -492,18 +538,25 @@ export default function MyTasks() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedTask, setSelectedTask] = useState(null);
   const [statusChanging, setStatusChanging] = useState({});
+
+  // Get current year and month for default initialization
+  const currentYear = new Date().getFullYear();
+  const currentMonthIndex = new Date().getMonth();
+  const monthTabs = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const currentMonthTab = monthTabs[currentMonthIndex];
+
   const [filters, setFilters] = useState({
     filterOpen: false,
     department: '',
     priority: '',
     status: '',
     view: '',
-    year: '',
+    year: String(currentYear),
     month: '',
     week: '',
     fromDate: '',
     toDate: '',
-    activeSubTab: ''
+    activeSubTab: currentMonthTab // Initialize with current month
   });
   // Alert States
   const [alert, setAlert] = useState(null);
@@ -512,14 +565,13 @@ export default function MyTasks() {
   const activeCollege = JSON.parse(localStorage.getItem("activeCollege"));
   const collegeId = activeCollege?.id || null;
 
-  const [departments, setDepartments] = useState([]);
-  const [deptLoading, setDeptLoading] = useState(false);
+  // const [departments, setDepartments] = useState([]);
+  // const [deptLoading, setDeptLoading] = useState(false);
   const [priorities, setPriorities] = useState([]);
   const [priorityLoading, setPriorityLoading] = useState(false);
   const [statuses, setStatuses] = useState([]);
   const [statusLoading, setStatusLoading] = useState(false);
-  const years = ['2022', '2023', '2024', '2025'];
-  const monthTabs = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  // const years = ['2022', '2023', '2024', '2025'];
   const fullMonthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 
   const getWeekOptions = (year, month) => {
@@ -554,19 +606,16 @@ export default function MyTasks() {
 
   const getPeriodTabs = (fromDate, toDate) => {
     if (!fromDate || !toDate) {
-      return ['25-02-2025', '25-02-2025', '25-02-2025', '25-02-2025', '25-02-2025', '25-02-2025', '25-02-2025', '25-02-2025', '25-02-2025', '25-02-2025'];
+      return [];
     }
 
     const start = new Date(fromDate);
     const end = new Date(toDate);
-    const totalDays = Math.ceil((end - start) / (1000 * 60 * 60 * 24)) + 1;
-    const daysPerPeriod = Math.ceil(totalDays / 10); // Divide into 10 periods
+    const dates = [];
 
-    const periods = [];
-    for (let i = 0; i < 10; i++) {
-      const periodStart = new Date(start);
-      periodStart.setDate(start.getDate() + (i * daysPerPeriod));
-
+    // Generate all dates from start to end (continuous)
+    const currentDate = new Date(start);
+    while (currentDate <= end) {
       const formatDate = (date) => {
         const day = String(date.getDate()).padStart(2, '0');
         const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -574,9 +623,11 @@ export default function MyTasks() {
         return `${day}-${month}-${year}`;
       };
 
-      periods.push(formatDate(periodStart));
+      dates.push(formatDate(currentDate));
+      currentDate.setDate(currentDate.getDate() + 1); // Add 1 day
     }
-    return periods;
+
+    return dates;
   };
 
   const getSubTabs = () => {
@@ -591,15 +642,27 @@ export default function MyTasks() {
   const handleViewChange = (view) => {
     const viewValue = view.toLowerCase();
     let subTabs;
+    let firstTab;
+
     if (viewValue === 'monthly') {
       subTabs = monthTabs;
+      // Use current month instead of first tab (Jan)
+      firstTab = currentMonthTab;
+      setFilters(prev => ({
+        ...prev,
+        view: viewValue,
+        activeSubTab: firstTab,
+        year: String(currentYear) // Ensure year is set for immediate filtering
+      }));
     } else if (viewValue === 'weekly') {
       subTabs = getWeekTabs(parseInt(filters.year), filters.month, filters.week);
+      // Don't select first date by default for weekly view
+      setFilters(prev => ({ ...prev, view: viewValue, activeSubTab: '' }));
     } else {
       subTabs = getPeriodTabs(filters.fromDate, filters.toDate);
+      firstTab = Array.isArray(subTabs[0]) ? subTabs[0] : subTabs[0]?.label || subTabs[0];
+      setFilters(prev => ({ ...prev, view: viewValue, activeSubTab: firstTab }));
     }
-    const firstTab = Array.isArray(subTabs[0]) ? subTabs[0] : subTabs[0]?.label || subTabs[0];
-    setFilters(prev => ({ ...prev, view: viewValue, activeSubTab: firstTab }));
   };
 
   const filteredTasks = useMemo(() => {
@@ -625,13 +688,130 @@ export default function MyTasks() {
       list = list.filter(task => task.status === filters.status);
     }
 
-    // Department filter
-    if (filters.department) {
-      list = list.filter(task => task.department === filters.department);
+    // Department filter - REMOVED
+
+    // Date-based filtering for view types
+    // Monthly filter - filter by year AND selected month tab
+    if (filters.view === 'monthly' && filters.year && filters.activeSubTab) {
+      const monthTabs = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      const selectedMonthIndex = monthTabs.indexOf(filters.activeSubTab);
+
+      list = list.filter(task => {
+        try {
+          if (!task.assigned_date_time) return false;
+          const date = new Date(task.assigned_date_time);
+          if (isNaN(date.getTime())) return false;
+
+          return date.getFullYear() === parseInt(filters.year) &&
+            date.getMonth() === selectedMonthIndex;
+        } catch (error) {
+          console.error('Error filtering by month:', error);
+          return false;
+        }
+      });
+    }
+
+    // Weekly filter
+    if (filters.view === 'weekly' && filters.year && filters.month && filters.week) {
+      const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+      const monthIndex = monthNames.indexOf(filters.month);
+      const weekNumber = parseInt(filters.week.split(' ')[1]);
+
+      const startDay = (weekNumber - 1) * 7 + 1;
+      const endDay = Math.min(weekNumber * 7, new Date(filters.year, monthIndex + 1, 0).getDate());
+
+      // If specific date is selected (activeSubTab), filter by that date only
+      if (filters.activeSubTab) {
+        // Extract date from activeSubTab format: "Monday, 6 Jan"
+        const dateMatch = filters.activeSubTab.match(/(\d+)\s+(\w+)/);
+        if (dateMatch) {
+          const day = parseInt(dateMatch[1]);
+
+          list = list.filter(task => {
+            try {
+              if (!task.assigned_date_time) return false;
+              const date = new Date(task.assigned_date_time);
+              if (isNaN(date.getTime())) return false;
+
+              // Filter by exact date (year, month, and day)
+              return date.getFullYear() === parseInt(filters.year) &&
+                date.getMonth() === monthIndex &&
+                date.getDate() === day;
+            } catch (error) {
+              console.error('Error filtering by specific date:', error);
+              return false;
+            }
+          });
+        }
+      } else {
+        // No specific date selected, show all tasks from the week
+        list = list.filter(task => {
+          try {
+            if (!task.assigned_date_time) return false;
+            const date = new Date(task.assigned_date_time);
+            if (isNaN(date.getTime())) return false;
+
+            return date.getFullYear() === parseInt(filters.year) &&
+              date.getMonth() === monthIndex &&
+              date.getDate() >= startDay &&
+              date.getDate() <= endDay;
+          } catch (error) {
+            console.error('Error filtering by week:', error);
+            return false;
+          }
+        });
+      }
+    }
+
+    // Period filter
+    if (filters.view === 'period' && filters.fromDate && filters.toDate) {
+      const fromDate = new Date(filters.fromDate);
+      const toDate = new Date(filters.toDate);
+      toDate.setHours(23, 59, 59, 999); // Include entire end date
+
+      // If specific date is selected (activeSubTab), filter by that date only
+      if (filters.activeSubTab) {
+        // Parse activeSubTab format: "01-01-2026"
+        const dateParts = filters.activeSubTab.split('-');
+        if (dateParts.length === 3) {
+          const day = parseInt(dateParts[0]);
+          const month = parseInt(dateParts[1]) - 1; // JS months are 0-indexed
+          const year = parseInt(dateParts[2]);
+
+          list = list.filter(task => {
+            try {
+              if (!task.assigned_date_time) return false;
+              const taskDate = new Date(task.assigned_date_time);
+              if (isNaN(taskDate.getTime())) return false;
+
+              // Filter by exact date
+              return taskDate.getFullYear() === year &&
+                taskDate.getMonth() === month &&
+                taskDate.getDate() === day;
+            } catch (error) {
+              console.error('Error filtering by specific date:', error);
+              return false;
+            }
+          });
+        }
+      } else {
+        // No specific date selected, show all tasks from the period
+        list = list.filter(task => {
+          try {
+            if (!task.assigned_date_time) return false;
+            const taskDate = new Date(task.assigned_date_time);
+            if (isNaN(taskDate.getTime())) return false;
+            return taskDate >= fromDate && taskDate <= toDate;
+          } catch (error) {
+            console.error('Error filtering by period:', error);
+            return false;
+          }
+        });
+      }
     }
 
     return list;
-  }, [tasks, searchQuery, filters.priority, filters.status, filters.department]);
+  }, [tasks, searchQuery, filters.priority, filters.status, filters.view, filters.year, filters.month, filters.week, filters.fromDate, filters.toDate, filters.activeSubTab]);
 
   const handleTaskSelect = (id) => {
     setSelectedTask(selectedTask === id ? null : id);
@@ -754,39 +934,24 @@ export default function MyTasks() {
   // Update period tabs when from/to dates change
   useEffect(() => {
     if (filters.view === 'period' && filters.fromDate && filters.toDate) {
-      const periodTabs = getPeriodTabs(filters.fromDate, filters.toDate);
-      setFilters(prev => ({ ...prev, activeSubTab: periodTabs[0] }));
+      // Don't auto-select first period date - show all period tasks by default
+      // const periodTabs = getPeriodTabs(filters.fromDate, filters.toDate);
+      // setFilters(prev => ({ ...prev, activeSubTab: periodTabs[0] }));
     }
   }, [filters.fromDate, filters.toDate, filters.view]);
 
   // Update weekly tabs when month or year changes
   useEffect(() => {
     if (filters.view === 'weekly' && filters.week) {
-      const weeklyTabs = getWeekTabs(parseInt(filters.year), filters.month, filters.week);
-      const firstTab = weeklyTabs[0]?.label || weeklyTabs[0];
-      setFilters(prev => ({ ...prev, activeSubTab: firstTab }));
+      // Don't auto-select first date - let user manually select or show whole week
+      // const weeklyTabs = getWeekTabs(parseInt(filters.year), filters.month, filters.week);
+      // const firstTab = weeklyTabs[0]?.label || weeklyTabs[0];
+      // setFilters(prev => ({ ...prev, activeSubTab: firstTab }));
     }
     setMobileTabStart(0);
   }, [filters.month, filters.year, filters.week, filters.view]);
 
-  // Fetch departments from API
-  useEffect(() => {
-    const fetchDepartments = async () => {
-      if (!collegeId) return;
-      setDeptLoading(true);
-      try {
-        const data = await TaskManagement.getDepartmentByCollegeId(collegeId);
-        const deptNames = data.map(dept => dept.department_name || dept.name || 'Unknown');
-        setDepartments(deptNames);
-      } catch (err) {
-        console.error('Error fetching departments:', err);
-        setDepartments([]);
-      } finally {
-        setDeptLoading(false);
-      }
-    };
-    fetchDepartments();
-  }, [collegeId]);
+
 
   // Fetch priorities from API
   useEffect(() => {
@@ -853,6 +1018,7 @@ export default function MyTasks() {
             ? `${task.assigned_by.other_staff_info.firstname} ${task.assigned_by.other_staff_info.lastname}`
             : "System",
           assignedOn: formatDate(task.assigned_date_time),
+          assigned_date_time: task.assigned_date_time, // Raw date for filtering
           dueOn: formatDate(task.due_date_time),
           dueDate: task.due_date_time,
           priority: task.priority?.priority_name || "Medium",
@@ -926,14 +1092,7 @@ export default function MyTasks() {
       {filters.filterOpen && (
         <div className="bg-white rounded-xl shadow-md p-5 mb-6 border border-gray-200">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-            <CustomSelect
-              label="Department"
-              value={filters.department}
-              onChange={(e) => setFilters(prev => ({ ...prev, department: e.target.value }))}
-              options={departments}
-              placeholder={deptLoading ? "Loading departments..." : "Select Department"}
-              disabled={deptLoading}
-            />
+
 
             <CustomSelect
               label="Priority"
@@ -968,13 +1127,18 @@ export default function MyTasks() {
                   options={['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']}
                   placeholder="Select Month"
                 />
-                <CustomSelect
-                  label="Year"
-                  value={filters.year}
-                  onChange={(e) => setFilters(prev => ({ ...prev, year: e.target.value, week: '' }))}
-                  options={years}
-                  placeholder="Select Year"
-                />
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">Year</label>
+                  <input
+                    type="number"
+                    value={filters.year || currentYear}
+                    onChange={(e) => setFilters(prev => ({ ...prev, year: e.target.value, week: '' }))}
+                    placeholder="Enter Year"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg min-h-[44px] focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                    min="1900"
+                    max="2100"
+                  />
+                </div>
                 <CustomSelect
                   label="Week"
                   value={filters.week}
@@ -986,13 +1150,18 @@ export default function MyTasks() {
               </>
             )}
             {filters.view === 'monthly' && (
-              <CustomSelect
-                label="Year"
-                value={filters.year}
-                onChange={(e) => setFilters(prev => ({ ...prev, year: e.target.value }))}
-                options={years}
-                placeholder="Select Year"
-              />
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">Year</label>
+                <input
+                  type="number"
+                  value={filters.year || currentYear}
+                  onChange={(e) => setFilters(prev => ({ ...prev, year: e.target.value }))}
+                  placeholder="Enter Year"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg min-h-[44px] focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                  min="1900"
+                  max="2100"
+                />
+              </div>
             )}
             {filters.view === 'period' && (
               <>

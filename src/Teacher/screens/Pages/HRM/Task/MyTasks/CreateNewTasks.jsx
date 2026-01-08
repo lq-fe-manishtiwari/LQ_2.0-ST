@@ -393,7 +393,7 @@ export default function CreateTask() {
           subject_id: parseInt(academicFilters.subject),
           program_id: parseInt(academicFilters.program)
         } : {
-          task_category: "NON-ACADEMIC"
+          task_category: "NON_ACADEMIC"
         })
       }];
 

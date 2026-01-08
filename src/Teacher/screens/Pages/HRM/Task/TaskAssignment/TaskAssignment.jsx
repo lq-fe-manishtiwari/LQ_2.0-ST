@@ -171,7 +171,7 @@ const TaskAssignmentTable = ({
 }) => {
   const entriesPerPage = 10;
   const [currentPage, setCurrentPage] = useState(1);
-  
+
   const totalEntries = tasks.length;
   const totalPages = Math.ceil(totalEntries / entriesPerPage);
   const start = (currentPage - 1) * entriesPerPage;
@@ -187,7 +187,7 @@ const TaskAssignmentTable = ({
     try {
       const date = new Date(dateString);
       if (isNaN(date.getTime())) return 'Invalid Date';
-      
+
       const day = String(date.getDate()).padStart(2, '0');
       const month = String(date.getMonth() + 1).padStart(2, '0');
       const year = date.getFullYear();
@@ -196,7 +196,7 @@ const TaskAssignmentTable = ({
       const ampm = hours >= 12 ? 'PM' : 'AM';
       hours = hours % 12;
       hours = hours ? hours : 12; // the hour '0' should be '12'
-      
+
       return `${day}-${month}-${year} ${hours}:${minutes} ${ampm}`;
     } catch (error) {
       console.error('Error formatting date:', error, dateString);
@@ -215,6 +215,21 @@ const TaskAssignmentTable = ({
     return due < today;
   };
 
+  // Check if task is delayed (overdue and still in active status)
+  const isTaskDelayed = (task) => {
+    if (!task.dueOn) return false;
+
+    const activeStatuses = ['Pending', 'Incomplete', 'In Progress', 'InProgress', 'Active'];
+    if (!activeStatuses.includes(task.status)) return false;
+
+    const dueDate = new Date(task.dueOn);
+    const currentDate = new Date();
+    currentDate.setHours(0, 0, 0, 0);
+    dueDate.setHours(0, 0, 0, 0);
+
+    return dueDate < currentDate;
+  };
+
   // Get display date
   const getDisplayDate = (dateString) => {
     if (!dateString) return 'N/A';
@@ -229,15 +244,15 @@ const TaskAssignmentTable = ({
           <table className="w-full table-fixed">
             <thead className="table-header">
               <tr>
-                <th className="table-th text-center" style={{width: '12%'}}>Name</th>
-                <th className="table-th text-center" style={{width: '12%'}}>Task Title</th>
-                <th className="table-th text-center" style={{width: '8%'}}>Task Type</th>
-                <th className="table-th text-center" style={{width: '8%'}}>Assigned By</th>
-                <th className="table-th text-center" style={{width: '8%'}}>Assigned on</th>
-                <th className="table-th text-center" style={{width: '17%'}}>Due on</th>
-                <th className="table-th text-center" style={{width: '10%'}}>Priority</th>
-                <th className="table-th text-center" style={{width: '13%'}}>Status</th>
-                <th className="table-th text-center" style={{width: '12%'}}>Actions</th>
+                <th className="table-th text-center" style={{ width: '12%' }}>Name</th>
+                <th className="table-th text-center" style={{ width: '12%' }}>Task Title</th>
+                <th className="table-th text-center" style={{ width: '8%' }}>Task Type</th>
+                <th className="table-th text-center" style={{ width: '8%' }}>Assigned By</th>
+                <th className="table-th text-center" style={{ width: '8%' }}>Assigned on</th>
+                <th className="table-th text-center" style={{ width: '17%' }}>Due on</th>
+                <th className="table-th text-center" style={{ width: '10%' }}>Priority</th>
+                <th className="table-th text-center" style={{ width: '13%' }}>Status</th>
+                <th className="table-th text-center" style={{ width: '12%' }}>Actions</th>
               </tr>
             </thead>
 
@@ -268,7 +283,8 @@ const TaskAssignmentTable = ({
                   const displayDueDate = getDisplayDate(task.dueOn);
                   const displayAssignedDate = getDisplayDate(task.assignedOn);
                   const isOverdue = isTaskOverdue(task);
-                  
+                  const statusLabel = isTaskDelayed(task) ? "Delayed" : task.status;
+
                   return (
                     <tr key={task.id} className="hover:bg-gray-50 transition-colors">
                       <td className="px-3 py-4 text-center">
@@ -279,18 +295,16 @@ const TaskAssignmentTable = ({
                       <td className="px-3 py-4 text-sm text-gray-700 truncate text-center">{task.taskType}</td>
                       <td className="px-3 py-4 text-sm text-gray-700 truncate text-center">{task.assignedBy}</td>
                       <td className="px-3 py-4 text-sm text-gray-700 truncate text-center">{displayAssignedDate}</td>
-                      <td className={`px-3 py-4 text-sm font-semibold truncate text-center ${
-                        isOverdue ? 'text-red-600' : 'text-gray-700'
-                      }`}>
+                      <td className={`px-3 py-4 text-sm font-semibold truncate text-center ${isOverdue ? 'text-red-600' : 'text-gray-700'
+                        }`}>
                         {displayDueDate}
                       </td>
 
                       <td className="px-2 py-4 text-center">
-                        <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                          task.priority === 'High' ? 'bg-red-100 text-red-800' :
+                        <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${task.priority === 'High' ? 'bg-red-100 text-red-800' :
                           task.priority === 'Medium' ? 'bg-yellow-100 text-yellow-800' :
-                          'bg-green-100 text-green-800'
-                        }`}>
+                            'bg-green-100 text-green-800'
+                          }`}>
                           {task.priority || 'Medium'}
                         </span>
                       </td>
@@ -299,21 +313,20 @@ const TaskAssignmentTable = ({
                         <button
                           onClick={() => onToggleActive(task.id)}
                           disabled={true}
-                          className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium transition-all cursor-not-allowed ${
-                            statusChanging[task.id]
-                              ? 'bg-gray-100 text-gray-500 cursor-not-allowed'
+                          className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium transition-all cursor-not-allowed ${statusChanging[task.id]
+                            ? 'bg-gray-100 text-gray-500 cursor-not-allowed'
+                            : statusLabel === 'Delayed'
+                              ? 'bg-red-100 text-red-800'
                               : task.status === 'Complete'
-                              ? 'bg-green-100 text-green-800 hover:bg-green-200'
-                              : task.status === 'Pending'
-                              ? 'bg-blue-100 text-blue-800 hover:bg-blue-200'
-                              : task.status === 'InProgress'
-                              ? 'bg-orange-100 text-orange-800 hover:bg-orange-200'
-                              : task.status === 'Incomplete'
-                              ? 'bg-red-100 text-red-800 hover:bg-red-200'
-                              : task.status === 'Incomplete'
-                              ? 'bg-orange-100 text-orange-800 hover:bg-orange-200'
-                              : 'bg-red-100 text-red-800 hover:bg-red-200'
-                          }`}
+                                ? 'bg-green-100 text-green-800 hover:bg-green-200'
+                                : task.status === 'Pending'
+                                  ? 'bg-blue-100 text-blue-800 hover:bg-blue-200'
+                                  : task.status === 'InProgress'
+                                    ? 'bg-orange-100 text-orange-800 hover:bg-orange-200'
+                                    : task.status === 'Incomplete'
+                                      ? 'bg-red-100 text-red-800 hover:bg-red-200'
+                                      : 'bg-gray-100 text-gray-800'
+                            }`}
                         >
                           {statusChanging[task.id] ? (
                             <>
@@ -323,7 +336,7 @@ const TaskAssignmentTable = ({
                           ) : (
                             <>
                               {task.status === 'Complete' ? <ToggleRight className="w-4 h-4 mr-1" /> : <ToggleLeft className="w-4 h-4 mr-1" />}
-                              {task.status || 'Pending'}
+                              {statusLabel}
                             </>
                           )}
                         </button>
@@ -365,11 +378,10 @@ const TaskAssignmentTable = ({
             <button
               onClick={handlePrev}
               disabled={currentPage === 1}
-              className={`px-4 py-2 rounded-md text-white ${
-                currentPage === 1 
-                  ? 'bg-blue-200 text-gray-400 cursor-not-allowed' 
-                  : 'bg-blue-600 hover:bg-blue-700'
-              }`}
+              className={`px-4 py-2 rounded-md text-white ${currentPage === 1
+                ? 'bg-blue-200 text-gray-400 cursor-not-allowed'
+                : 'bg-blue-600 hover:bg-blue-700'
+                }`}
             >
               Previous
             </button>
@@ -381,11 +393,10 @@ const TaskAssignmentTable = ({
             <button
               onClick={handleNext}
               disabled={currentPage === totalPages}
-              className={`px-4 py-2 rounded-md text-white ${
-                currentPage === totalPages 
-                  ? 'bg-blue-200 text-gray-400 cursor-not-allowed' 
-                  : 'bg-blue-600 hover:bg-blue-700'
-              }`}
+              className={`px-4 py-2 rounded-md text-white ${currentPage === totalPages
+                ? 'bg-blue-200 text-gray-400 cursor-not-allowed'
+                : 'bg-blue-600 hover:bg-blue-700'
+                }`}
             >
               Next
             </button>
@@ -417,7 +428,8 @@ const TaskAssignmentTable = ({
             const displayDueDate = getDisplayDate(task.dueOn);
             const displayAssignedDate = getDisplayDate(task.assignedOn);
             const isOverdue = isTaskOverdue(task);
-            
+            const statusLabel = isTaskDelayed(task) ? "Delayed" : task.status;
+
             return (
               <div
                 key={task.id}
@@ -438,15 +450,17 @@ const TaskAssignmentTable = ({
                     disabled={true}
                     className={`flex items-center px-2.5 py-1.5 rounded-full text-xs font-medium transition-all cursor-not-allowed ${statusChanging[task.id]
                       ? 'bg-gray-100 text-gray-500 cursor-not-allowed'
-                      : task.status === 'Complete'
-                        ? 'bg-green-100 text-green-800'
-                        : task.status === 'Pending'
-                        ? 'bg-blue-100 text-blue-800'
-                        : task.status === 'InProgress'
-                        ? 'bg-orange-100 text-orange-800'
-                        : task.status === 'Incomplete'
+                      : statusLabel === 'Delayed'
                         ? 'bg-red-100 text-red-800'
-                        : 'bg-gray-100 text-gray-800'
+                        : task.status === 'Complete'
+                          ? 'bg-green-100 text-green-800'
+                          : task.status === 'Pending'
+                            ? 'bg-blue-100 text-blue-800'
+                            : task.status === 'InProgress'
+                              ? 'bg-orange-100 text-orange-800'
+                              : task.status === 'Incomplete'
+                                ? 'bg-red-100 text-red-800'
+                                : 'bg-gray-100 text-gray-800'
                       }`}
                   >
                     {statusChanging[task.id] ? (
@@ -457,7 +471,7 @@ const TaskAssignmentTable = ({
                     ) : (
                       <>
                         {task.status === 'Complete' ? <ToggleRight className="w-3.5 h-3.5 mr-1" /> : <ToggleLeft className="w-3.5 h-3.5 mr-1" />}
-                        {task.status || 'Pending'}
+                        {statusLabel}
                       </>
                     )}
                   </button>
@@ -470,19 +484,16 @@ const TaskAssignmentTable = ({
                     <div><span className="font-medium">Assigned By:</span> {task.assignedBy || 'N/A'}</div>
                     <div><span className="font-medium">Assigned:</span> {displayAssignedDate}</div>
                     <div className="col-span-2">
-                      <span className={`font-medium ${
-                        isOverdue ? 'text-red-600' : 'text-gray-700'
-                      }`}>Due:</span> 
-                      <span className={`font-semibold ml-1 ${
-                        isOverdue ? 'text-red-600' : 'text-gray-700'
-                      }`}>{displayDueDate}</span>
+                      <span className={`font-medium ${isOverdue ? 'text-red-600' : 'text-gray-700'
+                        }`}>Due:</span>
+                      <span className={`font-semibold ml-1 ${isOverdue ? 'text-red-600' : 'text-gray-700'
+                        }`}>{displayDueDate}</span>
                     </div>
-                    <div><span className="font-medium">Priority:</span> 
-                      <span className={`ml-1 px-1.5 py-0.5 rounded text-xs ${
-                        task.priority === 'High' ? 'bg-red-100 text-red-800' :
+                    <div><span className="font-medium">Priority:</span>
+                      <span className={`ml-1 px-1.5 py-0.5 rounded text-xs ${task.priority === 'High' ? 'bg-red-100 text-red-800' :
                         task.priority === 'Medium' ? 'bg-yellow-100 text-yellow-800' :
-                        'bg-green-100 text-green-800'
-                      }`}>
+                          'bg-green-100 text-green-800'
+                        }`}>
                         {task.priority || 'Medium'}
                       </span>
                     </div>
@@ -523,11 +534,10 @@ const TaskAssignmentTable = ({
           <button
             onClick={handlePrev}
             disabled={currentPage === 1}
-            className={`px-4 py-2 rounded-md ${
-              currentPage === 1 
-                ? 'bg-gray-200 text-gray-400 cursor-not-allowed' 
-                : 'bg-blue-600 hover:bg-blue-700 text-white'
-            }`}
+            className={`px-4 py-2 rounded-md ${currentPage === 1
+              ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+              : 'bg-blue-600 hover:bg-blue-700 text-white'
+              }`}
           >
             Previous
           </button>
@@ -537,11 +547,10 @@ const TaskAssignmentTable = ({
           <button
             onClick={handleNext}
             disabled={currentPage === totalPages}
-            className={`px-4 py-2 rounded-md ${
-              currentPage === totalPages 
-                ? 'bg-gray-200 text-gray-400 cursor-not-allowed' 
-                : 'bg-blue-600 hover:bg-blue-700 text-white'
-            }`}
+            className={`px-4 py-2 rounded-md ${currentPage === totalPages
+              ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+              : 'bg-blue-600 hover:bg-blue-700 text-white'
+              }`}
           >
             Next
           </button>
@@ -556,36 +565,36 @@ export default function TaskAssignment() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [tasks, setTasks] = useState([]);
-  
+
   // Get current user ID from localStorage
   const currentUser = JSON.parse(localStorage.getItem("userProfile"));
   const userId = currentUser?.user?.user_id || null;
 
+  const currentYear = new Date().getFullYear();
+  const currentMonth = new Date().getMonth();
+  const monthTabs = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const currentMonthTab = monthTabs[currentMonth];
+
   const [searchQuery, setSearchQuery] = useState("");
   const [filters, setFilters] = useState({
     filterOpen: false,
-    department: '',
     view: '',
-    year: '',
+    year: String(currentYear),
     month: '',
     week: '',
     fromDate: '',
     toDate: '',
-    activeSubTab: '',
+    activeSubTab: currentMonthTab,
     priority: '',
     status: ''
   });
   const [mobileTabStart, setMobileTabStart] = useState(0);
 
-  const [departments, setDepartments] = useState([]);
-  const [deptLoading, setDeptLoading] = useState(false);
   const [priorities, setPriorities] = useState([]);
   const [priorityLoading, setPriorityLoading] = useState(false);
   const [statuses, setStatuses] = useState([]);
   const [statusLoading, setStatusLoading] = useState(false);
-  const years = ['2022', '2023', '2024', '2025'];
 
-  const monthTabs = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
   const fullMonthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 
   const getWeekOptions = (year, month) => {
@@ -602,10 +611,10 @@ export default function TaskAssignment() {
     const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
     const monthIndex = monthNames.indexOf(month);
     const weekNumber = parseInt(week.split(' ')[1]);
-    
+
     const startDay = (weekNumber - 1) * 7 + 1;
     const endDay = Math.min(weekNumber * 7, new Date(year, monthIndex + 1, 0).getDate());
-    
+
     const days = [];
     for (let day = startDay; day <= endDay; day++) {
       const date = new Date(year, monthIndex, day);
@@ -620,11 +629,11 @@ export default function TaskAssignment() {
 
   const getPeriodTabs = (fromDate, toDate) => {
     if (!fromDate || !toDate) return [];
-    
+
     const start = new Date(fromDate);
     const end = new Date(toDate);
     const dates = [];
-    
+
     const currentDate = new Date(start);
     while (currentDate <= end) {
       const formatDate = (date) => {
@@ -633,7 +642,7 @@ export default function TaskAssignment() {
         const y = date.getFullYear();
         return `${d}-${m}-${y}`;
       };
-      
+
       dates.push(formatDate(currentDate));
       currentDate.setDate(currentDate.getDate() + 1);
     }
@@ -641,7 +650,7 @@ export default function TaskAssignment() {
   };
 
   const getSubTabs = () => {
-    switch(filters.view) {
+    switch (filters.view) {
       case 'monthly': return monthTabs;
       case 'weekly': return getWeekTabs(parseInt(filters.year), filters.month, filters.week);
       case 'period': return getPeriodTabs(filters.fromDate, filters.toDate);
@@ -652,22 +661,32 @@ export default function TaskAssignment() {
   const handleViewChange = (view) => {
     const viewValue = view.toLowerCase();
     let subTabs;
+    let firstTab;
+
     if (viewValue === 'monthly') {
       subTabs = monthTabs;
+      firstTab = currentMonthTab;
+      setFilters(prev => ({
+        ...prev,
+        view: viewValue,
+        activeSubTab: firstTab,
+        year: String(currentYear)
+      }));
     } else if (viewValue === 'weekly') {
-      subTabs = getWeekTabs(parseInt(filters.year), filters.month);
+      subTabs = getWeekTabs(parseInt(filters.year), filters.month, filters.week);
+      setFilters(prev => ({ ...prev, view: viewValue, activeSubTab: '' }));
     } else {
       subTabs = getPeriodTabs(filters.fromDate, filters.toDate);
+      firstTab = Array.isArray(subTabs[0]) ? subTabs[0] : subTabs[0]?.label || subTabs[0];
+      setFilters(prev => ({ ...prev, view: viewValue, activeSubTab: firstTab }));
     }
-    const firstTab = Array.isArray(subTabs[0]) ? subTabs[0] : subTabs[0]?.label || subTabs[0];
-    setFilters(prev => ({ ...prev, view: viewValue, activeSubTab: firstTab }));
   };
 
   const filteredTasks = useMemo(() => {
     let list = tasks;
-    
+
     console.log("Filtering tasks:", list.length, "filters:", filters);
-    
+
     // Search filter
     if (searchQuery) {
       list = list.filter(
@@ -677,22 +696,18 @@ export default function TaskAssignment() {
           (task.taskTitle && task.taskTitle.toLowerCase().includes(searchQuery.toLowerCase()))
       );
     }
-    
+
     // Priority filter
     if (filters.priority && filters.priority !== 'All') {
       list = list.filter(task => task.priority === filters.priority);
     }
-    
+
     // Status filter
     if (filters.status && filters.status !== 'All') {
       list = list.filter(task => task.status === filters.status);
     }
-    
-    // Department filter
-    if (filters.department) {
-      list = list.filter(task => task.department === filters.department);
-    }
-    
+
+
     // Date-based filtering for view types
     if (filters.view === 'monthly' && filters.activeSubTab && filters.year) {
       const monthIndex = monthTabs.indexOf(filters.activeSubTab);
@@ -710,40 +725,111 @@ export default function TaskAssignment() {
         });
       }
     }
-    
-    if (filters.view === 'weekly' && filters.activeSubTab && filters.month && filters.year) {
-      list = list.filter(task => {
-        try {
-          if (!task.assignedOn) return false;
-          const date = new Date(task.assignedOn);
-          if (isNaN(date.getTime())) return false;
-          return date.getMonth() === ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'].indexOf(filters.month);
-        } catch (error) {
-          console.error('Error filtering by week:', error);
-          return false;
+
+    // Weekly filter
+    if (filters.view === 'weekly' && filters.year && filters.month && filters.week) {
+      const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+      const monthIndex = monthNames.indexOf(filters.month);
+      const weekNumber = parseInt(filters.week.split(' ')[1]);
+
+      const startDay = (weekNumber - 1) * 7 + 1;
+      const endDay = Math.min(weekNumber * 7, new Date(filters.year, monthIndex + 1, 0).getDate());
+
+      // If specific date is selected (activeSubTab), filter by that date only
+      if (filters.activeSubTab) {
+        // Extract date from activeSubTab format: "Monday, 6 Jan"
+        const dateMatch = filters.activeSubTab.match(/(\d+)\s+(\w+)/);
+        if (dateMatch) {
+          const day = parseInt(dateMatch[1]);
+
+          list = list.filter(task => {
+            try {
+              if (!task.assignedOn) return false;
+              const date = new Date(task.assignedOn);
+              if (isNaN(date.getTime())) return false;
+
+              // Filter by exact date (year, month, and day)
+              return date.getFullYear() === parseInt(filters.year) &&
+                date.getMonth() === monthIndex &&
+                date.getDate() === day;
+            } catch (error) {
+              console.error('Error filtering by specific date:', error);
+              return false;
+            }
+          });
         }
-      });
+      } else {
+        // No specific date selected, show all tasks from the week
+        list = list.filter(task => {
+          try {
+            if (!task.assignedOn) return false;
+            const date = new Date(task.assignedOn);
+            if (isNaN(date.getTime())) return false;
+
+            return date.getFullYear() === parseInt(filters.year) &&
+              date.getMonth() === monthIndex &&
+              date.getDate() >= startDay &&
+              date.getDate() <= endDay;
+          } catch (error) {
+            console.error('Error filtering by week:', error);
+            return false;
+          }
+        });
+      }
     }
-    
+
+    // Period filter
     if (filters.view === 'period' && filters.fromDate && filters.toDate) {
       const fromDate = new Date(filters.fromDate);
       const toDate = new Date(filters.toDate);
-      list = list.filter(task => {
-        try {
-          if (!task.assignedOn) return false;
-          const taskDate = new Date(task.assignedOn);
-          if (isNaN(taskDate.getTime())) return false;
-          return taskDate >= fromDate && taskDate <= toDate;
-        } catch (error) {
-          console.error('Error filtering by period:', error);
-          return false;
+      toDate.setHours(23, 59, 59, 999); // Include entire end date
+
+      // If specific date is selected (activeSubTab), filter by that date only
+      if (filters.activeSubTab) {
+        // Parse activeSubTab format: "01-01-2026"
+        const dateParts = filters.activeSubTab.split('-');
+        if (dateParts.length === 3) {
+          const day = parseInt(dateParts[0]);
+          const month = parseInt(dateParts[1]) - 1; // JS months are 0-indexed
+          const year = parseInt(dateParts[2]);
+
+          list = list.filter(task => {
+            try {
+              if (!task.assignedOn) return false;
+              const taskDate = new Date(task.assignedOn);
+              if (isNaN(taskDate.getTime())) return false;
+
+              // Filter by exact date
+              return taskDate.getFullYear() === year &&
+                taskDate.getMonth() === month &&
+                taskDate.getDate() === day;
+            } catch (error) {
+              console.error('Error filtering by specific date:', error);
+              return false;
+            }
+          });
         }
-      });
+      } else {
+        // No specific date selected, show all tasks from the period
+        list = list.filter(task => {
+          try {
+            if (!task.assignedOn) return false;
+            const taskDate = new Date(task.assignedOn);
+            if (isNaN(taskDate.getTime())) return false;
+
+            return taskDate >= fromDate && taskDate <= toDate;
+          } catch (error) {
+            console.error('Error filtering by period:', error);
+            return false;
+          }
+        });
+      }
     }
-    
+
+
     console.log("Filtered tasks count:", list.length);
     return list;
-  }, [tasks, searchQuery, filters.priority, filters.status, filters.department, filters.view, filters.activeSubTab, filters.year, filters.month, filters.fromDate, filters.toDate]);
+  }, [tasks, searchQuery, filters.priority, filters.status, filters.view, filters.activeSubTab, filters.year, filters.month, filters.week, filters.fromDate, filters.toDate]);
 
   const [selectedTask, setSelectedTask] = useState(null);
   const [statusChanging, setStatusChanging] = useState({});
@@ -753,7 +839,7 @@ export default function TaskAssignment() {
   const [taskToDelete, setTaskToDelete] = useState(null);
   const [passwordAlert, setPasswordAlert] = useState(false);
   const [password, setPassword] = useState('');
-  
+
   // Success/Error Alert States
   const [showDeleteSuccessAlert, setShowDeleteSuccessAlert] = useState(false);
   const [showDeleteErrorAlert, setShowDeleteErrorAlert] = useState(false);
@@ -771,16 +857,16 @@ export default function TaskAssignment() {
         setLoading(false);
         return;
       }
-      
+
       try {
         setLoading(true);
         console.log("Fetching tasks from API for user ID:", userId);
-  
+
         const currentUser = JSON.parse(localStorage.getItem("userProfile"));
         const collegeId = currentUser?.college_id || 1;
         const response = await TaskManagement.getEmployeeTaskView(userId, collegeId);
         console.log("API Response:", response);
-  
+
         // Check if response is an array
         let taskList = [];
         if (Array.isArray(response)) {
@@ -793,9 +879,9 @@ export default function TaskAssignment() {
           console.error("Unexpected API response format:", response);
           taskList = [];
         }
-  
+
         console.log("Task list:", taskList);
-  
+
         // Map tasks with better error handling
         const formatted = taskList.map((item, index) => {
           try {
@@ -803,38 +889,47 @@ export default function TaskAssignment() {
             const firstName = item.user?.teacher_info?.firstname || item.user?.other_staff_info?.firstname || "";
             const lastName = item.user?.teacher_info?.lastname || item.user?.other_staff_info?.lastname || "";
             const employeeName = `${firstName} ${lastName}`.trim() || item.user?.username || "Unknown";
-            
+
+            // Extract assigned by name from firstname, middlename, lastname
+            const assignedByFirstName = item.firstname || "";
+            const assignedByMiddleName = item.middlename || "";
+            const assignedByLastName = item.lastname || "";
+            const assignedByName = [assignedByFirstName, assignedByMiddleName, assignedByLastName]
+              .filter(Boolean)
+              .join(" ")
+              .trim() || "Admin";
+
             return {
               id: item.task_assignment_id || item.id || `task-${index}`,
-            
-              name: employeeName,
-            
-              taskTitle: item.task?.task_name || item.taskName || item.title || "No Title",
-            
-              taskType: item.task?.task_type?.task_type_name || "N/A",
-            
-              assignedBy: item.assignedByName || item.assigned_by || item.assignedBy || "-",
-            
-              assignedOn: item.task?.assigned_date_time || item.assigned_date_time,
-            
-              dueOn: item.task?.due_date_time || item.due_date_time,
-            
-              priority: item.task?.priority?.priority_name 
-       || item.priority?.priority_name 
-       || "Medium",
 
-            
-             status: item.task_status?.name || item.task?.task_status?.name || item.assignment_status || "Pending",
-            
+              name: employeeName,
+
+              taskTitle: item.task?.task_name || item.taskName || item.title || "No Title",
+
+              taskType: item.task?.task_type?.task_type_name || "N/A",
+
+              assignedBy: assignedByName,
+
+              assignedOn: item.task?.assigned_date_time || item.assigned_date_time,
+
+              dueOn: item.task?.due_date_time || item.due_date_time,
+
+              priority: item.task?.priority?.priority_name
+                || item.priority?.priority_name
+                || "Medium",
+
+
+              status: item.task_status?.name || item.task?.task_status?.name || item.assignment_status || "Pending",
+
               email: item.user?.email || "",
-            
+
               phone: item.user?.phone || "",
-            
+
               department: item.departmentName || item.department || "",
-            
+
               _raw: item
             };
-            
+
           } catch (error) {
             console.error("Error formatting task:", error, item);
             return {
@@ -853,14 +948,14 @@ export default function TaskAssignment() {
             };
           }
         });
-  
+
         // Filter tasks to show only those assigned to current user
         const userTasks = formatted.filter(task => {
           // Check if task is assigned to current user
           const taskUserId = task._raw?.user?.user_id || task._raw?.user_id;
           return taskUserId === userId;
         });
-        
+
         console.log("Formatted tasks:", formatted);
         console.log("User specific tasks:", userTasks);
         setTasks(userTasks);
@@ -872,53 +967,53 @@ export default function TaskAssignment() {
         setLoading(false);
       }
     }
-  
+
     fetchTasks();
   }, [userId]);
-  
+
   // DELETE HANDLERS
   const handleDelete = (id) => {
     console.log("Delete requested for task ID:", id);
     setTaskToDelete(id);
     setShowAlert(true);
   };
-  
+
   const handleConfirmDelete = async () => {
     console.log("Confirming delete for task ID:", taskToDelete);
     setShowAlert(false);
 
     try {
-        setLoading(true);
+      setLoading(true);
 
-        // Check if delete method exists in service
-        if (!TaskManagement.deletePMSTaskAssignment) {
-          throw new Error("Delete method not found in service");
-        }
+      // Check if delete method exists in service
+      if (!TaskManagement.deletePMSTaskAssignment) {
+        throw new Error("Delete method not found in service");
+      }
 
-        const response = await TaskManagement.deletePMSTaskAssignment(taskToDelete);
-        console.log("Delete response:", response);
+      const response = await TaskManagement.deletePMSTaskAssignment(taskToDelete);
+      console.log("Delete response:", response);
 
-        setLoading(false);
-        setAlertMessage("Task deleted successfully!");
-        setShowDeleteSuccessAlert(true);
+      setLoading(false);
+      setAlertMessage("Task deleted successfully!");
+      setShowDeleteSuccessAlert(true);
 
-        // Remove from UI
-        setTasks(prev => prev.filter(t => t.id !== taskToDelete));
+      // Remove from UI
+      setTasks(prev => prev.filter(t => t.id !== taskToDelete));
 
-        setTaskToDelete(null);
+      setTaskToDelete(null);
     } catch (error) {
-        setLoading(false);
-        console.error("Delete Error:", error);
+      setLoading(false);
+      console.error("Delete Error:", error);
 
-        let message = "Failed to delete task. Please try again.";
-        if (error?.message) message = error.message;
-        if (error?.response?.data?.message) message = error.response.data.message;
+      let message = "Failed to delete task. Please try again.";
+      if (error?.message) message = error.message;
+      if (error?.response?.data?.message) message = error.response.data.message;
 
-        setErrorMessage(message);
-        setShowDeleteErrorAlert(true);
+      setErrorMessage(message);
+      setShowDeleteErrorAlert(true);
     }
   };
-  
+
   const handleCancelDelete = () => {
     setShowAlert(false);
     setTaskToDelete(null);
@@ -962,7 +1057,7 @@ export default function TaskAssignment() {
       setTaskToDelete(null);
       setAlertMessage('Task deleted successfully!');
       setShowDeleteSuccessAlert(true);
-      
+
       // Remove task from local state
       setTasks(prevTasks => prevTasks.filter(task => task.id !== taskToDelete));
 
@@ -985,7 +1080,7 @@ export default function TaskAssignment() {
       setShowDeleteErrorAlert(true);
     }
   };
-  
+
   const handleCancelPassword = () => {
     setPasswordAlert(false);
     setPassword("");
@@ -1013,43 +1108,43 @@ export default function TaskAssignment() {
 
   const handleShowDetails = (task) => console.log('Show details:', task);
 
-  useEffect(() => {
-    if (filters.view === 'period' && filters.fromDate && filters.toDate) {
-      const periodTabs = getPeriodTabs(filters.fromDate, filters.toDate);
-      setFilters(prev => ({ ...prev, activeSubTab: periodTabs[0] }));
-    }
-  }, [filters.fromDate, filters.toDate, filters.view]);
+  // Don't auto-select first period date - show all period tasks by default
+  // useEffect(() => {
+  //   if (filters.view === 'period' && filters.fromDate && filters.toDate) {
+  //     const periodTabs = getPeriodTabs(filters.fromDate, filters.toDate);
+  //     setFilters(prev => ({ ...prev, activeSubTab: periodTabs[0] }));
+  //   }
+  // }, [filters.fromDate, filters.toDate, filters.view]);
 
+  // Don't auto-select first date - let user manually select or show whole week
+  // useEffect(() => {
+  //   if (filters.view === 'weekly' && filters.week) {
+  //     const weeklyTabs = getWeekTabs(parseInt(filters.year), filters.month, filters.week);
+  //     const firstTab = weeklyTabs[0]?.label || weeklyTabs[0];
+  //     setFilters(prev => ({ ...prev, activeSubTab: firstTab }));
+  //   }
+  //   setMobileTabStart(0);
+  // }, [filters.month, filters.year, filters.week, filters.view]);
+
+  // Reset mobile tab start when filters change
   useEffect(() => {
-    if (filters.view === 'weekly' && filters.week) {
-      const weeklyTabs = getWeekTabs(parseInt(filters.year), filters.month, filters.week);
-      const firstTab = weeklyTabs[0]?.label || weeklyTabs[0];
-      setFilters(prev => ({ ...prev, activeSubTab: firstTab }));
-    }
     setMobileTabStart(0);
   }, [filters.month, filters.year, filters.week, filters.view]);
 
-  const activeCollege = JSON.parse(localStorage.getItem("activeCollege"));
-  const collegeId = activeCollege?.id || null;
-
-  // Fetch departments from API
+  // Clear activeSubTab when week changes to show full week data first
   useEffect(() => {
-    const fetchDepartments = async () => {
-      if (!collegeId) return;
-      setDeptLoading(true);
-      try {
-        const data = await TaskManagement.getDepartmentByCollegeId(collegeId);
-        const deptNames = data.map(dept => dept.department_name || dept.name || 'Unknown');
-        setDepartments(deptNames);
-      } catch (err) {
-        console.error('Error fetching departments:', err);
-        setDepartments([]);
-      } finally {
-        setDeptLoading(false);
-      }
-    };
-    fetchDepartments();
-  }, [collegeId]);
+    if (filters.view === 'weekly' && filters.week) {
+      setFilters(prev => ({ ...prev, activeSubTab: '' }));
+    }
+  }, [filters.week]);
+
+  // Clear activeSubTab when period dates change to show full period data first
+  useEffect(() => {
+    if (filters.view === 'period' && filters.fromDate && filters.toDate) {
+      setFilters(prev => ({ ...prev, activeSubTab: '' }));
+    }
+  }, [filters.fromDate, filters.toDate]);
+
 
   // Fetch priorities from API
   useEffect(() => {
@@ -1138,15 +1233,7 @@ export default function TaskAssignment() {
       {filters.filterOpen && (
         <div className="bg-white rounded-xl shadow-md p-5 mb-6 border border-gray-200">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-            <CustomSelect
-              label="Department"
-              value={filters.department}
-              onChange={(e) => setFilters(prev => ({ ...prev, department: e.target.value }))}
-              options={departments}
-              placeholder={deptLoading ? "Loading departments..." : "Select Department"}
-              disabled={deptLoading}
-            />
-            
+
             <CustomSelect
               label="Priority"
               value={filters.priority || ''}
@@ -1155,7 +1242,7 @@ export default function TaskAssignment() {
               placeholder={priorityLoading ? "Loading priorities..." : "Select Priority"}
               disabled={priorityLoading}
             />
-            
+
             <CustomSelect
               label="Status"
               value={filters.status || ''}
@@ -1182,13 +1269,18 @@ export default function TaskAssignment() {
                   options={['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']}
                   placeholder="Select Month"
                 />
-                <CustomSelect
-                  label="Year"
-                  value={filters.year}
-                  onChange={(e) => setFilters(prev => ({ ...prev, year: e.target.value, week: '' }))}
-                  options={years}
-                  placeholder="Select Year"
-                />
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">Year</label>
+                  <input
+                    type="number"
+                    value={filters.year || currentYear}
+                    onChange={(e) => setFilters(prev => ({ ...prev, year: e.target.value, week: '' }))}
+                    placeholder="Enter Year"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg min-h-[44px] focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                    min="1900"
+                    max="2100"
+                  />
+                </div>
                 <CustomSelect
                   label="Week"
                   value={filters.week}
@@ -1201,13 +1293,18 @@ export default function TaskAssignment() {
             )}
 
             {filters.view === 'monthly' && (
-              <CustomSelect
-                label="Year"
-                value={filters.year}
-                onChange={(e) => setFilters(prev => ({ ...prev, year: e.target.value }))}
-                options={years}
-                placeholder="Select Year"
-              />
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">Year</label>
+                <input
+                  type="number"
+                  value={filters.year || currentYear}
+                  onChange={(e) => setFilters(prev => ({ ...prev, year: e.target.value }))}
+                  placeholder="Enter Year"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg min-h-[44px] focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                  min="1900"
+                  max="2100"
+                />
+              </div>
             )}
 
             {filters.view === 'period' && (
@@ -1270,14 +1367,13 @@ export default function TaskAssignment() {
                     <button
                       key={index}
                       onClick={() => setFilters(prev => ({ ...prev, activeSubTab: tabLabel }))}
-                      className={`whitespace-nowrap text-center px-3 py-2 text-sm rounded-lg transition-colors flex-shrink-0 ${
-                        filters.activeSubTab === tabLabel 
-                          ? "bg-blue-600 text-white" 
-                          : "bg-white text-gray-700 shadow-md"
-                      }`}
+                      className={`whitespace-nowrap text-center px-3 py-2 text-sm rounded-lg transition-colors flex-shrink-0 ${filters.activeSubTab === tabLabel
+                        ? "bg-blue-600 text-white"
+                        : "bg-white text-gray-700 shadow-md"
+                        }`}
                     >
-                      {filters.view === 'monthly' && monthTabs.includes(tabLabel) 
-                        ? fullMonthNames[monthTabs.indexOf(tabLabel)] 
+                      {filters.view === 'monthly' && monthTabs.includes(tabLabel)
+                        ? fullMonthNames[monthTabs.indexOf(tabLabel)]
                         : tabLabel}
                     </button>
                   );
@@ -1291,9 +1387,8 @@ export default function TaskAssignment() {
                     <button
                       onClick={() => setMobileTabStart(Math.max(0, mobileTabStart - 1))}
                       disabled={mobileTabStart === 0}
-                      className={`absolute left-0 top-1/2 -translate-y-1/2 p-2 z-20 bg-white rounded-full shadow-sm transition-colors ${
-                        mobileTabStart === 0 ? 'text-gray-300 cursor-not-allowed' : 'text-blue-600 hover:text-blue-800'
-                      }`}
+                      className={`absolute left-0 top-1/2 -translate-y-1/2 p-2 z-20 bg-white rounded-full shadow-sm transition-colors ${mobileTabStart === 0 ? 'text-gray-300 cursor-not-allowed' : 'text-blue-600 hover:text-blue-800'
+                        }`}
                     >
                       <ChevronLeft className="w-4 h-4" />
                     </button>
@@ -1301,9 +1396,8 @@ export default function TaskAssignment() {
                     <button
                       onClick={() => setMobileTabStart(Math.min(getSubTabs().length - 3, mobileTabStart + 1))}
                       disabled={mobileTabStart >= getSubTabs().length - 3}
-                      className={`absolute right-0 top-1/2 -translate-y-1/2 p-2 z-20 bg-white rounded-full shadow-sm transition-colors ${
-                        mobileTabStart >= getSubTabs().length - 3 ? 'text-gray-300 cursor-not-allowed' : 'text-blue-600 hover:text-blue-800'
-                      }`}
+                      className={`absolute right-0 top-1/2 -translate-y-1/2 p-2 z-20 bg-white rounded-full shadow-sm transition-colors ${mobileTabStart >= getSubTabs().length - 3 ? 'text-gray-300 cursor-not-allowed' : 'text-blue-600 hover:text-blue-800'
+                        }`}
                     >
                       <ChevronRight className="w-4 h-4" />
                     </button>
@@ -1317,14 +1411,13 @@ export default function TaskAssignment() {
                       <button
                         key={mobileTabStart + index}
                         onClick={() => setFilters(prev => ({ ...prev, activeSubTab: tabLabel }))}
-                        className={`text-center px-2 py-2 text-xs rounded-lg transition-colors ${
-                          filters.activeSubTab === tabLabel 
-                            ? "bg-blue-600 text-white" 
-                            : "bg-white text-gray-700 shadow-md"
-                        }`}
+                        className={`text-center px-2 py-2 text-xs rounded-lg transition-colors ${filters.activeSubTab === tabLabel
+                          ? "bg-blue-600 text-white"
+                          : "bg-white text-gray-700 shadow-md"
+                          }`}
                       >
-                        {filters.view === 'monthly' && monthTabs.includes(tabLabel) 
-                          ? fullMonthNames[monthTabs.indexOf(tabLabel)] 
+                        {filters.view === 'monthly' && monthTabs.includes(tabLabel)
+                          ? fullMonthNames[monthTabs.indexOf(tabLabel)]
                           : tabLabel}
                       </button>
                     );
@@ -1348,7 +1441,7 @@ export default function TaskAssignment() {
         statusChanging={statusChanging}
         loading={loading}
       />
-      
+
       {/* Delete Confirmation Alert */}
       {showAlert && (
         <SweetAlert
@@ -1363,7 +1456,7 @@ export default function TaskAssignment() {
           Do you want to delete this Task?
         </SweetAlert>
       )}
-      
+
       {/* Password Protected Delete Confirmation */}
       {passwordAlert && (
         <div className="fixed inset-0 flex items-center justify-center bg-black/40 z-50 px-4 sm:px-0">
@@ -1408,7 +1501,7 @@ export default function TaskAssignment() {
           </div>
         </div>
       )}
-      
+
       {/* Success/Error Alerts */}
       {showDeleteSuccessAlert && (
         <SweetAlert
@@ -1421,7 +1514,7 @@ export default function TaskAssignment() {
           {alertMessage}
         </SweetAlert>
       )}
-      
+
       {showDeleteErrorAlert && (
         <SweetAlert
           error
@@ -1436,7 +1529,7 @@ export default function TaskAssignment() {
           {errorMessage}
         </SweetAlert>
       )}
-      
+
       {showStatusSuccessAlert && (
         <SweetAlert
           success
@@ -1448,7 +1541,7 @@ export default function TaskAssignment() {
           {alertMessage}
         </SweetAlert>
       )}
-      
+
       {showStatusErrorAlert && (
         <SweetAlert
           error

@@ -45,7 +45,7 @@ export default function HRMRoutes() {
   return (
     <Routes>
       {/* ✅ Redirect to list when visiting /hrm */}
-      <Route path="/" element={<Navigate to="dashboard" replace />} />
+      <Route path="/" element={<Navigate to="tasks" replace />} />
 
       {/* ✅ Student list route */}
       <Route element={<TaskManagementLayout />}>
@@ -58,7 +58,7 @@ export default function HRMRoutes() {
 
 
 
-     
+
       <Route path="academic-diary" element={<AcademicDiaryLayout />}>
         <Route index element={<Navigate to="profile" replace />} />
         <Route path="profile" element={<UserProfile />} />
@@ -70,7 +70,7 @@ export default function HRMRoutes() {
         <Route path="time-table" element={<SalaryAttendance />} />
       </Route>
 
-<Route path="tasks" element={<TaskLayout />}>
+      <Route path="tasks" element={<TaskLayout />}>
         <Route index element={<Navigate to="task-assignment" replace />} />
         <Route path="my-tasks" element={<MyTasks />} />
         <Route path="my-tasks/add" element={<CreateTask />} />
@@ -83,7 +83,7 @@ export default function HRMRoutes() {
         <Route path="timesheet" element={<TimeSheetDashboard />} />
       </Route>
 
-<Route path="salary" element={<SalaryManagementLayout />}>
+      <Route path="salary" element={<SalaryManagementLayout />}>
         <Route index element={<Navigate to="dashboard" replace />} />
         {/* Salary dashboard */}
         <Route path="dashboard" element={<SalaryDashboard />} />
@@ -111,7 +111,7 @@ export default function HRMRoutes() {
         {/* <Route path="committee" element={<Committee />} />
         <Route path="teaching-plan" element={<SalaryAttendance />} />
         <Route path="time-table" element={<SalaryAttendance />} /> */}
-        
+
       </Route>
     </Routes>
   );
