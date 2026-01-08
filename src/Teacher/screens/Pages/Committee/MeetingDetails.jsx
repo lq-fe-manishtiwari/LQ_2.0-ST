@@ -125,7 +125,7 @@ export default function UserMeetingDetails() {
                             <div className="flex-1">
                                 <div className="flex flex-wrap items-center gap-3 mb-3">
                                     {getStatusBadge()}
-                                    <span className="text-white/50 font-bold text-xs uppercase">ID: {meeting.meeting_id || meeting.meetingId}</span>
+                                    {/* <span className="text-white/50 font-bold text-xs uppercase">ID: {meeting.meeting_id || meeting.meetingId}</span> */}
                                 </div>
                             </div>
                         </div>
@@ -227,23 +227,23 @@ export default function UserMeetingDetails() {
                                 {attendance.length > 0 ? (
                                     <div className="overflow-x-auto">
                                         <table className="w-full">
-                                            <thead className="bg-gray-50 border-b border-gray-200">
+                                            <thead className="table-header">
                                                 <tr>
-                                                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Member Name</th>
-                                                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Designation</th>
-                                                    <th className="px-6 py-3 text-center text-xs font-semibold text-gray-600 uppercase">Status</th>
+                                                    <th className="table-th text-left">Member Name</th>
+                                                    <th className="table-th text-left">Designation</th>
+                                                    <th className="table-th text-center">Status</th>
                                                 </tr>
                                             </thead>
                                             <tbody className="divide-y divide-gray-200">
                                                 {attendance.map((record, idx) => (
-                                                    <tr key={idx} className="hover:bg-gray-50">
-                                                        <td className="px-6 py-4 text-sm font-medium text-gray-800">
+                                                    <tr key={idx} className="hover:bg-gray-50 transition-colors">
+                                                        <td className="table-td text-left">
                                                             {record.member?.member_name || record.member?.memberName || 'N/A'}
                                                         </td>
-                                                        <td className="px-6 py-4 text-sm text-gray-600">
+                                                        <td className="table-td text-left">
                                                             {record.member?.designation || '-'}
                                                         </td>
-                                                        <td className="px-6 py-4 text-center">
+                                                        <td className="table-td text-center">
                                                             <span className={`px-3 py-1 rounded-full text-xs font-semibold ${record.is_present || record.isPresent
                                                                 ? 'bg-green-100 text-green-700'
                                                                 : 'bg-red-100 text-red-700'
