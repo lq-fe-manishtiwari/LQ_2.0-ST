@@ -19,16 +19,10 @@ import {
 } from "lucide-react";
 import { timetableService } from '../Services/timetable.service';
 
-/**
- * Advanced ViewTimetable Component
- * Modern UI with dynamic calendar and schedule views
- * With API integration
- */
 const MyViewDashboard = () => {
     const navigate = useNavigate();
     const { id } = useParams();
     
-    // Calendar State
     const [currentDate, setCurrentDate] = useState(new Date());
     const [selectedDate, setSelectedDate] = useState(new Date());
     const [loading, setLoading] = useState(false);
@@ -40,25 +34,32 @@ const MyViewDashboard = () => {
     const [teacherId, setTeacherId] = useState(null);
     const [collegeName, setCollegeName] = useState("");
 
-    // Mobile State
     const [isMobile, setIsMobile] = useState(false);
     const [mobileViewMode, setMobileViewMode] = useState("calendar");
     const [isSidebarOpen, setIsSidebarOpen] = useState(true);
     const [viewMode, setViewMode] = useState("Day");
 
-    // Week view slot popup state
     const [showWeekSlotPopup, setShowWeekSlotPopup] = useState(false);
     const [selectedWeekSlot, setSelectedWeekSlot] = useState(null);
 
-    // Month view popup state
     const [showMonthPopup, setShowMonthPopup] = useState(false);
     const [popupDate, setPopupDate] = useState(null);
     const [popupData, setPopupData] = useState([]);
 
-    // Get college and teacher info from localStorage
+    const isSameDay = (d1, d2) => {
+        if (!d1 || !d2) return false;
+        return d1.getFullYear() === d2.getFullYear() &&
+               d1.getMonth() === d2.getMonth() &&
+               d1.getDate() === d2.getDate();
+    };
+
+    const isSelectedDateToday = useMemo(() => {
+        const today = new Date();
+        return isSameDay(today, selectedDate);
+    }, [selectedDate]);
+
     useEffect(() => {
         try {
-            // Get activeCollege from localStorage
             const activeCollegeStr = localStorage.getItem('activeCollege');
             if (activeCollegeStr) {
                 const activeCollege = JSON.parse(activeCollegeStr);
@@ -67,15 +68,13 @@ const MyViewDashboard = () => {
                 console.log("Active College:", activeCollege);
             }
 
-            // Get currentUser from localStorage
             const currentUserStr = localStorage.getItem('currentUser');
             if (currentUserStr) {
                 const currentUser = JSON.parse(currentUserStr);
-                setTeacherId(currentUser.jti); // jti is the teacher ID
+                setTeacherId(currentUser.jti); 
                 console.log("Current User:", currentUser);
             }
 
-            // If URL has id parameter, use that as teacher_id
             if (id) {
                 setTeacherId(id);
             }
@@ -85,7 +84,6 @@ const MyViewDashboard = () => {
         }
     }, [id]);
 
-    // Check mobile screen size
     useEffect(() => {
         const checkMobile = () => {
             setIsMobile(window.innerWidth < 768);
@@ -97,10 +95,135 @@ const MyViewDashboard = () => {
         return () => window.removeEventListener('resize', checkMobile);
     }, []);
 
+    const getWeekRange = (date) => {
+        const start = new Date(date);
+        const day = start.getDay();
+        const diff = start.getDate() - day + (day === 0 ? -6 : 1);
+        start.setDate(diff);
+        start.setHours(0, 0, 0, 0);
+
+        const end = new Date(start);
+        end.setDate(start.getDate() + 6);
+        end.setHours(23, 59, 59, 999);
+
+        return { start, end };
+    };
+
+    const getMonthRange = (date) => {
+        const start = new Date(date.getFullYear(), date.getMonth(), 1);
+        const end = new Date(date.getFullYear(), date.getMonth() + 1, 0);
+        return { start, end };
+    };
+
+    const formatDateToYMD = (date) => {
+        if (!date) return "";
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    };
+
+    const formatDateToReadable = (date) => {
+        if (!date) return "";
+        return `${dayNames[date.getDay()]}, ${date.getDate()} ${monthNames[date.getMonth()]} ${date.getFullYear()}`;
+    };
+
+    const formatTimeForDisplay = (timeString) => {
+        if (!timeString) return "";
+        return timeString.split(':').slice(0, 2).join(':');
+    };
+
+    const formatTimeForDisplay12hr = (timeString) => {
+        if (!timeString) return "N/A";
+        try {
+            const [hours, minutes] = timeString.split(':');
+            const hour = parseInt(hours, 10);
+            const ampm = hour >= 12 ? 'PM' : 'AM';
+            const displayHour = hour % 12 || 12;
+            return `${displayHour}:${minutes.padStart(2, '0')} ${ampm}`;
+        } catch (e) {
+            console.warn("Invalid time string:", timeString, e);
+            return timeString;
+        }
+    };
+
+    const calendarDays = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+    const monthNames = [
+        "January", "February", "March", "April", "May", "June",
+        "July", "August", "September", "October", "November", "December"
+    ];
+    const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+
+    // Navigation handlers
+    const handlePrevMonth = () => {
+        setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1));
+    };
+
+    const handleNextMonth = () => {
+        setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1));
+    };
+
+      const handleViewModeChange = (mode) => {
+        setViewMode(mode);
+        
+        if (mode === "Week") {
+            const weekRange = getWeekRange(selectedDate);
+            setSelectedDate(weekRange.start);
+        }
+     
+        else if (mode === "Month") {
+            const monthRange = getMonthRange(selectedDate);
+            setSelectedDate(monthRange.start);
+            setCurrentDate(monthRange.start);
+        }
+      
+        else if (mode === "Day") {
+            
+        }
+    };
+
+    // Handle date selection from calendar sidebar
+    const handleDateSelectFromSidebar = (date) => {
+        setSelectedDate(date);
+        setViewMode("Day"); 
+        if (isMobile) {
+            setMobileViewMode("schedule");
+        }
+    };
+
+    // Handle week slot click
+    const handleWeekSlotClick = (slot) => {
+        setSelectedWeekSlot(slot);
+        setShowWeekSlotPopup(true);
+    };
+
+    // Handle month date click - Switch to Day view
+    const handleMonthDateClick = (date, schedule) => {
+        setSelectedDate(date);
+        setViewMode("Day"); 
+    };
+
+    // Handle week day click - Switch to Day view
+    const handleWeekDayClick = (date) => {
+        setSelectedDate(date);
+        setViewMode("Day");
+    };
+
+    // Close popups
+    const closeWeekSlotPopup = () => {
+        setShowWeekSlotPopup(false);
+        setSelectedWeekSlot(null);
+    };
+
+    const closeMonthPopup = () => {
+        setShowMonthPopup(false);
+        setPopupDate(null);
+        setPopupData([]);
+    };
+
     // Fetch timetable data when dependencies change
     useEffect(() => {
         const fetchTimetableData = async () => {
-            // Don't fetch if we don't have required IDs
             if (!teacherId || !collegeId) {
                 console.log("Waiting for teacherId and collegeId...", { teacherId, collegeId });
                 return;
@@ -142,35 +265,104 @@ const MyViewDashboard = () => {
                 
                 console.log("Timetable response received:", response);
                 
-                // Handle different response formats
                 let timetableArray = [];
                 
-                if (Array.isArray(response)) {
-                    // Response is already an array
+                if (response && response.daily_schedules && Array.isArray(response.daily_schedules)) {
+                    // Map the API response to our component format
+                    timetableArray = response.daily_schedules.flatMap(dailySchedule => {
+                        const date = dailySchedule.date;
+                        
+                        // If no slots for this day, return empty array
+                        if (!dailySchedule.slots || !Array.isArray(dailySchedule.slots)) {
+                            return [];
+                        }
+                        
+                        // Map each slot to our format
+                        return dailySchedule.slots.map(slot => ({
+                            // Basic information
+                            id: slot.time_slot_id || `${date}_${slot.start_time}`,
+                            date: date,
+                            day_of_week: dailySchedule.day_of_week,
+                            
+                            // Time information
+                            start_time: slot.start_time,
+                            end_time: slot.end_time,
+                            slot_name: slot.slot_name,
+                            
+                            // Subject information
+                            subject_id: slot.subject_id,
+                            subject_name: slot.subject_name,
+                            subject_code: slot.subject_id ? `SUB-${slot.subject_id}` : "",
+                            
+                            // Teacher information
+                            teacher_id: slot.teacher_id,
+                            teacher_name: slot.teacher_name,
+                            
+                            // Academic information
+                            academic_year_id: slot.academic_year_id,
+                            academic_year_name: slot.academic_year_name,
+                            program_id: slot.program_id,
+                            program_name: slot.program_name,
+                            batch_id: slot.batch_id,
+                            batch_name: slot.batch_name,
+                            semester_id: slot.semester_id,
+                            semester_name: slot.semester_name,
+                            division_id: slot.division_id,
+                            division_name: slot.division_name,
+                            
+                            // Location
+                            classroom_id: slot.classroom_id,
+                            classroom_name: slot.classroom_name,
+                            room_number: slot.classroom_name || "Not Assigned",
+                            
+                            // Type and notes
+                            class_type: slot.slot_name || "Lecture",
+                            type: slot.entry_type || "REGULAR",
+                            notes: slot.notes,
+                            
+                            // Source and exception handling
+                            source: slot.source,
+                            is_exception: slot.is_exception || false,
+                            exception_type: slot.exception_type,
+                            original_teacher_id: slot.original_teacher_id,
+                            original_teacher_name: slot.original_teacher_name,
+                            
+                            // Department (from program_name)
+                            department: slot.program_name || "",
+                            
+                            // College (from state)
+                            college: collegeName,
+                            
+                            // Holiday information
+                            is_holiday: dailySchedule.is_holiday || slot.is_holiday,
+                            holiday_name: dailySchedule.holiday_name || slot.holiday_name
+                        }));
+                    });
+                    
+                    console.log("Mapped timetable array:", timetableArray);
+                }
+                else if (Array.isArray(response)) {
+
                     timetableArray = response;
                 } else if (response && Array.isArray(response.data)) {
-                    // Response has data property that's an array
+
                     timetableArray = response.data;
                 } else if (response && response.timetable && Array.isArray(response.timetable)) {
-                    // Response has timetable property that's an array
+
                     timetableArray = response.timetable;
                 } else if (response && response.schedule && Array.isArray(response.schedule)) {
-                    // Response has schedule property that's an array
                     timetableArray = response.schedule;
                 } else if (response && typeof response === 'object') {
-                    // Try to extract array from response object
                     const arrayKey = Object.keys(response).find(key => Array.isArray(response[key]));
                     if (arrayKey) {
                         timetableArray = response[arrayKey];
                     } else {
-                        // If response is an object with values, convert to array
                         timetableArray = Object.values(response).filter(val => 
                             val && typeof val === 'object' && (val.date || val.start_time)
                         );
                     }
                 }
                 
-                // Ensure we have an array
                 if (!Array.isArray(timetableArray)) {
                     console.warn("Processed timetable is not an array, defaulting to empty array:", timetableArray);
                     timetableArray = [];
@@ -180,16 +372,15 @@ const MyViewDashboard = () => {
                 setTimetableData(timetableArray);
                 filterTimetableData(timetableArray, selectedDate, viewMode);
                 
-                // Set academic info from first entry if available
                 if (timetableArray.length > 0 && timetableArray[0]) {
+                    const firstSlot = timetableArray[0];
                     setAcademicInfo({
-                        name: timetableArray[0].teacher_name || "Timetable",
-                        department: timetableArray[0].department || "",
-                        semester: timetableArray[0].semester || "",
-                        college: collegeName
+                        name: firstSlot.teacher_name || "Timetable",
+                        department: firstSlot.department || firstSlot.program_name || "",
+                        semester: firstSlot.semester_name || firstSlot.semester || "",
+                        college: firstSlot.college || collegeName
                     });
                 } else {
-                    // Set default academic info
                     setAcademicInfo({
                         name: "Your Timetable",
                         college: collegeName
@@ -205,11 +396,9 @@ const MyViewDashboard = () => {
                                  "Failed to load timetable data. Please try again.";
                 setError(errorMsg);
                 
-                // Set empty data on error
                 setTimetableData([]);
                 setFilteredData([]);
                 
-                // For debugging, check if this is an authentication issue
                 if (err.response?.status === 401 || err.response?.status === 403) {
                     setError("Authentication required. Please log in again.");
                 }
@@ -221,9 +410,8 @@ const MyViewDashboard = () => {
         fetchTimetableData();
     }, [selectedDate, viewMode, teacherId, collegeId, collegeName]);
 
-    // Filter timetable data based on current view
     const filterTimetableData = (data, date, mode) => {
-        // Ensure data is an array
+
         if (!data || !Array.isArray(data)) {
             console.error("filterTimetableData: data is not an array", data);
             setFilteredData([]);
@@ -273,111 +461,6 @@ const MyViewDashboard = () => {
         }
     };
 
-    // Helper functions for date ranges
-    const getWeekRange = (date) => {
-        const start = new Date(date);
-        const day = start.getDay();
-        const diff = start.getDate() - day + (day === 0 ? -6 : 1);
-        start.setDate(diff);
-        start.setHours(0, 0, 0, 0);
-
-        const end = new Date(start);
-        end.setDate(start.getDate() + 6);
-        end.setHours(23, 59, 59, 999);
-
-        return { start, end };
-    };
-
-    const getMonthRange = (date) => {
-        const start = new Date(date.getFullYear(), date.getMonth(), 1);
-        const end = new Date(date.getFullYear(), date.getMonth() + 1, 0);
-        return { start, end };
-    };
-
-    const isSameDay = (d1, d2) => {
-        if (!d1 || !d2) return false;
-        return d1.getFullYear() === d2.getFullYear() &&
-               d1.getMonth() === d2.getMonth() &&
-               d1.getDate() === d2.getDate();
-    };
-
-    // Format date to YYYY-MM-DD format
-    const formatDateToYMD = (date) => {
-        if (!date) return "";
-        const year = date.getFullYear();
-        const month = String(date.getMonth() + 1).padStart(2, '0');
-        const day = String(date.getDate()).padStart(2, '0');
-        return `${year}-${month}-${day}`;
-    };
-
-    // Format date to readable string
-    const formatDateToReadable = (date) => {
-        if (!date) return "";
-        return `${dayNames[date.getDay()]}, ${date.getDate()} ${monthNames[date.getMonth()]} ${date.getFullYear()}`;
-    };
-
-    // Format time for display
-    const formatTimeForDisplay = (timeString) => {
-        if (!timeString) return "";
-        return timeString.split(':').slice(0, 2).join(':');
-    };
-
-    // Convert time format to 12hr format
-    const formatTimeForDisplay12hr = (timeString) => {
-        if (!timeString) return "N/A";
-        try {
-            const [hours, minutes] = timeString.split(':');
-            const hour = parseInt(hours, 10);
-            const ampm = hour >= 12 ? 'PM' : 'AM';
-            const displayHour = hour % 12 || 12;
-            return `${displayHour}:${minutes.padStart(2, '0')} ${ampm}`;
-        } catch (e) {
-            console.warn("Invalid time string:", timeString, e);
-            return timeString;
-        }
-    };
-
-    const calendarDays = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-    const monthNames = [
-        "January", "February", "March", "April", "May", "June",
-        "July", "August", "September", "October", "November", "December"
-    ];
-    const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-
-    // Navigation handlers
-    const handlePrevMonth = () => {
-        setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1));
-    };
-
-    const handleNextMonth = () => {
-        setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1));
-    };
-
-    // Handle week slot click
-    const handleWeekSlotClick = (slot) => {
-        setSelectedWeekSlot(slot);
-        setShowWeekSlotPopup(true);
-    };
-
-    // Handle month date click
-    const handleMonthDateClick = (date, schedule) => {
-        setPopupDate(date);
-        setPopupData(schedule);
-        setShowMonthPopup(true);
-    };
-
-    // Close popups
-    const closeWeekSlotPopup = () => {
-        setShowWeekSlotPopup(false);
-        setSelectedWeekSlot(null);
-    };
-
-    const closeMonthPopup = () => {
-        setShowMonthPopup(false);
-        setPopupDate(null);
-        setPopupData([]);
-    };
-
     // Calendar days for sidebar
     const calendarData = useMemo(() => {
         const year = currentDate.getFullYear();
@@ -404,7 +487,6 @@ const MyViewDashboard = () => {
         return days;
     }, [currentDate]);
 
-    // Prepare data for views
     const dayScheduleData = useMemo(() => {
         if (!Array.isArray(filteredData)) return [];
         
@@ -418,7 +500,7 @@ const MyViewDashboard = () => {
                 return false;
             }
         }).sort((a, b) => {
-            // Sort by start time
+
             const timeA = a.start_time || "00:00";
             const timeB = b.start_time || "00:00";
             return timeA.localeCompare(timeB);
@@ -468,7 +550,6 @@ const MyViewDashboard = () => {
 
     const monthGridData = useMemo(() => {
         if (!Array.isArray(filteredData)) {
-            // Return empty month grid if no data
             const { start: monthStart } = getMonthRange(selectedDate);
             const startOfMonth = new Date(monthStart);
             const startDay = startOfMonth.getDay();
@@ -548,7 +629,7 @@ const MyViewDashboard = () => {
                 isCurrentMonth: dayDate.getMonth() === selectedDate.getMonth(),
                 schedule: schedule,
                 totalSlots: schedule.length,
-                visibleSlots: schedule.slice(0, 2), // Show max 2 slots in month view
+                visibleSlots: schedule.slice(0, 2), 
                 hiddenSlotsCount: Math.max(0, schedule.length - 2)
             };
         });
@@ -596,12 +677,48 @@ const MyViewDashboard = () => {
                                 {slot.subject_code}
                             </span>
                         )}
+                        {slot.is_exception && (
+                            <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-orange-50 text-orange-600">
+                                {slot.exception_type === "SUBSTITUTED" ? "Substitution" : "Exception"}
+                            </span>
+                        )}
+                        {slot.day_of_week && (
+                            <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-purple-50 text-purple-600">
+                                {slot.day_of_week}
+                            </span>
+                        )}
                     </div>
 
                     {/* Subject */}
                     <h3 className="text-base font-bold text-slate-800 mb-3">
                         {slot.subject_name || slot.subject || "Subject Name"}
                     </h3>
+
+                    {/* Additional Info */}
+                    {(slot.program_name || slot.semester_name || slot.batch_name || slot.division_name) && (
+                        <div className="flex flex-wrap gap-2 mb-3">
+                            {slot.program_name && (
+                                <span className="text-xs text-slate-600 bg-slate-100 px-2 py-0.5 rounded">
+                                    {slot.program_name}
+                                </span>
+                            )}
+                            {slot.semester_name && (
+                                <span className="text-xs text-slate-600 bg-slate-100 px-2 py-0.5 rounded">
+                                    {slot.semester_name}
+                                </span>
+                            )}
+                            {slot.batch_name && (
+                                <span className="text-xs text-slate-600 bg-slate-100 px-2 py-0.5 rounded">
+                                    {slot.batch_name}
+                                </span>
+                            )}
+                            {slot.division_name && (
+                                <span className="text-xs text-slate-600 bg-slate-100 px-2 py-0.5 rounded">
+                                    Div: {slot.division_name}
+                                </span>
+                            )}
+                        </div>
+                    )}
 
                     {/* Teacher and Room */}
                     <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 md:gap-8">
@@ -614,6 +731,11 @@ const MyViewDashboard = () => {
                                     <span className="text-xs text-slate-500">Teacher</span>
                                     <p className="text-sm font-medium">
                                         {slot.teacher_name || slot.teacher || "Teacher Name"}
+                                        {slot.original_teacher_name && slot.is_exception && (
+                                            <span className="text-xs text-orange-600 ml-1">
+                                                (Sub for: {slot.original_teacher_name})
+                                            </span>
+                                        )}
                                     </p>
                                 </div>
                             </div>
@@ -629,7 +751,7 @@ const MyViewDashboard = () => {
                                 </div>
                             </div>
                         </div>
-                        {/* Right Side Update Button */}
+                        
                         <button
                             type="button"
                             onClick={() => navigate('/teacher/timetable/View-Upadate-Timetable', { state: { slot } })}
@@ -643,11 +765,13 @@ const MyViewDashboard = () => {
         </div>
     );
 
-    // Compact Slot Card for Month View
     const CompactSlotCard = ({ slot }) => (
         <div 
             className="px-2 py-1.5 rounded-md bg-primary-50 border border-primary-100 hover:bg-primary-100 transition-colors cursor-pointer"
-            onClick={() => handleWeekSlotClick(slot)}
+            onClick={(e) => {
+                e.stopPropagation(); 
+                handleWeekSlotClick(slot);
+            }}
         >
             <div className="flex items-center gap-2">
                 <div className="w-2 h-2 rounded-full bg-primary-500"></div>
@@ -706,6 +830,27 @@ const MyViewDashboard = () => {
         </div>
     );
 
+    const getDynamicButtonLabel = () => {
+        const today = new Date();
+        
+        if (viewMode === "Day") {
+            if (isSameDay(selectedDate, today)) {
+                return "Today";
+            } 
+        } else if (viewMode === "Week") {
+            const weekRange = getWeekRange(selectedDate);
+           
+            
+            if (weekRange.start.getMonth() === weekRange.end.getMonth()) {
+                return `Week`;
+            } 
+        } else if (viewMode === "Month") {
+            return `Month`;
+        }
+        
+        return "Today";
+    };
+
     return (
         <div className="h-full bg-slate-50 flex flex-col overflow-hidden">
             {/* Header */}
@@ -723,15 +868,14 @@ const MyViewDashboard = () => {
                                 {academicInfo?.name || "Teacher Timetable"}
                             </h1>
                             <div className="flex items-center gap-1 mt-0.5">
-                                <span className="text-xs text-slate-500">
-                                    {!teacherId || !collegeId ? "Loading user info..." :
-                                     loading ? "Loading timetable..." : 
-                                     error ? "Error loading data" :
-                                     `${dayScheduleData.length} sessions today`}
-                                </span>
                                 {collegeName && (
                                     <span className="text-xs text-primary-600 bg-primary-50 px-2 py-0.5 rounded-full">
                                         {collegeName}
+                                    </span>
+                                )}
+                                {academicInfo?.department && (
+                                    <span className="text-xs text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">
+                                        {academicInfo.department}
                                     </span>
                                 )}
                             </div>
@@ -850,23 +994,26 @@ const MyViewDashboard = () => {
                                                 return false;
                                             }
                                         });
+                                        const isToday = item.fullDate && isSameDay(item.fullDate, new Date());
                                         
                                         return (
                                             <div key={idx} className="aspect-square flex items-center justify-center p-0.5">
                                                 {item.day ? (
                                                     <button
-                                                        onClick={() => {
-                                                            setSelectedDate(item.fullDate);
-                                                            if (isMobile) setMobileViewMode("schedule");
-                                                        }}
+                                                        onClick={() => handleDateSelectFromSidebar(item.fullDate)}
                                                         className={`w-full h-full flex flex-col items-center justify-center rounded-lg text-sm transition-all relative
                                                             ${isSameDay(item.fullDate, selectedDate)
                                                                 ? "bg-primary-600 text-white shadow-lg shadow-primary-200 font-bold"
+                                                                : isToday
+                                                                ? "bg-blue-50 text-blue-600 hover:bg-blue-100"
                                                                 : "bg-slate-50 text-slate-600 hover:bg-primary-50 hover:text-primary-600"
                                                             }`}
                                                     >
                                                         <span>{item.day}</span>
-                                                        {hasClasses && (
+                                                        {isToday && (
+                                                            <div className={`absolute bottom-1 w-1 h-1 rounded-full ${isSameDay(item.fullDate, selectedDate) ? 'bg-white' : 'bg-blue-500'}`}></div>
+                                                        )}
+                                                        {hasClasses && !isToday && (
                                                             <div className={`absolute bottom-1 w-1 h-1 rounded-full ${isSameDay(item.fullDate, selectedDate) ? 'bg-white' : 'bg-primary-500'}`}></div>
                                                         )}
                                                     </button>
@@ -895,16 +1042,11 @@ const MyViewDashboard = () => {
                                     </button>
 
                                     <div className="h-4 w-[1px] bg-slate-300 mx-1"></div>
-
                                     <button
-                                        onClick={() => {
-                                            const today = new Date();
-                                            setSelectedDate(today);
-                                            setCurrentDate(new Date(today.getFullYear(), today.getMonth(), 1));
-                                        }}
+                                       
                                         className="px-2.5 py-1 rounded-lg border border-slate-200 bg-white text-xs font-bold text-slate-700 hover:bg-slate-50"
                                     >
-                                        Today
+                                        {getDynamicButtonLabel()}
                                     </button>
 
                                     <div className="flex items-center gap-1 ml-2">
@@ -945,15 +1087,67 @@ const MyViewDashboard = () => {
 
                                 <div className="flex items-center gap-3">
                                     <div className="flex items-center bg-slate-200/50 p-1 rounded-xl">
-                                        {['Day', 'Week', 'Month'].map((mode) => (
+                                        {[
+                                            { key: 'Day', label: 'Day' },
+                                            { key: 'Week', label: 'Week' },
+                                            { key: 'Month', label: 'Month' }
+                                        ].map((mode) => (
                                             <button
-                                                key={mode}
-                                                onClick={() => setViewMode(mode)}
-                                                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${viewMode === mode ? "bg-white text-primary-600 shadow-sm" : "text-slate-500 hover:text-slate-700"}`}
+                                                key={mode.key}
+                                                onClick={() => handleViewModeChange(mode.key)}
+                                                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${viewMode === mode.key ? "bg-white text-primary-600 shadow-sm" : "text-slate-500 hover:text-slate-700"}`}
                                             >
-                                                {mode}
+                                                {mode.label}
                                             </button>
                                         ))}
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Dynamic Button for Mobile */}
+                        {isMobile && (
+                            <div className="p-4 border-b border-slate-200 bg-white">
+                                <div className="flex items-center justify-between">
+                                    <button
+                                      
+                                        className="px-3 py-2 rounded-lg border border-slate-200 bg-white text-sm font-bold text-slate-700 hover:bg-slate-50"
+                                    >
+                                        {getDynamicButtonLabel()}
+                                    </button>
+                                    <div className="flex items-center gap-1">
+                                        <button
+                                            onClick={() => {
+                                                if (viewMode === 'Day') {
+                                                    setSelectedDate(prev => new Date(prev.getFullYear(), prev.getMonth(), prev.getDate() - 1));
+                                                } else if (viewMode === 'Week') {
+                                                    setSelectedDate(prev => new Date(prev.getFullYear(), prev.getMonth(), prev.getDate() - 7));
+                                                } else {
+                                                    const newDate = new Date(selectedDate.getFullYear(), selectedDate.getMonth() - 1, 1);
+                                                    setSelectedDate(newDate);
+                                                    setCurrentDate(newDate);
+                                                }
+                                            }}
+                                            className="p-1.5 rounded-full hover:bg-slate-200 text-slate-500"
+                                        >
+                                            <ChevronLeft size={18} />
+                                        </button>
+                                        <button
+                                            onClick={() => {
+                                                if (viewMode === 'Day') {
+                                                    setSelectedDate(prev => new Date(prev.getFullYear(), prev.getMonth(), prev.getDate() + 1));
+                                                } else if (viewMode === 'Week') {
+                                                    setSelectedDate(prev => new Date(prev.getFullYear(), prev.getMonth(), prev.getDate() + 7));
+                                                } else {
+                                                    const newDate = new Date(selectedDate.getFullYear(), selectedDate.getMonth() + 1, 1);
+                                                    setSelectedDate(newDate);
+                                                    setCurrentDate(newDate);
+                                                }
+                                            }}
+                                            className="p-1.5 rounded-full hover:bg-slate-200 text-slate-500"
+                                        >
+                                            <ChevronRight size={18} />
+                                        </button>
                                     </div>
                                 </div>
                             </div>
@@ -965,7 +1159,7 @@ const MyViewDashboard = () => {
                                     {/* Day Header */}
                                     <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm mb-4">
                                         <div className="flex items-center gap-4">
-                                            <div className={`w-16 h-16 rounded-2xl flex flex-col items-center justify-center border-2 shrink-0 ${dayScheduleData.length === 0 ? 'bg-slate-100 border-slate-200' : 'bg-primary-50 border-primary-100'}`}>
+                                            <div className={`w-16 h-16 rounded-2xl flex flex-col items-center justify-center border-2 shrink-0 ${dayScheduleData.length === 0 ? 'bg-slate-100 border-slate-200' : isSelectedDateToday ? 'bg-blue-50 border-blue-200' : 'bg-primary-50 border-primary-100'}`}>
                                                 <span className="text-xs font-bold text-slate-400">
                                                     {monthNames[selectedDate.getMonth()].slice(0, 3)}
                                                 </span>
@@ -973,7 +1167,12 @@ const MyViewDashboard = () => {
                                             </div>
                                             <div>
                                                 <h1 className="text-2xl font-bold text-slate-800">
-                                                    {dayNames[selectedDate.getDay()]}
+                                                    {isSelectedDateToday ? "Today" : dayNames[selectedDate.getDay()]}
+                                                    {isSelectedDateToday && (
+                                                        <span className="ml-2 text-xs bg-blue-100 text-blue-600 px-2 py-0.5 rounded-full">
+                                                            Today
+                                                        </span>
+                                                    )}
                                                 </h1>
                                                 <p className="text-slate-500 font-medium mt-1">
                                                     {dayScheduleData.length === 0 ? "No classes scheduled" : `${dayScheduleData.length} session${dayScheduleData.length > 1 ? 's' : ''}`}
@@ -1007,10 +1206,13 @@ const MyViewDashboard = () => {
                                                 <div key={idx} className={`p-3 text-center border-r border-slate-100 last:border-r-0 ${isSelected ? 'bg-primary-50' : ''}`}>
                                                     <div className="text-xs font-bold text-slate-400 mb-1">
                                                         {calendarDays[day.date.getDay() === 0 ? 6 : day.date.getDay() - 1]}
+                                                        {isToday && (
+                                                            <span className="ml-1 text-[10px] text-blue-600">•</span>
+                                                        )}
                                                     </div>
                                                     <button
-                                                        onClick={() => setSelectedDate(day.date)}
-                                                        className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ${isToday ? 'bg-primary-600 text-white' : isSelected ? 'bg-primary-100 text-primary-700' : 'text-slate-700 hover:bg-slate-100'}`}
+                                                        onClick={() => handleWeekDayClick(day.date)}
+                                                        className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ${isToday ? 'bg-blue-600 text-white' : isSelected ? 'bg-primary-100 text-primary-700' : 'text-slate-700 hover:bg-slate-100'}`}
                                                     >
                                                         {day.date.getDate()}
                                                     </button>
@@ -1042,7 +1244,10 @@ const MyViewDashboard = () => {
                                                                     {slot ? (
                                                                         <div 
                                                                             className="h-full p-2 rounded-md bg-primary-50 border border-primary-100 hover:bg-primary-100 transition-colors cursor-pointer"
-                                                                            onClick={() => handleWeekSlotClick(slot)}
+                                                                            onClick={(e) => {
+                                                                                e.stopPropagation();
+                                                                                handleWeekSlotClick(slot);
+                                                                            }}
                                                                         >
                                                                             <div className="text-xs font-bold text-primary-700 truncate">
                                                                                 {slot.subject_name || "Subject"}
@@ -1076,36 +1281,50 @@ const MyViewDashboard = () => {
 
                                     {/* Month Grid */}
                                     <div className="grid grid-cols-7">
-                                        {monthGridData.map((dayData, index) => (
-                                            <div 
-                                                key={index} 
-                                                className={`min-h-[120px] border-r border-b border-slate-100 p-2 ${!dayData.isCurrentMonth ? 'bg-slate-50/50' : ''} ${isSameDay(dayData.date, new Date()) ? 'bg-blue-50' : ''}`}
-                                                onClick={() => dayData.schedule.length > 0 && handleMonthDateClick(dayData.date, dayData.schedule)}
-                                            >
-                                                <div className="flex flex-col h-full">
-                                                    <div className="flex justify-between items-center mb-1">
-                                                        <span className={`text-sm font-bold ${dayData.isCurrentMonth ? 'text-slate-700' : 'text-slate-400'} ${isSameDay(dayData.date, selectedDate) ? 'bg-primary-600 text-white rounded-full w-6 h-6 flex items-center justify-center' : ''}`}>
-                                                            {dayData.dayNumber}
-                                                        </span>
-                                                        {dayData.schedule.length > 0 && (
-                                                            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-primary-100 text-primary-600 font-bold">
-                                                                {dayData.schedule.length}
+                                        {monthGridData.map((dayData, index) => {
+                                            const isToday = isSameDay(dayData.date, new Date());
+                                            return (
+                                                <div 
+                                                    key={index} 
+                                                    className={`min-h-[120px] border-r border-b border-slate-100 p-2 ${!dayData.isCurrentMonth ? 'bg-slate-50/50' : ''} ${isToday ? 'bg-blue-50' : ''} ${isSameDay(dayData.date, selectedDate) ? 'bg-primary-100' : ''}`}
+                                                    onClick={() => handleMonthDateClick(dayData.date, dayData.schedule)}
+                                                >
+                                                    <div className="flex flex-col h-full">
+                                                        <div className="flex justify-between items-center mb-1">
+                                                            <span className={`text-sm font-bold ${dayData.isCurrentMonth ? 'text-slate-700' : 'text-slate-400'} ${isSameDay(dayData.date, selectedDate) ? 'bg-primary-600 text-white rounded-full w-6 h-6 flex items-center justify-center' : ''} ${isToday && !isSameDay(dayData.date, selectedDate) ? 'text-blue-600' : ''}`}>
+                                                                {dayData.dayNumber}
+                                                                {isToday && (
+                                                                    <span className="absolute top-0 right-0 w-2 h-2 bg-blue-500 rounded-full"></span>
+                                                                )}
                                                             </span>
-                                                        )}
-                                                    </div>
-                                                    <div className="flex-1 space-y-1">
-                                                        {dayData.visibleSlots.map((slot, slotIndex) => (
-                                                            <CompactSlotCard key={slotIndex} slot={slot} />
-                                                        ))}
-                                                        {dayData.hiddenSlotsCount > 0 && (
-                                                            <div className="text-[10px] text-slate-500 px-2 py-1 bg-slate-100 rounded-md">
-                                                                +{dayData.hiddenSlotsCount} more
-                                                            </div>
-                                                        )}
+                                                            {dayData.schedule.length > 0 && (
+                                                                <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-primary-100 text-primary-600 font-bold">
+                                                                    {dayData.schedule.length}
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                        <div className="flex-1 space-y-1" onClick={(e) => e.stopPropagation()}>
+                                                            {dayData.visibleSlots.map((slot, slotIndex) => (
+                                                                <CompactSlotCard key={slotIndex} slot={slot} />
+                                                            ))}
+                                                            {dayData.hiddenSlotsCount > 0 && (
+                                                                <button 
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        setPopupDate(dayData.date);
+                                                                        setPopupData(dayData.schedule);
+                                                                        setShowMonthPopup(true);
+                                                                    }}
+                                                                    className="text-[10px] text-slate-500 px-2 py-1 bg-slate-100 rounded-md w-full text-left"
+                                                                >
+                                                                    +{dayData.hiddenSlotsCount} more
+                                                                </button>
+                                                            )}
+                                                        </div>
                                                     </div>
                                                 </div>
-                                            </div>
-                                        ))}
+                                            );
+                                        })}
                                     </div>
                                 </div>
                             )}
@@ -1241,7 +1460,10 @@ const MyViewDashboard = () => {
             {/* Mobile FAB */}
             {isMobile && mobileViewMode === "calendar" && dayScheduleData.length > 0 && (
                 <button
-                    onClick={() => setMobileViewMode("schedule")}
+                    onClick={() => {
+                        setMobileViewMode("schedule");
+                        setViewMode("Day");
+                    }}
                     className="fixed bottom-6 right-6 w-14 h-14 bg-primary-600 text-white rounded-full shadow-xl flex items-center justify-center z-50"
                 >
                     <span className="text-lg font-bold">{dayScheduleData.length}</span>
