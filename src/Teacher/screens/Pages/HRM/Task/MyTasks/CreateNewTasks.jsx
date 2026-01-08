@@ -4,6 +4,7 @@ import { Plus, X, ChevronDown } from "lucide-react";
 import SweetAlert from 'react-bootstrap-sweetalert';
 import { Settings } from '../../Settings/Settings.service';
 import { TaskManagement } from '../../Services/TaskManagement.service';
+import { api } from '../../../../../../_services/api';
 
 // Custom Select Component (unchanged)
 const CustomSelect = ({ label, value, onChange, options, placeholder, disabled = false, loading = false }) => {
@@ -78,6 +79,20 @@ export default function CreateTask() {
   const [alertMessage, setAlertMessage] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [currentUserId, setCurrentUserId] = useState(null);
+  const [currentTeacherId, setCurrentTeacherId] = useState(null);
+
+  // New State for Task Category and Academic Filters
+  const [taskCategory, setTaskCategory] = useState("NON_ACADEMIC");
+  const [allocations, setAllocations] = useState([]);
+  const [academicFilters, setAcademicFilters] = useState({
+    program: '',
+    batch: '',
+    academicYear: '',
+    semester: '',
+    division: '',
+    subject: ''
+  });
+  const [loadingAllocations, setLoadingAllocations] = useState(false);
 
   const inputClass = "w-full border rounded px-3 py-2 focus:outline-none transition-colors border-gray-300 focus:border-blue-500";
   const labelClass = "block text-sm font-semibold text-blue-700 mb-2";
@@ -86,31 +101,34 @@ export default function CreateTask() {
     // Updated function to correctly extract user_id (3138) from your localStorage structure
     const getUserIdFromStorage = () => {
       let userId = localStorage.getItem("currentUserId") ||
-                   localStorage.getItem("userId") ||
-                   localStorage.getItem("user_id") ||
-                   localStorage.getItem("id") ||
-                   localStorage.getItem("UserID") ||
-                   localStorage.getItem("uid");
+        localStorage.getItem("userId") ||
+        localStorage.getItem("user_id") ||
+        localStorage.getItem("id") ||
+        localStorage.getItem("UserID") ||
+        localStorage.getItem("uid");
 
       if (!userId) {
         userId = sessionStorage.getItem("currentUserId") ||
-                 sessionStorage.getItem("userId") ||
-                 sessionStorage.getItem("user_id") ||
-                 sessionStorage.getItem("id") ||
-                 sessionStorage.getItem("UserID") ||
-                 sessionStorage.getItem("uid");
+          sessionStorage.getItem("userId") ||
+          sessionStorage.getItem("user_id") ||
+          sessionStorage.getItem("id") ||
+          sessionStorage.getItem("UserID") ||
+          sessionStorage.getItem("uid");
       }
 
       // Primary source: userProfile (your app's actual storage key)
-      if (!userId) {
+      let teacherId = null;
+      if (!userId || !teacherId) {
         const userProfileStr = localStorage.getItem("userProfile") || sessionStorage.getItem("userProfile");
         if (userProfileStr) {
           try {
             const userProfile = JSON.parse(userProfileStr);
-            if (userProfile?.user?.user_id) {
+            if (userProfile?.teacher_id) {
+              teacherId = userProfile.teacher_id;
+            }
+            // Also try to get userId from here if not found yet
+            if (!userId && userProfile?.user?.user_id) {
               userId = userProfile.user.user_id;
-            } else if (userProfile?.teacher_id) {
-              userId = userProfile.teacher_id; // fallback (57 in your case)
             }
           } catch (e) {
             console.error("Error parsing userProfile:", e);
@@ -118,7 +136,7 @@ export default function CreateTask() {
         }
       }
 
-      // Fallback: generic "user" key
+      // Fallback: generic "user" key (less likely for teacherId but good for userId)
       if (!userId) {
         const userStr = localStorage.getItem("user") || sessionStorage.getItem("user");
         if (userStr) {
@@ -133,20 +151,20 @@ export default function CreateTask() {
 
       // Final fallback: JWT token decoding (if any token exists)
       if (!userId) {
-        const token = localStorage.getItem("token") || 
-                      localStorage.getItem("access_token") || 
-                      localStorage.getItem("refreshToken");
+        const token = localStorage.getItem("token") ||
+          localStorage.getItem("access_token") ||
+          localStorage.getItem("refreshToken");
         if (token) {
           try {
             let tokenStr = token;
             if (typeof token === "string" && token.startsWith('{')) {
-              try { tokenStr = JSON.parse(token).token || token; } catch {}
+              try { tokenStr = JSON.parse(token).token || token; } catch { }
             }
             const parts = tokenStr.split('.');
             if (parts.length > 1) {
               const base64Url = parts[1];
               const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-              const jsonPayload = decodeURIComponent(atob(base64).split('').map(c => 
+              const jsonPayload = decodeURIComponent(atob(base64).split('').map(c =>
                 '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)
               ).join(''));
               const payload = JSON.parse(jsonPayload);
@@ -158,13 +176,18 @@ export default function CreateTask() {
         }
       }
 
-      return userId ? parseInt(userId, 10) : null;
+      return { userId: userId ? parseInt(userId, 10) : null, teacherId: teacherId ? parseInt(teacherId, 10) : null };
     };
 
-    const userId = getUserIdFromStorage();
+    const { userId, teacherId } = getUserIdFromStorage();
     if (userId && !isNaN(userId)) {
       setCurrentUserId(userId);
-    } else {
+    }
+    if (teacherId && !isNaN(teacherId)) {
+      setCurrentTeacherId(teacherId);
+    }
+
+    if (!userId && !teacherId) {
       setAlertMessage("User not authenticated. Please login again.");
       setShowErrorAlert(true);
     }
@@ -175,11 +198,11 @@ export default function CreateTask() {
         const types = response.data || response || [];
         const uniqueTypes = [];
         const seenIds = new Set();
-       
+
         types.forEach(type => {
           const typeId = type.task_type_id || type.id;
           const typeName = type.task_type_name || type.name || type.title;
-         
+
           if (typeId && !seenIds.has(typeId)) {
             seenIds.add(typeId);
             uniqueTypes.push({ value: typeId, name: typeName });
@@ -187,7 +210,7 @@ export default function CreateTask() {
             uniqueTypes.push({ value: typeName, name: typeName });
           }
         });
-       
+
         setTaskTypes(uniqueTypes);
         setLoadingTaskTypes(false);
       })
@@ -219,6 +242,113 @@ export default function CreateTask() {
       });
   }, []);
 
+  // Fetch Allocations for Academic Task
+  useEffect(() => {
+    const fetchAllocations = async () => {
+      if (!currentTeacherId) return;
+      setLoadingAllocations(true);
+      try {
+        const response = await api.getTeacherAllocatedPrograms(currentTeacherId);
+
+        if (response.success) {
+          const data = response.data;
+          const allAllocations = [
+            ...(data.class_teacher_allocation || []),
+            ...(data.normal_allocation || [])
+          ];
+          setAllocations(allAllocations);
+        }
+      } catch (error) {
+        console.error("Error fetching allocations:", error);
+      } finally {
+        setLoadingAllocations(false);
+      }
+    };
+
+    if (currentTeacherId) {
+      fetchAllocations();
+    }
+  }, [currentTeacherId]);
+
+  // Derived Options Helper Functions
+  const getUniqueOptions = (filterFn, mapFn) => {
+    const map = new Map();
+    allocations.filter(filterFn).forEach(item => {
+      const { id, name } = mapFn(item);
+      if (id) map.set(id, name);
+    });
+    return Array.from(map.entries()).map(([value, name]) => ({ value, name }));
+  };
+
+  const programOptions = getUniqueOptions(
+    () => true,
+    (item) => ({ id: item.program?.program_id, name: item.program?.program_name })
+  );
+
+  const batchOptions = getUniqueOptions(
+    (item) => !academicFilters.program || item.program?.program_id == academicFilters.program,
+    (item) => ({ id: item.batch?.batch_id, name: item.batch?.batch_name })
+  );
+
+  const academicYearOptions = getUniqueOptions(
+    (item) => (!academicFilters.program || item.program?.program_id == academicFilters.program) &&
+      (!academicFilters.batch || item.batch?.batch_id == academicFilters.batch),
+    (item) => ({ id: item.academic_year_id, name: item.academic_year?.name })
+  );
+
+  const semesterOptions = getUniqueOptions(
+    (item) => (!academicFilters.program || item.program?.program_id == academicFilters.program) &&
+      (!academicFilters.batch || item.batch?.batch_id == academicFilters.batch) &&
+      (!academicFilters.academicYear || item.academic_year_id == academicFilters.academicYear),
+    (item) => ({ id: item.semester_id, name: item.semester?.name })
+  );
+
+  const divisionOptions = getUniqueOptions(
+    (item) => (!academicFilters.program || item.program?.program_id == academicFilters.program) &&
+      (!academicFilters.batch || item.batch?.batch_id == academicFilters.batch) &&
+      (!academicFilters.academicYear || item.academic_year_id == academicFilters.academicYear) &&
+      (!academicFilters.semester || item.semester_id == academicFilters.semester),
+    (item) => ({ id: item.division_id, name: item.division?.division_name })
+  );
+
+  const subjectOptions = () => {
+    // Collect all subjects from matching allocations
+    const subjectsMap = new Map();
+    allocations.filter(item =>
+      (!academicFilters.program || item.program?.program_id == academicFilters.program) &&
+      (!academicFilters.batch || item.batch?.batch_id == academicFilters.batch) &&
+      (!academicFilters.academicYear || item.academic_year_id == academicFilters.academicYear) &&
+      (!academicFilters.semester || item.semester_id == academicFilters.semester) &&
+      (!academicFilters.division || item.division_id == academicFilters.division)
+    ).forEach(alloc => {
+      if (alloc.subjects && Array.isArray(alloc.subjects)) {
+        alloc.subjects.forEach(sub => {
+          subjectsMap.set(sub.subject_id, sub.name);
+        });
+      }
+    });
+    return Array.from(subjectsMap.entries()).map(([value, name]) => ({ value, name }));
+  };
+
+  const handleAcademicFilterChange = (field, value) => {
+    setAcademicFilters(prev => {
+      const newFilters = { ...prev, [field]: value };
+      // Reset subsequent filters
+      if (field === 'program') {
+        newFilters.batch = ''; newFilters.academicYear = ''; newFilters.semester = ''; newFilters.division = '';
+      } else if (field === 'batch') {
+        newFilters.academicYear = ''; newFilters.semester = ''; newFilters.division = '';
+      } else if (field === 'academicYear') {
+        newFilters.semester = ''; newFilters.division = '';
+      } else if (field === 'semester') {
+        newFilters.division = ''; newFilters.subject = '';
+      } else if (field === 'division') {
+        newFilters.subject = '';
+      }
+      return newFilters;
+    });
+  };
+
   const formatDateTimeForAPI = (datetimeLocal) => {
     if (!datetimeLocal) return '';
     return datetimeLocal.length === 16 ? `${datetimeLocal}:00` : datetimeLocal;
@@ -247,14 +377,24 @@ export default function CreateTask() {
     setIsSubmitting(true);
     try {
       const taskData = [{
-        user_id: currentUserId,                    // अब यहाँ सही user_id (3138) जाएगा
+        user_id: currentUserId,
         title: form.title.trim(),
         description: form.description.trim(),
         priority_id: parseInt(form.priority),
         assigned_date_time: formatDateTimeForAPI(form.assignedDate),
         due_date_time: formatDateTimeForAPI(form.dueDate),
         task_type_id: parseInt(form.taskType),
-        status: 3
+        status: 3,
+        ...(taskCategory === "ACADEMIC" ? {
+          task_category: "ACADEMIC",
+          academic_year_id: parseInt(academicFilters.academicYear),
+          semester_id: parseInt(academicFilters.semester),
+          division_id: parseInt(academicFilters.division),
+          subject_id: parseInt(academicFilters.subject),
+          program_id: parseInt(academicFilters.program)
+        } : {
+          task_category: "NON-ACADEMIC"
+        })
       }];
 
       const response = await TaskManagement.postMyTask(taskData);
@@ -317,6 +457,85 @@ export default function CreateTask() {
 
       {/* Form Card */}
       <div className="bg-white rounded-xl p-4 sm:p-6 shadow-sm border">
+
+        {/* Task Category Selection */}
+        <div className="mb-6">
+          <label className="block text-sm font-semibold text-blue-700 mb-2">Category</label>
+          <div className="flex gap-6">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={taskCategory === "NON_ACADEMIC"}
+                onChange={() => setTaskCategory("NON_ACADEMIC")}
+                className="w-5 h-5 text-blue-600 rounded focus:ring-blue-500"
+              />
+              <span className="text-gray-700 font-medium">NON_ACADEMIC</span>
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={taskCategory === "ACADEMIC"}
+                onChange={() => setTaskCategory("ACADEMIC")}
+                className="w-5 h-5 text-blue-600 rounded focus:ring-blue-500"
+              />
+              <span className="text-gray-700 font-medium">ACADEMIC</span>
+            </label>
+          </div>
+        </div>
+
+        {/* Academic Filters */}
+        {taskCategory === "ACADEMIC" && (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 mb-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
+            <CustomSelect
+              label="Program"
+              value={academicFilters.program}
+              onChange={(e) => handleAcademicFilterChange('program', e.target.value)}
+              options={programOptions}
+              placeholder="Select Program"
+            />
+            <CustomSelect
+              label="Batch"
+              value={academicFilters.batch}
+              onChange={(e) => handleAcademicFilterChange('batch', e.target.value)}
+              options={batchOptions}
+              placeholder="Select Batch"
+              disabled={!academicFilters.program}
+            />
+            <CustomSelect
+              label="Academic Year"
+              value={academicFilters.academicYear}
+              onChange={(e) => handleAcademicFilterChange('academicYear', e.target.value)}
+              options={academicYearOptions}
+              placeholder="Select Academic Year"
+              disabled={!academicFilters.batch}
+            />
+            <CustomSelect
+              label="Semester"
+              value={academicFilters.semester}
+              onChange={(e) => handleAcademicFilterChange('semester', e.target.value)}
+              options={semesterOptions}
+              placeholder="Select Semester"
+              disabled={!academicFilters.academicYear}
+            />
+            <CustomSelect
+              label="Division"
+              value={academicFilters.division}
+              onChange={(e) => handleAcademicFilterChange('division', e.target.value)}
+              options={divisionOptions}
+              placeholder="Select Division"
+              disabled={!academicFilters.semester}
+            />
+            <CustomSelect
+              label="Subject"
+              value={academicFilters.subject}
+              onChange={(e) => handleAcademicFilterChange('subject', e.target.value)}
+              options={subjectOptions()}
+              placeholder="Select Subject"
+              disabled={!academicFilters.division}
+            />
+          </div>
+        )}
+
         <h2 className="text-lg sm:text-xl font-semibold mb-4 sm:mb-6">Task Information</h2>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
           <div>
@@ -345,7 +564,7 @@ export default function CreateTask() {
           <div>
             <label className={labelClass}>Assigned Date & Time *</label>
             <input type="datetime-local" className={inputClass} value={form.assignedDate}
-              onChange={(e) => setForm({ ...form, assignedDate: e.target.value })} min={getCurrentDateTime()} />
+              onChange={(e) => setForm({ ...form, assignedDate: e.target.value })} />
           </div>
           <div>
             <label className={labelClass}>Due Date & Time *</label>

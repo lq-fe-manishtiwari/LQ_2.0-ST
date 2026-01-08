@@ -39,11 +39,11 @@
 
   /* Table Header */
   .table-header {
-    @apply bg-primary-600 text-primary-50 text-xs font-semibold uppercase tracking-wider;
+    @apply bg-primary-600 text-primary-50 text-xs font-semibold tracking-wider;
   }
 
   .table-th {
-    @apply  px-4 py-3 bg-primary-600;
+    @apply px-4 py-3 bg-primary-600;
   }
 
   .table-td {

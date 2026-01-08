@@ -154,7 +154,7 @@ const MyTaskTable = ({
   onTaskSelect,
   onToggleActive,
   searchQuery,
-    filters,   
+  filters,
   onView,
   onEdit,
   onDelete,
@@ -184,7 +184,7 @@ const MyTaskTable = ({
   const handleNext = () => displayPage < totalPages && onPageChange(displayPage);
   // Calculate if next button should be disabled - only enable when there are more than 10 entries
   const isNextDisabled = totalTasks <= entriesPerPage || displayPage >= totalPages;
-  
+
   return (
     <>
       {/* ────────────────────── Desktop Table ────────────────────── */}
@@ -193,11 +193,12 @@ const MyTaskTable = ({
           <table className="w-full min-w-[900px]">
             <thead className="table-header">
               <tr>
-                <th className="table-th">Name</th>
+                <th className="table-th">Program</th>
+                <th className="table-th">Batch (Class Year)</th>
+                <th className="table-th">Subject</th>
                 <th className="table-th">Department</th>
                 <th className="table-th">Task Title</th>
                 <th className="table-th">Task Type</th>
-                <th className="table-th">Assigned By</th>
                 <th className="table-th">Due on</th>
                 <th className="table-th table-cell-center">Priority</th>
                 <th className="table-th table-cell-center">Status</th>
@@ -229,59 +230,38 @@ const MyTaskTable = ({
               ) : (
                 tasks.map((task) => (
                   <tr key={task.id} className="hover:bg-gray-50 transition-colors">
-                    <td className="px-6 py-4">
-                      <div className="flex items-center">
-                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-100 to-blue-200 flex items-center justify-center">
-                          <User className="w-6 h-6 text-blue-600" />
-                        </div>
-                        <div className="ml-3">
-                          <p className="font-semibold text-gray-900 whitespace-nowrap">{task.firstname} {task.lastname}</p>
-                        </div>
-                      </div>
+                    <td className="px-6 py-4 text-sm text-gray-700 max-w-[120px] truncate" title={task.program}>{task.program}</td>
+                    <td className="px-6 py-4 text-sm text-gray-700 max-w-[120px] truncate" title={`${task.batch} ${task.classYear ? `(${task.classYear})` : ''}`}>
+                      {task.batch} {task.classYear ? `(${task.classYear})` : ''}
                     </td>
-                    <td className="px-6 py-4 text-sm text-gray-700">{task.department}</td>
-                    <td className="px-6 py-4 text-sm text-gray-900">{task.taskTitle}</td>
-                    <td className="px-6 py-4 text-sm text-gray-700">{task.taskType}</td>
-                    <td className="px-6 py-4 text-sm text-gray-700">{task.assignedBy}</td>
-                    <td className={`px-6 py-4 text-sm font-semibold ${
-                      isTaskOverdue(task) ? 'text-red-600' : 'text-gray-700'
-                    }`}>{task.dueOn}</td>
+                    <td className="px-6 py-4 text-sm text-gray-700 max-w-[120px] truncate" title={task.subject}>{task.subject}</td>
+                    <td className="px-6 py-4 text-sm text-gray-700 max-w-[120px] truncate" title={task.department}>{task.department}</td>
+                    <td className="px-6 py-4 text-sm text-gray-900 max-w-[150px] truncate" title={task.taskTitle}>{task.taskTitle}</td>
+                    <td className="px-6 py-4 text-sm text-gray-700 max-w-[100px] truncate" title={task.taskType}>{task.taskType}</td>
+                    <td className={`px-6 py-4 text-sm font-semibold ${isTaskOverdue(task) ? 'text-red-600' : 'text-gray-700'
+                      }`}>{task.dueOn}</td>
                     <td className="px-6 py-4 text-center">
-                      <span className={`inline-flex items-center px-3 py-1.5 rounded-full text-xs font-medium ${
-                        task.priority === 'High' ? 'bg-red-100 text-red-800' :
+                      <span className={`inline-flex items-center px-3 py-1.5 rounded-full text-xs font-medium ${task.priority === 'High' ? 'bg-red-100 text-red-800' :
                         task.priority === 'Medium' ? 'bg-yellow-100 text-yellow-800' :
-                        'bg-green-100 text-green-800'
-                      }`}>
+                          'bg-green-100 text-green-800'
+                        }`}>
                         {task.priority}
                       </span>
                     </td>
                     <td className="px-6 py-4 text-center">
-                      <button
-                        onClick={() => onToggleActive(task.id)}
-                        disabled={statusChanging[task.id]}
-                        className={`inline-flex items-center px-3 py-1.5 rounded-full text-xs font-medium transition-all ${statusChanging[task.id]
-                          ? 'bg-gray-100 text-gray-500 cursor-not-allowed'
-                          : task.status === 'Complete'
-                            ? 'bg-green-100 text-green-800 hover:bg-green-200'
-                            : task.status === 'Pending'
-                            ? 'bg-blue-100 text-blue-800 hover:bg-blue-200'
+                      <span
+                        className={`inline-flex items-center px-3 py-1.5 rounded-full text-xs font-medium ${task.status === 'Complete'
+                          ? 'bg-green-100 text-green-800'
+                          : task.status === 'Pending'
+                            ? 'bg-blue-100 text-blue-800'
                             : task.status === 'Incomplete'
-                            ? 'bg-orange-100 text-orange-800 hover:bg-orange-200'
-                            : 'bg-red-100 text-red-800 hover:bg-red-200'
+                              ? 'bg-orange-100 text-orange-800'
+                              : 'bg-red-100 text-red-800'
                           }`}
                       >
-                        {statusChanging[task.id] ? (
-                          <>
-                            {/* <Loader size="sm" className="mr-1" /> */}
-                            Updating...
-                          </>
-                        ) : (
-                          <>
-                            {task.status === 'Complete' ? <ToggleRight className="w-4 h-4 mr-1" /> : <ToggleLeft className="w-4 h-4 mr-1" />}
-                            {task.status}
-                          </>
-                        )}
-                      </button>
+                        {task.status === 'Complete' ? <ToggleRight className="w-4 h-4 mr-1" /> : <ToggleLeft className="w-4 h-4 mr-1" />}
+                        {task.status}
+                      </span>
                     </td>
                     <td className="px-6 py-4 text-center">
                       <div className="flex items-center justify-center gap-2">
@@ -319,8 +299,8 @@ const MyTaskTable = ({
               onClick={handlePrev}
               disabled={displayPage === 1}
               className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-white transition-all ${displayPage === 1
-                  ? 'bg-blue-200 text-gray-400 cursor-not-allowed'
-                  : 'bg-blue-600 hover:bg-blue-700'
+                ? 'bg-blue-200 text-gray-400 cursor-not-allowed'
+                : 'bg-blue-600 hover:bg-blue-700'
                 }`}
             >
               Previous
@@ -334,8 +314,8 @@ const MyTaskTable = ({
               onClick={handleNext}
               disabled={isNextDisabled}
               className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-white transition-all ${isNextDisabled
-                 ? 'bg-blue-200 text-gray-400 cursor-not-allowed'
-                  : 'bg-blue-600 hover:bg-blue-700'
+                ? 'bg-blue-200 text-gray-400 cursor-not-allowed'
+                : 'bg-blue-600 hover:bg-blue-700'
                 }`}
             >
               Next
@@ -370,14 +350,21 @@ const MyTaskTable = ({
               className="bg-white rounded-xl shadow-md border border-gray-200 p-5 hover:shadow-lg transition-all"
             >
               <div className="flex justify-between items-start mb-3">
-                <div className="flex items-center">
-                  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-100 to-blue-200 flex items-center justify-center">
-                    <User className="w-7 h-7 text-blue-600" />
+                <div className="flex flex-col gap-1 w-full">
+                  <div className="flex justify-between w-full">
+                    <span className="font-semibold text-gray-900 line-clamp-1">{task.taskTitle}</span>
                   </div>
-                  <div className="ml-3">
-                    <p className="font-semibold text-gray-900">{task.firstname} {task.lastname}</p>
-                    <p className="text-sm text-gray-500">{task.department}</p>
-                    <p className="text-sm text-gray-500">{task.taskTitle}</p>
+                  <div className="text-sm text-gray-600 line-clamp-1">
+                    <span className="font-medium text-gray-800">Program:</span> {task.program}
+                  </div>
+                  <div className="text-sm text-gray-600 line-clamp-1">
+                    <span className="font-medium text-gray-800">Batch:</span> {task.batch} {task.classYear ? `(${task.classYear})` : ''}
+                  </div>
+                  <div className="text-sm text-gray-600 line-clamp-1">
+                    <span className="font-medium text-gray-800">Subject:</span> {task.subject}
+                  </div>
+                  <div className="text-sm text-gray-500 line-clamp-1">
+                    {task.department}
                   </div>
                 </div>
               </div>
@@ -385,52 +372,35 @@ const MyTaskTable = ({
               <div className="space-y-2 text-sm text-gray-700 mb-4">
                 <div className="grid grid-cols-2 gap-2">
                   <div><span className="font-medium">Type:</span> {task.taskType}</div>
-                  <div><span className="font-medium">Assigned By:</span> {task.assignedBy}</div>
-                  <div><span className="font-medium">Priority:</span> 
-                    <span className={`ml-1 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
-                      task.priority === 'High' ? 'bg-red-100 text-red-800' :
+                  {/* Assigned By removed */}
+                  <div><span className="font-medium">Priority:</span>
+                    <span className={`ml-1 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${task.priority === 'High' ? 'bg-red-100 text-red-800' :
                       task.priority === 'Medium' ? 'bg-yellow-100 text-yellow-800' :
-                      'bg-green-100 text-green-800'
-                    }`}>
+                        'bg-green-100 text-green-800'
+                      }`}>
                       {task.priority}
                     </span>
                   </div>
                   <div><span className="font-medium">Status:</span>
-                    <button
-                      onClick={() => onToggleActive(task.id)}
-                      disabled={statusChanging[task.id]}
-                      className={`ml-1 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium transition-all ${
-                        statusChanging[task.id]
-                          ? 'bg-gray-100 text-gray-500 cursor-not-allowed'
-                          : task.status === 'Complete'
-                            ? 'bg-green-100 text-green-800 hover:bg-green-200'
-                            : task.status === 'Pending'
-                            ? 'bg-blue-100 text-blue-800 hover:bg-blue-200'
+                    <span
+                      className={`ml-1 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${task.status === 'Complete'
+                          ? 'bg-green-100 text-green-800'
+                          : task.status === 'Pending'
+                            ? 'bg-blue-100 text-blue-800'
                             : task.status === 'Incomplete'
-                            ? 'bg-orange-100 text-orange-800 hover:bg-orange-200'
-                            : 'bg-red-100 text-red-800 hover:bg-red-200'
-                      }`}
+                              ? 'bg-orange-100 text-orange-800'
+                              : 'bg-red-100 text-red-800'
+                        }`}
                     >
-                      {statusChanging[task.id] ? (
-                        <>
-                          {/* <Loader size="sm" className="mr-1" /> */}
-                          Updating...
-                        </>
-                      ) : (
-                        <>
-                          {task.status === 'Complete' ? <ToggleRight className="w-3 h-3 mr-1" /> : <ToggleLeft className="w-3 h-3 mr-1" />}
-                          {task.status}
-                        </>
-                      )}
-                    </button>
+                      {task.status === 'Complete' ? <ToggleRight className="w-3 h-3 mr-1" /> : <ToggleLeft className="w-3 h-3 mr-1" />}
+                      {task.status}
+                    </span>
                   </div>
                   <div className="col-span-2">
-                    <span className={`font-medium ${
-                      isTaskOverdue(task) ? 'text-red-600' : 'text-gray-700'
-                    }`}>Due:</span>
-                    <span className={`ml-1 font-semibold ${
-                      isTaskOverdue(task) ? 'text-red-600' : 'text-gray-700'
-                    }`}>{task.dueOn}</span>
+                    <span className={`font-medium ${isTaskOverdue(task) ? 'text-red-600' : 'text-gray-700'
+                      }`}>Due:</span>
+                    <span className={`ml-1 font-semibold ${isTaskOverdue(task) ? 'text-red-600' : 'text-gray-700'
+                      }`}>{task.dueOn}</span>
                   </div>
                 </div>
               </div>
@@ -468,11 +438,10 @@ const MyTaskTable = ({
           <button
             onClick={handlePrev}
             disabled={displayPage === 1}
-            className={`px-4 py-2 rounded-md ${
-              displayPage === 1 
-                ? 'bg-gray-200 text-gray-400 cursor-not-allowed' 
-                : 'bg-blue-600 hover:bg-blue-700 text-white'
-            }`}
+            className={`px-4 py-2 rounded-md ${displayPage === 1
+              ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+              : 'bg-blue-600 hover:bg-blue-700 text-white'
+              }`}
           >
             Previous
           </button>
@@ -482,11 +451,10 @@ const MyTaskTable = ({
           <button
             onClick={handleNext}
             disabled={isNextDisabled}
-            className={`px-4 py-2 rounded-md ${
-              isNextDisabled
-                ? 'bg-gray-200 text-gray-400 cursor-not-allowed' 
-                : 'bg-blue-600 hover:bg-blue-700 text-white'
-            }`}
+            className={`px-4 py-2 rounded-md ${isNextDisabled
+              ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+              : 'bg-blue-600 hover:bg-blue-700 text-white'
+              }`}
           >
             Next
           </button>
@@ -499,10 +467,10 @@ const MyTaskTable = ({
 // Date formatting helper
 const formatDate = (isoString) => {
   if (!isoString) return 'N/A';
-  
+
   const date = new Date(isoString);
   if (isNaN(date.getTime())) return 'Invalid Date';
-  
+
   const day = String(date.getDate()).padStart(2, '0');
   const month = String(date.getMonth() + 1).padStart(2, '0');
   const year = date.getFullYear();
@@ -553,7 +521,7 @@ export default function MyTasks() {
   const years = ['2022', '2023', '2024', '2025'];
   const monthTabs = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
   const fullMonthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
-  
+
   const getWeekOptions = (year, month) => {
     if (!year || !month) return [];
     const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
@@ -562,16 +530,16 @@ export default function MyTasks() {
     const weeks = Math.ceil(daysInMonth / 7);
     return Array.from({ length: weeks }, (_, i) => `Week ${i + 1}`);
   };
-  
+
   const getWeekTabs = (year, month, week) => {
     if (!year || !month || !week) return [];
     const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
     const monthIndex = monthNames.indexOf(month);
     const weekNumber = parseInt(week.split(' ')[1]);
-   
+
     const startDay = (weekNumber - 1) * 7 + 1;
     const endDay = Math.min(weekNumber * 7, new Date(year, monthIndex + 1, 0).getDate());
-   
+
     const days = [];
     for (let day = startDay; day <= endDay; day++) {
       const date = new Date(year, monthIndex, day);
@@ -583,43 +551,43 @@ export default function MyTasks() {
     }
     return days;
   };
-  
+
   const getPeriodTabs = (fromDate, toDate) => {
     if (!fromDate || !toDate) {
       return ['25-02-2025', '25-02-2025', '25-02-2025', '25-02-2025', '25-02-2025', '25-02-2025', '25-02-2025', '25-02-2025', '25-02-2025', '25-02-2025'];
     }
-   
+
     const start = new Date(fromDate);
     const end = new Date(toDate);
     const totalDays = Math.ceil((end - start) / (1000 * 60 * 60 * 24)) + 1;
     const daysPerPeriod = Math.ceil(totalDays / 10); // Divide into 10 periods
-   
+
     const periods = [];
     for (let i = 0; i < 10; i++) {
       const periodStart = new Date(start);
       periodStart.setDate(start.getDate() + (i * daysPerPeriod));
-     
+
       const formatDate = (date) => {
         const day = String(date.getDate()).padStart(2, '0');
         const month = String(date.getMonth() + 1).padStart(2, '0');
         const year = date.getFullYear();
         return `${day}-${month}-${year}`;
       };
-     
+
       periods.push(formatDate(periodStart));
     }
     return periods;
   };
-  
+
   const getSubTabs = () => {
-    switch(filters.view) {
+    switch (filters.view) {
       case 'monthly': return monthTabs;
       case 'weekly': return getWeekTabs(parseInt(filters.year), filters.month, filters.week);
       case 'period': return getPeriodTabs(filters.fromDate, filters.toDate);
       default: return [];
     }
   };
-  
+
   const handleViewChange = (view) => {
     const viewValue = view.toLowerCase();
     let subTabs;
@@ -633,10 +601,10 @@ export default function MyTasks() {
     const firstTab = Array.isArray(subTabs[0]) ? subTabs[0] : subTabs[0]?.label || subTabs[0];
     setFilters(prev => ({ ...prev, view: viewValue, activeSubTab: firstTab }));
   };
-  
+
   const filteredTasks = useMemo(() => {
     let list = tasks;
-   
+
     // Search filter
     if (searchQuery) {
       list = list.filter(
@@ -646,35 +614,35 @@ export default function MyTasks() {
           task.taskTitle.toLowerCase().includes(searchQuery.toLowerCase())
       );
     }
-   
+
     // Priority filter
     if (filters.priority && filters.priority !== 'All') {
       list = list.filter(task => task.priority === filters.priority);
     }
-   
+
     // Status filter
     if (filters.status && filters.status !== 'All') {
       list = list.filter(task => task.status === filters.status);
     }
-   
+
     // Department filter
     if (filters.department) {
       list = list.filter(task => task.department === filters.department);
     }
-   
+
     return list;
   }, [tasks, searchQuery, filters.priority, filters.status, filters.department]);
-  
+
   const handleTaskSelect = (id) => {
     setSelectedTask(selectedTask === id ? null : id);
   };
-  
+
   const handleToggleActive = async (id) => {
     setStatusChanging(prev => ({ ...prev, [id]: true }));
     const task = tasks.find(t => t.id === id);
     const newStatus = task.status === 'Pending' || task.status === 'Incomplete' ? 'Complete' : 'Pending';
     const updateValues = { status: newStatus };
-    
+
     try {
       await TaskManagement.updateMyTask(updateValues, parseInt(id));
       setTasks(prev => prev.map(t => t.id === id ? { ...t, status: newStatus } : t));
@@ -702,11 +670,11 @@ export default function MyTasks() {
       setStatusChanging(prev => ({ ...prev, [id]: false }));
     }
   };
-  
-   const handleView = (task) => {
+
+  const handleView = (task) => {
     navigate(`/teacher/hrm/tasks/my-tasks/view/${task.id}`, { state: { taskData: task } });
   };
- 
+
   const handleEdit = (task) => {
     // Find the original task data from the API response
     const originalTask = tasks.find(t => t.id === task.id);
@@ -716,7 +684,7 @@ export default function MyTasks() {
       navigate(`/hrm/tasks/my-tasks/edit/${task.id}`);
     }
   };
- 
+
   // Delete functionality
   const handleDelete = (id) => {
     setAlert(
@@ -763,26 +731,26 @@ export default function MyTasks() {
       );
     }
   };
- 
+
   const handleShowDetails = (task) => console.log('Show details:', task);
-  
+
   // Pagination state
   const [currentPage, setCurrentPage] = useState(0);
   const entriesPerPage = 10;
   const totalTasks = filteredTasks.length;
   const totalPages = Math.ceil(totalTasks / entriesPerPage);
-  
+
   // Calculate paginated tasks
   const paginatedTasks = useMemo(() => {
     const startIndex = currentPage * entriesPerPage;
     const endIndex = startIndex + entriesPerPage;
     return filteredTasks.slice(startIndex, endIndex);
   }, [filteredTasks, currentPage, entriesPerPage]);
-  
+
   const handlePageChange = (newPage) => {
     setCurrentPage(newPage);
   };
-  
+
   // Update period tabs when from/to dates change
   useEffect(() => {
     if (filters.view === 'period' && filters.fromDate && filters.toDate) {
@@ -790,7 +758,7 @@ export default function MyTasks() {
       setFilters(prev => ({ ...prev, activeSubTab: periodTabs[0] }));
     }
   }, [filters.fromDate, filters.toDate, filters.view]);
-  
+
   // Update weekly tabs when month or year changes
   useEffect(() => {
     if (filters.view === 'weekly' && filters.week) {
@@ -864,9 +832,9 @@ export default function MyTasks() {
       try {
         setLoading(true);
         const response = await TaskManagement.getAllMyTasks(userId);
-        
+
         const tasksData = Array.isArray(response?.tasks) ? response.tasks : [];
-        
+
         const mappedTasks = tasksData.map(task => ({
           id: task.self_task_id?.toString(),
           firstname: response.user?.teacher_info?.firstname || "N/A",
@@ -875,6 +843,12 @@ export default function MyTasks() {
           email: response.user?.username || "",
           taskTitle: task.title || "No Title",
           taskType: task.task_type?.task_type_name || "General",
+
+          program: task.academic_year?.program_name || task.program?.program_name || "-",
+          batch: task.academic_year?.batch_name || task.batch?.batch_name || "-",
+          classYear: task.academic_year?.name || "",
+          subject: task.subject?.name || "-",
+
           assignedBy: task.assigned_by?.other_staff_info
             ? `${task.assigned_by.other_staff_info.firstname} ${task.assigned_by.other_staff_info.lastname}`
             : "System",
@@ -886,7 +860,7 @@ export default function MyTasks() {
           department: response.user?.other_staff_info?.department?.department_name || "",
           originalData: task // Store original API data
         }));
-        
+
         setTasks(mappedTasks);
       } catch (err) {
         console.error('Error fetching tasks:', err);
@@ -904,7 +878,7 @@ export default function MyTasks() {
         setLoading(false);
       }
     };
-    
+
     fetchTasks();
   }, [userId]);
 
@@ -960,7 +934,7 @@ export default function MyTasks() {
               placeholder={deptLoading ? "Loading departments..." : "Select Department"}
               disabled={deptLoading}
             />
-           
+
             <CustomSelect
               label="Priority"
               value={filters.priority || ''}
@@ -969,7 +943,7 @@ export default function MyTasks() {
               placeholder={priorityLoading ? "Loading priorities..." : "Select Priority"}
               disabled={priorityLoading}
             />
-           
+
             <CustomSelect
               label="Status"
               value={filters.status || ''}
@@ -1077,11 +1051,10 @@ export default function MyTasks() {
                     <button
                       key={index}
                       onClick={() => setFilters(prev => ({ ...prev, activeSubTab: tabLabel }))}
-                      className={`whitespace-nowrap text-center px-3 py-2 text-sm rounded-lg transition-colors flex-shrink-0 ${
-                        filters.activeSubTab === tabLabel
-                          ? "bg-blue-600 text-white"
-                          : "bg-white text-gray-700 shadow-md"
-                      }`}
+                      className={`whitespace-nowrap text-center px-3 py-2 text-sm rounded-lg transition-colors flex-shrink-0 ${filters.activeSubTab === tabLabel
+                        ? "bg-blue-600 text-white"
+                        : "bg-white text-gray-700 shadow-md"
+                        }`}
                     >
                       {filters.view === 'monthly' && monthTabs.includes(tabLabel)
                         ? fullMonthNames[monthTabs.indexOf(tabLabel)]
@@ -1097,18 +1070,16 @@ export default function MyTasks() {
                     <button
                       onClick={() => setMobileTabStart(Math.max(0, mobileTabStart - 1))}
                       disabled={mobileTabStart === 0}
-                      className={`absolute left-0 top-1/2 -translate-y-1/2 p-2 z-20 bg-white rounded-full shadow-sm transition-colors ${
-                        mobileTabStart === 0 ? 'text-gray-300 cursor-not-allowed' : 'text-blue-600 hover:text-blue-800'
-                      }`}
+                      className={`absolute left-0 top-1/2 -translate-y-1/2 p-2 z-20 bg-white rounded-full shadow-sm transition-colors ${mobileTabStart === 0 ? 'text-gray-300 cursor-not-allowed' : 'text-blue-600 hover:text-blue-800'
+                        }`}
                     >
                       <ChevronLeft className="w-4 h-4" />
                     </button>
                     <button
                       onClick={() => setMobileTabStart(Math.min(getSubTabs().length - 3, mobileTabStart + 1))}
                       disabled={mobileTabStart >= getSubTabs().length - 3}
-                      className={`absolute right-0 top-1/2 -translate-y-1/2 p-2 z-20 bg-white rounded-full shadow-sm transition-colors ${
-                        mobileTabStart >= getSubTabs().length - 3 ? 'text-gray-300 cursor-not-allowed' : 'text-blue-600 hover:text-blue-800'
-                      }`}
+                      className={`absolute right-0 top-1/2 -translate-y-1/2 p-2 z-20 bg-white rounded-full shadow-sm transition-colors ${mobileTabStart >= getSubTabs().length - 3 ? 'text-gray-300 cursor-not-allowed' : 'text-blue-600 hover:text-blue-800'
+                        }`}
                     >
                       <ChevronRight className="w-4 h-4" />
                     </button>
@@ -1121,11 +1092,10 @@ export default function MyTasks() {
                       <button
                         key={mobileTabStart + index}
                         onClick={() => setFilters(prev => ({ ...prev, activeSubTab: tabLabel }))}
-                        className={`flex-1 text-center px-2 py-2 text-xs rounded-lg transition-colors ${
-                          filters.activeSubTab === tabLabel
-                            ? "bg-blue-600 text-white"
-                            : "bg-white text-gray-700 shadow-md"
-                        }`}
+                        className={`flex-1 text-center px-2 py-2 text-xs rounded-lg transition-colors ${filters.activeSubTab === tabLabel
+                          ? "bg-blue-600 text-white"
+                          : "bg-white text-gray-700 shadow-md"
+                          }`}
                       >
                         {filters.view === 'monthly' && monthTabs.includes(tabLabel)
                           ? fullMonthNames[monthTabs.indexOf(tabLabel)]
@@ -1139,7 +1109,7 @@ export default function MyTasks() {
           )}
         </div>
       )}
-      
+
       <MyTaskTable
         tasks={loading ? [] : paginatedTasks}
         selectedTask={selectedTask}
@@ -1157,7 +1127,7 @@ export default function MyTasks() {
         statusChanging={statusChanging}
         loading={loading}
         searchQuery={searchQuery}
-         filters={filters}
+        filters={filters}
       />
 
     </div>

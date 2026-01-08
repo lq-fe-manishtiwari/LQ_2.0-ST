@@ -68,6 +68,14 @@ export default function ViewMyTasks() {
     priority: task.priority?.priority_name || "Medium",
     status: task.status?.name || "Pending",
     overdue: task.overdue ? `${task.days_until_due} Days` : null,
+    taskCategory: task.task_category || "NON_ACADEMIC",
+    // Academic Details
+    program: task.academic_year?.program_name || task.program?.program_name || "-",
+    batch: task.academic_year?.batch_name || task.batch?.batch_name || "-",
+    classYear: task.academic_year?.name || task.class_year_name || "-",
+    subject: task.subject?.name || "-",
+    semester: task.semester?.name || "-",
+    division: task.division?.division_name || task.division?.name || "-",
   } : null;
 
   // Helper function to check if task is overdue
@@ -124,13 +132,52 @@ export default function ViewMyTasks() {
 
       {/* ⭐ MAIN VIEW CARD - Updated Layout */}
       <div className="bg-white rounded-2xl p-6 sm:p-8 shadow-sm border w-full">
-        
+
         {/* Two Column Layout as per screenshot */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
 
+          {/* ACADEMIC DETAILS SECTION */}
+          {data.taskCategory === "ACADEMIC" && (
+            <div className="lg:col-span-2 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 p-4 bg-blue-50 rounded-xl border border-blue-100">
+              <div className="col-span-full mb-2 border-b border-blue-200 pb-2">
+                <h3 className="text-lg font-semibold text-blue-800">Academic Details</h3>
+              </div>
+
+              <div>
+                <span className="font-semibold text-gray-700 text-sm">Program:</span>
+                <p className="text-gray-900 font-medium">{data.program}</p>
+              </div>
+
+              <div>
+                <span className="font-semibold text-gray-700 text-sm">Batch:</span>
+                <p className="text-gray-900 font-medium">{data.batch}</p>
+              </div>
+
+              <div>
+                <span className="font-semibold text-gray-700 text-sm">Class Year:</span>
+                <p className="text-gray-900 font-medium">{data.classYear}</p>
+              </div>
+
+              <div>
+                <span className="font-semibold text-gray-700 text-sm">Semester:</span>
+                <p className="text-gray-900 font-medium">{data.semester}</p>
+              </div>
+
+              <div>
+                <span className="font-semibold text-gray-700 text-sm">Division:</span>
+                <p className="text-gray-900 font-medium">{data.division}</p>
+              </div>
+
+              <div>
+                <span className="font-semibold text-gray-700 text-sm">Subject:</span>
+                <p className="text-gray-900 font-medium">{data.subject}</p>
+              </div>
+            </div>
+          )}
+
           {/* LEFT COLUMN */}
           <div className="space-y-4 lg:space-y-6">
-            
+
             <div className="break-words">
               <span className="font-semibold text-gray-700">Title:</span>
               <p className="text-gray-900 mt-1">{data.title}</p>
@@ -149,13 +196,12 @@ export default function ViewMyTasks() {
             <div>
               <span className="font-semibold text-gray-700 block mb-2">Priority:</span>
               <span
-                className={`inline-block px-3 py-1.5 rounded-full text-sm font-medium ${
-                  data.priority === "High"
+                className={`inline-block px-3 py-1.5 rounded-full text-sm font-medium ${data.priority === "High"
                     ? "bg-red-100 text-red-800"
                     : data.priority === "Medium"
-                    ? "bg-yellow-100 text-yellow-800"
-                    : "bg-green-100 text-green-800"
-                }`}
+                      ? "bg-yellow-100 text-yellow-800"
+                      : "bg-green-100 text-green-800"
+                  }`}
               >
                 {data.priority}
               </span>
@@ -165,7 +211,7 @@ export default function ViewMyTasks() {
 
           {/* RIGHT COLUMN */}
           <div className="space-y-4 lg:space-y-6">
-            
+
             <div className="break-words">
               <span className="font-semibold text-gray-700">Description:</span>
               <p className="text-gray-900 mt-1">{data.description}</p>
@@ -173,9 +219,8 @@ export default function ViewMyTasks() {
 
             <div>
               <span className="font-semibold text-gray-700">Due Date & Time:</span>
-              <p className={`mt-1 font-medium ${
-                isTaskOverdue(data) ? 'text-red-600' : 'text-gray-900'
-              }`}>
+              <p className={`mt-1 font-medium ${isTaskOverdue(data) ? 'text-red-600' : 'text-gray-900'
+                }`}>
                 {data.dueDate}
               </p>
               {isTaskOverdue(data) && (
@@ -192,15 +237,14 @@ export default function ViewMyTasks() {
 
             <div>
               <span className="font-semibold text-gray-700 block mb-2">Status:</span>
-              <span className={`inline-block px-3 py-1.5 rounded-full text-sm font-medium ${
-                data.status === 'Complete' || data.status === 'Completed'
+              <span className={`inline-block px-3 py-1.5 rounded-full text-sm font-medium ${data.status === 'Complete' || data.status === 'Completed'
                   ? 'bg-green-100 text-green-800'
                   : data.status === 'In-Progress' || data.status === 'Active'
-                  ? 'bg-blue-100 text-blue-800'
-                  : data.status === 'Incomplete'
-                  ? 'bg-orange-100 text-orange-800'
-                  : 'bg-gray-100 text-gray-800'
-              }`}>
+                    ? 'bg-blue-100 text-blue-800'
+                    : data.status === 'Incomplete'
+                      ? 'bg-orange-100 text-orange-800'
+                      : 'bg-gray-100 text-gray-800'
+                }`}>
                 {data.status}
               </span>
             </div>
