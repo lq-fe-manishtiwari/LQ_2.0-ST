@@ -5,6 +5,7 @@ import { Plus, Upload } from "lucide-react";
 
 const tabs = [
   { label: "Dashboard", to: "/teacher/exam/dashboard" },
+  { label: "Assigned Tasks", to: "/teacher/exam/tasks" },
   { label: "Schedule", to: "/teacher/exam/schedule" },
   { label: "Paper", to: "/teacher/exam/paper" },
   { label: "Marks Entry", to: "/teacher/exam/marksEntry" },

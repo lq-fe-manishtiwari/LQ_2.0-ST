@@ -1,6 +1,7 @@
 import { Routes, Route, Navigate } from "react-router-dom";
 import ExamManagementLayout from "../ExamManagementLayout";
 import ExamDashboard from "../Dashboard/ExamDashboard";
+import AssignedTasks from "../Dashboard/AssignedTasks";
 import Schedule from "../Dashboard/Schedule";
 import Paper from "../Dashboard/Paper";
 import MarksEntry from "../Dashboard/MarksEntry";
@@ -16,6 +17,7 @@ export default function ExamManagementRoutes() {
       {/* dashboard */}
        <Route  element={<ExamManagementLayout />} >
        <Route path="dashboard" element={<ExamDashboard />} />
+       <Route path="tasks" element={<AssignedTasks />} />
        <Route path="schedule" element={<Schedule />} />
        <Route path="paper" element={<Paper />} />
        <Route path="marksEntry" element={<MarksEntry />} />
