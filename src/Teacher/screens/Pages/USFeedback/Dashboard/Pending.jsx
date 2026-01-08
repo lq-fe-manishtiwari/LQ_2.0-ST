@@ -41,8 +41,37 @@ export default function Pending() {
             // Handle paginated response
             if (response?.data?.content) {
                 console.log(response.data.content);
-                // Filter only pending forms (not submitted)
-                const pending = response.data.content.filter(f => !f.has_submitted);
+                // Filter only pending forms (not submitted) and add status calculation
+                const pending = response.data.content.filter(f => !f.has_submitted).map(form => {
+                    // Calculate status based on dates
+                    const today = new Date();
+                    today.setHours(0, 0, 0, 0); // Reset time for accurate date comparison
+                    const startDate = new Date(form.start_date);
+                    startDate.setHours(0, 0, 0, 0);
+                    const endDate = new Date(form.end_date);
+                    endDate.setHours(23, 59, 59, 999); // End of day
+
+                    let status = 'Inactive';
+                    let canFill = false;
+                    
+                    // Check date-based status
+                    if (today < startDate) {
+                        status = 'Scheduled';
+                        canFill = false;
+                    } else if (today >= startDate && today <= endDate) {
+                        status = 'Active';
+                        canFill = true;
+                    } else if (today > endDate) {
+                        status = 'Expired';
+                        canFill = false;
+                    }
+
+                    return {
+                        ...form,
+                        status,
+                        canFill
+                    };
+                });
                 setPendingForms(pending);
 
                 // Update pagination state
@@ -126,14 +155,34 @@ export default function Pending() {
                                                 <i className="bi bi-calendar-x mr-1"></i>
                                                 End: {form.end_date || 'N/A'}
                                             </span>
+                                            <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
+                                                form.status === 'Active' ? 'bg-green-100 text-green-800' :
+                                                form.status === 'Scheduled' ? 'bg-blue-100 text-blue-800' :
+                                                form.status === 'Expired' ? 'bg-red-100 text-red-800' :
+                                                'bg-gray-100 text-gray-800'
+                                            }`}>
+                                                {form.status}
+                                            </span>
                                         </div>
                                     </div>
                                     <button
                                         onClick={() => handleFillForm(form.feedback_form_id)}
-                                        className="px-4 py-2 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 transition-colors whitespace-nowrap self-start sm:self-auto flex items-center gap-2"
+                                        disabled={!form.canFill}
+                                        className={`px-4 py-2 text-sm rounded-md transition-colors whitespace-nowrap self-start sm:self-auto flex items-center gap-2 ${
+                                            form.canFill 
+                                                ? 'bg-blue-600 text-white hover:bg-blue-700' 
+                                                : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                        }`}
+                                        title={!form.canFill ? 
+                                            form.status === 'Scheduled' ? 'Form not yet available' :
+                                            form.status === 'Expired' ? 'Form has expired' :
+                                            'Form not available' : 'Fill form'
+                                        }
                                     >
                                         <i className="bi bi-pencil-square"></i>
-                                        Fill Form
+                                        {form.status === 'Scheduled' ? 'Not Available' :
+                                         form.status === 'Expired' ? 'Expired' :
+                                         'Fill Form'}
                                     </button>
                                 </div>
                             </div>
