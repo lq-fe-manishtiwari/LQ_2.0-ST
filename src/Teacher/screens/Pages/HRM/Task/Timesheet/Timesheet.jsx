@@ -288,7 +288,15 @@ export default function TimeSheetDashboard() {
         time: task.estimated_time || '-',
         taskDuration: task.task_duration || '-',
         actualDuration: task.actual_duration || '-',
-        delayedTime: task.delayed_time || '-'
+        delayedTime: task.delayed_time || '-',
+        taskCategory: task.task_category || '',
+        // Academic details (only for ACADEMIC tasks)
+        programName: task.academic_year?.program_name || '',
+        batchName: task.academic_year?.batch_name || '',
+        classYear: task.academic_year?.class_year_name || '',
+        semester: task.semester?.name || '',
+        division: task.division?.division_name || '',
+        subject: task.subject?.name || ''
       }));
 
       const allTasks = [...assignedTasks, ...selfTasks];
@@ -527,11 +535,11 @@ export default function TimeSheetDashboard() {
     const excelData = [];
 
     // Header row
-    excelData.push(['Date', 'Day', 'Leave Info', 'Task Title', 'Description', 'Priority', 'Status', 'Task Type', 'Assigned By', 'Due Date']);
+    excelData.push(['Date', 'Day', 'Leave Info', 'Task Title', 'Description', 'Priority', 'Status', 'Task Type', 'Assigned By', 'Due Date', 'Program', 'Batch', 'Class Year', 'Semester', 'Division', 'Subject']);
 
     // Summary row
-    excelData.push(['Summary', '', `Leave Taken: ${displayData.summary.leave || 0}`, `Total Days: ${displayData.summary.totalDays || 0}`, `Working Days: ${displayData.summary.totalWorkingDays || 0}`, `Actual Working: ${displayData.summary.actualWorkingDays || 0}`, `Absent: ${displayData.summary.absent || 0}`, `Comp Off: ${displayData.summary.compOff || 0}`, '', '']);
-    excelData.push(['', '', '', '', '', '', '', '', '', '']);
+    excelData.push(['Summary', '', `Leave Taken: ${displayData.summary.leave || 0}`, `Total Days: ${displayData.summary.totalDays || 0}`, `Working Days: ${displayData.summary.totalWorkingDays || 0}`, `Actual Working: ${displayData.summary.actualWorkingDays || 0}`, `Absent: ${displayData.summary.absent || 0}`, `Comp Off: ${displayData.summary.compOff || 0}`, '', '', '', '', '', '', '', '']);
+    excelData.push(['', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '']);
 
     // Data rows
     if (displayData.days && displayData.days.length > 0) {
@@ -552,7 +560,13 @@ export default function TimeSheetDashboard() {
               task.status,
               task.taskType,
               task.assignedBy,
-              task.dueDate
+              task.dueDate,
+              task.programName || '',
+              task.batchName || '',
+              task.classYear || '',
+              task.semester || '',
+              task.division || '',
+              task.subject || ''
             ]);
           });
         } else if (day.leave) {
@@ -561,6 +575,12 @@ export default function TimeSheetDashboard() {
             day.dayName,
             leaveInfo,
             'On Leave',
+            '',
+            '',
+            '',
+            '',
+            '',
+            '',
             '',
             '',
             '',
@@ -579,6 +599,12 @@ export default function TimeSheetDashboard() {
             '',
             '',
             '',
+            '',
+            '',
+            '',
+            '',
+            '',
+            '',
             ''
           ]);
         }
@@ -592,14 +618,20 @@ export default function TimeSheetDashboard() {
     worksheet['!cols'] = [
       { wch: 12 },  // Date
       { wch: 12 },  // Day
-      { wch: 30 },  // Leave Info
+      { wch: 20 },  // Leave Info
       { wch: 30 },  // Task Title
-      { wch: 40 },  // Description
+      { wch: 30 },  // Description
       { wch: 12 },  // Priority
       { wch: 15 },  // Status
       { wch: 15 },  // Task Type
-      { wch: 20 },  // Assigned By
-      { wch: 12 }   // Due Date
+      { wch: 10 },  // Assigned By
+      { wch: 12 },  // Due Date
+      { wch: 35 },  // Program
+      { wch: 25 },  // Batch
+      { wch: 12 },  // Class Year
+      { wch: 12 },  // Semester
+      { wch: 12 },  // Division
+      { wch: 25 }   // Subject
     ];
 
     // Create workbook and add worksheet
@@ -857,10 +889,10 @@ export default function TimeSheetDashboard() {
       <div id="timesheet-section" className="bg-white p-3 sm:p-4 rounded-xl shadow max-w-full overflow-hidden">
 
         <div className="name-header flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 sm:gap-3 px-1 mb-3 sm:mb-5">
-          <h2 className="text-sm sm:text-base lg:text-lg font-semibold break-words">
+          <h2 className="text-sm sm:text-base lg:text-lg break-words">
             Name : {
               currentUser?.fullName?.trim() ||
-              `${currentUser?.firstName || ''} ${currentUser?.lastName || ''}`.trim() ||
+              `${currentUser?.firstname || ''} ${currentUser?.lastname || ''}`.trim() ||
               '-'
             }
           </h2>
@@ -1016,6 +1048,50 @@ export default function TimeSheetDashboard() {
                               </span>
                             </div>
                           </div>
+
+                          {/* Academic Details - Only for Self Tasks with ACADEMIC category */}
+                          {task.assignedBy === 'Self' && task.taskCategory === 'ACADEMIC' && (
+                            <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-2 sm:p-3 mb-2 sm:mb-3">
+                              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-1.5 sm:gap-2 text-[10px] sm:text-xs">
+                                {task.programName && (
+                                  <div className="flex items-start gap-1">
+                                    <span className="font-semibold text-indigo-700 whitespace-nowrap">Program:</span>
+                                    <span className="text-gray-700">{task.programName}</span>
+                                  </div>
+                                )}
+                                {task.batchName && (
+                                  <div className="flex items-start gap-1">
+                                    <span className="font-semibold text-indigo-700 whitespace-nowrap">Batch:</span>
+                                    <span className="text-gray-700">{task.batchName}</span>
+                                  </div>
+                                )}
+                                {task.classYear && (
+                                  <div className="flex items-start gap-1">
+                                    <span className="font-semibold text-indigo-700 whitespace-nowrap">Class Year:</span>
+                                    <span className="text-gray-700">{task.classYear}</span>
+                                  </div>
+                                )}
+                                {task.semester && (
+                                  <div className="flex items-start gap-1">
+                                    <span className="font-semibold text-indigo-700 whitespace-nowrap">Semester:</span>
+                                    <span className="text-gray-700">{task.semester}</span>
+                                  </div>
+                                )}
+                                {task.division && (
+                                  <div className="flex items-start gap-1">
+                                    <span className="font-semibold text-indigo-700 whitespace-nowrap">Division:</span>
+                                    <span className="text-gray-700">{task.division}</span>
+                                  </div>
+                                )}
+                                {task.subject && (
+                                  <div className="flex items-start gap-1">
+                                    <span className="font-semibold text-indigo-700 whitespace-nowrap">Subject:</span>
+                                    <span className="text-gray-700">{task.subject}</span>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          )}
 
                           {task.description && task.description.trim() !== '' ? (
                             <p className="text-gray-700 text-xs sm:text-sm mb-2 sm:mb-3 bg-white/50 p-1.5 sm:p-2 rounded border-l-2 border-gray-300" style={{ wordWrap: 'break-word', overflowWrap: 'break-word', whiteSpace: 'normal' }}>
