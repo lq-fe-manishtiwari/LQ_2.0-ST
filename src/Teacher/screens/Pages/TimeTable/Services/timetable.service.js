@@ -1,5 +1,5 @@
 import {
-    authHeader, handleResponse, authHeaderToPost, TimetableAPI,
+    authHeader, handleResponse, authHeaderToPost, TimetableAPI,TeacherLoginAPI,
     AcademicAPI
 } from '@/_services/api';
 
@@ -15,7 +15,28 @@ export const timetableService = {
     getPeriodTimetable,
     getClassroomAvailability,
     createSlotException,
+    getTeacherTimetable
 };
+
+function getTeacherTimetable({ teacher_id, college_id, start_date, end_date }) {
+    const requestOptions = {
+        method: 'GET',
+        headers: authHeader()
+    };
+
+    const queryParams = new URLSearchParams({
+        teacher_id,
+        college_id,
+        start_date,
+        end_date
+    }).toString();
+
+    return fetch(
+        `${TimetableAPI}/admin/academic/teacher-timetable?${queryParams}`,
+        requestOptions
+    ).then(handleResponse);
+}
+
 
 function saveTimeSlots(values) {
     const requestOptions = {
