@@ -11,6 +11,7 @@ export const studentResultService = {
 };
 function getInternalExternal(studentId) {
     // GET /api/student/results/internal-or-external?studentId=X
+    // /api/student/results/internal-or-external?studentId=186
 
       const requestOptions = {
         method: "GET",
@@ -18,7 +19,7 @@ function getInternalExternal(studentId) {
       };
     
       return fetch(
-        `${ExamMGMAPI}/student/results/internal-or-external/${studentId}`,
+        `${ExamMGMAPI}/student/results/internal-or-external?studentId=${studentId}`,
         requestOptions
       ).then(handleResponse);
     }
