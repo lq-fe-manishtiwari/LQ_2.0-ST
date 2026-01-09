@@ -9,6 +9,9 @@ export const examgService = {
   getTeacherDutyAllocationsByCollege,
   getTeacherDutyAllocationsByTeacher,
   getExamSchedulesByTeacher,
+
+  getTeacherRevaluationRequests,
+  updateRevaluationMarks,
 };
 
 /**
@@ -56,5 +59,24 @@ function getExamSchedulesByTeacher(teacherId) {
   return fetch(
     `${ExamMGMAPI}/exam-schedules/teacher/${teacherId}`,
     requestOptions
+  ).then(handleResponse);
+}
+
+function getTeacherRevaluationRequests(teacherId, examScheduleId) {
+  return fetch(
+    `${ExamMGMAPI}/exam/teacher/revaluation-requests?teacherId=${teacherId}&examScheduleId=${examScheduleId}`,
+    { method: "GET", headers: authHeader() }
+  ).then(handleResponse);
+}
+
+
+function updateRevaluationMarks(id, data) {
+  return fetch(
+    `${ExamMGMAPI}/exam/teacher/revaluation-requests/${id}/update-marks`,
+    {
+      method: "PUT",
+      headers: authHeaderToPost(),
+      body: JSON.stringify(data)
+    }
   ).then(handleResponse);
 }
