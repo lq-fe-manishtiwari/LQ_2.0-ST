@@ -21,12 +21,15 @@ import StudentRoutes from '../Student/screens/Routes/StudentRoutes.jsx';
 import ProfileRoutes from '../Student/screens/Pages/Profile/Routes/ProfileRoutes.jsx';
 import PMSRoutes from '../Teacher/screens/Pages/PerformanceManagementSystem/Routes/PMSRoutes.jsx';
 import ContentRoutes from '../Student/screens/Pages/Content/Routes/ContentRoutes.jsx';
+// import ExamRoutes from '../Student/screens/Pages/Exam/Routes/ExamRoutes.jsx';
 import HRMRoutes from '../Teacher/screens/Pages/HRM/Routes/HRMRoute.jsx';
 import SubjectSelectionRoutes from '../Teacher/screens/Pages/SubjectSelection/Routes/SubjectSelectionRoutes.jsx';
 import TimeTableRoutes from '../Student/screens/Pages/TimeTable/Routes/TimeTableRoutes.jsx';
 
 import AcademicCalendarRoute from "../Teacher/screens/Pages/AcademicCalendar/Routes/AcademicCalendarRoute.jsx"
 import AcademicCalendarRoutes from "../Student/screens/Pages/AcademicCalendar/Routes/AcademicCalendarRoutes.jsx"
+import SubjectSelectionRoutes from "../Teacher/screens/Pages/SubjectSelection/Routes/SubjectSelectionRoutes.jsx";
+
 
 // ────── Route guards ──────
 const ProtectedRoute = ({ children }) => {
@@ -91,6 +94,8 @@ function App() {
             </ProtectedRoute>
           }
         />
+    
+
 
         <Route
           path="/teacher/hrm/*"
@@ -168,6 +173,17 @@ function App() {
             </ProtectedRoute>
           }
         />
+
+{/* <Route
+          path="/Exam/*"
+          element={
+            <ProtectedRoute>
+              <StudentHomepage>
+                <ExamRoutes/>
+              </StudentHomepage>
+            </ProtectedRoute>
+          }
+        /> */}
 
         <Route
           path="/pms/*"
