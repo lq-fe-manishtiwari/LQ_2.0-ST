@@ -7,11 +7,11 @@ export const studentResultService = {
 
     createRevaluationRequest,
     getStudentRevaluationRequests,
-    updateStudentRevaluationRequest
+    updateStudentRevaluationRequest,
+    getStudentAtktData
 };
 function getInternalExternal(studentId) {
     // GET /api/student/results/internal-or-external?studentId=X
-    // /api/student/results/internal-or-external?studentId=186
 
       const requestOptions = {
         method: "GET",
@@ -33,7 +33,7 @@ function getInternalExternal(studentId) {
         };
       
         return fetch(
-          `${ExamMGMAPI}/student/results/final/${studentId}`,
+          `${ExamMGMAPI}/student/results/final?studentId=${studentId}`,
           requestOptions
         ).then(handleResponse);
       }
@@ -64,5 +64,14 @@ function updateStudentRevaluationRequest(id, studentId, data) {
       headers: authHeaderToPost(),
       body: JSON.stringify(data)
     }
+  ).then(handleResponse);
+}
+
+
+function getStudentAtktData(studentId) {
+  // http://localhost:6060/api/student/results/atkt?studentId=541
+  return fetch(
+    `${ExamMGMAPI}/student/results/atkt?studentId=${studentId}`,
+    { method: "GET", headers: authHeader() }
   ).then(handleResponse);
 }

@@ -1,62 +1,49 @@
 // src/components/ATKT.jsx
-import { useState, useMemo } from 'react';
-
-const dummyData = [
-  {
-    id: 1,
-    program: 'B.Tech',
-    class: 'CSE - 3rd Year',
-    studentName: 'Amit Sharma',
-    rollNo: 'CS21001',
-    examType: 'Semester End',
-    receipt: 'ATKT-REC-001',
-  },
-  {
-    id: 2,
-    program: 'B.Tech',
-    class: 'IT - 2nd Year',
-    studentName: 'Priya Singh',
-    rollNo: 'IT22045',
-    examType: 'Mid Term',
-    receipt: 'ATKT-REC-002',
-  },
-  {
-    id: 3,
-    program: 'MCA',
-    class: 'MCA - 1st Year',
-    studentName: 'Rahul Verma',
-    rollNo: 'MCA23012',
-    examType: 'Semester End',
-    receipt: 'ATKT-REC-003',
-  },
-  {
-    id: 4,
-    program: 'B.Tech',
-    class: 'ECE - 4th Year',
-    studentName: 'Neha Gupta',
-    rollNo: 'EC19056',
-    examType: 'Re-Exam',
-    receipt: 'ATKT-REC-004',
-  },
-  // Add more entries as needed (10-20 for testing pagination)
-];
+import { useState, useEffect, useMemo } from 'react';
+import { studentResultService } from '../Service/StudentResultService'; // make sure this has getStudentAtktData
 
 const ITEMS_PER_PAGE = 8;
 
 export default function ATKT() {
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
+  const [atktData, setAtktData] = useState([]);
+  const [loading, setLoading] = useState(false);
+
+  // 🔹 Get student_id from localStorage
+  const userProfile = JSON.parse(localStorage.getItem('userProfile'));
+  const studentId = userProfile?.student_id;
+
+  // Fetch ATKT data
+  useEffect(() => {
+    if (!studentId) return;
+    fetchAtktData();
+  }, [studentId]);
+
+  const fetchAtktData = async () => {
+    setLoading(true);
+    try {
+      const response = await studentResultService.getStudentAtktData(studentId);
+      // Assuming response is an array
+      setAtktData(response || []);
+    } catch (err) {
+      console.error('Error fetching ATKT data:', err);
+      setAtktData([]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Filter data based on search term
   const filteredData = useMemo(() => {
-    if (!searchTerm) return dummyData;
+    if (!searchTerm) return atktData;
 
-    return dummyData.filter((item) =>
+    return atktData.filter((item) =>
       Object.values(item).some((value) =>
-        value.toString().toLowerCase().includes(searchTerm.toLowerCase())
+        value?.toString().toLowerCase().includes(searchTerm.toLowerCase())
       )
     );
-  }, [searchTerm]);
+  }, [searchTerm, atktData]);
 
   // Pagination
   const totalPages = Math.ceil(filteredData.length / ITEMS_PER_PAGE);
@@ -71,8 +58,7 @@ export default function ATKT() {
   return (
     <div className="min-h-screen bg-gray-50 py-8 px-4 sm:px-6 lg:px-8">
       <div className="max-w-7xl mx-auto">
-        {/* Title */}
-        <h1 className="text-3xl font-bold text-gray-900 mb-8">ATKT Requests</h1>
+        {/* <h1 className="text-3xl font-bold text-gray-900 mb-8">ATKT Requests</h1> */}
 
         {/* Search Bar */}
         <div className="mb-8">
@@ -114,7 +100,13 @@ export default function ATKT() {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {paginatedData.length > 0 ? (
+              {loading ? (
+                <tr>
+                  <td colSpan="7" className="px-6 py-12 text-center text-gray-500">
+                    Loading...
+                  </td>
+                </tr>
+              ) : paginatedData.length > 0 ? (
                 paginatedData.map((item) => (
                   <tr key={item.id} className="hover:bg-gray-50 transition">
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
