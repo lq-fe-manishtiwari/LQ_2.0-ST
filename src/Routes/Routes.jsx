@@ -28,7 +28,6 @@ import TimeTableRoutes from '../Student/screens/Pages/TimeTable/Routes/TimeTable
 
 import AcademicCalendarRoute from "../Teacher/screens/Pages/AcademicCalendar/Routes/AcademicCalendarRoute.jsx"
 import AcademicCalendarRoutes from "../Student/screens/Pages/AcademicCalendar/Routes/AcademicCalendarRoutes.jsx"
-import SubjectSelectionRoutes from "../Teacher/screens/Pages/SubjectSelection/Routes/SubjectSelectionRoutes.jsx";
 
 
 // ────── Route guards ──────
