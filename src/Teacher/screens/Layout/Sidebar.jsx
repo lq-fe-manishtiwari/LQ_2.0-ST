@@ -107,6 +107,15 @@ const Sidebar = ({ isOpen, toggle }) => {
           "/teacher/timetable",
         ],
       },
+      {
+        to: "/teacher/attendance",
+        label: "Attendance",
+        iconActive: assessmentActive,
+        iconInactive: assessmentInactive,
+        match: [
+          "/teacher/attendance",
+        ],
+      },
 
 
       {
@@ -202,7 +211,7 @@ const Sidebar = ({ isOpen, toggle }) => {
         iconInactive: classInactive,
         match: ["/teacher/academic-calendar"]
       },
-      
+
 
       {
         to: "/teacher-library",

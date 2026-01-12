@@ -26,8 +26,7 @@ export default function TasksTabsNav() {
                 to={t.to}
                 style={{ width: "9rem" }}
                 className={({ isActive }) =>
-                  `tab-link text-center flex-1 sm:flex-none px-3 py-2 text-xs sm:text-sm ${
-                    isActive ? "tab-active" : "tab-inactive"
+                  `tab-link text-center flex-1 sm:flex-none px-3 py-2 text-xs sm:text-sm ${isActive ? "tab-active" : "tab-inactive"
                   }`
                 }
               >
@@ -37,12 +36,12 @@ export default function TasksTabsNav() {
           </div>
 
           {/* Close Button */}
-          <button
+          {/* <button
             onClick={() => navigate("/hrm")}
             className="bg-blue-600 hover:bg-blue-700 text-white w-10 h-10 flex items-center justify-center rounded-full shadow-md transition-all ml-4"
           >
             ×
-          </button>
+          </button> */}
         </div>
       </div>
 

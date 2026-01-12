@@ -27,6 +27,8 @@ import TimeTableRoutes from '../Student/screens/Pages/TimeTable/Routes/TimeTable
 
 import AcademicCalendarRoute from "../Teacher/screens/Pages/AcademicCalendar/Routes/AcademicCalendarRoute.jsx"
 import AcademicCalendarRoutes from "../Student/screens/Pages/AcademicCalendar/Routes/AcademicCalendarRoutes.jsx"
+import AttendanceRoutes from '../Teacher/screens/Pages/Attendance/Routes/AttendanceRoutes.jsx';
+import StudentAttendanceRoutes from '../Student/screens/Pages/Attendance/Routes/AttendanceRoutes.jsx';
 
 // ────── Route guards ──────
 const ProtectedRoute = ({ children }) => {
@@ -102,6 +104,16 @@ function App() {
             </ProtectedRoute>
           }
         />
+        <Route
+          path="/teacher/attendance/*"
+          element={
+            <ProtectedRoute>
+              <TeacherHomepage>
+                <AttendanceRoutes />
+              </TeacherHomepage>
+            </ProtectedRoute>
+          }
+        />
         {/* ────── TEACHER – Academic Calendar ────── */}
         <Route
           path="/teacher/academic-calendar/*"
@@ -153,6 +165,17 @@ function App() {
             <ProtectedRoute>
               <StudentHomepage>
                 <TimeTableRoutes />
+              </StudentHomepage>
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/attendance/*"
+          element={
+            <ProtectedRoute>
+              <StudentHomepage>
+                <StudentAttendanceRoutes />
               </StudentHomepage>
             </ProtectedRoute>
           }

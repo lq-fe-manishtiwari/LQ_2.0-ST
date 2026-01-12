@@ -2,7 +2,7 @@ import React from "react";
 import { NavLink } from "react-router-dom";
 
 const tabs = [
-  { label: "My View", to: "/teacher/timetable/my-view" },
+  { label: "My View", to: "/timetable/my-view" },
 ];
 
 export default function TabsNav() {
@@ -14,18 +14,17 @@ export default function TabsNav() {
           .filter((t) => !t.rightAlign)
           .map((t) => (
             <NavLink
-            key={t.to}
-            to={t.to}
-            className={({ isActive }) =>
-              `tab-link flex items-center justify-center text-center whitespace-nowrap px-3 py-2 ${
-                isActive ? "tab-active" : "tab-inactive"
-              }`
-            }
-            style={{ minWidth: "180px" }}
-          >
-            {t.label}
-          </NavLink>
-          
+              key={t.to}
+              to={t.to}
+              className={({ isActive }) =>
+                `tab-link flex items-center justify-center text-center whitespace-nowrap px-3 py-2 ${isActive ? "tab-active" : "tab-inactive"
+                }`
+              }
+              style={{ minWidth: "180px" }}
+            >
+              {t.label}
+            </NavLink>
+
 
           ))}
       </div>
@@ -39,14 +38,13 @@ export default function TabsNav() {
               key={t.to}
               to={t.to}
               className={({ isActive }) =>
-                `tab-link flex items-center whitespace-nowrap px-3 py-2 ${
-                  isActive ? "tab-active" : "tab-inactive"
+                `tab-link flex items-center whitespace-nowrap px-3 py-2 ${isActive ? "tab-active" : "tab-inactive"
                 }`
               }
-              
+
             >
               {t.label}
-              
+
             </NavLink>
           ))}
       </div>
