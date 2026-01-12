@@ -164,7 +164,9 @@ const CreatePaper = ({ dutyId, examSchedule, subjectId, subjectName, onClose }) 
     setLoading(true);
     try {
       const activeCollege = JSON.parse(localStorage.getItem("activeCollege"));
+      const userProfile = JSON.parse(localStorage.getItem("userProfile"));
       const collegeId = activeCollege?.id;
+      const teacherId = userProfile?.teacher_id;
 
       const paperData = {
         paper_name: formData.paper_name,
@@ -173,6 +175,7 @@ const CreatePaper = ({ dutyId, examSchedule, subjectId, subjectName, onClose }) 
         subject_id: Number(formData.subject_id),
         exam_tool_id: Number(formData.exam_tool_id || 1),
         college_id: Number(collegeId),
+        teacher_id: Number(teacherId),
         start_date_time: formData.start_date_time,
         end_date_time: formData.end_date_time,
         exam_duration: Number(formData.exam_duration),
