@@ -9,6 +9,7 @@ import LeavesRoutes from "../Pages/StudentLeaves/Routes/LeavesRoutes.jsx";
 import SubjectSelectionPage from '../Pages/SubjectSelection/SubjectSelectionPage.jsx';
 import AluminiRoutes from '../Pages/Alumini/Routes/Routes.jsx';
 import TimeTableRoutes from '../Pages/TimeTable/Routes/TimeTableRoutes.jsx';
+import ExamRoutes from '../Pages/Exam/Routes/ExamRoutes.jsx';
 import USFeedbackRoutes from '../Pages/USFeedback/Routes/USFeedbackRoutes.jsx';
 import MyCommittees from '../Pages/Committee/MyCommittees.jsx';
 import CommitteeDetails from '../Pages/Committee/CommitteeDetails.jsx';
@@ -31,7 +32,10 @@ const StudentRoutes = () => {
       <Route path="committees" element={<MyCommittees />} />
       <Route path="committee/:committeeId" element={<CommitteeDetails />} />
       <Route path="committee/meeting/:meetingId" element={<MeetingDetails />} />
+      <Route path="exam/*" element={<ExamRoutes />} />
       {/* Add more student pages */}
+      
+      
     </Routes>
   );
 };
