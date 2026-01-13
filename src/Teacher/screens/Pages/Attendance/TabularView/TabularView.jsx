@@ -13,7 +13,8 @@ export default function TabularView() {
         academicYear: '',
         semester: '',
         division: '',
-        paper: ''
+        paper: '',
+        timeSlot: ''
     });
 
     const [showFilters, setShowFilters] = useState(true);
@@ -22,16 +23,16 @@ export default function TabularView() {
     const [allocations, setAllocations] = useState([]);
     const [loadingAllocations, setLoadingAllocations] = useState(false);
     const [currentTeacherId, setCurrentTeacherId] = useState(null);
+    const [collegeId, setCollegeId] = useState(null);
+
+    // State for time slots
+    const [timeSlots, setTimeSlots] = useState([]);
+    const [loadingTimeSlots, setLoadingTimeSlots] = useState(false);
 
     // State for student fetching
     const [loadingStudents, setLoadingStudents] = useState(false);
     const [studentsFetched, setStudentsFetched] = useState(false);
 
-    // Initial hardcoded students for fallback
-    const hardcodedStudents = [
-        { id: 101, name: 'Sample Student 1', program: 'B.Tech', batch: 'CS-A', division: 'A', status: 'P', selected: false, paper: 'Data Structures', semester: 3, academicYear: '2023-24', program_id: 1, batch_id: 1, academic_year_id: 1, semester_id: 1, division_id: 1, subject_id: 1 },
-        { id: 102, name: 'Sample Student 2', program: 'B.Tech', batch: 'CS-A', division: 'A', status: 'P', selected: false, paper: 'Data Structures', semester: 3, academicYear: '2023-24', program_id: 1, batch_id: 1, academic_year_id: 1, semester_id: 1, division_id: 1, subject_id: 1 },
-    ];
 
     const [students, setStudents] = useState([]);
 
@@ -54,6 +55,7 @@ export default function TabularView() {
     useEffect(() => {
         const getTeacherIdFromStorage = () => {
             let teacherId = null;
+            let collegeId = null;
             const userProfileStr = localStorage.getItem("userProfile") || sessionStorage.getItem("userProfile");
             if (userProfileStr) {
                 try {
@@ -61,16 +63,25 @@ export default function TabularView() {
                     if (userProfile?.teacher_id) {
                         teacherId = userProfile.teacher_id;
                     }
+                    if (userProfile?.college_id) {
+                        collegeId = userProfile.college_id;
+                    }
                 } catch (e) {
                     console.error("Error parsing userProfile:", e);
                 }
             }
-            return teacherId ? parseInt(teacherId, 10) : null;
+            return {
+                teacherId: teacherId ? parseInt(teacherId, 10) : null,
+                collegeId: collegeId ? parseInt(collegeId, 10) : null
+            };
         };
 
-        const teacherId = getTeacherIdFromStorage();
+        const { teacherId, collegeId: fetchedCollegeId } = getTeacherIdFromStorage();
         if (teacherId && !isNaN(teacherId)) {
             setCurrentTeacherId(teacherId);
+        }
+        if (fetchedCollegeId && !isNaN(fetchedCollegeId)) {
+            setCollegeId(fetchedCollegeId);
         }
     }, []);
 
@@ -117,11 +128,62 @@ export default function TabularView() {
         }
     }, [allocations]);
 
+    // Fetch time slots when paper is selected
+    useEffect(() => {
+        const fetchTimeSlots = async () => {
+            if (filters.paper && filters.academicYear && filters.semester && filters.division && currentTeacherId && collegeId) {
+                setLoadingTimeSlots(true);
+                try {
+                    const params = {
+                        teacherId: currentTeacherId,
+                        subjectId: filters.paper,
+                        date: selectedDate,
+                        academicYearId: filters.academicYear,
+                        semesterId: filters.semester,
+                        divisionId: filters.division,
+                        collegeId: collegeId
+                    };
+                    const response = await AttendanceManagement.getTimeSlots(params);
+
+                    if (response && response.data && response.data.length > 0) {
+                        // Filter out holidays - only show non-holiday time slots
+                        const validTimeSlots = response.data.filter(slot => !slot.is_holiday);
+
+                        if (validTimeSlots.length > 0) {
+                            setTimeSlots(validTimeSlots);
+                            // Auto-select first time slot
+                            const firstSlotId = validTimeSlots[0].timetable_id?.toString() || validTimeSlots[0].time_slot_id?.toString();
+                            setFilters(prev => ({ ...prev, timeSlot: firstSlotId }));
+                        } else {
+                            // All slots are holidays, clear everything
+                            setTimeSlots([]);
+                            setFilters(prev => ({ ...prev, timeSlot: '' }));
+                        }
+                    } else {
+                        // No time slots available
+                        setTimeSlots([]);
+                        setFilters(prev => ({ ...prev, timeSlot: '' }));
+                    }
+                } catch (error) {
+                    console.error("Error fetching time slots:", error);
+                    setTimeSlots([]);
+                    setFilters(prev => ({ ...prev, timeSlot: '' }));
+                } finally {
+                    setLoadingTimeSlots(false);
+                }
+            } else {
+                setTimeSlots([]);
+                setFilters(prev => ({ ...prev, timeSlot: '' }));
+            }
+        };
+
+        fetchTimeSlots();
+    }, [filters.paper, filters.academicYear, filters.semester, filters.division, currentTeacherId, selectedDate, collegeId]);
 
     // Fetch students based on filters
     useEffect(() => {
         const fetchStudents = async () => {
-            // Only fetch if all required filters are selected
+            // Fetch students when paper is selected (parallel with time slots)
             if (filters.academicYear && filters.semester && filters.division && filters.paper) {
                 setLoadingStudents(true);
                 try {
@@ -133,44 +195,38 @@ export default function TabularView() {
                     };
                     const response = await AttendanceManagement.getAttendanceStudents(params);
 
-                    if (response.success && response.data && response.data.length > 0) {
-                        const formattedStudents = response.data.map(s => ({
-                            id: s.student_id || s.id,
-                            name: s.full_name || `${s.firstname} ${s.lastname}`,
-                            status: 'P', // Default to present
-                            selected: false,
-                            ...s
-                        }));
+                    if (response && response.data && response.data.length > 0) {
+                        const formattedStudents = response.data.map(s => {
+                            const fullName = [s.firstname, s.middlename, s.lastname].filter(Boolean).join(' ');
+                            return {
+                                ...s,
+                                id: s.student_id,
+                                name: fullName,
+                                roll_number: s.roll_number,
+                                email: s.email,
+                                avatar: s.avatar,
+                                status: 'P', // Default to present
+                                selected: false,
+                                // Inject filter IDs if missing so filtering logic doesn't hide them
+                                program_id: s.program_id || parseInt(filters.program),
+                                batch_id: s.batch_id || parseInt(filters.batch),
+                                academic_year_id: s.academic_year_id || parseInt(filters.academicYear),
+                                semester_id: s.semester_id || parseInt(filters.semester),
+                                division_id: s.division_id || parseInt(filters.division),
+                                subject_id: s.subject_id || parseInt(filters.paper)
+                            };
+                        });
+                        console.log("DEBUG: Final Formatted Students for UI:", formattedStudents);
                         setStudents(formattedStudents);
                         setStudentsFetched(true);
                     } else {
-                        // If no data from API, use hardcoded students for testing
-                        // Mapping them to match current filters so they aren't filtered out by the UI
-                        const fallbackStudents = hardcodedStudents.map(s => ({
-                            ...s,
-                            program_id: parseInt(filters.program),
-                            batch_id: parseInt(filters.batch),
-                            academic_year_id: parseInt(filters.academicYear),
-                            semester_id: parseInt(filters.semester),
-                            division_id: parseInt(filters.division),
-                            subject_id: parseInt(filters.paper)
-                        }));
-                        setStudents(fallbackStudents);
+                        console.log("DEBUG: No students found in response");
+                        setStudents([]);
                         setStudentsFetched(true);
                     }
-
                 } catch (error) {
-                    console.error("Error fetching students:", error);
-                    const fallbackStudents = hardcodedStudents.map(s => ({
-                        ...s,
-                        program_id: parseInt(filters.program),
-                        batch_id: parseInt(filters.batch),
-                        academic_year_id: parseInt(filters.academicYear),
-                        semester_id: parseInt(filters.semester),
-                        division_id: parseInt(filters.division),
-                        subject_id: parseInt(filters.paper)
-                    }));
-                    setStudents(fallbackStudents);
+                    console.error("DEBUG: Error fetching students:", error);
+                    setStudents([]);
                     setStudentsFetched(true);
                 } finally {
                     setLoadingStudents(false);
@@ -196,6 +252,8 @@ export default function TabularView() {
         if (filters.paper && student.subject_id !== parseInt(filters.paper)) return false;
         return true;
     });
+
+    console.log("DEBUG: Filtered Students for Rendering:", filteredStudents.length, filteredStudents);
 
     // Filter handlers
     const handleFilterChange = (newFilters) => {
@@ -463,6 +521,8 @@ export default function TabularView() {
                         onApplyFilters={applyFilters}
                         allocations={allocations}
                         loadingAllocations={loadingAllocations}
+                        timeSlots={timeSlots}
+                        loadingTimeSlots={loadingTimeSlots}
                         compact={true}
                     />
                 </div>
@@ -577,14 +637,18 @@ export default function TabularView() {
 
             {/* Table or Empty State/Loader */}
             <div className="relative min-h-[300px]">
-                {!filters.paper ? (
+                {!filters.paper || !filters.timeSlot ? (
                     <div className="py-20 text-center">
                         <div className="mx-auto w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center mb-4">
                             <Activity className="w-8 h-8 text-blue-400" />
                         </div>
-                        <h3 className="text-xl font-semibold text-gray-800 mb-2">Select Filters to Mark Attendance</h3>
+                        <h3 className="text-xl font-semibold text-gray-800 mb-2">
+                            {!filters.paper ? 'Select Filters to Mark Attendance' : 'No Time Slot Available'}
+                        </h3>
                         <p className="text-gray-500 max-w-sm mx-auto">
-                            Please select Program, Academic Year, Semester, Division, and Paper to load the student list.
+                            {!filters.paper
+                                ? 'Please select Program, Academic Year, Semester, Division, and Paper to load the student list.'
+                                : 'No valid time slots found for the selected date. This might be a holiday or no classes are scheduled.'}
                         </p>
                     </div>
                 ) : loadingStudents ? (
@@ -625,9 +689,9 @@ export default function TabularView() {
                                     </th>
                                     <th className="table-th text-center">Name</th>
                                     <th className="table-th text-center">Roll No.</th>
-                                    <th className="table-th text-center">
+                                    {/* <th className="table-th text-center">
                                         Program
-                                    </th>
+                                    </th> */}
                                     <th className="table-th text-center">
                                         Batch
                                     </th>
@@ -730,8 +794,8 @@ export default function TabularView() {
                                                 </div>
                                             </td>
                                             <td className="py-3 px-3 sm:px-6 hidden sm:table-cell">
-                                                <div className="bg-blue-600 rounded-full p-1 sm:p-2 w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center text-white shrink-0">
-                                                    <User size={14} className="sm:w-5 sm:h-5" />
+                                                <div className="bg-blue-100 rounded-lg p-2 w-10 h-10 flex items-center justify-center text-blue-600 shrink-0 border border-blue-200">
+                                                    <User size={18} />
                                                 </div>
                                             </td>
                                             <td className="py-3 px-3 sm:px-6">
@@ -742,12 +806,12 @@ export default function TabularView() {
                                                     </span>
                                                 </div>
                                             </td>
-                                            <td className="py-3 px-3 sm:px-6 text-gray-600 text-xs sm:text-sm whitespace-nowrap hidden md:table-cell">
-                                                {paperName}
+                                            <td className="py-3 px-3 sm:px-6 text-gray-800 text-xs sm:text-sm font-medium whitespace-nowrap">
+                                                {student.roll_number || 'N/A'}
                                             </td>
-                                            <td className="py-3 px-3 sm:px-6 text-gray-600 text-xs sm:text-sm whitespace-nowrap hidden md:table-cell">
+                                            {/* <td className="py-3 px-3 sm:px-6 text-gray-600 text-xs sm:text-sm whitespace-nowrap hidden md:table-cell">
                                                 {programName}
-                                            </td>
+                                            </td> */}
                                             <td className="py-3 px-3 sm:px-6 text-gray-600 text-xs sm:text-sm whitespace-nowrap hidden lg:table-cell">
                                                 {batchName}
                                             </td>
