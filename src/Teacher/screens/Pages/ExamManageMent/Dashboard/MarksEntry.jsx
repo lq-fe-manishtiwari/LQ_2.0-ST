@@ -43,7 +43,6 @@ const MarksEntry = () => {
       (ex) => ex.exam_schedule_id === Number(scheduleId)
     );
 
-    // 🔑 Extract subjects from teacher_subject_duties
     setSubjects(selectedSchedule?.teacher_subject_duties || []);
   };
 
@@ -63,7 +62,6 @@ const MarksEntry = () => {
         subjectId
       );
 
-      // ✅ FILTER ONLY THOSE WITH MARKS ENTERED
       const filtered = (response?.data || []).filter(
         (item) =>
           item.subject_marks &&
@@ -81,15 +79,15 @@ const MarksEntry = () => {
   };
 
   return (
-    <div className="p-6 bg-gray-50 min-h-screen">
+    <div className="p-4 sm:p-6 bg-gray-50 min-h-screen">
       <div className="bg-white rounded-xl shadow overflow-hidden">
 
         {/* =========================
             Filters
         ==========================*/}
-        <div className="flex gap-4 p-4 border-b">
+        <div className="flex flex-col sm:flex-row gap-4 p-4 border-b">
           <select
-            className="border rounded-lg px-4 py-2 w-80"
+            className="border rounded-lg px-4 py-2 w-full sm:w-80"
             value={selectedExamScheduleId}
             onChange={handleExamScheduleChange}
           >
@@ -105,7 +103,7 @@ const MarksEntry = () => {
           </select>
 
           <select
-            className="border rounded-lg px-4 py-2 w-72"
+            className="border rounded-lg px-4 py-2 w-full sm:w-72"
             value={selectedSubjectId}
             onChange={handleSubjectChange}
             disabled={!subjects.length}
@@ -120,19 +118,16 @@ const MarksEntry = () => {
         </div>
 
         {/* =========================
-            Table
+            TABLE VIEW (Desktop)
         ==========================*/}
-        <div
-          className="overflow-x-auto"
-          style={{ maxHeight: "calc(100vh - 240px)" }}
-        >
-          <table className="w-full border-collapse min-w-[1400px]">
+        <div className="hidden md:block overflow-x-auto">
+          <table className="w-full border-collapse">
             <thead className="table-header">
               <tr className="bg-[#2162c1] text-white">
                 <th className="px-4 py-3 bg-[#2162c1] text-white">Student Name</th>
                 <th className="px-4 py-3 bg-[#2162c1] text-white">Roll No</th>
-                <th className="px-4 py-3 bg-[#2162c1] text-white">PRN</th>
-                <th className="px-4 py-3 bg-[#2162c1] text-white">Subject</th>
+                <th className="px-4 py-3 bg-[#2162c1] text-white">ERN</th>
+                <th className="px-4 py-3 bg-[#2162c1] text-white">Paper</th>
                 <th className="px-4 py-3 bg-[#2162c1] text-white">Exam Type</th>
                 <th className="px-4 py-3 bg-[#2162c1] text-white">Max Marks</th>
                 <th className="px-4 py-3 bg-[#2162c1] text-white">Marks Obtained</th>
@@ -176,7 +171,7 @@ const MarksEntry = () => {
                       <td className="px-4 py-3">{subject.minimum_marks}</td>
                       <td className="px-4 py-3">
                         <span className="px-3 py-1 rounded-full bg-green-100 text-green-800 text-sm">
-                          -
+                          {subject.attendance_status}
                         </span>
                       </td>
                     </tr>
@@ -188,9 +183,53 @@ const MarksEntry = () => {
         </div>
 
         {/* =========================
+            CARD VIEW (Mobile)
+        ==========================*/}
+        <div className="block md:hidden space-y-4 p-4">
+          {loading ? (
+            <div className="text-center py-10">Loading...</div>
+          ) : marksData.length === 0 ? (
+            <div className="text-center text-gray-500">No records found</div>
+          ) : (
+            marksData.map((row, index) => {
+              const subject = row.subject_marks[0];
+
+              return (
+                <div
+                  key={index}
+                  className="bg-white rounded-lg shadow border p-4 space-y-2"
+                >
+                  <div className="font-semibold text-lg">
+                    {row.student_firstname} {row.student_lastname}
+                  </div>
+
+                  <div className="text-sm text-gray-600">
+                    Roll No: {row.roll_number}
+                  </div>
+
+                  <div className="text-sm text-gray-600">
+                    PRN: {row.permanent_registration_number}
+                  </div>
+
+                  <div className="pt-2 border-t text-sm space-y-1">
+                    <div><strong>Subject:</strong> {subject.subject_name}</div>
+                    <div><strong>Exam:</strong> {subject.exam_type}</div>
+                    <div><strong>Max Marks:</strong> {subject.maximum_marks}</div>
+                    <div className="font-semibold">
+                      <strong>Marks Obtained:</strong> {subject.marks_obtained}
+                    </div>
+                    <div><strong>Min Marks:</strong> {subject.minimum_marks}</div>
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+
+        {/* =========================
             Footer
         ==========================*/}
-        <div className="px-6 py-4 text-gray-500">
+        <div className="px-6 py-4 text-gray-500 text-center sm:text-left">
           Showing {marksData.length} entries
         </div>
       </div>

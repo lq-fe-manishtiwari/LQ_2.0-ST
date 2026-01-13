@@ -16,9 +16,7 @@ const ReEvaluation = () => {
 
   // 🔹 Fetch re-evaluation requests
   useEffect(() => {
-    if (!studentId) return;
-
-    fetchReEvaluationRequests();
+    if (studentId) fetchReEvaluationRequests();
   }, [studentId]);
 
   const fetchReEvaluationRequests = async () => {
@@ -27,8 +25,8 @@ const ReEvaluation = () => {
       const response =
         await studentResultService.getStudentRevaluationRequests(studentId);
 
-      setData(response?.data || []);
-      setFilteredData(response?.data || []);
+      setData(response || []);
+      setFilteredData(response || []);
     } catch (error) {
       console.error("Error fetching re-evaluation requests", error);
       setData([]);
@@ -41,9 +39,15 @@ const ReEvaluation = () => {
   // 🔍 Search filter
   useEffect(() => {
     const filtered = data.filter((item) =>
-      Object.values(item).some((value) =>
-        value?.toString().toLowerCase().includes(searchTerm.toLowerCase())
-      )
+      [
+        item.exam_schedule_name,
+        item.subject_name,
+        item.request_status,
+        item.request_reason,
+      ]
+        .join(" ")
+        .toLowerCase()
+        .includes(searchTerm.toLowerCase())
     );
 
     setFilteredData(filtered);
@@ -60,76 +64,96 @@ const ReEvaluation = () => {
   const totalPages = Math.ceil(filteredData.length / itemsPerPage);
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      {/* <h1 className="text-2xl font-bold mb-6 text-gray-800">
-        Re-Evaluation Requests
-      </h1> */}
+    <div className="max-w-7xl mx-auto px-4 py-6">
+      {/* 🔹 Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6 gap-4">
+        {/* <h1 className="text-xl sm:text-2xl font-bold text-gray-800">
+          Re-Evaluation Requests
+        </h1> */}
 
-      {/* Search */}
-      <div className="mb-6">
         <input
           type="text"
-          placeholder="Search by any field..."
+          placeholder="Search exam, subject, status..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
-          className="w-full max-w-md px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
+          className="w-full sm:w-80 px-4 py-2 border rounded-md focus:ring-2 focus:ring-blue-500"
         />
       </div>
 
-      {/* Table */}
-      <div className="overflow-x-auto">
-        <table className="min-w-full bg-white border border-gray-200 rounded-lg shadow-md">
-          <thead className="bg-blue-700 text-white">
+      {/* 🔹 Table */}
+      <div className="overflow-x-auto rounded-lg shadow border bg-white">
+        <table className="min-w-full text-sm">
+          <thead className="table-header">
             <tr>
-              <th className="px-6 py-3 text-left">Request Date</th>
-              <th className="px-6 py-3 text-left">Request ID</th>
-              <th className="px-6 py-3 text-left">Exam Name</th>
-              <th className="px-6 py-3 text-left">Request For</th>
-              <th className="px-6 py-3 text-left">Subject</th>
-              <th className="px-6 py-3 text-left">Updated Marks</th>
-              <th className="px-6 py-3 text-left">Status</th>
-              <th className="px-6 py-3 text-left">Receipt</th>
+               <th className="px-4 py-3 bg-[#2162c1] text-white">Request ID</th>
+              <th className="px-4 py-3 bg-[#2162c1] text-white">Date</th>
+             
+              <th className="px-4 py-3 bg-[#2162c1] text-white">Exam</th>
+              <th className="px-4 py-3 bg-[#2162c1] text-white hidden md:table-cell">
+                Reason
+              </th>
+              <th className="px-4 py-3 bg-[#2162c1] text-white">Paper</th>
+              <th className="px-4 py-3 bg-[#2162c1] text-white hidden sm:table-cell">
+                Updated Marks
+              </th>
+              <th className="px-4 py-3 bg-[#2162c1] text-white">Status</th>
             </tr>
           </thead>
 
-          <tbody className="divide-y divide-gray-200">
+          <tbody className="divide-y">
             {loading ? (
               <tr>
-                <td colSpan="8" className="p-6 text-center">
+                <td colSpan="7" className="p-6 text-center">
                   Loading...
                 </td>
               </tr>
             ) : currentItems.length === 0 ? (
               <tr>
-                <td colSpan="8" className="p-6 text-center text-gray-500">
-                  No records found.
+                <td colSpan="7" className="p-6 text-center text-gray-500">
+                  No records found
                 </td>
               </tr>
             ) : (
-              currentItems.map((item, index) => (
-                <tr key={index} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 text-sm">{item.requestDate}</td>
-                  <td className="px-6 py-4 text-sm">{item.requestId}</td>
-                  <td className="px-6 py-4 text-sm">{item.examName}</td>
-                  <td className="px-6 py-4 text-sm">{item.requestFor}</td>
-                  <td className="px-6 py-4 text-sm">{item.subject}</td>
-                  <td className="px-6 py-4 text-sm">
-                    {item.updatedMarks ?? "-"}
+              currentItems.map((item) => (
+                <tr key={item.revaluation_request_id} className="hover:bg-gray-50">
+                 
+
+                  <td className="px-4 py-3">
+                    #{item.revaluation_request_id}
                   </td>
-                  <td className="px-6 py-4">
+                   <td className="px-4 py-3">
+                    {new Date(item.created_at).toLocaleDateString()}
+                  </td>
+
+                  <td className="px-4 py-3">
+                    {item.exam_schedule_name}
+                  </td>
+
+                  <td className="px-4 py-3 hidden md:table-cell">
+                    {item.request_reason}
+                  </td>
+
+                  <td className="px-4 py-3">
+                    {item.subject_name}
+                  </td>
+
+                  <td className="px-4 py-3 hidden sm:table-cell">
+                    {item.new_marks_obtained ?? "-"}
+                  </td>
+
+                  <td className="px-4 py-3">
                     <span
                       className={`px-2 py-1 text-xs font-semibold rounded-full ${
-                        item.status === "Approved"
+                        item.request_status === "APPROVED"
                           ? "bg-green-100 text-green-800"
-                          : item.status === "Rejected"
+                          : item.request_status === "REJECTED"
                           ? "bg-red-100 text-red-800"
                           : "bg-yellow-100 text-yellow-800"
                       }`}
                     >
-                      {item.status}
+                      {item.request_status}
                     </span>
                   </td>
-                  <td className="px-6 py-4 text-sm">{item.receipt || "-"}</td>
                 </tr>
               ))
             )}
@@ -137,20 +161,20 @@ const ReEvaluation = () => {
         </table>
       </div>
 
-      {/* Pagination */}
+      {/* 🔹 Pagination */}
       {totalPages > 1 && (
-        <div className="flex justify-center mt-6 space-x-2">
-          {Array.from({ length: totalPages }, (_, i) => i + 1).map((number) => (
+        <div className="flex flex-wrap justify-center mt-6 gap-2">
+          {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
             <button
-              key={number}
-              onClick={() => setCurrentPage(number)}
-              className={`px-3 py-2 rounded-md text-sm ${
-                currentPage === number
-                  ? "bg-blue-500 text-white"
-                  : "bg-white border hover:bg-gray-50"
+              key={page}
+              onClick={() => setCurrentPage(page)}
+              className={`px-3 py-1.5 rounded text-sm border ${
+                currentPage === page
+                  ? "bg-blue-600 text-white"
+                  : "bg-white hover:bg-gray-100"
               }`}
             >
-              {number}
+              {page}
             </button>
           ))}
         </div>

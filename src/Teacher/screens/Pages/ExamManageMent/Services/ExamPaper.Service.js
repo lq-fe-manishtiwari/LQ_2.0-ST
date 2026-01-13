@@ -14,6 +14,7 @@ import {
     getPaperById,
     deleteExamPaper,
     updateExamPaper,
+    getPaperByCollegeTeacher,
 
   };
   
@@ -111,3 +112,15 @@ function deleteExamPaper(id) {
   ).then(handleResponse);
 }
 
+ function getPaperByCollegeTeacher(collegeId,teacherId) {
+// GET BY COLLEGE /api/admin/exam-papers/college/{collegeId}/teacher/{teacherId
+    const requestOptions = {
+      method: "GET",
+      headers: authHeader()
+    };
+
+    return fetch(
+      `${ExamMGMAPI}/admin/exam-papers/college/${collegeId}/teacher/${teacherId}`,
+      requestOptions
+    ).then(handleResponse);
+  }
