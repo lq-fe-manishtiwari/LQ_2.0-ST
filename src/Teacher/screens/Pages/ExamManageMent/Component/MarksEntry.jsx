@@ -158,26 +158,22 @@ export default function MarksEntry({
     <>
       {sweetAlert}
 
-      <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center overflow-y-auto">
-        <div className="bg-white w-[95%] max-w-6xl rounded-xl shadow-2xl my-8">
+<div className="min-h-screen bg-gray-50 p-6">
+  <div className="bg-gray-50 w-full max-w-6xl mx-auto rounded-xl shadow-lg">
+
           {/* Header */}
-          <div className="p-6 bg-gradient-to-r from-blue-700 to-blue-800 text-white rounded-t-xl">
+          <div className="p-3 text-blue-700 rounded-t-xl">
             <div className="flex justify-between items-start">
               <div>
-                <h2 className="text-2xl font-bold mb-4">Marks Entry</h2>
-
-                <div className="space-y-3 text-sm md:text-base">
-                  <div>
-                    <span className="font-semibold">Exam Schedule:</span>{" "}
+                <h4 className="text-2xl font-bold mb-4">Marks Entry</h4>
+                   <span className="font-semibold">Exam Schedule:</span>{" "}
                     <span className="font-medium">
                       {examSchedule?.examScheduleName || "N/A"}
-                    </span>
-                  </div>
-                  <div>
-                    <span className="font-semibold">Paper:</span>{" "}
-                    <span className="font-medium text-lg">{subjectName || "N/A"}</span>
-                  </div>
-                </div>
+                    </span>{" "}
+                        <span className="font-semibold">Paper:</span>{" "}
+                    <span className="font-medium">{subjectName || "N/A"}</span>
+
+               
               </div>
 
               <button
@@ -210,13 +206,13 @@ export default function MarksEntry({
                 <div className="bg-white rounded-xl shadow border overflow-hidden">
                   <div className="overflow-x-auto max-h-[60vh]">
                     <table className="min-w-full text-sm text-gray-700">
-                      <thead className="sticky top-0 bg-blue-900 text-white z-10">
+                      <thead className="table-header">
                         <tr>
-                          <th className="px-6 py-4 text-center w-20">Roll</th>
-                          <th className="px-6 py-4 text-left">Student Name</th>
-                          <th className="px-6 py-4 text-left">Reg. No</th>
-                          <th className="px-6 py-4 text-center w-32">Marks Obtained</th>
-                          <th className="px-6 py-4 text-center w-40">Attendance</th>
+                          <th className="px-4 py-3 bg-[#2162c1] text-white">Roll</th>
+                          <th className="px-4 py-3 bg-[#2162c1] text-white">Student Name</th>
+                          <th className="px-4 py-3 bg-[#2162c1] text-white">Reg. No</th>
+                          <th className="px-4 py-3 bg-[#2162c1] text-white">Marks Obtained</th>
+                          <th className="px-4 py-3 bg-[#2162c1] text-white">Attendance</th>
                         </tr>
                       </thead>
 
