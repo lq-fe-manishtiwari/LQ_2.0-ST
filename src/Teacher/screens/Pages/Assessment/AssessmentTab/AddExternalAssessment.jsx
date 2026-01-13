@@ -1,44 +1,31 @@
 'use client';
+import React, { useState, useEffect, useRef } from 'react';
+import { Formik, Field, Form } from 'formik';
+import * as Yup from 'yup';
+import { Plus, Calendar, Clock, CheckCircle, ChevronDown } from 'lucide-react';
+import assesment_logo from '@/_assets/images_new_design/Assessment_logo.svg';
 
-import React, { useState, useEffect, useRef } from "react";
-import { Formik, Field, Form } from "formik";
-import { Calendar, CheckCircle, ChevronDown, Filter } from "lucide-react";
-import assesment_logo from "@/_assets/images_new_design/Assessment_logo.svg";
+const AddExternalAssessment = ({ grade, nba, currentUser, showSuccessModal, showWarningModal, userRole }) => {
+  const [grades, setGrades] = useState([]);
+  const [classes, setClasses] = useState([]);
+  const [divisions, setDivisions] = useState([]);
+  const [subjects, setSubjects] = useState([]);
+  const [selectedGrade, setSelectedGrade] = useState(grade?.grade || '');
+  const [selectedClass, setSelectedClass] = useState(grade?.grade_class?.class || 'FY');
+  const [testDate, setTestDate] = useState(new Date(new Date().setDate(new Date().getDate() + 1)));
 
-// Mock Data
-const mockGrades = [
-  { grade_id: "1", name: "Grade 1" },
-  { grade_id: "2", name: "Grade 2" },
-];
-const mockClasses = [
-  { class_data_id: "FY", name_data: "FY" },
-  { class_data_id: "SY", name_data: "SY" },
-];
-const mockDivisions = [
-  { grade_division_id: "d1", division: { name: "A" } },
-  { grade_division_id: "d2", division: { name: "B" } },
-];
-const mockSubjects = [
-  { subject_id: "s1", name: "Maths" },
-  { subject_id: "s2", name: "Science" },
-];
-
-export default function AddExternalAssessment() {
-  const [selectedGradeId, setSelectedGradeId] = useState("");
-  const [selectedClassDataId, setSelectedClassDataId] = useState("");
-  const [selectedDivisionId, setSelectedDivisionId] = useState("");
-  const [selectedSubjectId, setSelectedSubjectId] = useState("");
-  const [selectedTestCategory, setSelectedTestCategory] = useState("");
-  const [testDate, setTestDate] = useState(() => {
-    const tomorrow = new Date();
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    return tomorrow;
-  });
-  const [filterOpen, setFilterOpen] = useState(true);
-
-  // Dropdown control
+  // dropdown control for custom dropdowns
   const [openDropdown, setOpenDropdown] = useState(null);
   const dropdownRefs = useRef({});
+
+  // Mock data for UI (replace with API calls as needed)
+  useEffect(() => {
+    setGrades([
+      { grade_id: '1', name: 'MBA Grade Testing' },
+      { grade_id: '2', name: 'BCA' },
+      { grade_id: '3', name: 'MCA' },
+    ]);
+  }, []);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -46,49 +33,64 @@ export default function AddExternalAssessment() {
         setOpenDropdown(null);
       }
     };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const handleGradeChange = (val, setFieldValue) => {
-    setSelectedGradeId(val);
-    setSelectedClassDataId("");
-    setSelectedDivisionId("");
-    setSelectedSubjectId("");
-    setFieldValue("grade", val);
-    setFieldValue("class_data_id", "");
-    setFieldValue("grade_division_id", "");
-    setFieldValue("subject_id", "");
+  const handleGradeChange = (gradeId, setFieldValue) => {
+    setSelectedGrade(gradeId);
+    setClasses([
+      { class_id: 'FY', name: 'FY' },
+      { class_id: 'SY', name: 'SY' },
+      { class_id: 'TY', name: 'TY' },
+    ]);
+    setDivisions([]);
+    setSubjects([]);
+    setFieldValue('grade', gradeId);
+    setFieldValue('class_id', '');
+    setFieldValue('grade_division_id', '');
+    setFieldValue('subject_id', '');
   };
 
-  const handleClassChange = (val, setFieldValue) => {
-    setSelectedClassDataId(val);
-    setSelectedDivisionId("");
-    setSelectedSubjectId("");
-    setFieldValue("class_data_id", val);
-    setFieldValue("grade_division_id", "");
-    setFieldValue("subject_id", "");
+  const handleClassChange = (classId, setFieldValue) => {
+    setSelectedClass(classId);
+    setDivisions([
+      { grade_division_id: '1', division: { name: 'A' } },
+      { grade_division_id: '2', division: { name: 'B' } },
+      { grade_division_id: '3', division: { name: 'C' } },
+    ]);
+    setSubjects([]);
+    setFieldValue('class_id', classId);
+    setFieldValue('grade_division_id', '');
+    setFieldValue('subject_id', '');
   };
 
-  const handleDivisionChange = (val, setFieldValue) => {
-    setSelectedDivisionId(val);
-    setSelectedSubjectId("");
-    setFieldValue("grade_division_id", val);
-    setFieldValue("subject_id", "");
+  const handleDivisionChange = (divisionId, setFieldValue) => {
+    setSubjects([
+      { subject_id: '1', name: 'Mathematics' },
+      { subject_id: '2', name: 'Science' },
+      { subject_id: '3', name: 'English' },
+    ]);
+    setFieldValue('grade_division_id', divisionId);
+    setFieldValue('subject_id', '');
   };
 
-  const handleSubjectChange = (val, setFieldValue) => {
-    setSelectedSubjectId(val);
-    setFieldValue("subject_id", val);
-  };
-
-  const handleCategoryChange = (val, setFieldValue) => {
-    setSelectedTestCategory(val);
-    setFieldValue("test_category", val);
-  };
+  const validationSchema = Yup.object().shape({
+    title: Yup.string().trim().required('Please enter the Assessment Title'),
+    grade: Yup.string().trim().required('Please select the Program'),
+    class_id: Yup.string().trim().required('Please select the Class'),
+    grade_division_id: Yup.string().trim().required('Please select the Division'),
+    subject_id: Yup.string().trim().required('Please select the Subject'),
+    test_category: Yup.string().trim().required('Please select the Category'),
+    min_marks: Yup.number().required('Please enter the Passing Threshold').min(0),
+    max_marks: Yup.number()
+      .required('Please enter the Total Marks')
+      .min(Yup.ref('min_marks'), 'Total Marks must be greater than Passing Threshold'),
+    date_time: Yup.string().required('Please select a valid date and time'),
+  });
 
   const formatDateForInput = (date) => {
-    if (!(date instanceof Date) || isNaN(date)) return "";
+    if (!(date instanceof Date) || isNaN(date)) return '';
     return date.toISOString().slice(0, 16);
   };
 
@@ -98,259 +100,282 @@ export default function AddExternalAssessment() {
     return formatDateForInput(tomorrow);
   };
 
-  // ───────────────────── Custom Select Component ─────────────────────
-  const CustomSelect = ({ label, value, onChange, options, placeholder, disabled = false, fieldName }) => {
-    const [isOpen, setIsOpen] = useState(false);
-    const dropdownRef = useRef(null);
-    dropdownRefs.current[fieldName] = dropdownRef.current;
-
-    const handleSelect = (option) => {
-      onChange(option);
-      setIsOpen(false);
-      setOpenDropdown(null);
-    };
-
-    useEffect(() => {
-      const handleClickOutside = (event) => {
-        if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
-          setIsOpen(false);
-        }
-      };
-      document.addEventListener("mousedown", handleClickOutside);
-      return () => document.removeEventListener("mousedown", handleClickOutside);
-    }, []);
-
-    return (
-      <div ref={dropdownRef}>
-        <label className="block text-sm font-semibold text-gray-700 mb-2">{label}</label>
-        <div className="relative">
-          <div
-            className={`w-full px-3 py-2 border rounded-lg min-h-[44px] flex items-center justify-between transition-all duration-150 cursor-pointer ${
-              disabled
-                ? "bg-gray-100 text-gray-500 border-gray-200 cursor-not-allowed"
-                : "bg-white border-gray-300 hover:border-blue-400"
-            }`}
-            onClick={() => !disabled && setIsOpen(!isOpen)}
-          >
-            <span className={value ? "text-gray-900" : "text-gray-400"}>
-              {value || placeholder}
-            </span>
-            <ChevronDown
-              className={`w-4 h-4 text-gray-400 transition-transform ${
-                isOpen ? "rotate-180" : "rotate-0"
-              }`}
-            />
-          </div>
-
-          {isOpen && !disabled && (
-            <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
-              <div
-                className="px-4 py-2 text-sm text-gray-700 cursor-pointer hover:bg-blue-50 transition-colors"
-                onClick={() => handleSelect("")}
-              >
-                {placeholder}
-              </div>
-              {options.map((option) => {
-                const val = option.grade_id || option.class_data_id || option.grade_division_id || option.subject_id || option;
-                const label = option.name || option.name_data || option.division?.name || option;
-                return (
-                  <div
-                    key={val}
-                    className="px-4 py-2 text-sm text-gray-700 cursor-pointer hover:bg-blue-50 transition-colors"
-                    onClick={() => handleSelect(val)}
-                  >
-                    {label}
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
-      </div>
-    );
-  };
-
   return (
-    <div className="max-w-5xl mx-auto p-4 md:p-6 bg-white rounded-xl shadow-lg">
-      <Formik
-        initialValues={{
-          title: "",
-          grade: "",
-          class_data_id: "",
-          grade_division_id: "",
-          subject_id: "",
-          test_category: "",
-          min_marks: "",
-          max_marks: "",
-          date_time: formatDateForInput(testDate),
-          int_ext_type: "External",
-        }}
-        onSubmit={(values, { setSubmitting, resetForm }) => {
-          values.date_time = Math.floor(new Date(values.date_time).getTime() / 1000);
-          console.log("Submitted:", values);
-          alert("External Assessment Created (Demo Mode)");
-          setSubmitting(false);
-          resetForm();
-        }}
-      >
-        {({ setFieldValue, isSubmitting }) => (
-          <Form className="space-y-6 md:space-y-8">
-
-            {/* Header */}
-            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 border-b pb-6">
-              <div className="w-16 h-16 bg-blue-100 rounded-xl flex items-center justify-center p-2">
-                <img src={assesment_logo} alt="Assessment" className="w-full h-full object-contain" />
-              </div>
-              <div className="flex-1 w-full">
-                <Field
-                  name="title"
-                  placeholder="Enter Assessment Title"
-                  className="w-full text-2xl font-bold text-gray-800 placeholder-gray-400 border-0 focus:outline-none"
-                />
-              </div>
-            </div>
-
-            {/* Filter Section */}
-            <div className="mb-6">
-              <button
-                type="button"
-                onClick={() => setFilterOpen(!filterOpen)}
-                className="flex items-center gap-2 bg-white border border-gray-300 hover:bg-gray-50 px-4 py-3 rounded-xl shadow-sm transition-all"
-              >
-                <Filter className="w-5 h-5 text-blue-600" />
-                <span className="text-blue-600 font-medium">Filter</span>
-                <ChevronDown
-                  className={`w-4 h-4 text-blue-600 transition-transform ${
-                    filterOpen ? "rotate-180" : "rotate-0"
+   
+        <Formik
+          initialValues={{
+            title: '',
+            grade: selectedGrade,
+            class_id: selectedClass,
+            grade_division_id: '',
+            subject_id: '',
+            test_category: '',
+            min_marks: '',
+            max_marks: '',
+            date_time: formatDateForInput(testDate),
+            int_ext_type: 'External',
+          }}
+          validationSchema={validationSchema}
+          enableReinitialize
+          onSubmit={(values, { setSubmitting, resetForm }) => {
+            // Convert date_time to Unix timestamp
+            values.date_time = Math.floor(new Date(values.date_time).getTime() / 1000);
+            console.log('Submitting:', values);
+            // Simulate API call
+            setTimeout(() => {
+              showSuccessModal(true, 'Assessment added successfully!');
+              resetForm();
+              setSubmitting(false);
+            }, 1000);
+          }}
+        >
+          {({ values, errors, touched, handleChange, handleSubmit, isSubmitting, setFieldValue }) => {
+            // CustomDropdown component
+            const CustomDropdown = ({ fieldName, label, value, options, placeholder = '', required = false, onChangeCallback }) => (
+              <div ref={el => dropdownRefs.current[fieldName] = el} className="relative">
+                <label className="block font-medium mb-1 text-gray-700">
+                  {label}{required && <span className="text-red-500">*</span>}
+                </label>
+                <div
+                  className={`w-full px-3 py-2.5 border bg-white cursor-pointer rounded-md min-h-[40px] flex items-center justify-between transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-blue-400 hover:border-blue-400 ${
+                    errors[fieldName] && touched[fieldName] ? 'border-red-500' : 'border-gray-300'
                   }`}
-                />
-              </button>
+                  onClick={() => setOpenDropdown(openDropdown === fieldName ? null : fieldName)}
+                >
+                  <span className={value ? 'text-gray-900' : 'text-gray-400'}>
+                    {value ? options.find(opt => (opt.grade_id || opt.class_id || opt.grade_division_id || opt.subject_id || opt) === value)?.name || value : placeholder}
+                  </span>
+                  <ChevronDown
+                    className={`w-4 h-4 text-gray-400 transition-transform ${openDropdown === fieldName ? 'rotate-180' : 'rotate-0'}`}
+                  />
+                </div>
+                {openDropdown === fieldName && (
+                  <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto">
+                    <div
+                      className="px-4 py-2 text-sm text-gray-700 cursor-pointer hover:bg-blue-50 transition-colors"
+                      onClick={() => {
+                        if (onChangeCallback) onChangeCallback('');
+                        setOpenDropdown(null);
+                      }}
+                    >
+                      {placeholder}
+                    </div>
+                    {options.map((option) => {
+                      const optValue = typeof option === 'string' ? option : (option.grade_id || option.class_id || option.grade_division_id || option.subject_id);
+                      const optLabel = typeof option === 'string' ? option : option.name;
+                      return (
+                        <div
+                          key={optValue}
+                          className="px-4 py-2 text-sm text-gray-700 cursor-pointer hover:bg-blue-50 transition-colors"
+                          onClick={() => {
+                            if (onChangeCallback) onChangeCallback(optValue);
+                            setOpenDropdown(null);
+                          }}
+                        >
+                          {optLabel}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+                {errors[fieldName] && touched[fieldName] && (
+                  <p className="mt-1 text-sm text-red-600">{errors[fieldName]}</p>
+                )}
+              </div>
+            );
 
-              {filterOpen && (
-                <div className="bg-white rounded-xl shadow-md p-5 border border-gray-200 mt-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    <CustomSelect
-                      label="Program"
-                      value={mockGrades.find(g => g.grade_id === selectedGradeId)?.name || ""}
-                      options={mockGrades}
-                      placeholder="Select Program"
-                      fieldName="grade"
-                      onChange={(val) => handleGradeChange(val, setFieldValue)}
+            return (
+              <Form onSubmit={handleSubmit} className="space-y-8">
+                {/* Header with Logo & Title */}
+                <div className="flex items-center space-x-4 border-b border-gray-200 pb-6">
+                  <div className="w-16 h-16 bg-blue-100 rounded-xl flex items-center justify-center p-3">
+                    <img src={assesment_logo} alt="Assessment" className="w-full h-full object-contain" />
+                  </div>
+                  <div className="flex-1">
+                    <Field
+                      name="title"
+                      placeholder="Enter Assessment Title"
+                      className={`w-full text-xl font-semibold text-gray-800 placeholder-gray-400 border-0 focus:outline-none focus:ring-0 ${
+                        errors.title && touched.title ? 'text-red-600' : ''
+                      }`}
                     />
-
-                    <CustomSelect
-                      label="Class"
-                      value={mockClasses.find(c => c.class_data_id === selectedClassDataId)?.name_data || ""}
-                      options={selectedGradeId ? mockClasses : []}
-                      placeholder="Select Class"
-                      fieldName="class"
-                      disabled={!selectedGradeId}
-                      onChange={(val) => handleClassChange(val, setFieldValue)}
-                    />
-
-                    <CustomSelect
-                      label="Division"
-                      value={mockDivisions.find(d => d.grade_division_id === selectedDivisionId)?.division.name || ""}
-                      options={selectedClassDataId ? mockDivisions : []}
-                      placeholder="Select Division"
-                      fieldName="division"
-                      disabled={!selectedClassDataId}
-                      onChange={(val) => handleDivisionChange(val, setFieldValue)}
-                    />
-
-                    <CustomSelect
-                      label="Paper"
-                      value={mockSubjects.find(s => s.subject_id === selectedSubjectId)?.name || ""}
-                      options={selectedDivisionId ? mockSubjects : []}
-                      placeholder="Select Paper"
-                      fieldName="subject"
-                      disabled={!selectedDivisionId}
-                      onChange={(val) => handleSubjectChange(val, setFieldValue)}
-                    />
-
-                    <CustomSelect
-                      label="Category"
-                      value={selectedTestCategory}
-                      options={["Objective", "Subjective", "Coding", "Mixed"]}
-                      placeholder="Select Category"
-                      fieldName="category"
-                      onChange={(val) => handleCategoryChange(val, setFieldValue)}
-                    />
+                    {errors.title && touched.title && (
+                      <p className="mt-1 text-sm text-red-600">{errors.title}</p>
+                    )}
                   </div>
                 </div>
-              )}
-            </div>
 
-            {/* Result Date, Passing Threshold, Total Marks */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">Result Date</label>
-                <div className="relative">
-                  <Field
-                    name="date_time"
-                    type="datetime-local"
-                    min={getMinDate()}
-                    className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg min-h-[44px] focus:outline-none focus:ring-2 focus:ring-blue-400 hover:border-blue-400 text-sm md:text-base"
-                    onChange={(e) => {
-                      setFieldValue("date_time", e.target.value);
-                      const newDate = new Date(e.target.value);
-                      if (!isNaN(newDate)) setTestDate(newDate);
+                {/* Program, Class, Division */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+                  <CustomDropdown
+                    fieldName="grade"
+                    label="Program"
+                    value={values.grade}
+                    options={grades}
+                    placeholder="Select Program"
+                    required
+                    onChangeCallback={(val) => {
+                      handleGradeChange(val, setFieldValue);
                     }}
                   />
-                  <Calendar className="absolute left-3 top-3 w-5 h-5 text-gray-400 pointer-events-none" />
+
+                  <CustomDropdown
+                    fieldName="class_id"
+                    label="Class"
+                    value={values.class_id}
+                    options={classes}
+                    placeholder="Select Class"
+                    required
+                    onChangeCallback={(val) => {
+                      handleClassChange(val, setFieldValue);
+                    }}
+                  />
+
+                  <CustomDropdown
+                    fieldName="grade_division_id"
+                    label="Division"
+                    value={values.grade_division_id}
+                    options={divisions.map(d => ({ grade_division_id: d.grade_division_id, name: d.division.name }))}
+                    placeholder="Select Division"
+                    required
+                    onChangeCallback={(val) => {
+                      handleDivisionChange(val, setFieldValue);
+                    }}
+                  />
                 </div>
-              </div>
 
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">Passing Threshold</label>
-                <Field
-                  name="min_marks"
-                  type="number"
-                  placeholder="Enter Passing Threshold"
-                  min="0"
-                  max="999"
-                  className="w-full px-3 py-2.5 border border-gray-300 rounded-lg min-h-[44px] focus:outline-none focus:ring-2 focus:ring-blue-400 hover:border-blue-400 text-sm md:text-base"
-                />
-              </div>
+                {/* Subject, Category, Empty */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+                  <CustomDropdown
+                    fieldName="subject_id"
+                    label={userRole?.userRole === 'ADMIN' ? 'Paper' : 'Subject'}
+                    value={values.subject_id}
+                    options={subjects}
+                    placeholder={userRole?.userRole === 'ADMIN' ? 'Select Paper' : 'Select Subject'}
+                    required
+                    onChangeCallback={(val) => {
+                      setFieldValue('subject_id', val);
+                    }}
+                  />
 
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">Total Marks</label>
-                <Field
-                  name="max_marks"
-                  type="number"
-                  placeholder="Enter Total Marks"
-                  min="0"
-                  max="999"
-                  className="w-full px-3 py-2.5 border border-gray-300 rounded-lg min-h-[44px] focus:outline-none focus:ring-2 focus:ring-blue-400 hover:border-blue-400 text-sm md:text-base"
-                />
-              </div>
-            </div>
+                  <CustomDropdown
+                    fieldName="test_category"
+                    label="Category"
+                    value={values.test_category}
+                    options={['Objective','Subjective','Coding','Mixed']}
+                    placeholder="Select Category"
+                    required
+                    onChangeCallback={(val) => {
+                      setFieldValue('test_category', val);
+                    }}
+                  />
 
-            {/* Submit Button */}
-            <div className="flex justify-center pt-6 border-t">
-              <button
-                type="submit"
-                disabled={isSubmitting}
-                className={`flex items-center gap-2 px-8 py-3 rounded-lg font-medium text-white transition-all shadow-md ${
-                  isSubmitting ? "bg-blue-400 cursor-not-allowed" : "bg-blue-600 hover:bg-blue-700"
-                }`}
-              >
-                {isSubmitting ? (
-                  <>
-                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                    Submitting...
-                  </>
-                ) : (
-                  <>
-                    <CheckCircle className="w-5 h-5" />
-                    Submit Assessment
-                  </>
-                )}
-              </button>
-            </div>
-          </Form>
-        )}
-      </Formik>
-    </div>
+                  <div></div>
+                </div>
+
+                {/* Result Date, Passing Threshold, Total Marks */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+                  <div>
+                  <label className="block font-medium mb-1 text-gray-700">
+                    Result Date <span className="text-red-500">*</span>
+                  </label>
+                  <div className="relative">
+                    <Field
+                      name="date_time"
+                      type="datetime-local"
+                      min={getMinDate()}
+                      value={formatDateForInput(testDate)}
+                      onChange={(e) => {
+                        handleChange(e);
+                        const newDate = new Date(e.target.value);
+                        if (!isNaN(newDate)) setTestDate(newDate);
+                      }}
+                      className={`w-full border rounded-md px-3 py-2.5 pl-10 min-h-[40px] focus:outline-none focus:ring-2 focus:ring-blue-400 transition-all duration-150 hover:border-blue-400 ${
+                        errors.date_time && touched.date_time
+                          ? 'border-red-500'
+                          : 'border-gray-300'
+                      }`}
+                    />
+                    <Calendar className="absolute left-3 top-3 h-5 w-5 text-gray-400 pointer-events-none" />
+                  </div>
+                  {errors.date_time && touched.date_time && (
+                    <p className="mt-1 text-sm text-red-600">{errors.date_time}</p>
+                  )}
+                  </div>
+
+                  <div>
+                    <label className="block font-medium mb-1 text-gray-700">
+                      Passing Threshold <span className="text-red-500">*</span>
+                    </label>
+                    <Field
+                      name="min_marks"
+                      type="number"
+                      placeholder="Enter Passing Threshold"
+                      min="0"
+                      max="999"
+                      className={`w-full border rounded-md px-3 py-2.5 min-h-[40px] focus:outline-none focus:ring-2 focus:ring-blue-400 transition-all duration-150 hover:border-blue-400 ${
+                        errors.min_marks && touched.min_marks
+                          ? 'border-red-500'
+                          : 'border-gray-300'
+                      }`}
+                    />
+                    {errors.min_marks && touched.min_marks && (
+                      <p className="mt-1 text-sm text-red-600">{errors.min_marks}</p>
+                    )}
+                  </div>
+
+                  <div>
+                    <label className="block font-medium mb-1 text-gray-700">
+                      Total Marks <span className="text-red-500">*</span>
+                    </label>
+                    <Field
+                      name="max_marks"
+                      type="number"
+                      placeholder="Enter Total Marks"
+                      min="0"
+                      max="999"
+                      className={`w-full border rounded-md px-3 py-2.5 min-h-[40px] focus:outline-none focus:ring-2 focus:ring-blue-400 transition-all duration-150 hover:border-blue-400 ${
+                        errors.max_marks && touched.max_marks
+                          ? 'border-red-500'
+                          : 'border-gray-300'
+                      }`}
+                    />
+                    {errors.max_marks && touched.max_marks && (
+                      <p className="mt-1 text-sm text-red-600">{errors.max_marks}</p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Submit Button */}
+                <div className="flex justify-center pt-6 border-t border-gray-200">
+                  <button
+                    type="submit"
+                    disabled={isSubmitting}
+                    className={`flex items-center space-x-2 px-8 py-3 rounded-lg font-medium text-white transition-all ${
+                      isSubmitting
+                        ? 'bg-blue-400 cursor-not-allowed'
+                        : 'bg-blue-600 hover:bg-blue-700 shadow-md hover:shadow-lg'
+                    }`}
+                  >
+                    {isSubmitting ? (
+                      <>
+                        <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                        <span>Submitting...</span>
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle className="h-5 w-5" />
+                        <span>Submit Assessment</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </Form>
+            );
+          }}
+        </Formik>
+     
   );
-}
+};
+
+export default AddExternalAssessment;

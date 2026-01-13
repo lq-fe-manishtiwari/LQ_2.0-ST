@@ -25,6 +25,7 @@ import ContentRoutes from '../Student/screens/Pages/Content/Routes/ContentRoutes
 import HRMRoutes from '../Teacher/screens/Pages/HRM/Routes/HRMRoute.jsx';
 import SubjectSelectionRoutes from '../Teacher/screens/Pages/SubjectSelection/Routes/SubjectSelectionRoutes.jsx';
 import TimeTableRoutes from '../Student/screens/Pages/TimeTable/Routes/TimeTableRoutes.jsx';
+import AssessmentRoutes from "../Student/screens/Pages/Assessment/Routes/AssessmentRoutes.jsx";
 
 import AcademicCalendarRoute from "../Teacher/screens/Pages/AcademicCalendar/Routes/AcademicCalendarRoute.jsx"
 import AcademicCalendarRoutes from "../Student/screens/Pages/AcademicCalendar/Routes/AcademicCalendarRoutes.jsx"
@@ -184,6 +185,16 @@ function App() {
             </ProtectedRoute>
           }
         />
+<Route
+  path="/my-assessment/*"
+  element={
+    <ProtectedRoute>
+      <StudentHomepage>
+        <AssessmentRoutes />
+      </StudentHomepage>
+    </ProtectedRoute>
+  }
+/>
 
         <Route
           path="/curriculum/*"
