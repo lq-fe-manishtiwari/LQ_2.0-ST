@@ -7,7 +7,7 @@ const Schedule = () => {
 
   // ✅ Pagination state
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 5;
+  const itemsPerPage = 10;
 
   // ✅ teacherId from localStorage
   const teacher = JSON.parse(localStorage.getItem("userProfile"));
@@ -37,8 +37,11 @@ const Schedule = () => {
   );
 
   // ✅ Format Date
-  const formatDate = (dateStr) =>
-    dateStr ? new Date(dateStr).toLocaleDateString() : "-";
+ const formatDate = (dateStr) =>
+  dateStr
+    ? new Date(dateStr).toLocaleDateString("en-GB")
+    : "-";
+
 
   // ✅ Format Time
   const formatTime = (dateTimeStr) =>
@@ -57,7 +60,7 @@ const Schedule = () => {
             <tr className="text-left">
               <th className="px-4 py-3 bg-[#2162c1] text-white">Exam Name</th>
               <th className="px-4 py-3 bg-[#2162c1] text-white">Classroom</th>
-              <th className="px-4 py-3 bg-[#2162c1] text-white">Course</th>
+              <th className="px-4 py-3 bg-[#2162c1] text-white">Paper</th>
               <th className="px-4 py-3 bg-[#2162c1] text-white">Exam Date</th>
               <th className="px-4 py-3 bg-[#2162c1] text-white">Start Time</th>
               <th className="px-4 py-3 bg-[#2162c1] text-white">End Time</th>

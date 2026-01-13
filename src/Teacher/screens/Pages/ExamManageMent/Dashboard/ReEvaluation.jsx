@@ -48,7 +48,7 @@ const ReEvaluation = () => {
   };
 
   return (
-    <div className="p-6 bg-gray-50 min-h-screen">
+    <div className="p-4 sm:p-6 bg-gray-50 min-h-screen">
       <div className="bg-white rounded-xl shadow overflow-hidden">
 
         {/* =========================
@@ -56,13 +56,16 @@ const ReEvaluation = () => {
         ==========================*/}
         <div className="p-4">
           <select
-            className="border rounded-lg px-4 py-2 w-96"
+            className="border rounded-lg px-4 py-2 w-full sm:w-96"
             value={selectedExamScheduleId}
             onChange={handleExamScheduleChange}
           >
             <option value="">Select Exam Schedule</option>
             {examSchedules.map((exam) => (
-              <option key={exam.exam_schedule_id} value={exam.exam_schedule_id}>
+              <option
+                key={exam.exam_schedule_id}
+                value={exam.exam_schedule_id}
+              >
                 {exam.exam_schedule_name}
               </option>
             ))}
@@ -70,23 +73,23 @@ const ReEvaluation = () => {
         </div>
 
         {/* =========================
-            Table
+            TABLE VIEW (Desktop)
         ==========================*/}
-        <div className="overflow-x-auto">
-          <table className="w-full border-collapse min-w-[1400px]">
-            <thead>
+        <div className="hidden md:block overflow-x-auto">
+          <table className="w-full border-collapse">
+            <thead className="table-header">
               <tr className="bg-[#2162c1] text-white">
-                <th className="px-4 py-4">Request ID</th>
-                <th className="px-4 py-4">Request Date</th>
-                <th className="px-4 py-4">Student Name</th>
-                <th className="px-4 py-4">Grade</th>
-                <th className="px-4 py-4">Class</th>
-                <th className="px-4 py-4">Exam Name</th>
-                <th className="px-4 py-4">Subject</th>
-                <th className="px-4 py-4">Previous Marks</th>
-                <th className="px-4 py-4">Updated Marks</th>
-                <th className="px-4 py-4">Status</th>
-                <th className="px-4 py-4">Action</th>
+                <th className="px-4 py-3 bg-[#2162c1] text-white">Request ID</th>
+                <th className="px-4 py-3 bg-[#2162c1] text-white">Request Date</th>
+                <th className="px-4 py-3 bg-[#2162c1] text-white">Student Name</th>
+                <th className="px-4 py-3 bg-[#2162c1] text-white">Program</th>
+                <th className="px-4 py-3 bg-[#2162c1] text-white">Class</th>
+                <th className="px-4 py-3 bg-[#2162c1] text-white">Exam Name</th>
+                <th className="px-4 py-3 bg-[#2162c1] text-white">Paper</th>
+                <th className="px-4 py-3 bg-[#2162c1] text-white">Previous Marks</th>
+                <th className="px-4 py-3 bg-[#2162c1] text-white">Updated Marks</th>
+                <th className="px-4 py-3 bg-[#2162c1] text-white">Status</th>
+                <th className="px-4 py-3 bg-[#2162c1] text-white">Action</th>
               </tr>
             </thead>
 
@@ -105,7 +108,7 @@ const ReEvaluation = () => {
                 </tr>
               ) : (
                 revaluationRequests.map((req) => (
-                  <tr key={req.id} className="border-b">
+                  <tr key={req.id} className="border-b hover:bg-gray-50">
                     <td className="px-4 py-3">{req.id}</td>
                     <td className="px-4 py-3">{req.request_date}</td>
                     <td className="px-4 py-3">{req.student_name}</td>
@@ -131,12 +134,60 @@ const ReEvaluation = () => {
         </div>
 
         {/* =========================
+            CARD VIEW (Mobile)
+        ==========================*/}
+        <div className="block md:hidden space-y-4 p-4">
+          {loading ? (
+            <div className="text-center py-10">Loading...</div>
+          ) : revaluationRequests.length === 0 ? (
+            <div className="text-center text-gray-500">
+              No matching records found
+            </div>
+          ) : (
+            revaluationRequests.map((req) => (
+              <div
+                key={req.id}
+                className="bg-white rounded-lg shadow border p-4 space-y-2"
+              >
+                <div className="flex justify-between">
+                  <div className="font-semibold text-lg">
+                    {req.student_name}
+                  </div>
+                  <span className="text-sm text-gray-500">
+                    #{req.id}
+                  </span>
+                </div>
+
+                <div className="text-sm text-gray-600">
+                  Request Date: {req.request_date}
+                </div>
+
+                <div className="pt-2 border-t text-sm space-y-1">
+                  <div><strong>Grade:</strong> {req.grade}</div>
+                  <div><strong>Class:</strong> {req.class_name}</div>
+                  <div><strong>Exam:</strong> {req.exam_name}</div>
+                  <div><strong>Subject:</strong> {req.subject_name}</div>
+                  <div><strong>Previous Marks:</strong> {req.previous_marks}</div>
+                  <div className="font-semibold">
+                    <strong>Updated Marks:</strong>{" "}
+                    {req.updated_marks ?? "-"}
+                  </div>
+                  <div><strong>Status:</strong> {req.status}</div>
+                </div>
+
+                <button className="mt-2 w-full text-blue-600 border border-blue-600 rounded-lg py-2 hover:bg-blue-50">
+                  Update Marks
+                </button>
+              </div>
+            ))
+          )}
+        </div>
+
+        {/* =========================
             Footer
         ==========================*/}
-        <div className="flex items-center justify-between px-6 py-4">
-          <p className="text-gray-500">
-            Showing {revaluationRequests.length} entries
-          </p>
+        <div className="px-6 py-4 text-gray-500 text-center sm:text-left">
+          Showing {revaluationRequests.length} entries
         </div>
       </div>
     </div>

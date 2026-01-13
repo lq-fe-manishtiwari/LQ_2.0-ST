@@ -279,12 +279,17 @@ export default function BulkUpload({
         </SweetAlert>
       )}
 
-      <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center overflow-y-auto">
-        <div className="bg-white w-[95%] max-w-6xl rounded-xl shadow-2xl my-8">
+   <div className="min-h-screen bg-gray-50 p-6">
+  <div className="bg-gray-50 w-full max-w-6xl mx-auto rounded-xl shadow-lg">
+
           {/* Header */}
-          <div className="p-6 bg-gradient-to-r from-blue-700 to-blue-900 text-white rounded-t-xl">
+          <div className="p-3 bg-blue-700 text-white rounded-t-xl">
             <div className="flex justify-between items-center">
-              <h2 className="text-2xl font-bold">Bulk Upload Marks</h2>
+              <p><strong>Bulk Upload Marks</strong></p>
+               {/* <div className="mt-3 text-sm"> */}
+              <p><strong>Exam Schedule:</strong> {examSchedule?.examScheduleName || "N/A"}</p>
+              <p><strong>Paper:</strong> {subjectName || "N/A"}</p>
+            {/* </div> */}
               <button
                 onClick={onClose}
                 className="text-3xl font-bold hover:bg-white/20 rounded-full w-10 h-10 flex items-center justify-center"
@@ -292,10 +297,7 @@ export default function BulkUpload({
                 ×
               </button>
             </div>
-            <div className="mt-3 text-sm">
-              <p><strong>Exam:</strong> {examSchedule?.examScheduleName || "N/A"}</p>
-              <p><strong>Subject:</strong> {subjectName || "N/A"}</p>
-            </div>
+           
           </div>
 
           <div className="p-6 space-y-6 max-h-[70vh] overflow-y-auto">
@@ -329,12 +331,12 @@ export default function BulkUpload({
               <div className="border rounded-xl overflow-hidden shadow">
                 <div className="overflow-x-auto max-h-[50vh]">
                   <table className="w-full text-sm">
-                    <thead className="bg-blue-900 text-white sticky top-0 z-10">
+                    <thead className="table-header">
                       <tr>
                         {templateHeaders.map((h) => (
-                          <th key={h} className="px-4 py-3 text-left">{h}</th>
+                          <th key={h} className="px-4 py-3 bg-[#2162c1] text-white">{h}</th>
                         ))}
-                        <th className="px-4 py-3 text-left">Status</th>
+                        <th className="px-4 py-3 bg-[#2162c1] text-white">Status</th>
                       </tr>
                     </thead>
                     <tbody>

@@ -201,8 +201,9 @@ const CreatePaper = ({ dutyId, examSchedule, subjectId, subjectName, onClose }) 
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-40 flex justify-center items-center z-50 overflow-y-auto">
-      <div className="bg-gray-50 w-full max-w-5xl my-8 mx-4 rounded-xl shadow-2xl max-h-[95vh] overflow-y-auto">
+<div className="min-h-screen bg-gray-50 p-6">
+  <div className="bg-gray-50 w-full max-w-6xl mx-auto rounded-xl shadow-lg">
+
         <div className="p-8">
           {/* Exam Schedule Details Card */}
           <div className="bg-blue-50 rounded-lg p-5 mb-8">
