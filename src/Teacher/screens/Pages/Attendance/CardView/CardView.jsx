@@ -302,9 +302,9 @@ export default function CardView() {
     }, [selectedYear, selectedMonth]);
 
     return (
-        <div className="min-h-screen bg-gray-50 p-4 md:p-6">
+        <div className="min-h-screen bg-gray-50 md:p-6">
             {/* Main Header */}
-            <div className="bg-white p-4 md:p-6 rounded-xl shadow-sm border border-gray-200 mb-6">
+            <div className="bg-white  md:p-6 rounded-xl shadow-sm border border-gray-200 mb-6">
                 <div className="space-y-1 mb-6">
                     <h3 className="text-xl md:text-2xl font-bold text-gray-800">
                         Student Attendance - {getMonthName(selectedMonth)} {selectedYear}
