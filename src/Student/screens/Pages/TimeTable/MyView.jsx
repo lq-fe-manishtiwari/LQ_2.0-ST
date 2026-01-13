@@ -12,21 +12,23 @@ import {
     FlaskConical,
     Coffee,
     MoreVertical,
-    Download,
-    Share2,
-    Printer,
     Layers,
     Zap,
     Users,
     Menu,
     X,
-    ChevronDown
+    ChevronDown,
+    CheckCircle,
+    XCircle,
+    Thermometer,
+    Trophy,
+    AlertCircle
 } from "lucide-react";
-import { timetableService } from "./Services/timetable.service";
 
 /**
  * Advanced ViewTimetable Component
  * Modernized UI with dynamic calendar, smart schedule cards, and academic theme.
+ * ALL DATA IS HARDCODED - NO API CALLS
  */
 const MyView = () => {
     const navigate = useNavigate();
@@ -35,7 +37,7 @@ const MyView = () => {
     // Calendar State
     const [currentDate, setCurrentDate] = useState(new Date());
     const [selectedDate, setSelectedDate] = useState(new Date());
-    const [loading, setLoading] = useState(true);
+    const [loading, setLoading] = useState(false); // Changed to false since no API calls
     const [timetableData, setTimetableData] = useState(null);
     const [error, setError] = useState(null);
     const [academicInfo, setAcademicInfo] = useState(null);
@@ -48,6 +50,321 @@ const MyView = () => {
     const [viewMode, setViewMode] = useState("Day"); // "Day", "Week", "Month"
     const [showViewDropdown, setShowViewDropdown] = useState(false);
 
+    // Attendance State for each slot
+    const [attendanceData, setAttendanceData] = useState({});
+
+    // Attendance options - REMOVED NOT_MARKED
+    const attendanceOptions = [
+        { id: "PRESENT", label: "Present", icon: CheckCircle, color: "text-green-600", bgColor: "bg-green-50", borderColor: "border-green-200" },
+        { id: "ABSENT", label: "Absent", icon: XCircle, color: "text-red-600", bgColor: "bg-red-50", borderColor: "border-red-200" },
+        { id: "MEDICAL_LEAVE", label: "Medical Leave", icon: Thermometer, color: "text-blue-600", bgColor: "bg-blue-50", borderColor: "border-blue-200" },
+        { id: "SPORTS_ACTIVITY", label: "Sports Activity", icon: Trophy, color: "text-purple-600", bgColor: "bg-purple-50", borderColor: "border-purple-200" }
+    ];
+
+    // Initialize attendance data with only 4 options
+    useEffect(() => {
+        const initAttendance = {};
+        const statuses = ["PRESENT", "ABSENT", "MEDICAL_LEAVE", "SPORTS_ACTIVITY"];
+        
+        // Initialize attendance for all slots
+        enhancedTimetableData.daily_timetable.forEach(day => {
+            if (day.slots) {
+                day.slots.forEach(slot => {
+                    // Randomly assign one of the 4 statuses
+                    initAttendance[slot.time_slot_id] = statuses[Math.floor(Math.random() * statuses.length)];
+                });
+            }
+        });
+        
+        setAttendanceData(initAttendance);
+    }, []);
+
+    // Handle attendance change
+    const handleAttendanceChange = (slotId, status) => {
+        setAttendanceData(prev => ({
+            ...prev,
+            [slotId]: status
+        }));
+    };
+
+    // Get attendance display info
+    const getAttendanceInfo = (status) => {
+        const option = attendanceOptions.find(opt => opt.id === status);
+        return option || attendanceOptions[0]; // Default to Present if not found
+    };
+
+    // Hardcoded Academic Information
+    const hardcodedAcademicInfo = {
+        name: "B.Tech Computer Science - Semester 5",
+        description: "Academic Year 2023-24 | Division A",
+        template_type: "Regular",
+        academic_year_id: "2023-24",
+        semester_id: "SEM5",
+        division_id: "DIV-A",
+        college_id: "COLLEGE-001",
+        template_info: {
+            template_id: "TEMP-2023-CS-001",
+            template_name: "CS Semester 5 Regular Template"
+        }
+    };
+
+    // Hardcoded Timetable Data
+    const hardcodedTimetableData = {
+        period_info: {
+            academic_year_id: "2023-24",
+            semester_id: "SEM5",
+            division_id: "DIV-A",
+            college_id: "COLLEGE-001",
+            start_date: "2023-11-01",
+            end_date: "2023-11-30",
+            working_days: 22,
+            template_used: {
+                template_id: "TEMP-2023-CS-001",
+                template_name: "CS Semester 5 Regular Template"
+            }
+        },
+        summary: {
+            total_slots: 48,
+            active_slots: 45,
+            exception_slots: 3
+        },
+        daily_timetable: [
+            {
+                date: new Date().toISOString().split('T')[0],
+                day_of_week: new Date().getDay(),
+                is_working_day: true,
+                slots: [
+                    {
+                        time_slot_id: "SLOT-001",
+                        start_time: "09:00:00",
+                        end_time: "10:30:00",
+                        subject_name: "Data Structures & Algorithms",
+                        teacher_name: "Dr. Rajesh Kumar",
+                        classroom_name: "Room 301 - CS Block",
+                        entry_type: "Lecture",
+                        slot_name: "Morning Slot 1",
+                        module_name: "Advanced Algorithms",
+                        unit_name: "Unit 3: Graphs",
+                        notes: "Bring Laptop for practical session",
+                        subject_id: "SUB-CS301",
+                        teacher_id: "TCH-001",
+                        classroom_id: "ROOM-301",
+                        is_exception: false,
+                        exception_type: null,
+                        source: "Regular Schedule"
+                    },
+                    {
+                        time_slot_id: "SLOT-002",
+                        start_time: "11:00:00",
+                        end_time: "12:30:00",
+                        subject_name: "Database Management Systems",
+                        teacher_name: "Prof. Anjali Sharma",
+                        classroom_name: "Room 305 - CS Block",
+                        entry_type: "Lecture",
+                        slot_name: "Morning Slot 2",
+                        module_name: "SQL Optimization",
+                        unit_name: "Unit 4: Transactions",
+                        notes: "Assignment due next week",
+                        subject_id: "SUB-CS302",
+                        teacher_id: "TCH-002",
+                        classroom_id: "ROOM-305",
+                        is_exception: false,
+                        exception_type: null,
+                        source: "Regular Schedule"
+                    },
+                    {
+                        time_slot_id: "SLOT-003",
+                        start_time: "14:00:00",
+                        end_time: "16:30:00",
+                        subject_name: "Computer Networks Lab",
+                        teacher_name: "Dr. Vikram Singh",
+                        classroom_name: "Lab 401 - IT Block",
+                        entry_type: "Practical",
+                        slot_name: "Afternoon Lab",
+                        module_name: "Network Protocols",
+                        unit_name: "Unit 5: TCP/IP",
+                        notes: "Group project demonstration",
+                        subject_id: "SUB-CS303",
+                        teacher_id: "TCH-003",
+                        classroom_id: "LAB-401",
+                        is_exception: false,
+                        exception_type: null,
+                        source: "Lab Schedule"
+                    }
+                ]
+            },
+            {
+                date: new Date(new Date().setDate(new Date().getDate() + 1)).toISOString().split('T')[0],
+                day_of_week: (new Date().getDay() + 1) % 7,
+                is_working_day: true,
+                slots: [
+                    {
+                        time_slot_id: "SLOT-004",
+                        start_time: "10:00:00",
+                        end_time: "11:30:00",
+                        subject_name: "Operating Systems",
+                        teacher_name: "Dr. Meena Patel",
+                        classroom_name: "Room 302 - CS Block",
+                        entry_type: "Lecture",
+                        slot_name: "Morning Slot 1",
+                        module_name: "Process Management",
+                        unit_name: "Unit 2: Scheduling",
+                        notes: "Mid-term syllabus discussion",
+                        subject_id: "SUB-CS304",
+                        teacher_id: "TCH-004",
+                        classroom_id: "ROOM-302",
+                        is_exception: false,
+                        exception_type: null,
+                        source: "Regular Schedule"
+                    },
+                    {
+                        time_slot_id: "SLOT-005",
+                        start_time: "13:30:00",
+                        end_time: "15:00:00",
+                        subject_name: "Software Engineering",
+                        teacher_name: "Prof. Rahul Verma",
+                        classroom_name: "Room 303 - CS Block",
+                        entry_type: "Tutorial",
+                        slot_name: "Afternoon Tutorial",
+                        module_name: "Agile Methodology",
+                        unit_name: "Unit 3: Scrum",
+                        notes: "Case study presentation",
+                        subject_id: "SUB-CS305",
+                        teacher_id: "TCH-005",
+                        classroom_id: "ROOM-303",
+                        is_exception: true,
+                        exception_type: "Rescheduled",
+                        source: "Modified Schedule"
+                    }
+                ]
+            },
+            {
+                date: new Date(new Date().setDate(new Date().getDate() + 2)).toISOString().split('T')[0],
+                day_of_week: (new Date().getDay() + 2) % 7,
+                is_working_day: true,
+                slots: [
+                    {
+                        time_slot_id: "SLOT-006",
+                        start_time: "09:30:00",
+                        end_time: "11:00:00",
+                        subject_name: "Artificial Intelligence",
+                        teacher_name: "Dr. Priya Nair",
+                        classroom_name: "Room 304 - CS Block",
+                        entry_type: "Lecture",
+                        slot_name: "Morning Slot 1",
+                        module_name: "Machine Learning",
+                        unit_name: "Unit 4: Neural Networks",
+                        notes: "Guest lecture by industry expert",
+                        subject_id: "SUB-CS306",
+                        teacher_id: "TCH-006",
+                        classroom_id: "ROOM-304",
+                        is_exception: false,
+                        exception_type: null,
+                        source: "Regular Schedule"
+                    }
+                ]
+            },
+            {
+                date: new Date(new Date().setDate(new Date().getDate() + 3)).toISOString().split('T')[0],
+                day_of_week: (new Date().getDay() + 3) % 7,
+                is_working_day: false,
+                slots: []
+            }
+        ]
+    };
+
+    // Generate additional dates for the current month
+    const generateMonthData = () => {
+        const today = new Date();
+        const currentMonth = today.getMonth();
+        const currentYear = today.getFullYear();
+        const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+        const monthData = [];
+
+        for (let i = 1; i <= daysInMonth; i++) {
+            const date = new Date(currentYear, currentMonth, i);
+            const dateStr = date.toISOString().split('T')[0];
+            const dayOfWeek = date.getDay();
+            
+            // Skip weekends for sample data generation
+            if (dayOfWeek === 0 || dayOfWeek === 6) {
+                monthData.push({
+                    date: dateStr,
+                    day_of_week: dayOfWeek,
+                    is_working_day: false,
+                    slots: []
+                });
+                continue;
+            }
+
+            // Generate random number of slots for each day (0-3)
+            const slotCount = Math.floor(Math.random() * 4);
+            const slots = [];
+
+            for (let j = 0; j < slotCount; j++) {
+                const subjects = [
+                    "Data Structures", "Database Systems", "Operating Systems", 
+                    "Computer Networks", "Software Engineering", "AI & ML",
+                    "Web Development", "Mobile Computing", "Cyber Security"
+                ];
+                const teachers = [
+                    "Dr. Rajesh Kumar", "Prof. Anjali Sharma", "Dr. Vikram Singh",
+                    "Dr. Meena Patel", "Prof. Rahul Verma", "Dr. Priya Nair",
+                    "Prof. Sanjay Gupta", "Dr. Anita Desai"
+                ];
+                const rooms = [
+                    "Room 301", "Room 302", "Room 303", "Room 304", "Room 305",
+                    "Lab 401", "Lab 402", "Seminar Hall", "Auditorium"
+                ];
+                const entryTypes = ["Lecture", "Practical", "Tutorial"];
+                const times = [
+                    { start: "09:00:00", end: "10:30:00" },
+                    { start: "11:00:00", end: "12:30:00" },
+                    { start: "14:00:00", end: "15:30:00" },
+                    { start: "16:00:00", end: "17:30:00" }
+                ];
+
+                const timeSlot = times[j % times.length];
+                slots.push({
+                    time_slot_id: `SLOT-${dateStr.replace(/-/g, '')}-${j + 1}`,
+                    start_time: timeSlot.start,
+                    end_time: timeSlot.end,
+                    subject_name: subjects[Math.floor(Math.random() * subjects.length)],
+                    teacher_name: teachers[Math.floor(Math.random() * teachers.length)],
+                    classroom_name: rooms[Math.floor(Math.random() * rooms.length)],
+                    entry_type: entryTypes[Math.floor(Math.random() * entryTypes.length)],
+                    slot_name: `Slot ${j + 1}`,
+                    module_name: `Module ${Math.floor(Math.random() * 5) + 1}`,
+                    unit_name: `Unit ${Math.floor(Math.random() * 8) + 1}`,
+                    notes: Math.random() > 0.7 ? "Important: Bring textbook" : "",
+                    subject_id: `SUB-${Math.floor(Math.random() * 900) + 100}`,
+                    teacher_id: `TCH-${Math.floor(Math.random() * 900) + 100}`,
+                    classroom_id: `ROOM-${Math.floor(Math.random() * 900) + 100}`,
+                    is_exception: Math.random() > 0.85,
+                    exception_type: Math.random() > 0.85 ? "Cancelled" : null,
+                    source: Math.random() > 0.8 ? "Modified" : "Regular"
+                });
+            }
+
+            monthData.push({
+                date: dateStr,
+                day_of_week: dayOfWeek,
+                is_working_day: true,
+                slots: slots
+            });
+        }
+
+        return monthData;
+    };
+
+    // Add generated month data to hardcoded data
+    const enhancedTimetableData = useMemo(() => {
+        return {
+            ...hardcodedTimetableData,
+            daily_timetable: generateMonthData()
+        };
+    }, []);
+
     // Check mobile screen size
     useEffect(() => {
         const checkMobile = () => {
@@ -58,6 +375,14 @@ const MyView = () => {
         window.addEventListener('resize', checkMobile);
 
         return () => window.removeEventListener('resize', checkMobile);
+    }, []);
+
+    // Initialize data on component mount
+    useEffect(() => {
+        setLoading(false);
+        setAcademicInfo(hardcodedAcademicInfo);
+        setTimetableData(enhancedTimetableData);
+        setError(null);
     }, []);
 
     const calendarDays = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
@@ -119,84 +444,10 @@ const MyView = () => {
         }
     };
 
-    // Fetch timetable data on component mount
-    useEffect(() => {
-        const fetchTimetableData = async () => {
-            try {
-                setLoading(true);
-
-                // Fetch template info
-                const templateResponse = await timetableService.getTemplateById(id);
-
-                if (templateResponse) {
-                    setAcademicInfo({
-                        name: templateResponse.name,
-                        description: templateResponse.description,
-                        template_type: templateResponse.template_type
-                    });
-
-                    // Set up parameters for period timetable
-                    const params = {
-                        academic_year_id: templateResponse.academic_year_id,
-                        semester_id: templateResponse.semester_id,
-                        division_id: templateResponse.division_id,
-                        college_id: templateResponse.college_id,
-                        start_date: new Date(currentDate.getFullYear(), currentDate.getMonth(), 1)
-                            .toISOString().split('T')[0],
-                        end_date: new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0)
-                            .toISOString().split('T')[0]
-                    };
-
-                    // Fetch period timetable
-                    const periodTimetable = await timetableService.getPeriodTimetable(params);
-                    setTimetableData(periodTimetable);
-                    setError(null);
-                }
-            } catch (err) {
-                console.error("Error fetching timetable data:", err);
-                setError("Failed to load timetable data");
-                setTimetableData(null);
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        // if (id) {
-            fetchTimetableData();
-        // }
-    }, [id]);
-
-    // Fetch period timetable when month changes
-    useEffect(() => {
-        const fetchPeriodTimetable = async () => {
-            if (!academicInfo || !timetableData?.period_info) return;
-
-            try {
-                const params = {
-                    academic_year_id: timetableData.period_info.academic_year_id,
-                    semester_id: timetableData.period_info.semester_id,
-                    division_id: timetableData.period_info.division_id,
-                    college_id: timetableData.period_info.college_id,
-                    start_date: new Date(currentDate.getFullYear(), currentDate.getMonth(), 1)
-                        .toISOString().split('T')[0],
-                    end_date: new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0)
-                        .toISOString().split('T')[0]
-                };
-
-                const periodTimetable = await timetableService.getPeriodTimetable(params);
-                setTimetableData(periodTimetable);
-            } catch (err) {
-                console.error("Error fetching period timetable:", err);
-            }
-        };
-
-        fetchPeriodTimetable();
-    }, [currentDate]);
-
     // Create timetable metadata
     const timetableMeta = useMemo(() => {
         if (!timetableData || !timetableData.period_info) {
-            return null;
+            return hardcodedAcademicInfo;
         }
 
         return {
@@ -266,6 +517,36 @@ const MyView = () => {
     // Get schedule data for selected date
     const scheduleData = useMemo(() => {
         if (!timetableData || !timetableData.daily_timetable) {
+            // Return hardcoded data for today if no timetable data
+            const today = new Date().toISOString().split('T')[0];
+            if (today === selectedDate.toISOString().split('T')[0]) {
+                return hardcodedTimetableData.daily_timetable[0].slots.map(slot => ({
+                    id: slot.time_slot_id,
+                    time: `${formatTimeForDisplay(slot.start_time)} - ${formatTimeForDisplay(slot.end_time)}`,
+                    subject: slot.subject_name,
+                    teacher: slot.teacher_name,
+                    room: slot.classroom_name,
+                    mode: slot.entry_type,
+                    color: "#6366f1",
+                    slot_name: slot.slot_name,
+                    module_name: slot.module_name,
+                    unit_name: slot.unit_name,
+                    notes: slot.notes,
+                    subject_id: slot.subject_id,
+                    teacher_id: slot.teacher_id,
+                    classroom_id: slot.classroom_id,
+                    entry_type: slot.entry_type,
+                    start_time_raw: slot.start_time,
+                    end_time_raw: slot.end_time,
+                    date: today,
+                    is_active: !slot.is_exception,
+                    is_exception: slot.is_exception,
+                    exception_type: slot.exception_type,
+                    day_of_week: new Date().getDay(),
+                    is_working_day: true,
+                    source: slot.source
+                }));
+            }
             return [];
         }
 
@@ -350,20 +631,40 @@ const MyView = () => {
     const summaryStats = useMemo(() => {
         if (!timetableData || !timetableData.summary) {
             return {
-                total_slots: 0,
-                active_slots: 0,
-                exception_slots: 0
+                total_slots: 48,
+                active_slots: 45,
+                exception_slots: 3
             };
         }
 
         return {
-            total_slots: timetableData.summary.total_slots || 0,
-            active_slots: (timetableData.summary.total_slots || 0) - (timetableData.summary.exception_slots || 0),
-            exception_slots: timetableData.summary.exception_slots || 0
+            total_slots: timetableData.summary.total_slots || 48,
+            active_slots: (timetableData.summary.total_slots || 48) - (timetableData.summary.exception_slots || 3),
+            exception_slots: timetableData.summary.exception_slots || 3
         };
     }, [timetableData]);
 
-    // Loading state
+    // Get attendance statistics - UPDATED TO ONLY 4 OPTIONS
+    const attendanceStats = useMemo(() => {
+        const stats = {
+            PRESENT: 0,
+            ABSENT: 0,
+            MEDICAL_LEAVE: 0,
+            SPORTS_ACTIVITY: 0,
+            total: 0
+        };
+
+        Object.values(attendanceData).forEach(status => {
+            if (stats[status] !== undefined) {
+                stats[status]++;
+                stats.total++;
+            }
+        });
+
+        return stats;
+    }, [attendanceData]);
+
+    // Loading state - Will not show since loading is false
     if (loading) {
         return (
             <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
@@ -375,7 +676,7 @@ const MyView = () => {
         );
     }
 
-    // Error state
+    // Error state - Will not show since there's no error
     if (error || !timetableData) {
         return (
             <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
@@ -409,17 +710,17 @@ const MyView = () => {
                         </button>
                         <div className="flex-1 min-w-0">
                             <h1 className="text-base md:text-lg font-bold text-slate-800 line-clamp-2 leading-tight">
-                                {timetableMeta?.name || "Period Timetable"}
+                                {timetableMeta?.name || "B.Tech Computer Science - Semester 5"}
                             </h1>
                             <div className="flex items-center gap-1 mt-0.5 flex-wrap">
                                 <span className="text-xs font-medium text-slate-400">
-                                    College ID: {timetableMeta?.college_id || "N/A"}
+                                    College ID: {timetableMeta?.college_id || "COLLEGE-001"}
                                 </span>
                                 {timetableMeta?.template_info && (
                                     <>
                                         <span className="text-slate-300 text-xs">/</span>
                                         <span className="text-xs font-medium text-slate-500">
-                                            Template ID: {timetableMeta.template_info.template_id}
+                                            Template ID: {timetableMeta.template_info.template_id || "TEMP-2023-CS-001"}
                                         </span>
                                     </>
                                 )}
@@ -442,7 +743,6 @@ const MyView = () => {
                                 <div className="w-2.5 h-2.5 rounded-full bg-purple-500 shadow-sm"></div>
                                 <span className="text-[9px] font-bold text-slate-500 uppercase tracking-wide">Tutorial</span>
                             </div>
-
                         </div>
                     )}
 
@@ -575,24 +875,63 @@ const MyView = () => {
                                         <span className="text-xs font-bold text-slate-700 text-right">
                                             {timetableData?.period_info?.start_date ?
                                                 new Date(timetableData.period_info.start_date).toLocaleDateString('en-GB') :
-                                                new Date(currentDate.getFullYear(), currentDate.getMonth(), 1).toLocaleDateString('en-GB')} -
+                                                "01/11/2023"} -
                                             {timetableData?.period_info?.end_date ?
                                                 new Date(timetableData.period_info.end_date).toLocaleDateString('en-GB') :
-                                                new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0).toLocaleDateString('en-GB')}
+                                                "30/11/2023"}
                                         </span>
                                     </div>
                                     <div className="flex justify-between items-center">
                                         <span className="text-xs font-medium text-slate-500">Working Days</span>
                                         <span className="text-xs font-bold text-emerald-600">
-                                            {timetableData?.period_info?.working_days || 0} days
+                                            {timetableData?.period_info?.working_days || 22} days
                                         </span>
                                     </div>
                                 </div>
                             </div>
                         </div>
 
+                        {/* Attendance Summary in Sidebar */}
+                        <div className="mt-4 md:mt-0 md:ml-6 border-t md:border-t-0 md:border-l border-slate-100 pt-4 md:pt-0 md:pl-6">
+                            <div className="flex flex-col gap-3">
+                                <span className="text-xs font-bold text-slate-500">Attendance Overview</span>
+                                
+                                <div className="grid grid-cols-2 gap-2">
+                                    {attendanceOptions.map((option) => {
+                                        const count = attendanceStats[option.id];
+                                        const percentage = attendanceStats.total > 0 ? ((count / attendanceStats.total) * 100).toFixed(0) : 0;
+                                        const OptionIcon = option.icon;
+                                        
+                                        return (
+                                            <div key={option.id} className="flex items-center gap-2 p-2 rounded-lg bg-slate-50">
+                                                <OptionIcon size={12} className={option.color} />
+                                                <div className="flex-1">
+                                                    <div className="text-xs font-medium text-slate-600">{count}</div>
+                                                    <div className="text-[10px] font-bold text-slate-400 uppercase">{option.label.split(' ')[0]}</div>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                                
+                                <div className="mt-2 p-2 rounded-lg bg-primary-50 border border-primary-200">
+                                    <div className="flex items-center justify-between">
+                                        <div>
+                                            <p className="text-xs font-medium text-primary-700">Overall</p>
+                                            <p className="text-sm font-bold text-primary-800">
+                                                {attendanceStats.PRESENT} of {attendanceStats.total} slots
+                                            </p>
+                                        </div>
+                                        <div className="text-lg font-black text-primary-600">
+                                            {attendanceStats.total > 0 ? ((attendanceStats.PRESENT / attendanceStats.total) * 100).toFixed(0) : 0}%
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
                         {/* Summary Card for Sidebar */}
-                        {/* <div className="bg-slate-900 rounded-[2rem] p-6 text-white shadow-xl shadow-slate-200 mt-auto">
+                        <div className="bg-slate-900 rounded-[2rem] p-6 text-white shadow-xl shadow-slate-200 mt-auto">
                             <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4">Timetable Summary</h3>
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="flex flex-col">
@@ -604,7 +943,7 @@ const MyView = () => {
                                     <span className="text-[10px] font-bold text-emerald-500/50 uppercase tracking-wider">Active</span>
                                 </div>
                             </div>
-                        </div> */}
+                        </div>
                     </div>
                 </aside>
 
@@ -758,132 +1097,134 @@ const MyView = () => {
                                 {/* Schedule List */}
                                 <div className="flex-1 min-h-0 overflow-y-auto pr-2 space-y-3 md:space-y-4 pb-20 scroll-smooth">
                                     {scheduleData.length > 0 ? (
-                                        scheduleData.map((slot) => (
-                                            <div key={slot.id} className="group relative">
-                                                <div className={`bg-white rounded-xl md:rounded-2xl lg:rounded-3xl p-4 md:p-6 border transition-all duration-300 flex flex-col md:flex-row items-stretch gap-4 md:gap-6 relative z-10
-                                                ${isSessionActive(slot.time, slot) ? 'border-primary-500 shadow-lg shadow-primary-100 bg-primary-50/10' :
-                                                        slot.is_exception ? 'border-red-200 bg-red-50/10' :
-                                                            'border-transparent shadow-sm hover:shadow-lg hover:border-slate-200'}`}>
+                                        scheduleData.map((slot) => {
+                                            const attendanceInfo = getAttendanceInfo(attendanceData[slot.id]);
+                                            const AttendanceIcon = attendanceInfo.icon;
+                                            
+                                            return (
+                                                <div key={slot.id} className="group relative">
+                                                    <div className={`bg-white rounded-xl md:rounded-2xl lg:rounded-3xl p-4 md:p-6 border transition-all duration-300 flex flex-col md:flex-row items-stretch gap-4 md:gap-6 relative z-10
+                                                    ${isSessionActive(slot.time, slot) ? 'border-primary-500 shadow-lg shadow-primary-100 bg-primary-50/10' :
+                                                            slot.is_exception ? 'border-red-200 bg-red-50/10' :
+                                                                'border-transparent shadow-sm hover:shadow-lg hover:border-slate-200'}`}>
 
-                                                    {isSessionActive(slot.time, slot) && (
-                                                        <div className="absolute -top-2 left-4 md:left-6 px-3 py-1 bg-primary-600 text-white text-xs font-bold rounded-full shadow-lg z-20">
-                                                            Live Now
-                                                        </div>
-                                                    )}
+                                                        {isSessionActive(slot.time, slot) && (
+                                                            <div className="absolute -top-2 left-4 md:left-6 px-3 py-1 bg-primary-600 text-white text-xs font-bold rounded-full shadow-lg z-20">
+                                                                Live Now
+                                                            </div>
+                                                        )}
 
-                                                    {slot.is_exception && (
-                                                        <div className="absolute -top-2 left-4 md:left-6 px-3 py-1 bg-red-600 text-white text-xs font-bold rounded-full shadow-lg z-20">
-                                                            {slot.exception_type || "Exception"}
-                                                        </div>
-                                                    )}
+                                                        {slot.is_exception && (
+                                                            <div className="absolute -top-2 left-4 md:left-6 px-3 py-1 bg-red-600 text-white text-xs font-bold rounded-full shadow-lg z-20">
+                                                                {slot.exception_type || "Exception"}
+                                                            </div>
+                                                        )}
 
-                                                    {/* Time Badge */}
-                                                    <div className="w-full md:w-32 flex flex-row md:flex-col items-center justify-start md:justify-center gap-3 border-b md:border-b-0 md:border-r border-slate-100 pb-4 md:pb-0 pr-0 md:pr-6 shrink-0">
-                                                        <div className={`w-10 h-10 md:w-12 md:h-12 rounded-lg md:rounded-xl flex items-center justify-center shrink-0 shadow-sm
-                                                        ${slot.mode === 'PRACTICAL' || slot.entry_type === 'Practical' ? 'bg-emerald-100 text-emerald-600' :
-                                                                slot.mode === 'TUTORIAL' || slot.entry_type === 'Tutorial' ? 'bg-purple-100 text-purple-600' :
-                                                                    slot.mode === 'LECTURE' || slot.entry_type === 'Lecture' ? 'bg-blue-100 text-blue-600' :
-                                                                        'bg-primary-100 text-primary-600'}`}>
-                                                            {slot.mode === 'PRACTICAL' || slot.entry_type === 'Practical' ? <FlaskConical size={18} /> :
-                                                                slot.mode === 'TUTORIAL' || slot.entry_type === 'Tutorial' ? <Users size={18} /> :
-                                                                    <BookOpen size={18} />}
+                                                        {/* Time Badge */}
+                                                        <div className="w-full md:w-32 flex flex-row md:flex-col items-center justify-start md:justify-center gap-3 border-b md:border-b-0 md:border-r border-slate-100 pb-4 md:pb-0 pr-0 md:pr-6 shrink-0">
+                                                            <div className={`w-10 h-10 md:w-12 md:h-12 rounded-lg md:rounded-xl flex items-center justify-center shrink-0 shadow-sm
+                                                            ${slot.mode === 'PRACTICAL' || slot.entry_type === 'Practical' ? 'bg-emerald-100 text-emerald-600' :
+                                                                    slot.mode === 'TUTORIAL' || slot.entry_type === 'Tutorial' ? 'bg-purple-100 text-purple-600' :
+                                                                        slot.mode === 'LECTURE' || slot.entry_type === 'Lecture' ? 'bg-blue-100 text-blue-600' :
+                                                                            'bg-primary-100 text-primary-600'}`}>
+                                                                {slot.mode === 'PRACTICAL' || slot.entry_type === 'Practical' ? <FlaskConical size={18} /> :
+                                                                    slot.mode === 'TUTORIAL' || slot.entry_type === 'Tutorial' ? <Users size={18} /> :
+                                                                        <BookOpen size={18} />}
+                                                            </div>
+                                                            <div className="flex flex-col">
+                                                                <span className="text-xs font-medium text-slate-500">Timing</span>
+                                                                <span className="text-sm font-bold text-slate-700 mt-0.5 whitespace-nowrap">
+                                                                    {slot.time || "Time not set"}
+                                                                </span>
+                                                            </div>
                                                         </div>
-                                                        <div className="flex flex-col">
-                                                            <span className="text-xs font-medium text-slate-500">Timing</span>
-                                                            <span className="text-sm font-bold text-slate-700 mt-0.5 whitespace-nowrap">
-                                                                {slot.time || "Time not set"}
-                                                            </span>
-                                                        </div>
-                                                    </div>
 
-                                                    <div className="flex-1 min-w-0">
-                                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 h-full">
-                                                            <div className="flex flex-col gap-2">
-                                                                <div className="flex flex-wrap items-center gap-2">
-                                                                    <span className={`text-xs font-bold px-2 py-0.5 rounded-full
-                                                                    ${slot.mode === 'PRACTICAL' || slot.entry_type === 'Practical' ? 'bg-emerald-50 text-emerald-600' :
-                                                                            slot.mode === 'TUTORIAL' || slot.entry_type === 'Tutorial' ? 'bg-purple-50 text-purple-600' :
-                                                                                slot.mode === 'LECTURE' || slot.entry_type === 'Lecture' ? 'bg-blue-50 text-blue-600' :
-                                                                                    'bg-primary-50 text-primary-600'}`}>
-                                                                        {slot.entry_type || slot.mode || "CLASS"}
-                                                                    </span>
-                                                                    {slot.slot_name && (
-                                                                        <span className="text-xs font-bold px-2 py-0.5 bg-slate-50 text-slate-600 rounded-full">
-                                                                            {slot.slot_name}
+                                                        <div className="flex-1 min-w-0">
+                                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 h-full">
+                                                                <div className="flex flex-col gap-2">
+                                                                    <div className="flex flex-wrap items-center gap-2">
+                                                                        <span className={`text-xs font-bold px-2 py-0.5 rounded-full
+                                                                        ${slot.mode === 'PRACTICAL' || slot.entry_type === 'Practical' ? 'bg-emerald-50 text-emerald-600' :
+                                                                                slot.mode === 'TUTORIAL' || slot.entry_type === 'Tutorial' ? 'bg-purple-50 text-purple-600' :
+                                                                                    slot.mode === 'LECTURE' || slot.entry_type === 'Lecture' ? 'bg-blue-50 text-blue-600' :
+                                                                                        'bg-primary-50 text-primary-600'}`}>
+                                                                            {slot.entry_type || slot.mode || "CLASS"}
                                                                         </span>
-                                                                    )}
-                                                                    {slot.source && (
-                                                                        <span className="text-xs font-bold px-2 py-0.5 bg-indigo-50 text-indigo-600 rounded-full">
-                                                                            {slot.source}
-                                                                        </span>
-                                                                    )}
-                                                                </div>
-                                                                <h3 className="text-base md:text-lg font-bold text-slate-800">
-                                                                    {slot.subject || "Subject not specified"}
-                                                                </h3>
-
-                                                                {(slot.module_name || slot.unit_name) && (
-                                                                    <div className="flex flex-wrap gap-2 mt-1">
-                                                                        {slot.module_name && (
-                                                                            <span className="text-xs font-medium px-2 py-0.5 bg-blue-50 text-blue-600 rounded-full">
-                                                                                Module: {slot.module_name}
+                                                                        {slot.slot_name && (
+                                                                            <span className="text-xs font-bold px-2 py-0.5 bg-slate-50 text-slate-600 rounded-full">
+                                                                                {slot.slot_name}
                                                                             </span>
                                                                         )}
-                                                                        {slot.unit_name && (
-                                                                            <span className="text-xs font-medium px-2 py-0.5 bg-green-50 text-green-600 rounded-full">
-                                                                                Unit: {slot.unit_name}
+                                                                        {slot.source && (
+                                                                            <span className="text-xs font-bold px-2 py-0.5 bg-indigo-50 text-indigo-600 rounded-full">
+                                                                                {slot.source}
                                                                             </span>
                                                                         )}
                                                                     </div>
-                                                                )}
+                                                                    <h3 className="text-base md:text-lg font-bold text-slate-800">
+                                                                        {slot.subject || "Data Structures & Algorithms"}
+                                                                    </h3>
 
-                                                                {slot.notes && (
-                                                                    <div className="mt-1">
-                                                                        <span className="text-xs text-slate-500">{slot.notes}</span>
-                                                                    </div>
-                                                                )}
-                                                            </div>
+                                                                    {(slot.module_name || slot.unit_name) && (
+                                                                        <div className="flex flex-wrap gap-2 mt-1">
+                                                                            {slot.module_name && (
+                                                                                <span className="text-xs font-medium px-2 py-0.5 bg-blue-50 text-blue-600 rounded-full">
+                                                                                    Module: {slot.module_name}
+                                                                                </span>
+                                                                            )}
+                                                                            {slot.unit_name && (
+                                                                                <span className="text-xs font-medium px-2 py-0.5 bg-green-50 text-green-600 rounded-full">
+                                                                                    Unit: {slot.unit_name}
+                                                                                </span>
+                                                                            )}
+                                                                        </div>
+                                                                    )}
 
-                                                            <div className="flex flex-col md:flex-row items-start md:items-center gap-4 md:gap-6">
-                                                                <div className="flex items-center gap-3">
-                                                                    <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 border border-slate-200">
-                                                                        <User size={14} />
-                                                                    </div>
-                                                                    <div className="flex flex-col">
-                                                                        <span className="text-xs font-medium text-slate-500">Professor</span>
-                                                                        <span className="text-sm font-medium text-slate-600 mt-0.5">
-                                                                            {slot.teacher || "Not assigned"}
-                                                                        </span>
-                                                                    </div>
+                                                                    {slot.notes && (
+                                                                        <div className="mt-1">
+                                                                            <span className="text-xs text-slate-500">{slot.notes}</span>
+                                                                        </div>
+                                                                    )}
                                                                 </div>
-                                                                <div className="flex items-center gap-3">
-                                                                    <div className="flex flex-col">
-                                                                        <span className="text-xs font-medium text-slate-500">Location</span>
-                                                                        <span className="text-sm font-medium text-slate-600 mt-0.5">
-                                                                            {slot.room || "Room not assigned"}
-                                                                        </span>
+
+                                                                <div className="flex flex-col md:flex-row items-start md:items-center gap-4 md:gap-6">
+                                                                    <div className="flex items-center gap-3">
+                                                                        <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 border border-slate-200">
+                                                                            <User size={14} />
+                                                                        </div>
+                                                                        <div className="flex flex-col">
+                                                                            <span className="text-xs font-medium text-slate-500">Professor</span>
+                                                                            <span className="text-sm font-medium text-slate-600 mt-0.5">
+                                                                                {slot.teacher || "Dr. Rajesh Kumar"}
+                                                                            </span>
+                                                                        </div>
                                                                     </div>
-                                                                    {/* <div className="w-8 h-8 rounded-lg bg-slate-50 flex items-center justify-center text-slate-400 border border-slate-100">
-                                                            <Building2 size={14} />
-                                                        </div> */}
+                                                                    <div className="flex items-center gap-3">
+                                                                        <div className="flex flex-col">
+                                                                            <span className="text-xs font-medium text-slate-500">Location</span>
+                                                                            <span className="text-sm font-medium text-slate-600 mt-0.5">
+                                                                                {slot.room || "Room 301 - CS Block"}
+                                                                            </span>
+                                                                        </div>
+                                                                    </div>
                                                                 </div>
                                                             </div>
                                                         </div>
-                                                    </div>
 
-                                                    {/* <div className="hidden md:flex shrink-0 pl-4 border-l border-slate-50 lg:block opacity-0 group-hover:opacity-100 transition-opacity items-center justify-center">
-                                            <button className="p-2 text-slate-300 hover:text-primary-600 transition-colors">
-                                                <MoreVertical size={20} />
-                                            </button>
-                                        </div> */}
-                                                    {selectedDate.toISOString().split('T')[0] && (
-                                                        <p className="text-slate-400 text-sm mt-2">
-                                                            Date: {selectedDate.toISOString().split('T')[0]}
-                                                        </p>
-                                                    )}
+                                                        {/* Attendance Status Display */}
+                                                        <div className="absolute top-4 right-4 z-30">
+                                                            <div className={`flex items-center gap-2 px-3 py-1.5 rounded-xl ${attendanceInfo.bgColor} border ${attendanceInfo.borderColor} shadow-sm`}>
+                                                                <AttendanceIcon size={14} className={attendanceInfo.color} />
+                                                                <span className={`text-xs font-bold ${attendanceInfo.color}`}>
+                                                                    {attendanceInfo.label}
+                                                                </span>
+                                                            </div>
+                                                        </div>
+
+                                                    </div>
                                                 </div>
-                                            </div>
-                                        ))
+                                            );
+                                        })
                                     ) : (
                                         <div className="h-[300px] md:h-[400px] flex flex-col items-center justify-center bg-white rounded-2xl md:rounded-[3rem] border-2 border-dashed border-slate-200 p-4 md:p-6">
                                             <div className="w-16 h-16 md:w-20 md:h-20 bg-slate-50 rounded-full flex items-center justify-center text-2xl md:text-3xl mb-3 md:mb-4 opacity-50">📚</div>
@@ -954,30 +1295,35 @@ const MyView = () => {
                                                     {Array.from({ length: 13 }, (_, i) => i + 8).map(hour => (
                                                         <div key={hour} className="h-24 border-b border-slate-100 p-1 relative">
                                                             {slots.filter(slot => {
-                                                                const slotHour = slot.time ? parseInt(slot.time.split(':')[0]) : null;
+                                                                const slotHour = slot.start_time ? parseInt(slot.start_time.split(':')[0]) : null;
                                                                 return slotHour === hour || (slotHour === (hour - 12) && hour > 12);
-                                                            }).map(slot => (
-                                                                <div key={slot.id} className="absolute inset-1 rounded-lg border bg-white shadow-sm hover:shadow-md transition-all cursor-pointer group overflow-hidden">
-                                                                    <div className={`absolute left-0 top-0 bottom-0 w-1 ${slot.mode === 'PRACTICAL' || slot.entry_type === 'Practical' ? 'bg-emerald-500' :
-                                                                        slot.mode === 'TUTORIAL' || slot.entry_type === 'Tutorial' ? 'bg-purple-500' : 'bg-primary-500'
-                                                                        }`}></div>
-                                                                    <div className="p-1 pl-2">
-                                                                        <div className="text-[8px] font-bold text-slate-400 mb-0.5 leading-none">{slot.time}</div>
-                                                                        <div className="text-[10px] font-bold text-slate-800 line-clamp-2 leading-tight mb-0.5">{slot.subject}</div>
-                                                                        {slot.module_name && (
-                                                                            <div className="text-[8px] text-blue-600 font-medium truncate mb-0.5">📘 {slot.module_name}</div>
-                                                                        )}
-                                                                        {slot.teacher && (
-                                                                            <div className="text-[8px] text-slate-500 font-medium truncate mb-0.5 flex items-center gap-0.5">
-                                                                                <User size={8} /> {slot.teacher}
+                                                            }).map(slot => {
+                                                                const attendanceInfo = getAttendanceInfo(attendanceData[slot.time_slot_id]);
+                                                                return (
+                                                                    <div key={slot.time_slot_id} className="absolute inset-1 rounded-lg border bg-white shadow-sm hover:shadow-md transition-all cursor-pointer group overflow-hidden">
+                                                                        <div className={`absolute left-0 top-0 bottom-0 w-1 ${attendanceInfo.id === 'PRESENT' ? 'bg-green-500' :
+                                                                            attendanceInfo.id === 'ABSENT' ? 'bg-red-500' :
+                                                                            attendanceInfo.id === 'MEDICAL_LEAVE' ? 'bg-blue-500' :
+                                                                            attendanceInfo.id === 'SPORTS_ACTIVITY' ? 'bg-purple-500' :
+                                                                            slot.entry_type === 'Practical' ? 'bg-emerald-500' :
+                                                                            slot.entry_type === 'Tutorial' ? 'bg-purple-500' : 'bg-primary-500'
+                                                                            }`}></div>
+                                                                        <div className="p-1 pl-2">
+                                                                            <div className="text-[8px] font-bold text-slate-400 mb-0.5 leading-none">
+                                                                                {formatTimeForDisplay(slot.start_time)} - {formatTimeForDisplay(slot.end_time)}
                                                                             </div>
-                                                                        )}
-                                                                        <div className="text-[8px] font-medium text-slate-500 flex items-center gap-0.5 truncate">
-                                                                            <Building2 size={8} /> {slot.room || 'TBA'}
+                                                                            <div className="text-[10px] font-bold text-slate-800 line-clamp-2 leading-tight mb-0.5">{slot.subject_name}</div>
+                                                                            {slot.module_name && (
+                                                                                <div className="text-[8px] text-blue-600 font-medium truncate mb-0.5">📘 {slot.module_name}</div>
+                                                                            )}
+                                                                            <div className="text-[8px] text-slate-500 font-medium truncate mb-0.5 flex items-center gap-0.5">
+                                                                                <attendanceInfo.icon size={8} className={attendanceInfo.color} />
+                                                                                {attendanceInfo.label}
+                                                                            </div>
                                                                         </div>
                                                                     </div>
-                                                                </div>
-                                                            ))}
+                                                                );
+                                                            })}
                                                         </div>
                                                     ))}
                                                 </div>
@@ -1050,14 +1396,15 @@ const MyView = () => {
                                                             </span>
                                                         </div>
                                                         <div className="px-0.5 md:px-1 space-y-0.5 overflow-hidden">
-                                                            {slots.slice(0, 3).map(slot => (
-                                                                <div key={slot.id} className="px-1 py-0.5 rounded-md bg-primary-50 border border-primary-100/50 text-primary-700 text-[8px] font-semibold leading-tight flex items-center gap-1">
-                                                                    <div className={`w-1 h-1 rounded-full shrink-0 ${slot.mode === 'PRACTICAL' || slot.entry_type === 'Practical' ? 'bg-emerald-500' :
-                                                                        slot.mode === 'TUTORIAL' || slot.entry_type === 'Tutorial' ? 'bg-purple-500' : 'bg-primary-500'
-                                                                        }`}></div>
-                                                                    <span className="truncate">{slot.subject}</span>
-                                                                </div>
-                                                            ))}
+                                                            {slots.slice(0, 3).map(slot => {
+                                                                const attendanceInfo = getAttendanceInfo(attendanceData[slot.time_slot_id]);
+                                                                return (
+                                                                    <div key={slot.time_slot_id} className={`px-1 py-0.5 rounded-md ${attendanceInfo.bgColor} border ${attendanceInfo.borderColor} text-primary-700 text-[8px] font-semibold leading-tight flex items-center gap-1`}>
+                                                                        <div className={`w-1 h-1 rounded-full shrink-0 ${attendanceInfo.color.replace('text-', 'bg-')}`}></div>
+                                                                        <span className="truncate">{slot.subject_name}</span>
+                                                                    </div>
+                                                                );
+                                                            })}
                                                             {slots.length > 3 && (
                                                                 <div className="text-[7px] md:text-[8px] font-black text-slate-400 pl-1 uppercase tracking-tighter">
                                                                     +{slots.length - 3} more
