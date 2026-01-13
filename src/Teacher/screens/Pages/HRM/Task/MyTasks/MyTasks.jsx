@@ -209,25 +209,25 @@ const MyTaskTable = ({
       {/* ────────────────────── Desktop Table ────────────────────── */}
       <div className="hidden lg:block bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[900px]">
+          <table className="w-full">
             <thead className="table-header">
               <tr>
-                <th className="table-th">Program</th>
-                <th className="table-th">Batch (Class Year)</th>
-                <th className="table-th">Subject</th>
-                <th className="table-th">Department</th>
-                <th className="table-th">Task Title</th>
-                <th className="table-th">Task Type</th>
-                <th className="table-th">Due on</th>
-                <th className="table-th table-cell-center">Priority</th>
-                <th className="table-th table-cell-center">Status</th>
-                <th className="table-th table-cell-center">Actions</th>
+                <th className="table-th text-xs px-2 py-3">Program</th>
+                <th className="table-th text-xs px-2 py-3">Batch</th>
+                <th className="table-th text-xs px-2 py-3">Subject</th>
+                <th className="table-th text-xs px-2 py-3">Department</th>
+                <th className="table-th text-xs px-2 py-3">Task Title</th>
+                <th className="table-th text-xs px-2 py-3">Type</th>
+                <th className="table-th text-xs px-2 py-3">Due on</th>
+                <th className="table-th table-cell-center text-xs px-2 py-3">Priority</th>
+                <th className="table-th table-cell-center text-xs px-2 py-3">Status</th>
+                <th className="table-th table-cell-center text-xs px-2 py-3">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
               {loading ? (
                 <tr>
-                  <td colSpan={9} className="table-td text-center py-12">
+                  <td colSpan={10} className="table-td text-center py-12">
                     <div className="flex flex-col items-center justify-center">
                       {/* <Loader size="lg" className="mb-4" /> */}
                       <p className="text-gray-500">Loading tasks...</p>
@@ -236,7 +236,7 @@ const MyTaskTable = ({
                 </tr>
               ) : tasks.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="table-td text-center py-12">
+                  <td colSpan={10} className="table-td text-center py-12">
                     <div className="text-gray-500">
                       <p className="text-lg font-medium mb-2">No tasks found</p>
                       <p className="text-sm">
@@ -251,29 +251,29 @@ const MyTaskTable = ({
                   const statusLabel = isTaskDelayed(task) ? "Delayed" : task.status;
                   return (
                     <tr key={task.id} className="hover:bg-gray-50 transition-colors">
-                      <td className="px-6 py-4 text-sm text-gray-700 max-w-[120px] truncate" title={task.program}>{task.program}</td>
-                      <td className="px-6 py-4 text-sm text-gray-700 max-w-[120px] truncate" title={`${task.batch} ${task.classYear ? `(${task.classYear})` : ''}`}>
+                      <td className="px-2 py-3 text-xs text-gray-700 max-w-[90px] truncate" title={task.program}>{task.program}</td>
+                      <td className="px-2 py-3 text-xs text-gray-700 max-w-[80px] truncate" title={`${task.batch} ${task.classYear ? `(${task.classYear})` : ''}`}>
                         {task.batch} {task.classYear ? `(${task.classYear})` : ''}
                       </td>
-                      <td className="px-6 py-4 text-sm text-gray-700 max-w-[120px] truncate" title={task.subject}>{task.subject}</td>
-                      <td className="px-6 py-4 text-sm text-gray-700 max-w-[120px] truncate" title={task.department}>{task.department}</td>
-                      <td className="px-6 py-4 text-sm text-gray-900 max-w-[150px] truncate" title={task.taskTitle}>{task.taskTitle}</td>
-                      <td className="px-6 py-4 text-sm text-gray-700 max-w-[100px] truncate" title={task.taskType}>{task.taskType}</td>
-                      <td className={`px-6 py-4 text-sm font-semibold whitespace-nowrap ${isTaskOverdue(task) ? 'text-red-600' : 'text-gray-700'
+                      <td className="px-2 py-3 text-xs text-gray-700 max-w-[90px] truncate" title={task.subject}>{task.subject}</td>
+                      <td className="px-2 py-3 text-xs text-gray-700 max-w-[90px] truncate" title={task.department}>{task.department}</td>
+                      <td className="px-2 py-3 text-xs text-gray-900 font-medium max-w-[120px] truncate" title={task.taskTitle}>{task.taskTitle}</td>
+                      <td className="px-2 py-3 text-xs text-gray-700 max-w-[80px] truncate" title={task.taskType}>{task.taskType}</td>
+                      <td className={`px-2 py-3 text-xs font-semibold whitespace-nowrap ${isTaskOverdue(task) ? 'text-red-600' : 'text-gray-700'
                         }`}>{task.dueOn}</td>
-                      <td className="px-6 py-4 text-center">
-                        <span className={`inline-flex items-center px-3 py-1.5 rounded-full text-xs font-medium ${task.priority === 'High' ? 'bg-red-100 text-red-800' :
+                      <td className="px-2 py-3 text-center">
+                        <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${task.priority === 'High' ? 'bg-red-100 text-red-800' :
                           task.priority === 'Medium' ? 'bg-yellow-100 text-yellow-800' :
                             'bg-green-100 text-green-800'
                           }`}>
                           {task.priority}
                         </span>
                       </td>
-                      <td className="px-6 py-4 text-center">
+                      <td className="px-2 py-3 text-center">
                         <button
                           onClick={() => onToggleActive(task.id)}
                           disabled={statusChanging[task.id]}
-                          className={`inline-flex items-center px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap ${statusChanging[task.id]
+                          className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap ${statusChanging[task.id]
                             ? 'bg-gray-100 text-gray-500 cursor-not-allowed'
                             : task.status === 'Completed' || task.status === 'Complete'
                               ? 'bg-green-100 text-green-800 hover:bg-green-200'
@@ -290,31 +290,34 @@ const MyTaskTable = ({
                             </>
                           ) : (
                             <>
-                              {task.status === 'Complete' ? <ToggleRight className="w-4 h-4 mr-1" /> : <ToggleLeft className="w-4 h-4 mr-1" />}
+                              {task.status === 'Complete' ? <ToggleRight className="w-3 h-3 mr-1" /> : <ToggleLeft className="w-3 h-3 mr-1" />}
                               {statusChanging[task.id] ? 'Updating...' : statusLabel}
                             </>
                           )}
                         </button>
                       </td>
-                      <td className="px-6 py-4 text-center">
-                        <div className="flex items-center justify-center gap-2">
+                      <td className="px-2 py-3 text-center">
+                        <div className="flex items-center justify-center gap-1">
                           <button
                             onClick={() => onView(task)}
-                            className="p-2 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition"
+                            className="p-1.5 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition"
+                            title="View"
                           >
-                            <Eye className="w-4 h-4" />
+                            <Eye className="w-3.5 h-3.5" />
                           </button>
                           <button
                             onClick={() => onEdit(task)}
-                            className="p-2 rounded-lg bg-yellow-50 text-yellow-600 hover:bg-yellow-100 transition"
+                            className="p-1.5 rounded-lg bg-yellow-50 text-yellow-600 hover:bg-yellow-100 transition"
+                            title="Edit"
                           >
-                            <Edit className="w-4 h-4" />
+                            <Edit className="w-3.5 h-3.5" />
                           </button>
                           <button
                             onClick={() => onDelete(task.id)}
-                            className="p-2 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition"
+                            className="p-1.5 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition"
+                            title="Delete"
                           >
-                            <Trash2 className="w-4 h-4" />
+                            <Trash2 className="w-3.5 h-3.5" />
                           </button>
                         </div>
                       </td>

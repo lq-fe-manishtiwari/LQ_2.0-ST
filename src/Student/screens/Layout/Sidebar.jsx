@@ -88,6 +88,16 @@ const StudentSidebar = ({ isOpen, toggle }) => {
         ],
       },
       {
+        to: "/attendance",
+        label: "Attendance",
+        iconActive: contentActive,
+        iconInactive: contentInactive,
+        match: [
+          "/attendance",
+          "/attendance/my-attendance",
+        ],
+      },
+      {
         to: "/curriculum",
         label: "Content",
         iconActive: contentActive,
@@ -161,7 +171,7 @@ const StudentSidebar = ({ isOpen, toggle }) => {
         iconActive: classActive,
         iconInactive: classInactive,
       },
-      
+
       {
         to: "/my-library",
         label: "My Library",
@@ -181,16 +191,16 @@ const StudentSidebar = ({ isOpen, toggle }) => {
         iconInactive: assessmentInactive,
         match: ["/student/us-feedback"],
       },
-    {
-  to: "/student/committees",
-  label: "My Committees",
-  iconActive: classActive,
-  iconInactive: classInactive,
-  match: [
-    "/student/committees",
-    "/student/committee"
-  ],
-},
+      {
+        to: "/student/committees",
+        label: "My Committees",
+        iconActive: classActive,
+        iconInactive: classInactive,
+        match: [
+          "/student/committees",
+          "/student/committee"
+        ],
+      },
 
       {
         to: "/certificate",

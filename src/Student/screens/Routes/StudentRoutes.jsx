@@ -14,6 +14,7 @@ import USFeedbackRoutes from '../Pages/USFeedback/Routes/USFeedbackRoutes.jsx';
 import MyCommittees from '../Pages/Committee/MyCommittees.jsx';
 import CommitteeDetails from '../Pages/Committee/CommitteeDetails.jsx';
 import MeetingDetails from '../Pages/Committee/MeetingDetails.jsx';
+import AttendanceRoutes from '../Pages/Attendance/Routes/AttendanceRoutes.jsx';
 
 const StudentRoutes = () => {
   return (
@@ -22,6 +23,7 @@ const StudentRoutes = () => {
       <Route path="/home" element={<StudentHomepage />} />
       <Route path="/my-profile/*" element={<ProfileRoutes />} />
       <Route path="timetable/*" element={<TimeTableRoutes />} />
+      <Route path="attendance/*" element={<AttendanceRoutes />} />
       <Route path="content/*" element={<ContentRoutes />} />
       <Route path="leaves/*" element={<LeavesRoutes />} />
       <Route path="subject-selection" element={<SubjectSelectionPage />} />
