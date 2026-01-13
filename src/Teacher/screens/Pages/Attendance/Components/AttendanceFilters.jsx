@@ -67,6 +67,8 @@ const AttendanceFilters = ({
   onApplyFilters,
   allocations = [],
   loadingAllocations = false,
+  timeSlots = [],
+  loadingTimeSlots = false,
   showActiveFilters = true,
   compact = false,
   disabled = false
@@ -94,22 +96,22 @@ const AttendanceFilters = ({
 
   const academicYearOptions = getUniqueOptions(
     (item) => (!filters.program || item.program?.program_id == filters.program) &&
-        (!filters.batch || item.batch?.batch_id == filters.batch),
+      (!filters.batch || item.batch?.batch_id == filters.batch),
     (item) => ({ id: item.academic_year_id, name: item.academic_year?.name })
   );
 
   const semesterOptions = getUniqueOptions(
     (item) => (!filters.program || item.program?.program_id == filters.program) &&
-        (!filters.batch || item.batch?.batch_id == filters.batch) &&
-        (!filters.academicYear || item.academic_year_id == filters.academicYear),
+      (!filters.batch || item.batch?.batch_id == filters.batch) &&
+      (!filters.academicYear || item.academic_year_id == filters.academicYear),
     (item) => ({ id: item.semester_id, name: item.semester?.name })
   );
 
   const divisionOptions = getUniqueOptions(
     (item) => (!filters.program || item.program?.program_id == filters.program) &&
-        (!filters.batch || item.batch?.batch_id == filters.batch) &&
-        (!filters.academicYear || item.academic_year_id == filters.academicYear) &&
-        (!filters.semester || item.semester_id == filters.semester),
+      (!filters.batch || item.batch?.batch_id == filters.batch) &&
+      (!filters.academicYear || item.academic_year_id == filters.academicYear) &&
+      (!filters.semester || item.semester_id == filters.semester),
     (item) => ({ id: item.division_id, name: item.division?.division_name })
   );
 
@@ -134,7 +136,7 @@ const AttendanceFilters = ({
   const handleFilterChange = (field, value) => {
     if (onFilterChange) {
       const newFilters = { ...filters, [field]: value };
-      
+
       // Reset subsequent filters
       if (field === 'program') {
         newFilters.batch = ''; newFilters.academicYear = ''; newFilters.semester = ''; newFilters.division = ''; newFilters.paper = '';
@@ -145,16 +147,18 @@ const AttendanceFilters = ({
       } else if (field === 'semester') {
         newFilters.division = ''; newFilters.paper = '';
       } else if (field === 'division') {
-        newFilters.paper = '';
+        newFilters.paper = ''; newFilters.timeSlot = '';
+      } else if (field === 'paper') {
+        newFilters.timeSlot = '';
       }
-      
+
       onFilterChange(newFilters);
     }
   };
 
   const getFilterLabel = (filterType, value) => {
     if (!value) return '';
-    
+
     const optionsMap = {
       program: programOptions,
       batch: batchOptions,
@@ -163,7 +167,7 @@ const AttendanceFilters = ({
       division: divisionOptions,
       paper: paperOptions()
     };
-    
+
     const option = optionsMap[filterType]?.find(o => o.value === value);
     return option?.name || value;
   };
@@ -266,6 +270,19 @@ const AttendanceFilters = ({
             loading={loadingAllocations}
           />
 
+          <CustomSelect
+            label="Time Slot"
+            value={filters.timeSlot}
+            onChange={(e) => handleFilterChange('timeSlot', e.target.value)}
+            options={timeSlots.map(slot => ({
+              value: slot.timetable_id?.toString() || slot.time_slot_id?.toString(),
+              name: `${slot.start_time?.slice(0, 5)} - ${slot.end_time?.slice(0, 5)}`
+            }))}
+            placeholder="Select Time Slot"
+            disabled={disabled || !filters.paper || loadingTimeSlots}
+            loading={loadingTimeSlots}
+          />
+
           {/* Filter Actions */}
           <div className={`${compact ? 'md:col-span-2' : 'lg:col-span-3'} flex justify-end gap-3 pt-2`}>
             {onResetFilters && (
@@ -291,13 +308,13 @@ const AttendanceFilters = ({
       )}
 
       {/* Active Filters Display */}
-      {showActiveFilters && (filters.program || filters.batch || filters.academicYear || filters.semester || filters.division || filters.paper) && (
+      {showActiveFilters && (filters.program || filters.batch || filters.academicYear || filters.semester || filters.division || filters.paper || filters.timeSlot) && (
         <div className="flex flex-wrap gap-2 mb-4">
           {filters.program && (
             <span className="inline-flex items-center gap-1 px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-xs">
               Program: {getFilterLabel('program', filters.program)}
-              <button 
-                onClick={() => handleFilterChange('program', '')} 
+              <button
+                onClick={() => handleFilterChange('program', '')}
                 className="text-blue-600 hover:text-blue-800 disabled:opacity-50"
                 disabled={disabled}
               >
@@ -308,8 +325,8 @@ const AttendanceFilters = ({
           {filters.batch && (
             <span className="inline-flex items-center gap-1 px-3 py-1 bg-green-100 text-green-800 rounded-full text-xs">
               Batch: {getFilterLabel('batch', filters.batch)}
-              <button 
-                onClick={() => handleFilterChange('batch', '')} 
+              <button
+                onClick={() => handleFilterChange('batch', '')}
                 className="text-green-600 hover:text-green-800 disabled:opacity-50"
                 disabled={disabled}
               >
@@ -320,8 +337,8 @@ const AttendanceFilters = ({
           {filters.academicYear && (
             <span className="inline-flex items-center gap-1 px-3 py-1 bg-purple-100 text-purple-800 rounded-full text-xs">
               Academic Year: {getFilterLabel('academicYear', filters.academicYear)}
-              <button 
-                onClick={() => handleFilterChange('academicYear', '')} 
+              <button
+                onClick={() => handleFilterChange('academicYear', '')}
                 className="text-purple-600 hover:text-purple-800 disabled:opacity-50"
                 disabled={disabled}
               >
@@ -332,8 +349,8 @@ const AttendanceFilters = ({
           {filters.semester && (
             <span className="inline-flex items-center gap-1 px-3 py-1 bg-yellow-100 text-yellow-800 rounded-full text-xs">
               Semester: {getFilterLabel('semester', filters.semester)}
-              <button 
-                onClick={() => handleFilterChange('semester', '')} 
+              <button
+                onClick={() => handleFilterChange('semester', '')}
                 className="text-yellow-600 hover:text-yellow-800 disabled:opacity-50"
                 disabled={disabled}
               >
@@ -344,8 +361,8 @@ const AttendanceFilters = ({
           {filters.division && (
             <span className="inline-flex items-center gap-1 px-3 py-1 bg-red-100 text-red-800 rounded-full text-xs">
               Division: {getFilterLabel('division', filters.division)}
-              <button 
-                onClick={() => handleFilterChange('division', '')} 
+              <button
+                onClick={() => handleFilterChange('division', '')}
                 className="text-red-600 hover:text-red-800 disabled:opacity-50"
                 disabled={disabled}
               >
@@ -356,9 +373,21 @@ const AttendanceFilters = ({
           {filters.paper && (
             <span className="inline-flex items-center gap-1 px-3 py-1 bg-indigo-100 text-indigo-800 rounded-full text-xs">
               Paper: {getFilterLabel('paper', filters.paper)}
-              <button 
-                onClick={() => handleFilterChange('paper', '')} 
+              <button
+                onClick={() => handleFilterChange('paper', '')}
                 className="text-indigo-600 hover:text-indigo-800 disabled:opacity-50"
+                disabled={disabled}
+              >
+                <X size={12} />
+              </button>
+            </span>
+          )}
+          {filters.timeSlot && (
+            <span className="inline-flex items-center gap-1 px-3 py-1 bg-teal-100 text-teal-800 rounded-full text-xs">
+              Time Slot: {timeSlots.find(s => (s.timetable_id?.toString() || s.time_slot_id?.toString()) === filters.timeSlot)?.start_time?.slice(0, 5) || filters.timeSlot}
+              <button
+                onClick={() => handleFilterChange('timeSlot', '')}
+                className="text-teal-600 hover:text-teal-800 disabled:opacity-50"
                 disabled={disabled}
               >
                 <X size={12} />
@@ -379,7 +408,8 @@ AttendanceFilters.defaultProps = {
     academicYear: '',
     semester: '',
     division: '',
-    paper: ''
+    paper: '',
+    timeSlot: ''
   },
   allocations: [],
   loadingAllocations: false,
