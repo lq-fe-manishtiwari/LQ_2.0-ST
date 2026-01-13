@@ -13,8 +13,10 @@ import {
   X,
   Edit,
   Trash2,
+  Search,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import SweetAlert from "react-bootstrap-sweetalert";
 
 const Assessment = () => {
   const navigate = useNavigate();
@@ -25,21 +27,18 @@ const Assessment = () => {
   const [selectedSubject, setSelectedSubject] = useState('');
   const [currentMonth, setCurrentMonth] = useState(new Date().getMonth());
   const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
-  const [filterOpen, setFilterOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [alert, setAlert] = useState(null);
   
   const [filters, setFilters] = useState({
-    program: [],
-    selectedGrade: [],
-    classDataId: [],
-    gradeDivisionId: [],
-    paper: '',
-    module: '',
-    unit: '',
+    filterOpen: false,
+    program: '',
+    batch: '',
+    academicYear: '',
+    semester: '',
+    subject: '',
+    status: ''
   });
-
-  // ---------- NEW STATE FOR "Get Q's" ----------
-  const [loadQuestion, setLoadQuestion] = useState(true); // disabled until all required fields are filled
-  const [questions, setQuestions] = useState([]);        // will hold fetched questions (mock for now)
 
   const customBlue = 'rgb(33 98 193 / var(--tw-bg-opacity, 1))';
 
@@ -48,10 +47,13 @@ const Assessment = () => {
     'July', 'August', 'September', 'October', 'November', 'December'
   ];
 
-  // Mock filter options (same as before)
+  // Mock filter options
   const programOptions = ['MCA-BTech-Graduation', 'BCA', 'BBA', 'M.Tech'];
-  const classOptions = ['Class 7A', 'Class 7C', 'Class 8A', 'Class 8B', 'Class 9B', 'Class 10A'];
-  const divisionOptions = ['A', 'B', 'C'];
+  const batchOptions = ['Batch 2021', 'Batch 2022', 'Batch 2023', 'Batch 2024'];
+  const academicYearOptions = ['2023-24', '2024-25', '2025-26'];
+  const semesterOptions = ['Semester 1', 'Semester 2', 'Semester 3', 'Semester 4'];
+  const subjectOptions = ['Mathematics', 'Science', 'English', 'Computer Science'];
+  const statusOptions = ['All', 'Active', 'Inactive', 'Completed'];
   
   const grades = [
     { id: '1', name: 'Grade 1' },
@@ -122,16 +124,25 @@ const Assessment = () => {
     },
   ];
 
-  // Handle Program Selection (Multi)
+  // Handle Program Selection
   const handleProgramChange = (e) => {
-    const value = e.target.value;
-    if (value && !filters.program.includes(value)) {
-      setFilters(prev => ({ ...prev, program: [...prev.program, value] }));
-    }
+    setFilters(prev => ({ ...prev, program: e.target.value }));
   };
 
-  const removeProgram = (prog) => {
-    setFilters(prev => ({ ...prev, program: prev.program.filter(p => p !== prog) }));
+  const removeFilter = (filterType) => {
+    setFilters(prev => ({ ...prev, [filterType]: '' }));
+  };
+
+  const clearAllFilters = () => {
+    setFilters({
+      filterOpen: false,
+      program: '',
+      batch: '',
+      academicYear: '',
+      semester: '',
+      subject: '',
+      status: ''
+    });
   };
 
   const handlePrevMonth = () => {
@@ -160,24 +171,58 @@ const Assessment = () => {
     return nextYear > today.getFullYear() || (nextYear === today.getFullYear() && nextMonth > today.getMonth());
   };
 
-  // ---------- "Get Q's" LOGIC ----------
-  const handleGetQuestions = () => {
-    // Simulate API call (replace with real `questionService.getQuestionBySunjectIdWithFlagV2Paging` later)
-    const mockQuestions = [
-      { id: 1, question: 'What is 2 + 2?', level: 'EASY' },
-      { id: 2, question: 'Solve x² = 16', level: 'MEDIUM' },
-    ];
-    setQuestions(mockQuestions);
-    setLoadQuestion(false);
+  // Delete functionality
+  const handleDeleteConfirm = (id) => {
+    const assessment = assessments.find(a => a.id === id);
+    setAlert(
+      <SweetAlert
+        warning
+        showCancel
+        confirmBtnText="Yes, delete it!"
+        confirmBtnCssClass="btn-confirm"
+        cancelBtnCssClass="btn-cancel"
+        title="Are you sure?"
+        onConfirm={() => confirmDelete(id)}
+        onCancel={() => setAlert(null)}
+        focusCancelBtn
+      >
+        You will not be able to recover "{assessment?.title || 'this assessment'}"!
+      </SweetAlert>
+    );
   };
 
-  // Enable "Get Q's" only when required filters are selected
-  useEffect(() => {
-    const required = filters.classDataId.length > 0 && filters.gradeDivisionId.length > 0 && filters.paper;
-    setLoadQuestion(!required);
-  }, [filters.classDataId, filters.gradeDivisionId, filters.paper]);
-
-  // Custom Select Component
+  const confirmDelete = async (assessmentId) => {
+    try {
+      console.log('Deleting assessment with ID:', assessmentId);
+      // Add your delete API call here
+      // await assessmentService.deleteAssessment(assessmentId);
+      setAlert(
+        <SweetAlert
+          success
+          title="Deleted!"
+          confirmBtnCssClass="btn-confirm"
+          onConfirm={() => setAlert(null)}
+        >
+          Assessment deleted successfully.
+        </SweetAlert>
+      );
+      // Reload assessments after successful deletion
+      // loadAssessments();
+    } catch (error) {
+      console.error('Delete error:', error);
+      setAlert(
+        <SweetAlert
+          danger
+          title="Error!"
+          confirmBtnCssClass="btn-confirm"
+          onConfirm={() => setAlert(null)}
+        >
+          Failed to delete assessment. Please try again.
+        </SweetAlert>
+      );
+    }
+  };
+  // Custom Select Component from TeacherList
   const CustomSelect = ({ label, value, onChange, options, placeholder, disabled = false }) => {
     const [isOpen, setIsOpen] = useState(false);
     const dropdownRef = useRef(null);
@@ -235,316 +280,324 @@ const Assessment = () => {
     );
   };
 
-  // Multi Select Program Component
-  const MultiSelectProgram = ({ label, selectedPrograms, programOptions, onProgramChange, onProgramRemove }) => {
-    const [isOpen, setIsOpen] = useState(false);
-    const dropdownRef = useRef(null);
-    const availableOptions = programOptions.filter(p => !selectedPrograms.includes(p));
-
-    const handleSelect = (program) => {
-        onProgramChange({ target: { value: program } });
-    };
-
-    useEffect(() => {
-        const handleClickOutside = (event) => {
-            if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
-                setIsOpen(false);
-            }
-        };
-        document.addEventListener('mousedown', handleClickOutside);
-        return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, []);
-
-    return (
-        <div ref={dropdownRef}>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">{label}</label>
-            <div className="relative">
-                <div
-                    className="flex flex-wrap items-center gap-1 p-2 border border-gray-300 rounded-lg min-h-[44px] bg-white cursor-pointer hover:border-blue-400 transition-all duration-150"
-                    onClick={() => setIsOpen(!isOpen)}
-                >
-                    {selectedPrograms.length > 0 ? (
-                        selectedPrograms.map(prog => (
-                            <span
-                                key={prog}
-                                className="inline-flex items-center gap-1 bg-blue-100 text-blue-700 px-2 py-1 rounded-full text-xs font-medium"
-                                onClick={(e) => e.stopPropagation()}
-                            >
-                                {prog}
-                                <button
-                                    onClick={() => onProgramRemove(prog)}
-                                    className="hover:bg-blue-200 rounded-full p-0.5 ml-0.5 transition-colors"
-                                    title="Remove Program"
-                                >
-                                    <X className="w-3 h-3" />
-                                </button>
-                            </span>
-                        ))
-                    ) : (
-                        <span className="text-gray-400 text-sm ml-1">Select Program(s)</span>
-                    )}
-                    <ChevronDown className={`w-4 h-4 text-gray-400 absolute right-3 top-1/2 -translate-y-1/2 transition-transform ${isOpen ? 'rotate-180' : 'rotate-0'}`} />
-                </div>
-                
-                {isOpen && (
-                    <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
-                        {availableOptions.length > 0 ? (
-                            availableOptions.map(prog => (
-                                <div
-                                    key={prog}
-                                    className="px-4 py-2 text-sm text-gray-700 cursor-pointer hover:bg-blue-50 transition-colors"
-                                    onClick={() => handleSelect(prog)}
-                                >
-                                    {prog}
-                                </div>
-                            ))
-                        ) : (
-                            <div className="px-4 py-3 text-sm text-gray-500">All programs selected.</div>
-                        )}
-                    </div>
-                )}
-            </div>
-        </div>
-    );
-  };
-
   return (
-    <div className="p-4 md:p-6 bg-gray-50 min-h-screen">
-      {/* Month Navigation */}
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-2">
-          <span className="text-lg font-medium" style={{ color: customBlue }}>
-            {months[currentMonth]} / {currentYear}
-          </span>
-          <button onClick={handlePrevMonth} className="p-2" style={{ color: customBlue }}>
-            <ChevronLeft className="h-5 w-5" />
-          </button>
+    <div className="p-0 md:p-0">
+      {alert}
+      {/* Header Section */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4 sm:gap-0">
+        {/* Search */}
+        <div className="relative w-full sm:w-80">
+          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+            <Search className="w-5 h-5 text-gray-400" />
+          </div>
+          <input
+            type="search"
+            placeholder="Search for assessments"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 placeholder-gray-400 text-gray-900 bg-white shadow-sm"
+          />
+        </div>
+
+        {/* Action Buttons */}
+        <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+          {/* Filter Toggle */}
           <button
-            onClick={handleNextMonth}
-            className="p-2 disabled:opacity-50"
-            style={{ color: customBlue }}
-            disabled={isNextDisabled()}
+            onClick={() => setFilters(prev => ({ ...prev, filterOpen: !prev.filterOpen }))}
+            className="flex items-center justify-center gap-2 bg-white border border-gray-300 hover:bg-gray-50 px-4 py-3 rounded-xl shadow-sm transition-all flex-1 sm:flex-none sm:w-auto"
           >
-            <ChevronRight className="h-5 w-5" />
+            <Filter className="w-4 h-4 text-blue-600" />
+            <span className="text-blue-600 font-medium">Filter</span>
+            <ChevronDown
+              className={`w-4 h-4 text-blue-600 transition-transform ${filters.filterOpen ? 'rotate-180' : 'rotate-0'}`}
+            />
+          </button>
+
+          {/* Create Button */}
+          <button
+            onClick={() => navigate('/teacher/assessments/teacher-add-new-assessment')}
+            className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-3 rounded-xl shadow-sm transition-all flex-1 sm:flex-none sm:w-auto"
+          >
+            <Plus className="w-4 h-4" />
+            <span className="font-medium">Create Assessment</span>
           </button>
         </div>
       </div>
 
-      {/* Filter Toggle */}
-      <div className="mb-4">
-        <button
-          onClick={() => setFilterOpen(!filterOpen)}
-          className="flex items-center gap-2 bg-white border border-gray-300 hover:bg-gray-50 px-4 py-3 rounded-xl shadow-sm transition-all"
-        >
-          <Filter className="w-5 h-5 text-blue-600" />
-          <span className="text-blue-600 font-medium">Filter</span>
-          <ChevronDown className={`w-4 h-4 text-blue-600 transition-transform ${filterOpen ? 'rotate-180' : 'rotate-0'}`} />
-        </button>
-      </div>
-
-      {/* Filter Panel (Updated with "Get Q's") */}
-      {filterOpen && (
-        <div className="bg-white rounded-xl shadow-md p-5 mb-6 border border-gray-200">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-
-            {/* 1. Program - Multi Select */}
-            <MultiSelectProgram
-                label="Program"
-                selectedPrograms={filters.program}
-                programOptions={programOptions}
-                onProgramChange={handleProgramChange}
-                onProgramRemove={removeProgram}
-            />
-
-            {/* 2. Select Class */}
+      {/* Filter Panel - 2 Rows */}
+      {filters.filterOpen && (
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-5 mb-6">
+          {/* First Row */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
+            {/* Program */}
             <CustomSelect
-                label="Select Class"
-                value={filters.classDataId[0] || ''}
-                onChange={(e) => setFilters(prev => ({
-                  ...prev,
-                  classDataId: e.target.value ? [e.target.value] : [],
-                  gradeDivisionId: []
-                }))}
-                options={classOptions}
-                placeholder="Select Class"
-                disabled={filters.program.length === 0}
+              label="Program"
+              value={filters.program}
+              onChange={(e) => setFilters(prev => ({ ...prev, program: e.target.value }))}
+              options={programOptions}
+              placeholder="Select Program"
             />
 
-            {/* 3. Division */}
+            {/* Batch */}
             <CustomSelect
-                label="Division"
-                value={filters.gradeDivisionId[0] || ''}
-                onChange={(e) => setFilters(prev => ({
-                  ...prev,
-                  gradeDivisionId: e.target.value ? [e.target.value] : []
-                }))}
-                options={divisionOptions}
-                placeholder="Select Division"
-                disabled={!filters.classDataId.length}
+              label="Batch"
+              value={filters.batch}
+              onChange={(e) => setFilters(prev => ({ ...prev, batch: e.target.value }))}
+              options={batchOptions}
+              placeholder="Select Batch"
+              disabled={!filters.program}
             />
 
-            {/* 4. Select Paper */}
+            {/* Academic Year */}
             <CustomSelect
-                label="Select Paper"
-                value={filters.paper || ''}
-                onChange={(e) => setFilters(prev => ({
-                    ...prev,
-                    paper: e.target.value || ''
-                }))}
-                options={['Mathematics', 'Science', 'English', 'History']}
-                placeholder="Select Paper"
-                disabled={!filters.gradeDivisionId.length}
+              label="Academic Year"
+              value={filters.academicYear}
+              onChange={(e) => setFilters(prev => ({ ...prev, academicYear: e.target.value }))}
+              options={academicYearOptions}
+              placeholder="Select Academic Year"
+              disabled={!filters.batch}
             />
-
-            {/* 5. Module */}
-            <CustomSelect
-                label="Module"
-                value={filters.module || ''}
-                onChange={(e) => setFilters(prev => ({
-                    ...prev,
-                    module: e.target.value || ''
-                }))}
-                options={['Module 1', 'Module 2', 'Module 3']}
-                placeholder="Select Module"
-                disabled={!filters.paper}
-            />
-
-            {/* 6. Unit */}
-            <CustomSelect
-                label="Unit"
-                value={filters.unit || ''}
-                onChange={(e) => setFilters(prev => ({
-                    ...prev,
-                    unit: e.target.value || ''
-                }))}
-                options={['Unit 1', 'Unit 2', 'Unit 3', 'Unit 4']}
-                placeholder="Select Unit"
-                disabled={!filters.module}
-            />
-
-            {/* 7. Get Q's Button */}
-            <div className="flex items-end">
-              <button
-                onClick={handleGetQuestions}
-                disabled={loadQuestion}
-                className={`px-4 py-2 rounded-lg font-medium transition-all ${
-                  loadQuestion
-                    ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                    : 'bg-blue-600 text-white hover:bg-blue-700'
-                }`}
-              >
-                Get Q's
-              </button>
-            </div>
-
           </div>
 
-          {/* Optional: Show fetched questions below */}
-          {questions.length > 0 && (
-            <div className="mt-6 p-4 bg-gray-50 rounded-lg">
-              <h4 className="font-semibold mb-2">Fetched Questions:</h4>
-              <ul className="space-y-2">
-                {questions.map(q => (
-                  <li key={q.id} className="text-sm">
-                    <span className="font-medium">{q.level}:</span> {q.question}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
+          {/* Second Row */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {/* Semester */}
+            <CustomSelect
+              label="Semester"
+              value={filters.semester}
+              onChange={(e) => setFilters(prev => ({ ...prev, semester: e.target.value }))}
+              options={semesterOptions}
+              placeholder="Select Semester"
+              disabled={!filters.academicYear}
+            />
+
+            {/* Subject */}
+            <CustomSelect
+              label="Subject"
+              value={filters.subject}
+              onChange={(e) => setFilters(prev => ({ ...prev, subject: e.target.value }))}
+              options={subjectOptions}
+              placeholder="Select Subject"
+              disabled={!filters.semester}
+            />
+
+            {/* Status */}
+            <CustomSelect
+              label="Status"
+              value={filters.status}
+              onChange={(e) => setFilters(prev => ({ ...prev, status: e.target.value }))}
+              options={statusOptions}
+              placeholder="Select Status"
+            />
+          </div>
         </div>
       )}
 
-      {/* Add New */}
-      <div className="bg-white rounded-lg p-4 mb-6 shadow-sm">
-        <button
-          onClick={() => navigate('/teacher/assessments/teacher-add-new-assessment')}
-          className="flex items-center gap-3"
-          style={{ color: customBlue }}
-        >
-          <span className="flex items-center justify-center rounded-full h-10 w-10 text-white"
-            style={{ backgroundColor: customBlue }}>
-            <Plus className="h-6 w-6" />
-          </span>
-          <span className="font-medium text-base sm:text-lg">Add New Assessment</span>
-        </button>
-      </div>
-
-      {/* Assessments List */}
-      <div className="bg-white rounded-xl shadow-md border border-gray-200">
-        {/* Header */}
-        <div className="px-6 py-4 border-b border-gray-200">
-          <h2 className="text-lg font-semibold text-gray-900">Assessments</h2>
-          <p className="text-sm text-gray-500 mt-1">Manage your assessments</p>
-        </div>
-
-        {/* Assessments Grid */}
-        <div className="p-6">
-          <div className="grid gap-4">
-            {assessments.map((a) => (
-              <div key={a.id} className="border border-gray-200 rounded-lg p-5 hover:shadow-md transition-shadow">
-                <div className="flex items-start justify-between mb-3">
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold text-white"
-                      style={{ backgroundColor: a.subject.color }}>
-                      {a.proctoring ? <Video className="w-4 h-4" /> : <Clipboard className="w-4 h-4" />}
-                    </div>
-                    <div className="flex gap-2">
+      {/* ────────────────────── Desktop Table ────────────────────── */}
+      <div className="hidden lg:block bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead className="table-header">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-50 uppercase tracking-wider bg-[#2162C1]">Assessment</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-50 uppercase tracking-wider bg-[#2162C1]">Subject</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-50 uppercase tracking-wider bg-[#2162C1]">Start Date</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-50 uppercase tracking-wider bg-[#2162C1]">End Date</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-50 uppercase tracking-wider bg-[#2162C1]">Status</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-50 uppercase tracking-wider bg-[#2162C1]">Progress</th>
+                <th className="px-6 py-3 text-center text-xs font-medium text-gray-50 uppercase tracking-wider bg-[#2162C1]">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {assessments.length > 0 ? (
+                assessments.map((a) => (
+                  <tr key={a.id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-full flex items-center justify-center text-white"
+                          style={{ backgroundColor: a.subject.color }}>
+                          {a.proctoring ? <Video className="w-4 h-4" /> : <Clipboard className="w-4 h-4" />}
+                        </div>
+                        <div>
+                          <div className="text-sm font-medium text-gray-900">{a.title}</div>
+                          <div className="text-xs text-gray-500">{a.type}</div>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 text-sm text-gray-500">{a.subject.name}</td>
+                    <td className="px-6 py-4 text-sm text-gray-500">{a.startDate}</td>
+                    <td className="px-6 py-4 text-sm text-gray-500">{a.endDate}</td>
+                    <td className="px-6 py-4">
                       <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${
                         a.status === 'Attempted' ? 'bg-green-100 text-green-700' : 
                         a.status === 'In Progress' ? 'bg-blue-100 text-blue-700' : 'bg-yellow-100 text-yellow-700'
                       }`}>
                         {a.status}
                       </span>
-                      <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${
-                        a.type === 'Online' ? 'bg-purple-100 text-purple-700' : 'bg-gray-100 text-gray-700'
-                      }`}>
-                        {a.type}
-                      </span>
-                    </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-2">
+                        <div className="h-2 bg-gray-200 rounded-full overflow-hidden flex-1">
+                          <div
+                            className="h-full bg-blue-500 rounded-full"
+                            style={{ width: `${a.percentage}%` }}
+                          ></div>
+                        </div>
+                        <span className="text-sm font-medium text-gray-600">{a.attempted}/{a.total}</span>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 text-center">
+                      <div className="flex items-center justify-center gap-2">
+                        <button 
+                          onClick={() => navigate(`/teacher/assessments/assessment/view/${a.id}`)}
+                          className="p-1 text-blue-600 hover:bg-blue-50 rounded"
+                        >
+                          <Eye className="w-4 h-4" />
+                        </button>
+                        <button 
+                          onClick={() => navigate(`/teacher/assessments/assessment/edit/${a.id}`)}
+                          className="p-1 text-green-600 hover:bg-green-50 rounded"
+                        >
+                          <Edit className="w-4 h-4" />
+                        </button>
+                        <button 
+                          onClick={() => handleDeleteConfirm(a.id)}
+                          className="p-1 text-red-600 hover:bg-red-50 rounded"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan="7" className="px-6 py-8 text-center text-gray-500">
+                    No assessments found
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Pagination */}
+        <div className="flex justify-between items-center px-6 py-4 border-t border-gray-200 text-sm text-gray-600">
+          <button
+            disabled
+            className="px-4 py-2 rounded-md bg-gray-200 text-gray-400 cursor-not-allowed"
+          >
+            Previous
+          </button>
+          <span className="text-gray-700 font-medium">
+            Showing 1–{assessments.length} of {assessments.length} entries
+          </span>
+          <button
+            disabled
+            className="px-4 py-2 rounded-md bg-gray-200 text-gray-400 cursor-not-allowed"
+          >
+            Next
+          </button>
+        </div>
+      </div>
+
+      {/* ────────────────────── Mobile Cards ────────────────────── */}
+      <div className="lg:hidden space-y-4">
+        {assessments.length === 0 ? (
+          <div className="bg-white rounded-xl shadow-md p-8 text-center border border-gray-200">
+            <div className="text-gray-500">
+              <p className="text-lg font-medium mb-2">No assessments found</p>
+              <p className="text-sm">No assessments found. Try adjusting the search or contact support if the issue persists.</p>
+            </div>
+          </div>
+        ) : (
+          assessments.map((a) => (
+            <div
+              key={a.id}
+              className="bg-white rounded-xl shadow-md border border-gray-200 p-5 hover:shadow-lg transition-all"
+            >
+              <div className="flex justify-between items-start mb-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-full flex items-center justify-center text-white"
+                    style={{ backgroundColor: a.subject.color }}>
+                    {a.proctoring ? <Video className="w-4 h-4" /> : <Clipboard className="w-4 h-4" />}
                   </div>
-                  <div className="flex items-center gap-2">
-                    <button className="btn-icon btn-view"><Eye className="w-4 h-4" /></button>
-                    <button className="btn-icon btn-edit"><Edit className="w-4 h-4" /></button>
-                    <button className="btn-icon btn-delete"><Trash2 className="w-4 h-4" /></button>
+                  <div>
+                    <p className="font-semibold text-gray-900">{a.title}</p>
+                    <p className="text-sm text-gray-500">{a.subject.name}</p>
                   </div>
                 </div>
-                <h3 className="font-medium text-gray-900 mb-2">{a.title}</h3>
-                <div className="text-sm text-gray-600 mb-3">
-                  <div className="grid grid-cols-2 gap-2">
-                    <div>Start: {a.startDate}</div>
-                    <div>End: {a.endDate}</div>
-                    <div>Attempted: {a.attempted}/{a.total}</div>
-                    <div>Type: {a.proctoring ? 'Proctored' : a.offline ? 'Offline' : 'Online'}</div>
-                  </div>
+                <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${
+                  a.status === 'Attempted' ? 'bg-green-100 text-green-700' : 
+                  a.status === 'In Progress' ? 'bg-blue-100 text-blue-700' : 'bg-yellow-100 text-yellow-700'
+                }`}>
+                  {a.status}
+                </span>
+              </div>
+
+              <div className="space-y-2 text-sm text-gray-700 mb-4">
+                <div className="grid grid-cols-2 gap-2">
+                  <div><span className="font-medium">Start:</span> {a.startDate}</div>
+                  <div><span className="font-medium">End:</span> {a.endDate}</div>
+                  <div><span className="font-medium">Type:</span> {a.type}</div>
+                  <div><span className="font-medium">Progress:</span> {a.attempted}/{a.total}</div>
                 </div>
-                <div className="flex items-center justify-between text-xs text-gray-500">
-                  <div className="flex items-center gap-4">
-                    <span>Subject: {a.subject.name}</span>
-                    <span>Completion: {a.percentage}%</span>
+                <div className="mt-3">
+                  <div className="flex items-center justify-between text-xs mb-1">
+                    <span>Completion</span>
+                    <span>{a.percentage}%</span>
                   </div>
-                  <span>Students: {a.attempted}/{a.total}</span>
+                  <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-blue-500 rounded-full"
+                      style={{ width: `${a.percentage}%` }}
+                    ></div>
+                  </div>
                 </div>
               </div>
-            ))}
-          </div>
 
-          {/* Pagination */}
-          <div className="flex items-center justify-between mt-6 pt-4 border-t border-gray-200">
-            <div className="text-sm text-gray-500">
-              Showing 1 to 2 of 2 assessments
+              <div className="flex justify-end items-center gap-2">
+                <button 
+                  onClick={() => navigate(`/teacher/assessments/assessment/view/${a.id}`)}
+                  className="p-2 text-blue-600 hover:bg-blue-50 rounded"
+                >
+                  <Eye className="w-4 h-4" />
+                </button>
+                <button 
+                  onClick={() => navigate(`/teacher/assessments/assessment/edit/${a.id}`)}
+                  className="p-2 text-green-600 hover:bg-green-50 rounded"
+                >
+                  <Edit className="w-4 h-4" />
+                </button>
+                <button 
+                  onClick={() => handleDeleteConfirm(a.id)}
+                  className="p-2 text-red-600 hover:bg-red-50 rounded"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </div>
             </div>
-            <div className="flex items-center gap-2">
-              <button className="px-3 py-1 text-sm border border-gray-300 rounded hover:bg-gray-50 disabled:opacity-50" disabled>
-                Previous
-              </button>
-              <button className="px-3 py-1 text-sm bg-blue-600 text-white rounded">1</button>
-              <button className="px-3 py-1 text-sm border border-gray-300 rounded hover:bg-gray-50" disabled>
-                Next
-              </button>
-            </div>
-          </div>
-        </div>
+          ))
+        )}
+      </div>
+
+      {/* Mobile Pagination */}
+      <div className="lg:hidden flex justify-between items-center px-4 py-4 bg-white rounded-lg shadow-sm border border-gray-200 mt-4 text-sm text-gray-600">
+        <button
+          disabled
+          className="px-4 py-2 rounded-md bg-gray-200 text-gray-400 cursor-not-allowed"
+        >
+          Previous
+        </button>
+        <span className="text-gray-700 font-medium text-xs">
+          1–{assessments.length} of {assessments.length}
+        </span>
+        <button
+          disabled
+          className="px-4 py-2 rounded-md bg-gray-200 text-gray-400 cursor-not-allowed"
+        >
+          Next
+        </button>
       </div>
     </div>
   );
