@@ -63,6 +63,7 @@ function getExamSchedulesByTeacher(teacherId) {
 }
 
 function getTeacherRevaluationRequests(teacherId, examScheduleId) {
+  // api/exam/teacher/revaluation-requests?teacherId=x&examScheduleId
   return fetch(
     `${ExamMGMAPI}/exam/teacher/revaluation-requests?teacherId=${teacherId}&examScheduleId=${examScheduleId}`,
     { method: "GET", headers: authHeader() }
@@ -70,9 +71,9 @@ function getTeacherRevaluationRequests(teacherId, examScheduleId) {
 }
 
 
-function updateRevaluationMarks(id, data) {
+function updateRevaluationMarks(id, data,teacherId) {
   return fetch(
-    `${ExamMGMAPI}/exam/teacher/revaluation-requests/${id}/update-marks`,
+    `${ExamMGMAPI}/exam/teacher/revaluation-requests/${id}/update-marks?teacherId=${teacherId}`,
     {
       method: "PUT",
       headers: authHeaderToPost(),
