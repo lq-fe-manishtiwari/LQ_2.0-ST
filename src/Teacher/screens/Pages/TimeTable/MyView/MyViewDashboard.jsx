@@ -22,7 +22,7 @@ import { timetableService } from '../Services/timetable.service';
 const MyViewDashboard = () => {
     const navigate = useNavigate();
     const { id } = useParams();
-    
+
     const [currentDate, setCurrentDate] = useState(new Date());
     const [selectedDate, setSelectedDate] = useState(new Date());
     const [loading, setLoading] = useState(false);
@@ -49,8 +49,8 @@ const MyViewDashboard = () => {
     const isSameDay = (d1, d2) => {
         if (!d1 || !d2) return false;
         return d1.getFullYear() === d2.getFullYear() &&
-               d1.getMonth() === d2.getMonth() &&
-               d1.getDate() === d2.getDate();
+            d1.getMonth() === d2.getMonth() &&
+            d1.getDate() === d2.getDate();
     };
 
     const isSelectedDateToday = useMemo(() => {
@@ -71,7 +71,7 @@ const MyViewDashboard = () => {
             const currentUserStr = localStorage.getItem('currentUser');
             if (currentUserStr) {
                 const currentUser = JSON.parse(currentUserStr);
-                setTeacherId(currentUser.jti); 
+                setTeacherId(currentUser.jti);
                 console.log("Current User:", currentUser);
             }
 
@@ -163,29 +163,29 @@ const MyViewDashboard = () => {
         setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1));
     };
 
-      const handleViewModeChange = (mode) => {
+    const handleViewModeChange = (mode) => {
         setViewMode(mode);
-        
+
         if (mode === "Week") {
             const weekRange = getWeekRange(selectedDate);
             setSelectedDate(weekRange.start);
         }
-     
+
         else if (mode === "Month") {
             const monthRange = getMonthRange(selectedDate);
             setSelectedDate(monthRange.start);
             setCurrentDate(monthRange.start);
         }
-      
+
         else if (mode === "Day") {
-            
+
         }
     };
 
     // Handle date selection from calendar sidebar
     const handleDateSelectFromSidebar = (date) => {
         setSelectedDate(date);
-        setViewMode("Day"); 
+        setViewMode("Day");
         if (isMobile) {
             setMobileViewMode("schedule");
         }
@@ -200,7 +200,7 @@ const MyViewDashboard = () => {
     // Handle month date click - Switch to Day view
     const handleMonthDateClick = (date, schedule) => {
         setSelectedDate(date);
-        setViewMode("Day"); 
+        setViewMode("Day");
     };
 
     // Handle week day click - Switch to Day view
@@ -231,11 +231,11 @@ const MyViewDashboard = () => {
 
             setLoading(true);
             setError(null);
-            
+
             try {
                 // Calculate date range based on view mode
                 let startDate, endDate;
-                
+
                 if (viewMode === "Day") {
                     startDate = formatDateToYMD(selectedDate);
                     endDate = formatDateToYMD(selectedDate);
@@ -248,56 +248,56 @@ const MyViewDashboard = () => {
                     startDate = formatDateToYMD(monthRange.start);
                     endDate = formatDateToYMD(monthRange.end);
                 }
-                
+
                 console.log("Fetching timetable with params:", {
                     teacher_id: teacherId,
                     college_id: collegeId,
                     start_date: startDate,
                     end_date: endDate
                 });
-                
+
                 const response = await timetableService.getTeacherTimetable({
                     teacher_id: teacherId,
                     college_id: collegeId,
                     start_date: startDate,
                     end_date: endDate
                 });
-                
+
                 console.log("Timetable response received:", response);
-                
+
                 let timetableArray = [];
-                
+
                 if (response && response.daily_schedules && Array.isArray(response.daily_schedules)) {
                     // Map the API response to our component format
                     timetableArray = response.daily_schedules.flatMap(dailySchedule => {
                         const date = dailySchedule.date;
-                        
+
                         // If no slots for this day, return empty array
                         if (!dailySchedule.slots || !Array.isArray(dailySchedule.slots)) {
                             return [];
                         }
-                        
+
                         // Map each slot to our format
                         return dailySchedule.slots.map(slot => ({
                             // Basic information
                             id: slot.time_slot_id || `${date}_${slot.start_time}`,
                             date: date,
                             day_of_week: dailySchedule.day_of_week,
-                            
+
                             // Time information
                             start_time: slot.start_time,
                             end_time: slot.end_time,
                             slot_name: slot.slot_name,
-                            
+
                             // Subject information
                             subject_id: slot.subject_id,
                             subject_name: slot.subject_name,
                             subject_code: slot.subject_id ? `SUB-${slot.subject_id}` : "",
-                            
+
                             // Teacher information
                             teacher_id: slot.teacher_id,
                             teacher_name: slot.teacher_name,
-                            
+
                             // Academic information
                             academic_year_id: slot.academic_year_id,
                             academic_year_name: slot.academic_year_name,
@@ -309,36 +309,36 @@ const MyViewDashboard = () => {
                             semester_name: slot.semester_name,
                             division_id: slot.division_id,
                             division_name: slot.division_name,
-                            
+
                             // Location
                             classroom_id: slot.classroom_id,
                             classroom_name: slot.classroom_name,
                             room_number: slot.classroom_name || "Not Assigned",
-                            
+
                             // Type and notes
                             class_type: slot.slot_name || "Lecture",
                             type: slot.entry_type || "REGULAR",
                             notes: slot.notes,
-                            
+
                             // Source and exception handling
                             source: slot.source,
                             is_exception: slot.is_exception || false,
                             exception_type: slot.exception_type,
                             original_teacher_id: slot.original_teacher_id,
                             original_teacher_name: slot.original_teacher_name,
-                            
+
                             // Department (from program_name)
                             department: slot.program_name || "",
-                            
+
                             // College (from state)
                             college: collegeName,
-                            
+
                             // Holiday information
                             is_holiday: dailySchedule.is_holiday || slot.is_holiday,
                             holiday_name: dailySchedule.holiday_name || slot.holiday_name
                         }));
                     });
-                    
+
                     console.log("Mapped timetable array:", timetableArray);
                 }
                 else if (Array.isArray(response)) {
@@ -357,21 +357,21 @@ const MyViewDashboard = () => {
                     if (arrayKey) {
                         timetableArray = response[arrayKey];
                     } else {
-                        timetableArray = Object.values(response).filter(val => 
+                        timetableArray = Object.values(response).filter(val =>
                             val && typeof val === 'object' && (val.date || val.start_time)
                         );
                     }
                 }
-                
+
                 if (!Array.isArray(timetableArray)) {
                     console.warn("Processed timetable is not an array, defaulting to empty array:", timetableArray);
                     timetableArray = [];
                 }
-                
+
                 console.log("Processed timetable array:", timetableArray);
                 setTimetableData(timetableArray);
                 filterTimetableData(timetableArray, selectedDate, viewMode);
-                
+
                 if (timetableArray.length > 0 && timetableArray[0]) {
                     const firstSlot = timetableArray[0];
                     setAcademicInfo({
@@ -390,15 +390,15 @@ const MyViewDashboard = () => {
                 console.error("Full error details:", err);
                 console.error("Error response:", err.response);
                 console.error("Error data:", err.data);
-                
-                const errorMsg = err.response?.data?.message || 
-                                 err.message || 
-                                 "Failed to load timetable data. Please try again.";
+
+                const errorMsg = err.response?.data?.message ||
+                    err.message ||
+                    "Failed to load timetable data. Please try again.";
                 setError(errorMsg);
-                
+
                 setTimetableData([]);
                 setFilteredData([]);
-                
+
                 if (err.response?.status === 401 || err.response?.status === 403) {
                     setError("Authentication required. Please log in again.");
                 }
@@ -406,7 +406,7 @@ const MyViewDashboard = () => {
                 setLoading(false);
             }
         };
-        
+
         fetchTimetableData();
     }, [selectedDate, viewMode, teacherId, collegeId, collegeName]);
 
@@ -489,7 +489,7 @@ const MyViewDashboard = () => {
 
     const dayScheduleData = useMemo(() => {
         if (!Array.isArray(filteredData)) return [];
-        
+
         return filteredData.filter(item => {
             if (!item || !item.date) return false;
             try {
@@ -515,15 +515,15 @@ const MyViewDashboard = () => {
                 return { date, schedule: [] };
             });
         }
-        
+
         const weekRange = getWeekRange(selectedDate);
         const days = [];
-        
+
         // Create array for 7 days of the week
         for (let i = 0; i < 7; i++) {
             const date = new Date(weekRange.start);
             date.setDate(weekRange.start.getDate() + i);
-            
+
             const daySchedule = filteredData.filter(item => {
                 if (!item || !item.date) return false;
                 try {
@@ -538,13 +538,13 @@ const MyViewDashboard = () => {
                 const timeB = b.start_time || "00:00";
                 return timeA.localeCompare(timeB);
             });
-            
+
             days.push({
                 date,
                 schedule: daySchedule
             });
         }
-        
+
         return days;
     }, [filteredData, selectedDate]);
 
@@ -585,7 +585,7 @@ const MyViewDashboard = () => {
                 hiddenSlotsCount: 0
             }));
         }
-        
+
         const { start: monthStart } = getMonthRange(selectedDate);
         const startOfMonth = new Date(monthStart);
         const startDay = startOfMonth.getDay();
@@ -621,7 +621,7 @@ const MyViewDashboard = () => {
                     return false;
                 }
             });
-            
+
             return {
                 date: dayDate,
                 dateStr: formatDateToYMD(dayDate),
@@ -629,7 +629,7 @@ const MyViewDashboard = () => {
                 isCurrentMonth: dayDate.getMonth() === selectedDate.getMonth(),
                 schedule: schedule,
                 totalSlots: schedule.length,
-                visibleSlots: schedule.slice(0, 2), 
+                visibleSlots: schedule.slice(0, 2),
                 hiddenSlotsCount: Math.max(0, schedule.length - 2)
             };
         });
@@ -638,7 +638,7 @@ const MyViewDashboard = () => {
     // Get unique time slots for week view
     const uniqueTimeSlots = useMemo(() => {
         if (!Array.isArray(filteredData)) return [];
-        
+
         const slots = new Set();
         filteredData.forEach(item => {
             if (item && item.start_time) {
@@ -720,8 +720,8 @@ const MyViewDashboard = () => {
                         </div>
                     )}
 
-                    {/* Teacher and Room */}
-                    <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 md:gap-8">
+                    <div className="flex flex-col gap-4 md:gap-6">
+                        {/* ===== TOP : Teacher & Room Info ===== */}
                         <div className="flex flex-col md:flex-row gap-4 md:gap-8">
                             <div className="flex items-center gap-3">
                                 <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center shrink-0">
@@ -751,25 +751,51 @@ const MyViewDashboard = () => {
                                 </div>
                             </div>
                         </div>
-                        
-                        <button
-                            type="button"
-                            onClick={() => navigate('/teacher/timetable/View-Upadate-Timetable', { state: { slot } })}
-                            className="text-xs px-3 py-1 bg-orange-500 hover:bg-orange-600 text-white rounded-full flex items-center gap-1 transition whitespace-nowrap self-start md:self-center"
-                        >
-                            Update
-                        </button>
+
+                        {/* ===== BOTTOM : Action Buttons ===== */}
+                        <div className="flex flex-wrap gap-2 md:gap-3">
+                            <button
+                                type="button"
+                                onClick={() => navigate('/teacher/timetable/View-Upadate-Timetable', { state: { slot } })}
+                                className="text-xs px-3 py-1 bg-orange-500 hover:bg-orange-600 text-white rounded-full transition"
+                            >
+                                Update
+                            </button>
+
+                            <button
+                                type="button"
+                                onClick={() => navigate('/teacher/attendance/tabular-view', {
+                                    state: {
+                                        slot,
+                                        fromTimetable: true
+                                    }
+                                })}
+                                className="text-xs px-3 py-1 bg-green-500 hover:bg-green-600 text-white rounded-full transition"
+                            >
+                                Mark Attendance
+                            </button>
+
+                            <button
+                                type="button"
+                                onClick={() => navigate('/teacher/attendance/generate-qr', { state: { slot } })}
+                                className="text-xs px-3 py-1 bg-blue-500 hover:bg-blue-600 text-white rounded-full transition"
+                            >
+                                Generate QR
+                            </button>
+                        </div>
+
                     </div>
+
                 </div>
             </div>
         </div>
     );
 
     const CompactSlotCard = ({ slot }) => (
-        <div 
+        <div
             className="px-2 py-1.5 rounded-md bg-primary-50 border border-primary-100 hover:bg-primary-100 transition-colors cursor-pointer"
             onClick={(e) => {
-                e.stopPropagation(); 
+                e.stopPropagation();
                 handleWeekSlotClick(slot);
             }}
         >
@@ -832,22 +858,22 @@ const MyViewDashboard = () => {
 
     const getDynamicButtonLabel = () => {
         const today = new Date();
-        
+
         if (viewMode === "Day") {
             if (isSameDay(selectedDate, today)) {
                 return "Today";
-            } 
+            }
         } else if (viewMode === "Week") {
             const weekRange = getWeekRange(selectedDate);
-           
-            
+
+
             if (weekRange.start.getMonth() === weekRange.end.getMonth()) {
                 return `Week`;
-            } 
+            }
         } else if (viewMode === "Month") {
             return `Month`;
         }
-        
+
         return "Today";
     };
 
@@ -909,7 +935,7 @@ const MyViewDashboard = () => {
                         <span className="font-bold">Error loading timetable</span>
                     </div>
                     <p className="text-red-500 text-sm mt-1">{error}</p>
-                    <button 
+                    <button
                         onClick={() => window.location.reload()}
                         className="mt-3 px-4 py-2 bg-red-600 text-white rounded-lg text-sm hover:bg-red-700"
                     >
@@ -995,7 +1021,7 @@ const MyViewDashboard = () => {
                                             }
                                         });
                                         const isToday = item.fullDate && isSameDay(item.fullDate, new Date());
-                                        
+
                                         return (
                                             <div key={idx} className="aspect-square flex items-center justify-center p-0.5">
                                                 {item.day ? (
@@ -1005,8 +1031,8 @@ const MyViewDashboard = () => {
                                                             ${isSameDay(item.fullDate, selectedDate)
                                                                 ? "bg-primary-600 text-white shadow-lg shadow-primary-200 font-bold"
                                                                 : isToday
-                                                                ? "bg-blue-50 text-blue-600 hover:bg-blue-100"
-                                                                : "bg-slate-50 text-slate-600 hover:bg-primary-50 hover:text-primary-600"
+                                                                    ? "bg-blue-50 text-blue-600 hover:bg-blue-100"
+                                                                    : "bg-slate-50 text-slate-600 hover:bg-primary-50 hover:text-primary-600"
                                                             }`}
                                                     >
                                                         <span>{item.day}</span>
@@ -1043,7 +1069,7 @@ const MyViewDashboard = () => {
 
                                     <div className="h-4 w-[1px] bg-slate-300 mx-1"></div>
                                     <button
-                                       
+
                                         className="px-2.5 py-1 rounded-lg border border-slate-200 bg-white text-xs font-bold text-slate-700 hover:bg-slate-50"
                                     >
                                         {getDynamicButtonLabel()}
@@ -1110,7 +1136,7 @@ const MyViewDashboard = () => {
                             <div className="p-4 border-b border-slate-200 bg-white">
                                 <div className="flex items-center justify-between">
                                     <button
-                                      
+
                                         className="px-3 py-2 rounded-lg border border-slate-200 bg-white text-sm font-bold text-slate-700 hover:bg-slate-50"
                                     >
                                         {getDynamicButtonLabel()}
@@ -1242,7 +1268,7 @@ const MyViewDashboard = () => {
                                                             return (
                                                                 <div key={dayIndex} className="p-2 border-r border-slate-100 last:border-r-0 min-h-[60px]">
                                                                     {slot ? (
-                                                                        <div 
+                                                                        <div
                                                                             className="h-full p-2 rounded-md bg-primary-50 border border-primary-100 hover:bg-primary-100 transition-colors cursor-pointer"
                                                                             onClick={(e) => {
                                                                                 e.stopPropagation();
@@ -1284,8 +1310,8 @@ const MyViewDashboard = () => {
                                         {monthGridData.map((dayData, index) => {
                                             const isToday = isSameDay(dayData.date, new Date());
                                             return (
-                                                <div 
-                                                    key={index} 
+                                                <div
+                                                    key={index}
                                                     className={`min-h-[120px] border-r border-b border-slate-100 p-2 ${!dayData.isCurrentMonth ? 'bg-slate-50/50' : ''} ${isToday ? 'bg-blue-50' : ''} ${isSameDay(dayData.date, selectedDate) ? 'bg-primary-100' : ''}`}
                                                     onClick={() => handleMonthDateClick(dayData.date, dayData.schedule)}
                                                 >
@@ -1308,7 +1334,7 @@ const MyViewDashboard = () => {
                                                                 <CompactSlotCard key={slotIndex} slot={slot} />
                                                             ))}
                                                             {dayData.hiddenSlotsCount > 0 && (
-                                                                <button 
+                                                                <button
                                                                     onClick={(e) => {
                                                                         e.stopPropagation();
                                                                         setPopupDate(dayData.date);

@@ -1,11 +1,17 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { User, X, Check, Activity, Stethoscope, Calendar, ChevronLeft, ChevronRight, MoreHorizontal, Trophy, AlertCircle, Coffee, Save, Trash2 } from 'lucide-react';
+import { useLocation } from 'react-router-dom';
 import AttendanceFilters from '../Components/AttendanceFilters';
 import AttendanceActionBar from './AttendanceActionBar';
 import { api } from '../../../../../_services/api';
 import { TeacherAttendanceManagement } from '../Services/attendance.service';
+import SweetAlert from 'react-bootstrap-sweetalert';
 
 export default function TabularView() {
+    const location = useLocation();
+    const passedSlot = location.state?.slot;
+    const fromTimetable = location.state?.fromTimetable;
+
     // State for filters
     const [filters, setFilters] = useState({
         program: '',
@@ -18,6 +24,11 @@ export default function TabularView() {
     });
 
     const [showFilters, setShowFilters] = useState(true);
+
+    // SweetAlert state
+    const [showSuccessAlert, setShowSuccessAlert] = useState(false);
+    const [showErrorAlert, setShowErrorAlert] = useState(false);
+    const [alertMessage, setAlertMessage] = useState('');
 
     // State for allocations
     const [allocations, setAllocations] = useState([]);
@@ -37,15 +48,26 @@ export default function TabularView() {
     const [attendanceStatuses, setAttendanceStatuses] = useState([]);
     const [loadingStatuses, setLoadingStatuses] = useState(false);
 
-
     const [students, setStudents] = useState([]);
 
-    // Date state
+    // Date state with localStorage check
     const [selectedDate, setSelectedDate] = useState(() => {
+        // Check if there's a saved state
+        const savedState = localStorage.getItem('attendanceTabularViewState');
+        if (savedState) {
+            try {
+                const parsedState = JSON.parse(savedState);
+                if (parsedState.selectedDate) {
+                    return parsedState.selectedDate;
+                }
+            } catch (error) {
+                console.error('Error reading saved date:', error);
+            }
+        }
+
         const today = new Date();
         return today.toISOString().split('T')[0];
     });
-
 
     // Calendar dropdown state
     const [showCalendar, setShowCalendar] = useState(false);
@@ -54,6 +76,104 @@ export default function TabularView() {
 
     const [activePopup, setActivePopup] = useState(null);
     const [selectAll, setSelectAll] = useState(false);
+
+    // Flag to track if filters were set from timetable
+    const [filtersSetFromTimetable, setFiltersSetFromTimetable] = useState(false);
+
+    // Process timetable navigation when component mounts
+    useEffect(() => {
+        const handleTimetableNavigation = () => {
+            if (fromTimetable && passedSlot && !filtersSetFromTimetable) {
+                const slot = passedSlot;
+
+                console.log("DEBUG: Received slot from timetable:", slot);
+
+                // Extract and set filters from slot
+                const newFilters = {
+                    program: slot.program_id?.toString() || '',
+                    batch: slot.batch_id?.toString() || '',
+                    academicYear: slot.academic_year_id?.toString() || '',
+                    semester: slot.semester_id?.toString() || '',
+                    division: slot.division_id?.toString() || '',
+                    paper: slot.subject_id?.toString() || '',
+                    timeSlot: slot.time_slot_id?.toString() || ''
+                };
+
+                console.log("DEBUG: Setting filters from slot:", newFilters);
+                setFilters(newFilters);
+                setFiltersSetFromTimetable(true);
+
+                // Set date from slot
+                if (slot.date) {
+                    try {
+                        let dateStr = slot.date;
+                        // Ensure proper format (YYYY-MM-DD)
+                        if (typeof dateStr === 'string' && dateStr.includes('-')) {
+                            // Already in correct format
+                            setSelectedDate(dateStr);
+                        } else {
+                            // Parse and format
+                            const date = new Date(dateStr);
+                            if (!isNaN(date.getTime())) {
+                                const year = date.getFullYear();
+                                const month = String(date.getMonth() + 1).padStart(2, '0');
+                                const day = String(date.getDate()).padStart(2, '0');
+                                const formattedDate = `${year}-${month}-${day}`;
+                                setSelectedDate(formattedDate);
+                            }
+                        }
+                    } catch (error) {
+                        console.error("Error parsing slot date:", error);
+                    }
+                }
+
+                // Create a manual time slot object
+                if (slot.start_time && slot.end_time) {
+                    const manualTimeSlot = {
+                        timetable_id: slot.time_slot_id || `temp_${Date.now()}`,
+                        time_slot_id: slot.time_slot_id,
+                        start_time: slot.start_time,
+                        end_time: slot.end_time,
+                        slot_name: slot.slot_name || `${slot.start_time} - ${slot.end_time}`,
+                        fromTimetable: true
+                    };
+
+                    setTimeSlots([manualTimeSlot]);
+                }
+
+                // Clear the location state to prevent re-applying on refresh
+                if (window.history.replaceState) {
+                    window.history.replaceState({}, document.title);
+                }
+            }
+        };
+
+        handleTimetableNavigation();
+    }, [fromTimetable, passedSlot, filtersSetFromTimetable]);
+
+    // Restore saved state on component mount (only if not from timetable)
+    useEffect(() => {
+        if (!fromTimetable) {
+            const savedState = localStorage.getItem('attendanceTabularViewState');
+            if (savedState) {
+                try {
+                    const parsedState = JSON.parse(savedState);
+
+                    // Restore filters
+                    if (parsedState.filters) {
+                        setFilters(parsedState.filters);
+                    }
+
+                    // Clean up - remove from localStorage after restoring
+                    localStorage.removeItem('attendanceTabularViewState');
+
+                } catch (error) {
+                    console.error('Error restoring saved state:', error);
+                    localStorage.removeItem('attendanceTabularViewState');
+                }
+            }
+        }
+    }, [fromTimetable]);
 
     // Fetch teacher ID and allocations
     useEffect(() => {
@@ -113,6 +233,7 @@ export default function TabularView() {
         fetchAttendanceStatuses();
     }, [collegeId]);
 
+    // Fetch teacher allocations
     useEffect(() => {
         const fetchAllocations = async () => {
             if (!currentTeacherId) return;
@@ -140,9 +261,9 @@ export default function TabularView() {
         }
     }, [currentTeacherId]);
 
-    // Auto-select first values when allocations load
+    // Auto-select first values when allocations load (only if not from timetable)
     useEffect(() => {
-        if (allocations.length > 0 && !filters.paper) {
+        if (allocations.length > 0 && !filters.paper && !filtersSetFromTimetable) {
             const firstAlloc = allocations[0];
             const newFilters = {
                 program: firstAlloc.program?.program_id?.toString() || '',
@@ -154,11 +275,17 @@ export default function TabularView() {
             };
             setFilters(newFilters);
         }
-    }, [allocations]);
+    }, [allocations, filters.paper, filtersSetFromTimetable]);
 
     // Fetch time slots when paper is selected
     useEffect(() => {
         const fetchTimeSlots = async () => {
+            // If coming from timetable and we already have a manual time slot, skip fetch
+            if (fromTimetable && filtersSetFromTimetable && timeSlots.length > 0 && timeSlots[0]?.fromTimetable) {
+                console.log("DEBUG: Using manual time slot from timetable");
+                return;
+            }
+
             if (filters.paper && filters.academicYear && filters.semester && filters.division && currentTeacherId && collegeId) {
                 setLoadingTimeSlots(true);
                 try {
@@ -179,40 +306,103 @@ export default function TabularView() {
 
                         if (validTimeSlots.length > 0) {
                             setTimeSlots(validTimeSlots);
-                            // Auto-select first time slot
-                            const firstSlotId = validTimeSlots[0].timetable_id?.toString() || validTimeSlots[0].time_slot_id?.toString();
-                            setFilters(prev => ({ ...prev, timeSlot: firstSlotId }));
+                            // Auto-select first time slot only if not already set from timetable
+                            if (!filters.timeSlot || !filtersSetFromTimetable) {
+                                const firstSlotId = validTimeSlots[0].timetable_id?.toString() || validTimeSlots[0].time_slot_id?.toString();
+                                setFilters(prev => ({ ...prev, timeSlot: firstSlotId }));
+                            }
                         } else {
                             // All slots are holidays, clear everything
                             setTimeSlots([]);
-                            setFilters(prev => ({ ...prev, timeSlot: '' }));
+                            if (!filtersSetFromTimetable) {
+                                setFilters(prev => ({ ...prev, timeSlot: '' }));
+                            }
                         }
                     } else {
                         // No time slots available
                         setTimeSlots([]);
-                        setFilters(prev => ({ ...prev, timeSlot: '' }));
+                        if (!filtersSetFromTimetable) {
+                            setFilters(prev => ({ ...prev, timeSlot: '' }));
+                        }
                     }
                 } catch (error) {
                     console.error("Error fetching time slots:", error);
                     setTimeSlots([]);
-                    setFilters(prev => ({ ...prev, timeSlot: '' }));
+                    if (!filtersSetFromTimetable) {
+                        setFilters(prev => ({ ...prev, timeSlot: '' }));
+                    }
                 } finally {
                     setLoadingTimeSlots(false);
                 }
             } else {
                 setTimeSlots([]);
-                setFilters(prev => ({ ...prev, timeSlot: '' }));
+                if (!filtersSetFromTimetable) {
+                    setFilters(prev => ({ ...prev, timeSlot: '' }));
+                }
             }
         };
 
         fetchTimeSlots();
-    }, [filters.paper, filters.academicYear, filters.semester, filters.division, currentTeacherId, selectedDate, collegeId]);
+    }, [filters.paper, filters.academicYear, filters.semester, filters.division, currentTeacherId, selectedDate, collegeId, fromTimetable, filtersSetFromTimetable, timeSlots.length]);
 
     // Fetch students based on filters
     useEffect(() => {
         const fetchStudents = async () => {
-            // Fetch students when paper is selected (parallel with time slots)
-            if (filters.academicYear && filters.semester && filters.division && filters.paper) {
+            // If coming from timetable, prioritize using slot data
+            if (fromTimetable && passedSlot && !studentsFetched) {
+                console.log("DEBUG: Fetching students with timetable slot data");
+
+                const params = {
+                    academicYearId: passedSlot.academic_year_id,
+                    semesterId: passedSlot.semester_id,
+                    divisionId: passedSlot.division_id,
+                    subjectId: passedSlot.subject_id
+                };
+
+                console.log("DEBUG: Fetch params from timetable:", params);
+
+                setLoadingStudents(true);
+                try {
+                    const response = await AttendanceManagement.getAttendanceStudents(params);
+
+                    if (response && response.data && response.data.length > 0) {
+                        const formattedStudents = response.data.map(s => {
+                            const fullName = [s.firstname, s.middlename, s.lastname].filter(Boolean).join(' ');
+                            return {
+                                ...s,
+                                id: s.student_id,
+                                name: fullName,
+                                roll_number: s.roll_number,
+                                email: s.email,
+                                avatar: s.avatar,
+                                status: 'P', // Default to present
+                                selected: false,
+                                program_id: s.program_id || parseInt(filters.program || passedSlot.program_id),
+                                batch_id: s.batch_id || parseInt(filters.batch || passedSlot.batch_id),
+                                academic_year_id: s.academic_year_id || parseInt(filters.academicYear || passedSlot.academic_year_id),
+                                semester_id: s.semester_id || parseInt(filters.semester || passedSlot.semester_id),
+                                division_id: s.division_id || parseInt(filters.division || passedSlot.division_id),
+                                subject_id: s.subject_id || parseInt(filters.paper || passedSlot.subject_id)
+                            };
+                        });
+                        console.log("DEBUG: Students fetched from timetable slot:", formattedStudents.length);
+                        setStudents(formattedStudents);
+                        setStudentsFetched(true);
+                    } else {
+                        console.log("DEBUG: No students found via timetable slot");
+                        setStudents([]);
+                        setStudentsFetched(true);
+                    }
+                } catch (error) {
+                    console.error("DEBUG: Error fetching students from timetable:", error);
+                    setStudents([]);
+                    setStudentsFetched(true);
+                } finally {
+                    setLoadingStudents(false);
+                }
+            }
+            // Normal fetch based on filters
+            else if (filters.academicYear && filters.semester && filters.division && filters.paper) {
                 setLoadingStudents(true);
                 try {
                     const params = {
@@ -235,7 +425,6 @@ export default function TabularView() {
                                 avatar: s.avatar,
                                 status: 'P', // Default to present
                                 selected: false,
-                                // Inject filter IDs if missing so filtering logic doesn't hide them
                                 program_id: s.program_id || parseInt(filters.program),
                                 batch_id: s.batch_id || parseInt(filters.batch),
                                 academic_year_id: s.academic_year_id || parseInt(filters.academicYear),
@@ -244,16 +433,16 @@ export default function TabularView() {
                                 subject_id: s.subject_id || parseInt(filters.paper)
                             };
                         });
-                        console.log("DEBUG: Final Formatted Students for UI:", formattedStudents);
+                        console.log("DEBUG: Students fetched normally:", formattedStudents.length);
                         setStudents(formattedStudents);
                         setStudentsFetched(true);
                     } else {
-                        console.log("DEBUG: No students found in response");
+                        console.log("DEBUG: No students found normally");
                         setStudents([]);
                         setStudentsFetched(true);
                     }
                 } catch (error) {
-                    console.error("DEBUG: Error fetching students:", error);
+                    console.error("DEBUG: Error fetching students normally:", error);
                     setStudents([]);
                     setStudentsFetched(true);
                 } finally {
@@ -267,16 +456,24 @@ export default function TabularView() {
         };
 
         fetchStudents();
-    }, [filters.academicYear, filters.semester, filters.division, filters.paper]);
+    }, [filters.academicYear, filters.semester, filters.division, filters.paper, fromTimetable, passedSlot, filtersSetFromTimetable, studentsFetched]);
 
     // Fetch existing attendance when time slot is selected
     useEffect(() => {
         const fetchExistingAttendance = async () => {
             if (filters.timeSlot && students.length > 0 && filters.academicYear && filters.semester && filters.division && filters.paper) {
                 try {
-                    const selectedTimeSlot = timeSlots.find(slot =>
-                        (slot.timetable_id?.toString() || slot.time_slot_id?.toString()) === filters.timeSlot
-                    );
+                    let selectedTimeSlot;
+
+                    // If coming from timetable with manual time slot
+                    if (fromTimetable && timeSlots.length > 0 && timeSlots[0]?.fromTimetable) {
+                        selectedTimeSlot = timeSlots[0];
+                    } else {
+                        // Find in fetched time slots
+                        selectedTimeSlot = timeSlots.find(slot =>
+                            (slot.timetable_id?.toString() || slot.time_slot_id?.toString()) === filters.timeSlot
+                        );
+                    }
 
                     if (!selectedTimeSlot) return;
 
@@ -320,8 +517,7 @@ export default function TabularView() {
         };
 
         fetchExistingAttendance();
-    }, [filters.timeSlot, students.length, attendanceStatuses.length]);
-
+    }, [filters.timeSlot, students.length, attendanceStatuses.length, fromTimetable, timeSlots, filters.academicYear, filters.semester, filters.division, filters.paper, selectedDate]);
 
     // Filter students based on selected filters
     const filteredStudents = students.filter(student => {
@@ -339,6 +535,10 @@ export default function TabularView() {
     // Filter handlers
     const handleFilterChange = (newFilters) => {
         setFilters(newFilters);
+        // If user manually changes filters, reset the timetable flag
+        if (filtersSetFromTimetable) {
+            setFiltersSetFromTimetable(false);
+        }
     };
 
     const toggleFilters = () => {
@@ -352,8 +552,10 @@ export default function TabularView() {
             academicYear: '',
             semester: '',
             division: '',
-            paper: ''
+            paper: '',
+            timeSlot: ''
         });
+        setFiltersSetFromTimetable(false);
     };
 
     const applyFilters = () => {
@@ -519,20 +721,45 @@ export default function TabularView() {
         setSelectAll(false);
     };
 
+    // Success Alert
+    const handleSuccessAlertConfirm = () => {
+        if (!fromTimetable) {
+            const stateToSave = {
+                filters: filters,
+                selectedDate: selectedDate
+            };
+            localStorage.setItem('attendanceTabularViewState', JSON.stringify(stateToSave));
+        }
+        window.location.reload();
+    };
+    const handleErrorAlertConfirm = () => {
+        setShowErrorAlert(false);
+    };
+
     // API Integration for submitting attendance
     const handleSubmitAttendance = async () => {
         if (!filters.academicYear || !filters.semester || !filters.division || !filters.paper || !filters.timeSlot) {
-            alert("Please select all filters including Time Slot before submitting.");
+            setAlertMessage("Please select all filters including Time Slot before submitting.");
+            setShowErrorAlert(true);
             return;
         }
 
         // Find selected time slot details
-        const selectedTimeSlot = timeSlots.find(slot =>
-            (slot.timetable_id?.toString() || slot.time_slot_id?.toString()) === filters.timeSlot
-        );
+        let selectedTimeSlot;
+
+        // If coming from timetable with manual time slot
+        if (fromTimetable && timeSlots.length > 0 && timeSlots[0]?.fromTimetable) {
+            selectedTimeSlot = timeSlots[0];
+        } else {
+            // Find in fetched time slots
+            selectedTimeSlot = timeSlots.find(slot =>
+                (slot.timetable_id?.toString() || slot.time_slot_id?.toString()) === filters.timeSlot
+            );
+        }
 
         if (!selectedTimeSlot) {
-            alert("Selected time slot not found. Please refresh and try again.");
+            setAlertMessage("Selected time slot not found. Please refresh and try again.");
+            setShowErrorAlert(true);
             return;
         }
 
@@ -561,13 +788,16 @@ export default function TabularView() {
         try {
             const response = await TeacherAttendanceManagement.saveDailyAttendance(attendanceData);
             if (response.success) {
-                alert('Attendance saved successfully!');
+                // Show success SweetAlert
+                setShowSuccessAlert(true);
             } else {
-                alert('Failed to save attendance: ' + (response.message || 'Unknown error'));
+                setAlertMessage('Failed to save attendance: ' + (response.message || 'Unknown error'));
+                setShowErrorAlert(true);
             }
         } catch (error) {
             console.error('Error saving attendance:', error);
-            alert('An error occurred while saving attendance.');
+            setAlertMessage('An error occurred while saving attendance.');
+            setShowErrorAlert(true);
         }
     };
 
@@ -601,7 +831,6 @@ export default function TabularView() {
             color: status.color_code || '#6B7280' // Use API color or default gray
         }));
 
-
     const getStatusColor = (status) => {
         switch (status) {
             case 'P': return 'bg-green-500';
@@ -631,6 +860,11 @@ export default function TabularView() {
                 <div className="px-4 sm:px-6 py-4">
                     <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-4">
                         <h2 className="text-lg font-semibold text-gray-800">Student Attendance</h2>
+                        {/* {fromTimetable && passedSlot && (
+                            <div className="text-xs bg-blue-50 text-blue-700 px-3 py-1 rounded-full">
+                                Auto-filled from Timetable
+                            </div>
+                        )} */}
                     </div>
 
                     {/* AttendanceFilters Component */}
@@ -756,7 +990,6 @@ export default function TabularView() {
                 </div>
             </div>
 
-
             {/* Table or Empty State/Loader */}
             <div className="relative min-h-[300px]">
                 {!filters.paper || !filters.timeSlot ? (
@@ -791,9 +1024,6 @@ export default function TabularView() {
                 ) : filteredStudents.length > 0 ? (
                     <div className="overflow-x-auto">
                         <table className="w-full">
-
-                            {/* ... table content ... */}
-
                             <thead className="table-header">
                                 <tr>
                                     <th className="table-th text-center">
@@ -931,28 +1161,15 @@ export default function TabularView() {
                                             <td className="py-3 px-3 sm:px-6 text-gray-800 text-xs sm:text-sm font-medium whitespace-nowrap">
                                                 {student.roll_number || 'N/A'}
                                             </td>
-                                            {/* <td className="py-3 px-3 sm:px-6 text-gray-600 text-xs sm:text-sm whitespace-nowrap hidden md:table-cell">
-                                                {programName}
-                                            </td> */}
                                             <td className="py-3 px-3 sm:px-6 text-gray-600 text-xs sm:text-sm whitespace-nowrap hidden lg:table-cell">
                                                 {batchName}
                                             </td>
                                             <td className="py-3 px-3 sm:px-6 text-gray-600 text-xs sm:text-sm whitespace-nowrap hidden md:table-cell">
                                                 {divisionName}
                                             </td>
-                                            {/* <td className="py-3 px-3 sm:px-6 text-gray-600 text-xs sm:text-sm whitespace-nowrap hidden lg:table-cell">
-                                                <div className="max-w-[120px] truncate" title={paperName}>
-                                                    {paperName}
-                                                </div>
-                                            </td> */}
                                             <td className="py-3 px-3 sm:px-6 text-gray-600 text-xs sm:text-sm whitespace-nowrap hidden xl:table-cell">
                                                 {semesterName}
                                             </td>
-                                            {/* <td className="py-3 px-3 sm:px-6 text-gray-600 text-xs sm:text-sm whitespace-nowrap hidden xl:table-cell">
-                                                <div className="max-w-[80px] truncate" title={academicYearName}>
-                                                    {academicYearName}
-                                                </div>
-                                            </td> */}
                                             <td className="py-3 px-3 sm:px-6">
                                                 <div className="flex justify-center">
                                                     <button
@@ -997,8 +1214,6 @@ export default function TabularView() {
                     </div>
                 ) : null}
             </div>
-
-
 
             {/* Hoisted Popup Modal */}
             {
@@ -1089,6 +1304,36 @@ export default function TabularView() {
                 )
             }
 
+            {/* SweetAlert Components */}
+
+            {/* Success SweetAlert */}
+            {showSuccessAlert && (
+                <SweetAlert
+                    success
+                    title="Success"
+                    confirmBtnText="OK"
+                    confirmBtnCssClass="btn-confirm"
+                    onConfirm={handleSuccessAlertConfirm}
+                    onCancel={() => setShowSuccessAlert(false)}
+                >
+                    Attendance saved successfully!
+                </SweetAlert>
+            )}
+
+            {/* Error SweetAlert */}
+            {showErrorAlert && (
+                <SweetAlert
+                    error
+                    title="Error"
+                    confirmBtnText="OK"
+                    confirmBtnCssClass="btn-error"
+                    onConfirm={handleErrorAlertConfirm}
+                    onCancel={() => setShowErrorAlert(false)}
+                >
+                    {alertMessage}
+                </SweetAlert>
+            )}
+
             {/* CSS Animations */}
             <style jsx>{`
                 @keyframes statusChange {
@@ -1135,6 +1380,6 @@ export default function TabularView() {
                     </div>
                 )
             }
-        </div >
+        </div>
     );
 }
