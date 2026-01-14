@@ -483,7 +483,14 @@ const SubjectSelectionFullScreenView = ({
 
                 // Show appropriate message based on results
                 if (failedCount > 0) {
-                    setErrorMessage(`${successCount} student(s) updated successfully.\n${failedCount} student(s) failed to update.`);
+                    // Format detailed error message with specific failures
+                    let detailedError = `${successCount} student(s) updated successfully.\n${failedCount} student(s) failed to update:\n\n`;
+                    failedEntries.forEach((entry, index) => {
+                        const student = studentsData.find(s => s.id === entry.student_id);
+                        const studentName = student ? student.name : `Student ID: ${entry.student_id}`;
+                        detailedError += `${index + 1}. ${studentName}: ${entry.error_message}\n`;
+                    });
+                    setErrorMessage(detailedError);
                     setShowSaveErrorAlert(true);
                 } else {
                     setAlertMessage(`Successfully updated ${successCount} student(s)!`);
@@ -565,6 +572,21 @@ const SubjectSelectionFullScreenView = ({
             // Only update UI if API call was successful
             if (response) {
                 console.log("Bulk API response:", response);
+
+                const successCount = response.successful_count || 0;
+                const failedCount = response.failed_count || 0;
+                const failedEntries = response.failed_entries || [];
+
+                if (failedCount > 0) {
+                    // Show detailed error message for failed entries
+                    let detailedError = "Failed to save changes:\n\n";
+                    failedEntries.forEach((entry, index) => {
+                        detailedError += `${index + 1}. ${entry.error_message}\n`;
+                    });
+                    setErrorMessage(detailedError);
+                    setShowSaveErrorAlert(true);
+                    return; // Don't update UI if there are failures
+                }
 
                 // Update the main students data with saved changes
                 const updatedStudents = studentsData.map(student => {
@@ -708,7 +730,7 @@ const SubjectSelectionFullScreenView = ({
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
                                 <div className="space-y-3 sm:space-y-4">
                                     <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center p-3 bg-blue-50 rounded-lg gap-1 sm:gap-0">
-                                        <span className="text-xs sm:text-sm font-medium text-gray-700">Subject Type:</span>
+                                        <span className="text-xs sm:text-sm font-medium text-gray-700">Paper Type:</span>
                                         <span className="text-xs sm:text-sm font-semibold text-blue-700 truncate">{displayName}</span>
                                     </div>
 
@@ -727,14 +749,14 @@ const SubjectSelectionFullScreenView = ({
                                     </div>
 
                                     <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center p-3 bg-purple-50 rounded-lg gap-1 sm:gap-0">
-                                        <span className="text-xs sm:text-sm font-medium text-gray-700">Available Subjects:</span>
+                                        <span className="text-xs sm:text-sm font-medium text-gray-700">Available Paper:</span>
                                         <span className="text-xs sm:text-sm font-semibold text-purple-700">{availableSubjects}</span>
                                     </div>
                                 </div>
 
                                 <div className="space-y-3 sm:space-y-4">
                                     <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center p-3 bg-indigo-50 rounded-lg gap-1 sm:gap-0">
-                                        <span className="text-xs sm:text-sm font-medium text-gray-700">Student Limit/Subject:</span>
+                                        <span className="text-xs sm:text-sm font-medium text-gray-700">Student Limit/Paper:</span>
                                         <span className="text-xs sm:text-sm font-semibold text-indigo-700">
                                             {configData?.limit_per_subject_selections || "30"}
                                         </span>
@@ -761,7 +783,7 @@ const SubjectSelectionFullScreenView = ({
                                     </div>
 
                                     <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center p-3 bg-teal-50 rounded-lg gap-1 sm:gap-0">
-                                        <span className="text-xs sm:text-sm font-medium text-gray-700">Subject Sets:</span>
+                                        <span className="text-xs sm:text-sm font-medium text-gray-700">Paper Sets:</span>
                                         <span className="text-xs sm:text-sm font-semibold text-teal-700">
                                             {configData?.subject_sets?.length || "2"} sets
                                         </span>
@@ -835,7 +857,7 @@ const SubjectSelectionFullScreenView = ({
                                 <p className="text-xs sm:text-sm text-gray-600 mt-1">
                                     {bulkSelectionMode
                                         ? "Select students to assign subjects in bulk. You can select across multiple pages."
-                                        : "Click on any student to manage their subject selections"
+                                        : "Click on any student to manage their paper selections"
                                     }
                                     {filteredStudents.length > studentsPerPage && !bulkSelectionMode && (
                                         <span className="ml-2 text-blue-600">
@@ -1393,7 +1415,7 @@ const SubjectSelectionFullScreenView = ({
                                                                     <div className="min-w-0 flex-1 pr-2">
                                                                         <h5 className="font-medium text-gray-900 text-xs sm:text-sm truncate">{subject.name}</h5>
                                                                         <p className="text-xs text-gray-600 truncate">
-                                                                            {subject.code} • {subject.paper_code}
+                                                                            • {subject.paper_code}
                                                                         </p>
                                                                     </div>
                                                                     <button
@@ -1415,7 +1437,7 @@ const SubjectSelectionFullScreenView = ({
                                             <Target size={32} className="sm:w-10 sm:h-10 mx-auto text-gray-400 mb-3 sm:mb-4" />
                                             <p className="text-gray-600 text-xs sm:text-sm sm:text-base">Maximum selections reached</p>
                                             <p className="text-gray-500 text-xs sm:text-sm mt-2">
-                                                Remove some subjects to add new ones
+                                                Remove some Paper to add new ones
                                             </p>
                                         </div>
                                     )}

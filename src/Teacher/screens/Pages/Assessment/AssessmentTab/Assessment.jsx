@@ -397,15 +397,15 @@ const Assessment = () => {
       <div className="hidden lg:block bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead className="table-header">
+            <thead className="bg-primary-600">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-50 uppercase tracking-wider bg-[#2162C1]">Assessment</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-50 uppercase tracking-wider bg-[#2162C1]">Subject</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-50 uppercase tracking-wider bg-[#2162C1]">Start Date</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-50 uppercase tracking-wider bg-[#2162C1]">End Date</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-50 uppercase tracking-wider bg-[#2162C1]">Status</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-50 uppercase tracking-wider bg-[#2162C1]">Progress</th>
-                <th className="px-6 py-3 text-center text-xs font-medium text-gray-50 uppercase tracking-wider bg-[#2162C1]">Actions</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-50 uppercase tracking-wider">Assessment</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-50 uppercase tracking-wider">Subject</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-50 uppercase tracking-wider">Start Date</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-50 uppercase tracking-wider">End Date</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-50 uppercase tracking-wider">Status</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-50 uppercase tracking-wider">Progress</th>
+                <th className="px-6 py-3 text-center text-xs font-medium text-gray-50 uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
@@ -451,18 +451,33 @@ const Assessment = () => {
                         <button 
                           onClick={() => navigate(`/teacher/assessments/assessment/view/${a.id}`)}
                           className="p-1 text-blue-600 hover:bg-blue-50 rounded"
+                          title="View Assessment"
                         >
                           <Eye className="w-4 h-4" />
                         </button>
                         <button 
                           onClick={() => navigate(`/teacher/assessments/assessment/edit/${a.id}`)}
                           className="p-1 text-green-600 hover:bg-green-50 rounded"
+                          title="Edit Assessment"
                         >
                           <Edit className="w-4 h-4" />
                         </button>
+                        <button
+  onClick={() =>
+    navigate(`/teacher/assessments/check-papers/${a.id}`, {
+      state: { assessmentData: a },
+    })
+  }
+  className="p-1 text-purple-600 hover:bg-purple-50 rounded"
+  title="Check Papers"
+>
+  <Clipboard className="w-4 h-4" />
+</button>
+
                         <button 
                           onClick={() => handleDeleteConfirm(a.id)}
                           className="p-1 text-red-600 hover:bg-red-50 rounded"
+                          title="Delete Assessment"
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>
@@ -560,18 +575,28 @@ const Assessment = () => {
                 <button 
                   onClick={() => navigate(`/teacher/assessments/assessment/view/${a.id}`)}
                   className="p-2 text-blue-600 hover:bg-blue-50 rounded"
+                  title="View Assessment"
                 >
                   <Eye className="w-4 h-4" />
                 </button>
                 <button 
                   onClick={() => navigate(`/teacher/assessments/assessment/edit/${a.id}`)}
                   className="p-2 text-green-600 hover:bg-green-50 rounded"
+                  title="Edit Assessment"
                 >
                   <Edit className="w-4 h-4" />
                 </button>
                 <button 
+                  onClick={() => navigate('/admin-assessment/assessment/check-papers', { state: { assessmentData: a } })}
+                  className="p-2 text-purple-600 hover:bg-purple-50 rounded"
+                  title="Check Papers"
+                >
+                  <Clipboard className="w-4 h-4" />
+                </button>
+                <button 
                   onClick={() => handleDeleteConfirm(a.id)}
                   className="p-2 text-red-600 hover:bg-red-50 rounded"
+                  title="Delete Assessment"
                 >
                   <Trash2 className="w-4 h-4" />
                 </button>

@@ -1,5 +1,6 @@
 import React from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
+
 import AssessmentLayout from "../AssessmentLayout";
 import Assessment from "../AssessmentTab/Assessment";
 import Questions from "../QuestionsTab/Questions";
@@ -7,6 +8,8 @@ import AddNewAssessment from "../AssessmentTab/AddNewAssessment";
 import EditAssessment from "../AssessmentTab/EditAssessment";
 import ViewAssessment from "../AssessmentTab/ViewAssessment";
 import AddNewQuestion from "../AddQuestions/AddNewQuestions";
+import CheckPapers from "../AssessmentTab/CheckPapers";
+import StudentResults from "../AssessmentTab/StudentResults";
 
 export default function AssessmentRoutes() {
   return (
@@ -23,6 +26,10 @@ export default function AssessmentRoutes() {
         <Route path="assessment/view/:id" element={<ViewAssessment />} />
         <Route path="assessment/edit/:id" element={<EditAssessment />} />
         <Route path="add-question" element={<AddNewQuestion />} />
+
+        {/* Extra routes */}
+        <Route path="check-papers/:id" element={<CheckPapers />} />
+        <Route path="student-results/:studentId/:assessmentId" element={<StudentResults />} />
       </Route>
 
       {/* Standalone page (no sidebar/layout) */}
