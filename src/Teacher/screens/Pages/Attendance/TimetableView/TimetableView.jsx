@@ -720,8 +720,8 @@ const TimetableView = () => {
                         </div>
                     )}
 
-                    {/* Teacher and Room */}
-                    <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 md:gap-8">
+<div className="flex flex-col gap-4 md:gap-6">
+                        {/* ===== TOP : Teacher & Room Info ===== */}
                         <div className="flex flex-col md:flex-row gap-4 md:gap-8">
                             <div className="flex items-center gap-3">
                                 <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center shrink-0">
@@ -751,14 +751,39 @@ const TimetableView = () => {
                                 </div>
                             </div>
                         </div>
-                        
-                        <button
-                            type="button"
-                            onClick={() => navigate('/teacher/timetable/View-Upadate-Timetable', { state: { slot } })}
-                            className="text-xs px-3 py-1 bg-orange-500 hover:bg-orange-600 text-white rounded-full flex items-center gap-1 transition whitespace-nowrap self-start md:self-center"
-                        >
-                            Update
-                        </button>
+
+                        {/* ===== BOTTOM : Action Buttons ===== */}
+                        <div className="flex flex-wrap gap-2 md:gap-3">
+                            <button
+                                type="button"
+                                onClick={() => navigate('/teacher/timetable/View-Upadate-Timetable', { state: { slot } })}
+                                className="text-xs px-3 py-1 bg-orange-500 hover:bg-orange-600 text-white rounded-full transition"
+                            >
+                                Update
+                            </button>
+
+                            <button
+                                type="button"
+                                onClick={() => navigate('/teacher/attendance/tabular-view', {
+                                    state: {
+                                        slot,
+                                        fromTimetable: true
+                                    }
+                                })}
+                                className="text-xs px-3 py-1 bg-green-500 hover:bg-green-600 text-white rounded-full transition"
+                            >
+                                Mark Attendance
+                            </button>
+
+                            <button
+                                type="button"
+                                onClick={() => navigate('/teacher/attendance/generate-qr', { state: { slot } })}
+                                className="text-xs px-3 py-1 bg-blue-500 hover:bg-blue-600 text-white rounded-full transition"
+                            >
+                                Generate QR
+                            </button>
+                        </div>
+
                     </div>
                 </div>
             </div>
