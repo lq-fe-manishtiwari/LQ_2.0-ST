@@ -70,6 +70,8 @@ const GET_EXAM_SCHEDULES_BY_COLLEGE_ID = gql`
            tool {
           toolId
           toolName
+          minimumMarks
+          maximumMarks
         }
           classrooms {
             examScheduleCourseClassroomId
@@ -123,6 +125,8 @@ const GET_EXAM_SCHEDULES_BY_ACADEMIC_YEAR = gql`
            tool {
           toolId
           toolName
+          minimumMarks
+          maximumMarks
         }
           classrooms {
             examScheduleCourseClassroomId
@@ -183,6 +187,8 @@ const GET_EXAM_SCHEDULE_BY_ID = gql`
          tool {
         toolId
         toolName
+        minimumMarks
+        maximumMarks
       }
         classrooms {
           classroomId
