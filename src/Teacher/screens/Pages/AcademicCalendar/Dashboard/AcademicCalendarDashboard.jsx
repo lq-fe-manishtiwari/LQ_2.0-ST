@@ -3,8 +3,10 @@ import { Calendar, ChevronLeft, ChevronRight, Clock, Users, Grid, List, Plus, St
 import AddEventModal from '../Components/AddEventModal';
 import SweetAlert from 'react-bootstrap-sweetalert';
 import { academicEventsService } from '../Services/academicEventsService';
+import { useUserProfile } from '../../../../../contexts/UserProfileContext';
 
 const AcademicCalendarDashboard = () => {
+  const { getCollegeId, isLoaded: isProfileLoaded, loading: profileLoading } = useUserProfile();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [showAddModal, setShowAddModal] = useState(false);
   const [selectedDate, setSelectedDate] = useState(null);
@@ -28,9 +30,15 @@ const AcademicCalendarDashboard = () => {
   // Load events for current month
   useEffect(() => {
     const loadEvents = async () => {
+      if (!isProfileLoaded || profileLoading) return;
+      
+      const collegeId = getCollegeId();
+      if (!collegeId) return;
+      
       try {
         setEvents({}); // Clear existing events
-        const response = await academicEventsService.getEventsByMonth(
+        const response = await academicEventsService.getEventsByCollegeAndMonth(
+          collegeId,
           currentDate.getFullYear(),
           currentDate.getMonth() + 1
         );
@@ -73,7 +81,7 @@ const AcademicCalendarDashboard = () => {
     };
     
     loadEvents();
-  }, [currentDate]);
+  }, [currentDate, isProfileLoaded, profileLoading, getCollegeId]);
   
   const monthNames = [
     'January', 'February', 'March', 'April', 'May', 'June',
@@ -154,6 +162,9 @@ const AcademicCalendarDashboard = () => {
   };
 
   const saveEvent = async (eventData) => {
+    const collegeId = getCollegeId();
+    if (!collegeId) return;
+    
     try {
       if (editEvent) {
         // Update existing event
@@ -182,7 +193,7 @@ const AcademicCalendarDashboard = () => {
           event_name: eventData.event_name,
           description: eventData.description,
           event_date: eventData.event_date
-        });
+        }, collegeId);
         
         const newEvent = {
           id: response.event_id,

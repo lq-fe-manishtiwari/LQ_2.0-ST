@@ -57,7 +57,7 @@ const AddNewQuestion = () => {
 
   // Navigate Back
   const goBack = () => {
-    navigate("/teacher/assessments/questions");
+    navigate("/admin-assessment/questions");
   };
 
   // Modal Helpers
@@ -81,23 +81,22 @@ const AddNewQuestion = () => {
   return (
     <>
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 p-4 md:p-6 lg:p-8">
-        <div className="max-w-7xl mx-auto h-full">
+        <div className="max-w-7xl mx-auto">
 
-          {/* Main Container */}
-          <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-200 h-full flex flex-col">
-            {/* Header */}
-            <div className="flex items-center justify-between mb-6">
+          {/* Header */}
+          <div className="bg-white rounded-xl shadow-md p-6 mb-6 border border-gray-200">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg flex items-center justify-center shadow-md" style={{ backgroundColor: "rgb(33 98 193 / var(--tw-bg-opacity, 1))" }}>
-                  <HelpCircle className="w-6 h-6 text-white" />
-                </div>
-                <h1 className="text-xl sm:text-2xl font-semibold" style={{ color: "rgb(33 98 193 / var(--tw-bg-opacity, 1))" }}>Add New Question</h1>
+                {/* <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                  <HelpCircle className="w-6 h-6 text-blue-600" />
+                </div> */}
+                <h1 className="text-xl sm:text-2xl font-semibold mb-6 text-center sm:text-left text-blue-700">Add New Question</h1>
               </div>
 
              {/* Right Circular Close Button */}
              <button
               onClick={goBack}
-              className="w-10 h-10 flex items-center justify-center rounded-full text-white transition-all hover:opacity-90 shadow-md"
+              className="w-10 h-10 mt-3 sm:mt-0 flex items-center justify-center rounded-full text-white transition-all shadow-sm hover:shadow-md"
               style={{ backgroundColor: "rgb(33 98 193 / var(--tw-bg-opacity, 1))" }}
             >
               <X className="w-5 h-5" />
@@ -105,13 +104,13 @@ const AddNewQuestion = () => {
             </div>
 
             {/* Tabs: Objective / Subjective */}
-            <div className="flex gap-3 mb-6">
+            <div className="flex gap-3 mt-6 border-b border-gray-200">
               {tabs.map((tab, index) => (
                 <button
                   key={tab.name}
                   type="button"
                   onClick={() => setActiveTabIndex(index)}
-                  className={`flex items-center gap-2 px-6 py-3 font-medium text-sm rounded-lg transition-all shadow-sm
+                  className={`flex items-center gap-2 px-6 py-3 font-medium text-sm rounded-t-lg transition-all
                     ${activeTabIndex === index
                       ? 'bg-blue-600 text-white shadow-md'
                       : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
@@ -122,10 +121,10 @@ const AddNewQuestion = () => {
                 </button>
               ))}
             </div>
+          </div>
 
-            {/* Content Area */}
-            <div className="flex-1">
-              <div className="bg-white rounded-lg shadow-md p-6 border border-gray-100 h-full">
+          {/* Content Area */}
+          <div className="bg-white rounded-xl shadow-md p-6 border border-gray-200">
             <Formik
               initialValues={initialValues}
               validationSchema={validationSchema}
@@ -140,27 +139,25 @@ const AddNewQuestion = () => {
               }}
             >
               {({ values, errors, touched, handleChange, handleSubmit, isSubmitting, setFieldValue }) => (
-                <Form onSubmit={handleSubmit} className="h-full flex flex-col">
+                <Form onSubmit={handleSubmit} className="space-y-8">
                   {/* Tab Content */}
-                  <div className="flex-1 flex justify-center">
-                    <div className="w-full max-w-4xl">
-                      {activeTabIndex === 0 ? (
-                        <ObjectiveQuestion formData={values} handleChange={handleChange} errors={errors} touched={touched} />
-                      ) : (
-                        <SubjectiveQuestion formData={values} handleChange={handleChange} errors={errors} touched={touched} />
-                      )}
-                    </div>
+                  <div className="tab-content">
+                    {activeTabIndex === 0 ? (
+                      <ObjectiveQuestion formData={values} handleChange={handleChange} errors={errors} touched={touched} />
+                    ) : (
+                      <SubjectiveQuestion formData={values} handleChange={handleChange} errors={errors} touched={touched} />
+                    )}
                   </div>
 
                   {/* Submit Button */}
-                  <div className="flex justify-center pt-6 border-t border-gray-200 mt-6">
+                  <div className="flex justify-center pt-6 border-t border-gray-200">
                     <button
                       type="submit"
                       disabled={isSubmitting}
                       className={`flex items-center space-x-2 px-8 py-3 rounded-lg font-medium text-white transition-all ${
                         isSubmitting
                           ? 'bg-blue-400 cursor-not-allowed'
-                          : 'bg-blue-600 hover:bg-blue-700'
+                          : 'bg-blue-600 hover:bg-blue-700 shadow-md hover:shadow-lg'
                       }`}
                     >
                       {isSubmitting ? (
@@ -176,8 +173,6 @@ const AddNewQuestion = () => {
                 </Form>
               )}
             </Formik>
-              </div>
-            </div>
           </div>
         </div>
       </div>
@@ -185,7 +180,7 @@ const AddNewQuestion = () => {
       {/* Success Modal */}
       {showSuccessModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl max-w-md w-full p-6">
+          <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-lg font-semibold text-green-600">{modalHeading}</h3>
               <button onClick={() => setShowSuccessModal(false)} className="text-gray-400 hover:text-gray-600">
@@ -208,7 +203,7 @@ const AddNewQuestion = () => {
       {/* Warning Modal */}
       {showWarningModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl max-w-md w-full p-6">
+          <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-lg font-semibold text-amber-600">{modalHeading}</h3>
               <button onClick={() => setShowWarningModal(false)} className="text-gray-400 hover:text-gray-600">

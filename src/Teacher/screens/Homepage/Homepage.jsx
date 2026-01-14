@@ -21,7 +21,7 @@ const Homepage = ({ children }) => {
     <div className="homepage flex min-h-screen overflow-hidden">
       <Sidebar toggle={toggle} isOpen={isOpen} />
       <div
-        className={`content flex-1 transition-all duration-300 p-3 bg-gray-100
+        className={`content flex-1 transition-all duration-300 p-3 bg-gray-100  overflow-x-hidden  max-w-full
           ${isOpen && !isMobile ? "ml-[250px]" : isMobile ? "ml-0" : "ml-[80px]"}
         `}
       >

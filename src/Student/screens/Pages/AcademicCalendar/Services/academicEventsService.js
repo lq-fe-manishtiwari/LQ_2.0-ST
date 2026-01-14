@@ -2,33 +2,40 @@ import { authHeader, handleResponse, authHeaderToPost, AcademicAPI } from '@/_se
 
 export const academicEventsService = {
   createEvent,
-  getEventsByMonth,
+  getEventsByCollegeAndMonth,
   getEventsByDay,
   updateEvent,
   deleteEvent
 };
 
-function createEvent(eventData) {
+function createEvent(eventData, collegeId) {
   const requestOptions = {
     method: 'POST',
     headers: authHeaderToPost(),
     body: JSON.stringify({
       event_name: eventData.event_name,
       description: eventData.description,
-      event_date: eventData.event_date
+      event_date: eventData.event_date,
+      college_id: collegeId,
+      academic_year_id: 1
     })
   };
-  return fetch(`${AcademicAPI}/admin/academic//academic-events`, requestOptions)
+  return fetch(`${AcademicAPI}/admin/academic/academic-events/college/${collegeId}`, requestOptions)
     .then(handleResponse);
 }
 
-function getEventsByMonth(year, month) {
+function getEventsByCollegeAndMonth(collegeId, year, month) {
+  console.log('Fetching events for college:', collegeId, 'year:', year, 'month:', month);
   const requestOptions = {
     method: 'GET',
     headers: authHeader()
   };
-  return fetch(`${AcademicAPI}/admin/academic/academic-events/month?year=${year}&month=${month}`, requestOptions)
-    .then(handleResponse);
+  return fetch(`${AcademicAPI}/admin/academic/academic-events/college/${collegeId}/month?year=${year}&month=${month}`, requestOptions)
+    .then(handleResponse)
+    .catch(error => {
+      console.error('API Error:', error);
+      throw error;
+    });
 }
 
 function getEventsByDay(year, month, day) {
