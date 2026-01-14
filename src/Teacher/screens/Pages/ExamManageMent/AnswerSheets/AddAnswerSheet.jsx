@@ -114,7 +114,7 @@ const AddAnswerSheet = () => {
             {/* Buttons */}
             <div className="flex justify-in justify-center gap-6">
               <Link
-                to="/exam-management/answer-sheets"
+                to="/teacher/exam/answer-sheets"
                 className="px-8 py-3 border border-gray-300 rounded-lg hover:bg-gray-50"
               >
                 Cancel
