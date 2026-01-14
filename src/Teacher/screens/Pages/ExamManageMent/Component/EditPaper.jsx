@@ -1,22 +1,25 @@
 import React, { useEffect, useState } from "react";
 import SweetAlert from "react-bootstrap-sweetalert";
 import { examPaperService } from "../Services/ExamPaper.Service";
+import { fetchExamScheduleById } from "../Services/examSchedule.graphql.service";
 import { Plus, Trash2 } from "lucide-react";
 
 const EditPaper = ({ paper, onCancel, onSuccess }) => {
   const [loading, setLoading] = useState(false);
   const [alert, setAlert] = useState(null);
+  const [loadingSchedule, setLoadingSchedule] = useState(true);
 
   // dropdown data
-  const [examSchedules, setExamSchedules] = useState([]);
+  const [examSchedule, setExamSchedule] = useState(null);
   const [subjects, setSubjects] = useState([]);
-  const [examTools, setExamTools] = useState([]);
-  const [semesters, setSemesters] = useState([]);
 
   const [sections, setSections] = useState([]);
 
   const activeCollege = JSON.parse(localStorage.getItem("activeCollege"));
   const collegeId = activeCollege?.id;
+
+  const userProfile = JSON.parse(localStorage.getItem("userProfile"));
+  const teacherId = userProfile?.teacher_id;
 
   const [formData, setFormData] = useState({
     paper_name: "",
@@ -33,52 +36,57 @@ const EditPaper = ({ paper, onCancel, onSuccess }) => {
     remark: "",
   });
 
-  // ─────────────────────────────────────────────
-  // Load dropdown data
-  // ─────────────────────────────────────────────
+  // Load schedule details and dependent data (subjects, tools)
   useEffect(() => {
-    if (!collegeId) return;
+    if (!paper?.exam_schedule_id || !collegeId) return;
 
     const loadData = async () => {
-      const [
-        scheduleRes,
-        subjectRes,
-        toolRes,
-        semesterRes,
-      ] = await Promise.all([
-        examPaperService.getExamSchedules(collegeId),
-        examPaperService.getSubjects(collegeId),
-        examPaperService.getExamTools(),
-        examPaperService.getSemesters(collegeId),
-      ]);
+        setLoadingSchedule(true);
+        try {
+            const scheduleData = await fetchExamScheduleById(paper.exam_schedule_id);
 
-      setExamSchedules(scheduleRes || []);
-      setSubjects(subjectRes || []);
-      setExamTools(toolRes || []);
-      setSemesters(semesterRes || []);
+            setExamSchedule(scheduleData);
+
+            if (scheduleData?.courses) {
+                const courseSubjects = scheduleData.courses.map(course => ({
+                    id: course.subjectId,
+                    subject_name: course.subjectDetails?.subjectName || `Subject ${course.subjectId}`
+                }));
+                setSubjects(courseSubjects);
+            }
+        } catch (error) {
+            console.error("Failed to load schedule/tool details:", error);
+            setAlert(<SweetAlert danger title="Error">Failed to load required data.</SweetAlert>);
+        } finally {
+            setLoadingSchedule(false);
+        }
     };
 
     loadData();
-  }, [collegeId]);
+  }, [paper?.exam_schedule_id, collegeId]);
 
   // ─────────────────────────────────────────────
   // Prefill edit data
   // ─────────────────────────────────────────────
   useEffect(() => {
-    if (!paper) return;
+    if (!paper || !examSchedule) return;
+
+    const matchingCourse = examSchedule.courses?.find(
+        (c) => String(c.subjectId) === String(paper.subject_id)
+    );
 
     setFormData({
       paper_name: paper.paper_name,
       paper_description: paper.paper_description,
       exam_schedule_id: String(paper.exam_schedule_id),
       subject_id: String(paper.subject_id),
-      exam_tool_id: String(paper.exam_tool_id),
-      semester_id: String(paper.semester_id),
+      exam_tool_id: String(matchingCourse?.tool?.toolId || paper.exam_tool_id || ""),
+      semester_id: String(examSchedule.semesterId || paper.semester_id || ""),
       start_date_time: paper.start_date_time?.slice(0, 16),
       end_date_time: paper.end_date_time?.slice(0, 16),
       exam_duration: (paper.exam_duration / 60).toString(),
-      min_marks: paper.min_marks,
-      max_marks: paper.max_marks,
+      min_marks: String(matchingCourse?.tool?.minimumMarks || paper.min_marks || ""),
+      max_marks: String(matchingCourse?.tool?.maximumMarks || paper.max_marks || ""),
       remark: paper.remark || "",
     });
 
@@ -92,7 +100,7 @@ const EditPaper = ({ paper, onCancel, onSuccess }) => {
         }))
       );
     }
-  }, [paper]);
+  }, [paper, examSchedule]);
 
   // ─────────────────────────────────────────────
   // Handlers
@@ -133,8 +141,15 @@ const EditPaper = ({ paper, onCancel, onSuccess }) => {
 
     try {
       const payload = {
-        ...formData,
+        paper_name: formData.paper_name,
+        paper_description: formData.paper_description,
+        exam_schedule_id: Number(formData.exam_schedule_id),
+        subject_id: Number(formData.subject_id),
+        exam_tool_id: Number(formData.exam_tool_id),
+        college_id: Number(collegeId),
+        teacher_id: Number(teacherId),
         exam_duration: Number(formData.exam_duration) * 60,
+        remark: formData.remark,
         min_marks: Number(formData.min_marks),
         max_marks: Number(formData.max_marks),
         start_date_time: `${formData.start_date_time}:00`,
@@ -173,6 +188,10 @@ const EditPaper = ({ paper, onCancel, onSuccess }) => {
   // ─────────────────────────────────────────────
   // UI
   // ─────────────────────────────────────────────
+    if (loadingSchedule) {
+        return <div className="p-6 text-center">Loading paper details...</div>;
+    }
+
   return (
     <div className="p-6 bg-gray-50 min-h-screen">
       {alert}
@@ -184,61 +203,51 @@ const EditPaper = ({ paper, onCancel, onSuccess }) => {
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* BASIC INFO */}
         <div className="bg-white p-6 rounded-xl shadow grid md:grid-cols-2 gap-6">
-          <select
-            name="exam_schedule_id"
-            value={formData.exam_schedule_id}
-            onChange={handleChange}
-            className="border rounded-lg px-4 py-2"
-          >
-            <option value="">Select Exam Schedule</option>
-            {examSchedules.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.exam_schedule_name}
-              </option>
-            ))}
-          </select>
+          <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Exam Schedule</label>
+              <div className="w-full border rounded-lg px-4 py-2.5 bg-gray-100">
+                  {examSchedule?.examScheduleName || "Loading..."}
+              </div>
+          </div>
 
-          <select
-            name="semester_id"
-            value={formData.semester_id}
-            onChange={handleChange}
-            className="border rounded-lg px-4 py-2"
-          >
-            <option value="">Select Semester</option>
-            {semesters.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.name}
-              </option>
-            ))}
-          </select>
+          <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Semester</label>
+              <div className="w-full border rounded-lg px-4 py-2.5 bg-gray-100">
+                  {examSchedule?.semester?.name || "Loading..."}
+              </div>
+          </div>
 
           <select
             name="subject_id"
             value={formData.subject_id}
-            onChange={handleChange}
+            onChange={(e) => {
+                const newSubjectId = e.target.value;
+                const course = examSchedule?.courses?.find(c => String(c.subjectId) === String(newSubjectId));
+                setFormData(prev => ({
+                    ...prev,
+                    subject_id: newSubjectId,
+                    exam_tool_id: course?.tool?.toolId ? String(course.tool.toolId) : prev.exam_tool_id
+                }));
+            }}
             className="border rounded-lg px-4 py-2"
           >
             <option value="">Select Subject</option>
-            {subjects.map((s) => (
+            {subjects?.map((s) => (
               <option key={s.id} value={s.id}>
                 {s.subject_name}
               </option>
             ))}
           </select>
 
-          <select
-            name="exam_tool_id"
-            value={formData.exam_tool_id}
-            onChange={handleChange}
-            className="border rounded-lg px-4 py-2"
-          >
-            <option value="">Select Exam Tool</option>
-            {examTools.map((t) => (
-              <option key={t.id} value={t.id}>
-                {t.tool_name}
-              </option>
-            ))}
-          </select>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Exam Tool</label>
+            <div className="w-full border rounded-lg px-4 py-2.5 bg-gray-100 text-gray-700">
+              {(() => {
+                 const course = examSchedule?.courses?.find(c => String(c.subjectId) === String(formData.subject_id));
+                 return course?.tool?.toolName || "Auto-filled";
+              })()}
+            </div>
+          </div>
 
           <input
             name="paper_name"
