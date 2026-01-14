@@ -33,6 +33,10 @@ export default function TabularView() {
     const [loadingStudents, setLoadingStudents] = useState(false);
     const [studentsFetched, setStudentsFetched] = useState(false);
 
+    // State for attendance statuses
+    const [attendanceStatuses, setAttendanceStatuses] = useState([]);
+    const [loadingStatuses, setLoadingStatuses] = useState(false);
+
 
     const [students, setStudents] = useState([]);
 
@@ -84,6 +88,30 @@ export default function TabularView() {
             setCollegeId(fetchedCollegeId);
         }
     }, []);
+
+    // Fetch attendance statuses when collegeId is available
+    useEffect(() => {
+        const fetchAttendanceStatuses = async () => {
+            if (collegeId) {
+                setLoadingStatuses(true);
+                try {
+                    const response = await AttendanceManagement.getAttendanceStatuses(collegeId);
+                    if (response && response.success && response.data) {
+                        setAttendanceStatuses(response.data);
+                    } else {
+                        setAttendanceStatuses([]);
+                    }
+                } catch (error) {
+                    console.error("Error fetching attendance statuses:", error);
+                    setAttendanceStatuses([]);
+                } finally {
+                    setLoadingStatuses(false);
+                }
+            }
+        };
+
+        fetchAttendanceStatuses();
+    }, [collegeId]);
 
     useEffect(() => {
         const fetchAllocations = async () => {
@@ -240,6 +268,59 @@ export default function TabularView() {
 
         fetchStudents();
     }, [filters.academicYear, filters.semester, filters.division, filters.paper]);
+
+    // Fetch existing attendance when time slot is selected
+    useEffect(() => {
+        const fetchExistingAttendance = async () => {
+            if (filters.timeSlot && students.length > 0 && filters.academicYear && filters.semester && filters.division && filters.paper) {
+                try {
+                    const selectedTimeSlot = timeSlots.find(slot =>
+                        (slot.timetable_id?.toString() || slot.time_slot_id?.toString()) === filters.timeSlot
+                    );
+
+                    if (!selectedTimeSlot) return;
+
+                    const payload = {
+                        academic_year_id: parseInt(filters.academicYear),
+                        semester_id: parseInt(filters.semester),
+                        division_id: parseInt(filters.division),
+                        subject_id: parseInt(filters.paper),
+                        time_slot_id: selectedTimeSlot.time_slot_id,
+                        timetable_allocation_id: selectedTimeSlot.timetable_allocation_id || "",
+                        timetable_id: selectedTimeSlot.timetable_id,
+                        date: selectedDate
+                    };
+
+                    const response = await AttendanceManagement.getAttendanceList(payload);
+
+                    if (response && response.success && response.data && response.data.length > 0) {
+                        // Attendance exists, update student statuses
+                        console.log("DEBUG: Attendance list response:", response.data);
+                        setStudents(prevStudents =>
+                            prevStudents.map(student => {
+                                const attendanceRecord = response.data.find(a => a.student_id === student.id);
+                                if (attendanceRecord && attendanceRecord.status) {
+                                    // Status is nested object with status_code
+                                    console.log(`DEBUG: Found attendance for student ${student.id}:`, attendanceRecord.status);
+                                    return {
+                                        ...student,
+                                        status: attendanceRecord.status.status_code || 'P'
+                                    };
+                                }
+                                return student;
+                            })
+                        );
+                    }
+                    // If no attendance data, keep default 'P' status
+                } catch (error) {
+                    console.error("Error fetching existing attendance:", error);
+                    // Keep default statuses on error
+                }
+            }
+        };
+
+        fetchExistingAttendance();
+    }, [filters.timeSlot, students.length, attendanceStatuses.length]);
 
 
     // Filter students based on selected filters
@@ -440,20 +521,40 @@ export default function TabularView() {
 
     // API Integration for submitting attendance
     const handleSubmitAttendance = async () => {
-        if (!filters.academicYear || !filters.semester || !filters.division || !filters.paper) {
-            alert("Please select all filters (Academic Year, Semester, Division, Paper) before submitting.");
+        if (!filters.academicYear || !filters.semester || !filters.division || !filters.paper || !filters.timeSlot) {
+            alert("Please select all filters including Time Slot before submitting.");
             return;
         }
+
+        // Find selected time slot details
+        const selectedTimeSlot = timeSlots.find(slot =>
+            (slot.timetable_id?.toString() || slot.time_slot_id?.toString()) === filters.timeSlot
+        );
+
+        if (!selectedTimeSlot) {
+            alert("Selected time slot not found. Please refresh and try again.");
+            return;
+        }
+
+        // Map status codes to status IDs from API
+        const getStatusId = (statusCode) => {
+            const status = attendanceStatuses.find(s => s.status_code === statusCode);
+            return status?.status_id || null;
+        };
 
         const attendanceData = {
             academic_year_id: parseInt(filters.academicYear),
             semester_id: parseInt(filters.semester),
             division_id: parseInt(filters.division),
             subject_id: parseInt(filters.paper),
+            timetable_id: selectedTimeSlot.timetable_id,
+            timetable_allocation_id: selectedTimeSlot.timetable_allocation_id || null,
+            time_slot_id: selectedTimeSlot.time_slot_id,
             date: selectedDate,
-            attendance: students.map(s => ({
+            students: students.map(s => ({
                 student_id: s.id,
-                status: s.status
+                status_id: getStatusId(s.status),
+                remarks: s.status === 'P' ? 'Present' : s.status === 'A' ? 'Absent' : attendanceStatuses.find(st => st.status_code === s.status)?.status_name || ''
             }))
         };
 
@@ -472,12 +573,33 @@ export default function TabularView() {
 
     const selectedCount = students.filter(s => s.selected).length;
 
-    const otherStatuses = [
-        { id: 'OA', label: 'Other Activity', icon: <Activity size={16} />, color: 'bg-orange-500' },
-        { id: 'SA', label: 'Sports Activity', icon: <Trophy size={16} />, color: 'bg-yellow-500' },
-        { id: 'ML', label: 'Medical Leave', icon: <Stethoscope size={16} />, color: 'bg-blue-500' },
-        { id: 'SL', label: 'Sick Leave', icon: <AlertCircle size={16} />, color: 'bg-indigo-500' },
-    ];
+    // Map API statuses to UI format with icons
+    const getIconForStatus = (statusCode) => {
+        const iconMap = {
+            'P': <Check size={16} />,
+            'A': <X size={16} />,
+            'OA': <Activity size={16} />,
+            'SA': <Trophy size={16} />,
+            'ML': <Stethoscope size={16} />,
+            'SL': <AlertCircle size={16} />,
+            'CM': <Coffee size={16} />,
+        };
+        return iconMap[statusCode] || <MoreHorizontal size={16} />;
+    };
+
+    // Get Present and Absent statuses from API
+    const presentStatus = attendanceStatuses.find(s => s.status_code === 'P');
+    const absentStatus = attendanceStatuses.find(s => s.status_code === 'A');
+
+    // All other statuses (excluding P and A) for bulk actions dropdown
+    const otherStatuses = attendanceStatuses
+        .filter(status => status.status_code !== 'P' && status.status_code !== 'A')
+        .map(status => ({
+            id: status.status_code,
+            label: status.status_name,
+            icon: getIconForStatus(status.status_code),
+            color: status.color_code || '#6B7280' // Use API color or default gray
+        }));
 
 
     const getStatusColor = (status) => {
@@ -966,29 +1088,6 @@ export default function TabularView() {
                     </>
                 )
             }
-
-            {/* Empty State
-            {filteredStudents.length === 0 && (
-                    <div className="py-12 text-center">
-                        <div className="mx-auto w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
-                            <User className="w-8 h-8 text-gray-400" />
-                        </div>
-                        <h3 className="text-lg font-medium text-gray-900 mb-2">No students found</h3>
-                        <p className="text-gray-500 max-w-md mx-auto">
-                            {Object.values(filters).some(f => f)
-                                ? "Try adjusting your filters to find students."
-                                : "No students available for the selected criteria."}
-                        </p>
-                        {Object.values(filters).some(f => f) && (
-                            <button
-                                onClick={resetFilters}
-                                className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
-                            >
-                                Reset All Filters
-                            </button>
-                        )}
-                    </div>
-            )} */}
 
             {/* CSS Animations */}
             <style jsx>{`

@@ -4,6 +4,8 @@ export const AttendanceManagement = {
     saveDailyAttendance,
     getAttendanceStudents,
     getTimeSlots,
+    getAttendanceStatuses,
+    getAttendanceList,
 };
 
 function saveDailyAttendance(attendanceData) {
@@ -13,7 +15,7 @@ function saveDailyAttendance(attendanceData) {
         body: JSON.stringify(attendanceData),
     };
 
-    return fetch(`${TeacherAcademicAPI}/attendance/save`, requestOptions)
+    return fetch(`${TimetableAPI}/admin/academic/attendance/bulk-attendance`, requestOptions)
         .then(handlePostResponse)
         .then(data => ({
             success: true,
@@ -64,5 +66,42 @@ function getTimeSlots(params) {
         .catch(error => ({
             success: false,
             message: error.message || 'Failed to fetch time slots'
+        }));
+}
+
+function getAttendanceStatuses(collegeId) {
+    const requestOptions = {
+        method: 'GET',
+        headers: authHeader(),
+    };
+
+    return fetch(`${TimetableAPI}/admin/academic/attendance/status?collegeId=${collegeId}`, requestOptions)
+        .then(handleResponse)
+        .then(data => ({
+            success: true,
+            data: data
+        }))
+        .catch(error => ({
+            success: false,
+            message: error.message || 'Failed to fetch attendance statuses'
+        }));
+}
+
+function getAttendanceList(payload) {
+    const requestOptions = {
+        method: 'POST',
+        headers: authHeaderToPost(),
+        body: JSON.stringify(payload),
+    };
+
+    return fetch(`${TimetableAPI}/admin/academic/attendance/list-attendance`, requestOptions)
+        .then(handlePostResponse)
+        .then(data => ({
+            success: true,
+            data: data
+        }))
+        .catch(error => ({
+            success: false,
+            message: error.message || 'Failed to fetch attendance list'
         }));
 }
