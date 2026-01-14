@@ -98,7 +98,7 @@ const AnswerSheetList = () => {
             <ChevronDown size={16} />
           </button>
 
-          <Link to="/exam-management/answer-sheets/add">
+          <Link to="/teacher/exam/answer-sheets/add">
             <button className="flex items-center gap-1 bg-green-600 text-white px-4 py-2 text-sm rounded-lg whitespace-nowrap">
               <Plus size={16} />
               Add Answer Sheet
