@@ -8,6 +8,7 @@ import MarksEntry from "../Dashboard/MarksEntry";
 import ReEvaluation from "../Dashboard/ReEvaluation";
 import AnswerSheetList from "../AnswerSheets/AnswerSheets";
 import AddAnswerSheet from "../AnswerSheets/AddAnswerSheet";
+import MarkingInterface from "../AnswerSheets/MarkingInterface";
 
 
 export default function ExamManagementRoutes() {
@@ -17,6 +18,7 @@ export default function ExamManagementRoutes() {
       <Route path="/" element={<Navigate to="dashboard" replace />} />
       <Route path="answer-sheets"  element={<AnswerSheetList />} ></Route>
       <Route path="answer-sheets/add" element={<AddAnswerSheet />} />
+      <Route path="answer-sheets/mark/:id" element={<MarkingInterface />} />
       {/* dashboard */}
        <Route  element={<ExamManagementLayout />} >
        <Route path="dashboard" element={<ExamDashboard />} />
