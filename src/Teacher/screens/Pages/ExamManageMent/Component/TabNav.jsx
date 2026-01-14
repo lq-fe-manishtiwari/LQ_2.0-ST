@@ -8,6 +8,7 @@ const tabs = [
   { label: "Assigned Tasks", to: "/teacher/exam/tasks" },
   { label: "Schedule", to: "/teacher/exam/schedule" },
   { label: "Paper", to: "/teacher/exam/paper" },
+  { label: "OSM", to: "/teacher/exam/answer-sheets" },
   { label: "Marks Entry", to: "/teacher/exam/marksEntry" },
   // { label: "Edit Requests", to: "/teacher/exam/EditRequests" },
   { label: "Re-Evaluation", to: "/teacher/exam/Evaluation" }
