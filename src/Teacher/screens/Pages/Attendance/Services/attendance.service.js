@@ -1,6 +1,6 @@
 import { authHeader, handleResponse, handlePostResponse, authHeaderToPost, TimetableAPI, TeacherAcademicAPI } from '../../../../../_services/api';
 
-export const AttendanceManagement = {
+export const TeacherAttendanceManagement = {
     saveDailyAttendance,
     getAttendanceStudents,
     getTimeSlots,

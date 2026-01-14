@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import AttendanceFilters from '../Components/AttendanceFilters';
 import { api } from '../../../../../_services/api';
-import { AttendanceManagement } from '../Services/attendance.service';
+import { TeacherAttendanceManagement } from '../Services/attendance.service';
 
 export default function CardView() {
     // State for selected year and month
@@ -99,7 +99,7 @@ export default function CardView() {
             if (collegeId) {
                 setLoadingStatuses(true);
                 try {
-                    const response = await AttendanceManagement.getAttendanceStatuses(collegeId);
+                    const response = await TeacherAttendanceManagement.getAttendanceStatuses(collegeId);
                     if (response && response.success && response.data) {
                         setAttendanceStatuses(response.data);
                     } else {
@@ -212,7 +212,7 @@ export default function CardView() {
                 subjectId: filters.paper
             };
 
-            const response = await AttendanceManagement.getAttendanceStudents(params);
+            const response = await TeacherAttendanceManagement.getAttendanceStudents(params);
 
             if (response && response.data && response.data.length > 0) {
                 const formattedStudents = response.data.map((s, index) => {

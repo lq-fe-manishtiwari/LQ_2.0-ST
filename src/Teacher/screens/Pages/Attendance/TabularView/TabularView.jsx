@@ -3,7 +3,7 @@ import { User, X, Check, Activity, Stethoscope, Calendar, ChevronLeft, ChevronRi
 import AttendanceFilters from '../Components/AttendanceFilters';
 import AttendanceActionBar from './AttendanceActionBar';
 import { api } from '../../../../../_services/api';
-import { AttendanceManagement } from '../Services/attendance.service';
+import { TeacherAttendanceManagement } from '../Services/attendance.service';
 
 export default function TabularView() {
     // State for filters
@@ -95,7 +95,7 @@ export default function TabularView() {
             if (collegeId) {
                 setLoadingStatuses(true);
                 try {
-                    const response = await AttendanceManagement.getAttendanceStatuses(collegeId);
+                    const response = await TeacherAttendanceManagement.getAttendanceStatuses(collegeId);
                     if (response && response.success && response.data) {
                         setAttendanceStatuses(response.data);
                     } else {
@@ -171,7 +171,7 @@ export default function TabularView() {
                         divisionId: filters.division,
                         collegeId: collegeId
                     };
-                    const response = await AttendanceManagement.getTimeSlots(params);
+                    const response = await TeacherAttendanceManagement.getTimeSlots(params);
 
                     if (response && response.data && response.data.length > 0) {
                         // Filter out holidays - only show non-holiday time slots
@@ -221,7 +221,7 @@ export default function TabularView() {
                         divisionId: filters.division,
                         subjectId: filters.paper
                     };
-                    const response = await AttendanceManagement.getAttendanceStudents(params);
+                    const response = await TeacherAttendanceManagement.getAttendanceStudents(params);
 
                     if (response && response.data && response.data.length > 0) {
                         const formattedStudents = response.data.map(s => {
@@ -291,7 +291,7 @@ export default function TabularView() {
                         date: selectedDate
                     };
 
-                    const response = await AttendanceManagement.getAttendanceList(payload);
+                    const response = await TeacherAttendanceManagement.getAttendanceList(payload);
 
                     if (response && response.success && response.data && response.data.length > 0) {
                         // Attendance exists, update student statuses
@@ -559,7 +559,7 @@ export default function TabularView() {
         };
 
         try {
-            const response = await AttendanceManagement.saveDailyAttendance(attendanceData);
+            const response = await TeacherAttendanceManagement.saveDailyAttendance(attendanceData);
             if (response.success) {
                 alert('Attendance saved successfully!');
             } else {
