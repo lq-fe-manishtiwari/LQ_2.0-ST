@@ -1,13 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import AttendanceFilters from '../Components/AttendanceFilters';
 import { api } from '../../../../../_services/api';
+import { AttendanceManagement } from '../Services/attendance.service';
 
 export default function CardView() {
     // State for selected year and month
     const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
     const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
-    
-    // State for filters
+
+    // State for filters (removed timeSlot)
     const [filters, setFilters] = useState({
         program: '',
         batch: '',
@@ -16,26 +17,31 @@ export default function CardView() {
         division: '',
         paper: ''
     });
-    
+
     const [showFilters, setShowFilters] = useState(true);
-    
+
     // State for allocations
     const [allocations, setAllocations] = useState([]);
     const [loadingAllocations, setLoadingAllocations] = useState(false);
     const [currentTeacherId, setCurrentTeacherId] = useState(null);
-    
+    const [collegeId, setCollegeId] = useState(null);
+
+    // State for attendance statuses
+    const [attendanceStatuses, setAttendanceStatuses] = useState([]);
+    const [loadingStatuses, setLoadingStatuses] = useState(false);
+
     // State for student attendance data
     const [students, setStudents] = useState([]);
-    
+
     // State for tracking which cell is being edited
     const [editingCell, setEditingCell] = useState(null);
-    
+
     // State to track if changes have been made
     const [hasChanges, setHasChanges] = useState(false);
 
     // Years array (last 5 years and next 2 years)
     const years = Array.from({ length: 8 }, (_, i) => new Date().getFullYear() - 5 + i);
-    
+
     // Months array
     const months = [
         { value: 1, label: 'January' },
@@ -52,18 +58,12 @@ export default function CardView() {
         { value: 12, label: 'December' }
     ];
 
-    // Attendance status options
-    const attendanceOptions = [
-        { value: 'P', textColor: 'text-green-600', label: 'Present' },
-        { value: 'A', textColor: 'text-red-600', label: 'Absent' },
-        { value: 'OL', textColor: 'text-yellow-600', label: 'On Leave' },
-        { value: 'ML', textColor: 'text-blue-600', label: 'Medical Leave' }
-    ];
 
-    // Fetch teacher ID
+    // Fetch teacher ID and collegeId
     useEffect(() => {
         const getTeacherIdFromStorage = () => {
             let teacherId = null;
+            let collegeId = null;
             const userProfileStr = localStorage.getItem("userProfile") || sessionStorage.getItem("userProfile");
             if (userProfileStr) {
                 try {
@@ -71,18 +71,51 @@ export default function CardView() {
                     if (userProfile?.teacher_id) {
                         teacherId = userProfile.teacher_id;
                     }
+                    if (userProfile?.college_id) {
+                        collegeId = userProfile.college_id;
+                    }
                 } catch (e) {
                     console.error("Error parsing userProfile:", e);
                 }
             }
-            return teacherId ? parseInt(teacherId, 10) : null;
+            return {
+                teacherId: teacherId ? parseInt(teacherId, 10) : null,
+                collegeId: collegeId ? parseInt(collegeId, 10) : null
+            };
         };
 
-        const teacherId = getTeacherIdFromStorage();
+        const { teacherId, collegeId: fetchedCollegeId } = getTeacherIdFromStorage();
         if (teacherId && !isNaN(teacherId)) {
             setCurrentTeacherId(teacherId);
         }
+        if (fetchedCollegeId && !isNaN(fetchedCollegeId)) {
+            setCollegeId(fetchedCollegeId);
+        }
     }, []);
+
+    // Fetch attendance statuses when collegeId is available
+    useEffect(() => {
+        const fetchAttendanceStatuses = async () => {
+            if (collegeId) {
+                setLoadingStatuses(true);
+                try {
+                    const response = await AttendanceManagement.getAttendanceStatuses(collegeId);
+                    if (response && response.success && response.data) {
+                        setAttendanceStatuses(response.data);
+                    } else {
+                        setAttendanceStatuses([]);
+                    }
+                } catch (error) {
+                    console.error("Error fetching attendance statuses:", error);
+                    setAttendanceStatuses([]);
+                } finally {
+                    setLoadingStatuses(false);
+                }
+            }
+        };
+
+        fetchAttendanceStatuses();
+    }, [collegeId]);
 
     // Fetch allocations
     useEffect(() => {
@@ -110,6 +143,22 @@ export default function CardView() {
             fetchAllocations();
         }
     }, [currentTeacherId]);
+
+    // Auto-select first available filter values
+    useEffect(() => {
+        if (allocations.length > 0 && !filters.paper) {
+            const firstAlloc = allocations[0];
+            const newFilters = {
+                program: firstAlloc.program?.program_id?.toString() || '',
+                batch: firstAlloc.batch?.batch_id?.toString() || '',
+                academicYear: firstAlloc.academic_year_id?.toString() || '',
+                semester: firstAlloc.semester_id?.toString() || '',
+                division: firstAlloc.division_id?.toString() || '',
+                paper: firstAlloc.subjects?.[0]?.subject_id?.toString() || ''
+            };
+            setFilters(newFilters);
+        }
+    }, [allocations]);
 
     // Filter handlers
     const handleFilterChange = (newFilters) => {
@@ -148,75 +197,59 @@ export default function CardView() {
     // Update days when month/year changes
     const days = Array.from({ length: getDaysInMonth(selectedYear, selectedMonth) }, (_, i) => i + 1);
 
-    // Load students data based on filters
-    const loadStudentsData = () => {
-        // In real app, you would fetch from API with filters
-        // For demo, we create dummy data based on filters
-        
-        const totalStudents = 15;
-        const initialStudents = Array(totalStudents).fill().map((_, i) => {
-            // Add filter-based data
-            let programName = 'B.Tech';
-            let batchName = 'CS-A';
-            let divisionName = 'A';
-            let paperName = 'Data Structures';
-            let semester = '3';
-            let academicYear = '2023-24';
-            
-            // If filters are selected, use them
-            if (filters.program && allocations.length > 0) {
-                const program = allocations.find(a => a.program?.program_id == filters.program);
-                if (program) programName = program.program?.program_name || programName;
-            }
-            
-            if (filters.batch && allocations.length > 0) {
-                const batch = allocations.find(a => a.batch?.batch_id == filters.batch);
-                if (batch) batchName = batch.batch?.batch_name || batchName;
-            }
-            
-            if (filters.division && allocations.length > 0) {
-                const division = allocations.find(a => a.division_id == filters.division);
-                if (division) divisionName = division.division?.division_name || divisionName;
-            }
-            
-            if (filters.paper && allocations.length > 0) {
-                const allocation = allocations.find(a => 
-                    a.subjects?.some(s => s.subject_id == filters.paper)
-                );
-                if (allocation) {
-                    const subject = allocation.subjects.find(s => s.subject_id == filters.paper);
-                    if (subject) paperName = subject.name || paperName;
-                }
-            }
+    // Load students data from API based on filters
+    const loadStudentsData = async () => {
+        if (!filters.academicYear || !filters.semester || !filters.division || !filters.paper) {
+            setStudents([]);
+            return;
+        }
 
-            const attendance = {};
-            days.forEach(day => {
-                attendance[day] = 'A'; // Default to Absent
-            });
-            
-            // Calculate total presents
-            const total = Object.values(attendance).filter(status => status === 'P').length;
-            
-            return {
-                id: i,
-                srNo: String(i + 1).padStart(2, '0'),
-                rollNo: String(10000 + i),
-                name: `Student ${i + 1}`,
-                program: programName,
-                batch: batchName,
-                division: divisionName,
-                paper: paperName,
-                semester,
-                academicYear,
-                attendance,
-                total
+        try {
+            const params = {
+                academicYearId: filters.academicYear,
+                semesterId: filters.semester,
+                divisionId: filters.division,
+                subjectId: filters.paper
             };
-        });
-        
-        setStudents(initialStudents);
+
+            const response = await AttendanceManagement.getAttendanceStudents(params);
+
+            if (response && response.data && response.data.length > 0) {
+                const formattedStudents = response.data.map((s, index) => {
+                    const fullName = [s.firstname, s.middlename, s.lastname].filter(Boolean).join(' ');
+
+                    // Initialize attendance for all days in month
+                    const attendance = {};
+                    days.forEach(day => {
+                        attendance[day] = 'A'; // Default to Absent
+                    });
+
+                    // Calculate totals
+                    const totalPresent = Object.values(attendance).filter(status => status === 'P').length;
+                    const totalAbsent = Object.values(attendance).filter(status => status === 'A').length;
+
+                    return {
+                        id: s.student_id,
+                        srNo: String(index + 1).padStart(2, '0'),
+                        rollNo: s.roll_number || 'N/A',
+                        name: fullName,
+                        attendance,
+                        totalPresent,
+                        totalAbsent
+                    };
+                });
+
+                setStudents(formattedStudents);
+            } else {
+                setStudents([]);
+            }
+        } catch (error) {
+            console.error("Error fetching students:", error);
+            setStudents([]);
+        }
     };
 
-    // Initialize student data when month/year changes or filters change
+    // Fetch students when filters or month/year changes
     useEffect(() => {
         loadStudentsData();
     }, [selectedYear, selectedMonth, filters, allocations]);
@@ -235,14 +268,30 @@ export default function CardView() {
         };
     }, []);
 
+    // Map API statuses to dropdown format with dynamic colors
+    const hexToTextColor = (hexColor) => {
+        // Simple mapping - you can expand this based on your color palette
+        const colorMap = {
+            '#00FF00': 'text-green-600',
+            '#de2b2b': 'text-red-600',
+            '#3ce0ec': 'text-cyan-600',
+            '#79bdcd': 'text-blue-600',
+            '#c4c73d': 'text-yellow-600',
+            '#c170c7': 'text-purple-600',
+        };
+        return colorMap[hexColor] || 'text-gray-600';
+    };
+
+    const attendanceOptions = attendanceStatuses.map(status => ({
+        value: status.status_code,
+        label: status.status_name,
+        textColor: hexToTextColor(status.color_code),
+        hexColor: status.color_code
+    }));
+
     const getStatusStyle = (status) => {
-        switch (status) {
-            case 'P': return 'text-green-600';
-            case 'A': return 'text-red-600';
-            case 'OL': return 'text-yellow-600';
-            case 'ML': return 'text-blue-600';
-            default: return 'text-gray-400';
-        }
+        const statusObj = attendanceOptions.find(opt => opt.value === status);
+        return statusObj?.textColor || 'text-gray-400';
     };
 
     // Function to get month name
@@ -259,22 +308,24 @@ export default function CardView() {
                         ...student.attendance,
                         [day]: newStatus
                     };
-                    
-                    // Calculate total presents
-                    const total = Object.values(updatedAttendance).filter(status => status === 'P').length;
-                    
+
+                    // Calculate totals
+                    const totalPresent = Object.values(updatedAttendance).filter(status => status === 'P').length;
+                    const totalAbsent = Object.values(updatedAttendance).filter(status => status === 'A').length;
+
                     return {
                         ...student,
                         attendance: updatedAttendance,
-                        total
+                        totalPresent,
+                        totalAbsent
                     };
                 }
                 return student;
             });
-            
+
             return updatedStudents;
         });
-        
+
         setHasChanges(true);
         setEditingCell(null);
     };
@@ -311,7 +362,7 @@ export default function CardView() {
                     </h3>
                     <p className="text-sm text-gray-600">Click on any attendance cell to update status</p>
                 </div>
-                
+
                 {/* Academic Filters */}
                 <AttendanceFilters
                     filters={filters}
@@ -328,53 +379,33 @@ export default function CardView() {
                 {/* Month/Year Selector and Submit Button */}
                 <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6 mt-6">
                     <div className="flex flex-col sm:flex-row gap-3">
-                        {/* Month Selector */}
-                        <div className="w-full sm:w-48">
+                        {/* Month-Year Picker */}
+                        <div className="w-full sm:w-64">
                             <label className="block text-sm font-medium text-gray-700 mb-1">
-                                Select Month
+                                Select Month & Year
                             </label>
-                            <select
-                                value={selectedMonth}
-                                onChange={(e) => setSelectedMonth(parseInt(e.target.value))}
+                            <input
+                                type="month"
+                                value={`${selectedYear}-${String(selectedMonth).padStart(2, '0')}`}
+                                onChange={(e) => {
+                                    const [year, month] = e.target.value.split('-');
+                                    setSelectedYear(parseInt(year));
+                                    setSelectedMonth(parseInt(month));
+                                }}
                                 className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors bg-white"
-                            >
-                                {months.map(month => (
-                                    <option key={month.value} value={month.value}>
-                                        {month.label}
-                                    </option>
-                                ))}
-                            </select>
-                        </div>
-
-                        {/* Year Selector */}
-                        <div className="w-full sm:w-40">
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                                Select Year
-                            </label>
-                            <select
-                                value={selectedYear}
-                                onChange={(e) => setSelectedYear(parseInt(e.target.value))}
-                                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors bg-white"
-                            >
-                                {years.map(year => (
-                                    <option key={year} value={year}>
-                                        {year}
-                                    </option>
-                                ))}
-                            </select>
+                            />
                         </div>
                     </div>
-                    
+
                     {/* Submit Button */}
                     <div className="mt-2 lg:mt-0">
                         <button
                             onClick={handleSubmit}
                             disabled={!hasChanges}
-                            className={`px-6 py-3 rounded-lg font-medium transition-all duration-200 flex items-center gap-2 ${
-                                hasChanges 
-                                    ? 'bg-blue-600 text-white hover:bg-blue-700 cursor-pointer shadow-md hover:shadow-lg' 
-                                    : 'bg-gray-100 text-gray-500 cursor-not-allowed'
-                            }`}
+                            className={`px-6 py-3 rounded-lg font-medium transition-all duration-200 flex items-center gap-2 ${hasChanges
+                                ? 'bg-blue-600 text-white hover:bg-blue-700 cursor-pointer shadow-md hover:shadow-lg'
+                                : 'bg-gray-100 text-gray-500 cursor-not-allowed'
+                                }`}
                         >
                             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
@@ -389,76 +420,74 @@ export default function CardView() {
                     </div>
                 </div>
 
-                {/* Legend */}
+
+                {/* Legend - Dynamic from API */}
                 <div className="mt-6 grid grid-cols-2 sm:grid-cols-4 gap-3">
-                    <div className="flex items-center gap-2 p-2 bg-green-50 rounded-lg border border-green-100">
-                        <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                        <span className="text-sm font-medium text-green-700">Present</span>
-                    </div>
-                    <div className="flex items-center gap-2 p-2 bg-red-50 rounded-lg border border-red-100">
-                        <div className="w-3 h-3 bg-red-500 rounded-full"></div>
-                        <span className="text-sm font-medium text-red-700">Absent</span>
-                    </div>
-                    <div className="flex items-center gap-2 p-2 bg-yellow-50 rounded-lg border border-yellow-100">
-                        <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
-                        <span className="text-sm font-medium text-yellow-700">On Leave</span>
-                    </div>
-                    <div className="flex items-center gap-2 p-2 bg-blue-50 rounded-lg border border-blue-100">
-                        <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
-                        <span className="text-sm font-medium text-blue-700">Medical Leave</span>
-                    </div>
+                    {attendanceOptions.map(option => (
+                        <div key={option.value} className="flex items-center gap-2 p-2 bg-gray-50 rounded-lg border border-gray-200">
+                            <div
+                                className="w-3 h-3 rounded-full"
+                                style={{ backgroundColor: option.hexColor }}
+                            ></div>
+                            <span className={`text-sm font-medium ${option.textColor}`}>
+                                {option.label}
+                            </span>
+                        </div>
+                    ))}
                 </div>
-            </div>
+            </div >
 
             {/* Table Container */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+            < div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden" >
                 {/* Header showing active filters */}
-                {(filters.program || filters.batch || filters.academicYear || filters.semester || filters.division || filters.paper) && (
-                    <div className="bg-blue-50 border-b border-blue-200 px-4 py-3">
-                        <div className="flex flex-wrap items-center gap-2">
-                            <span className="text-sm font-medium text-blue-800">Active Filters:</span>
-                            {filters.program && (
-                                <span className="inline-flex items-center gap-1 px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-xs">
-                                    Program: {allocations.find(a => a.program?.program_id == filters.program)?.program?.program_name || filters.program}
-                                </span>
-                            )}
-                            {filters.batch && (
-                                <span className="inline-flex items-center gap-1 px-3 py-1 bg-green-100 text-green-800 rounded-full text-xs">
-                                    Batch: {allocations.find(a => a.batch?.batch_id == filters.batch)?.batch?.batch_name || filters.batch}
-                                </span>
-                            )}
-                            {filters.academicYear && (
-                                <span className="inline-flex items-center gap-1 px-3 py-1 bg-purple-100 text-purple-800 rounded-full text-xs">
-                                    Academic Year: {allocations.find(a => a.academic_year_id == filters.academicYear)?.academic_year?.name || filters.academicYear}
-                                </span>
-                            )}
-                            {filters.semester && (
-                                <span className="inline-flex items-center gap-1 px-3 py-1 bg-yellow-100 text-yellow-800 rounded-full text-xs">
-                                    Semester: {allocations.find(a => a.semester_id == filters.semester)?.semester?.name || filters.semester}
-                                </span>
-                            )}
-                            {filters.division && (
-                                <span className="inline-flex items-center gap-1 px-3 py-1 bg-red-100 text-red-800 rounded-full text-xs">
-                                    Division: {allocations.find(a => a.division_id == filters.division)?.division?.division_name || filters.division}
-                                </span>
-                            )}
-                            {filters.paper && (
-                                <span className="inline-flex items-center gap-1 px-3 py-1 bg-indigo-100 text-indigo-800 rounded-full text-xs">
-                                    Paper: {(() => {
-                                        const allocation = allocations.find(a => 
-                                            a.subjects?.some(s => s.subject_id == filters.paper)
-                                        );
-                                        if (allocation) {
-                                            const subject = allocation.subjects.find(s => s.subject_id == filters.paper);
-                                            return subject?.name || filters.paper;
-                                        }
-                                        return filters.paper;
-                                    })()}
-                                </span>
-                            )}
+                {
+                    (filters.program || filters.batch || filters.academicYear || filters.semester || filters.division || filters.paper) && (
+                        <div className="bg-blue-50 border-b border-blue-200 px-4 py-3">
+                            <div className="flex flex-wrap items-center gap-2">
+                                <span className="text-sm font-medium text-blue-800">Active Filters:</span>
+                                {filters.program && (
+                                    <span className="inline-flex items-center gap-1 px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-xs">
+                                        Program: {allocations.find(a => a.program?.program_id == filters.program)?.program?.program_name || filters.program}
+                                    </span>
+                                )}
+                                {filters.batch && (
+                                    <span className="inline-flex items-center gap-1 px-3 py-1 bg-green-100 text-green-800 rounded-full text-xs">
+                                        Batch: {allocations.find(a => a.batch?.batch_id == filters.batch)?.batch?.batch_name || filters.batch}
+                                    </span>
+                                )}
+                                {filters.academicYear && (
+                                    <span className="inline-flex items-center gap-1 px-3 py-1 bg-purple-100 text-purple-800 rounded-full text-xs">
+                                        Academic Year: {allocations.find(a => a.academic_year_id == filters.academicYear)?.academic_year?.name || filters.academicYear}
+                                    </span>
+                                )}
+                                {filters.semester && (
+                                    <span className="inline-flex items-center gap-1 px-3 py-1 bg-yellow-100 text-yellow-800 rounded-full text-xs">
+                                        Semester: {allocations.find(a => a.semester_id == filters.semester)?.semester?.name || filters.semester}
+                                    </span>
+                                )}
+                                {filters.division && (
+                                    <span className="inline-flex items-center gap-1 px-3 py-1 bg-red-100 text-red-800 rounded-full text-xs">
+                                        Division: {allocations.find(a => a.division_id == filters.division)?.division?.division_name || filters.division}
+                                    </span>
+                                )}
+                                {filters.paper && (
+                                    <span className="inline-flex items-center gap-1 px-3 py-1 bg-indigo-100 text-indigo-800 rounded-full text-xs">
+                                        Paper: {(() => {
+                                            const allocation = allocations.find(a =>
+                                                a.subjects?.some(s => s.subject_id == filters.paper)
+                                            );
+                                            if (allocation) {
+                                                const subject = allocation.subjects.find(s => s.subject_id == filters.paper);
+                                                return subject?.name || filters.paper;
+                                            }
+                                            return filters.paper;
+                                        })()}
+                                    </span>
+                                )}
+                            </div>
                         </div>
-                    </div>
-                )}
+                    )
+                }
 
                 {/* Horizontal scroll container */}
                 <div className="overflow-x-auto relative">
@@ -466,44 +495,30 @@ export default function CardView() {
                         <table className="w-full">
                             <thead className="table-header">
                                 <tr>
-                                    <th className="table-th text-center">
+                                    <th className="table-th text-center sticky left-0 z-30 bg-gray-50">
                                         Sr No
                                     </th>
-                                    <th className="table-th text-center">
+                                    <th className="table-th text-center sticky left-[60px] z-30 bg-gray-50">
                                         Roll No.
                                     </th>
-                                    <th className="table-th text-center">
+                                    <th className="table-th text-left sticky left-[140px] z-30 bg-gray-50">
                                         Student Name
                                     </th>
-                                    {filters.program && (
-                                        <th className="table-th text-center">
-                                            Program
-                                        </th>
-                                    )}
-                                    {filters.batch && (
-                                        <th className="table-th text-center">
-                                            Batch
-                                        </th>
-                                    )}
-                                    {filters.division && (
-                                        <th className="table-th text-center">
-                                            Div
-                                        </th>
-                                    )}
-                                    {filters.paper && (
-                                        <th className="table-th text-center">
-                                            Paper
-                                        </th>
-                                    )}
                                     {days.map(day => (
                                         <th key={day} className="table-th text-center">
                                             {day}
                                         </th>
                                     ))}
-                                    <th className="table-th text-center">
+                                    <th className="table-th text-center bg-green-50">
                                         <div className="flex flex-col items-center">
                                             <span>Total</span>
                                             <span className="text-xs opacity-90">Present</span>
+                                        </div>
+                                    </th>
+                                    <th className="table-th text-center bg-red-50">
+                                        <div className="flex flex-col items-center">
+                                            <span>Total</span>
+                                            <span className="text-xs opacity-90">Absent</span>
                                         </div>
                                     </th>
                                 </tr>
@@ -511,65 +526,41 @@ export default function CardView() {
                             <tbody className="divide-y divide-gray-100">
                                 {students.map((student, index) => (
                                     <tr key={student.id} className="hover:bg-gray-50/80 transition-colors">
-                                        <td className="py-3 border-r border-gray-200 text-gray-600 font-medium sticky left-0 bg-white z-20 hover:bg-gray-50">
+                                        <td className="py-3 border-r border-gray-200 text-gray-600 font-medium sticky left-0 z-20 bg-white hover:bg-gray-50">
                                             <div className="flex items-center justify-center">
                                                 <span className="w-6 h-6 flex items-center justify-center bg-gray-100 rounded-full text-sm">
                                                     {student.srNo}
                                                 </span>
                                             </div>
                                         </td>
-                                        <td className="py-3 border-r border-gray-200 text-gray-700 font-medium sticky left-[60px] bg-white z-20 hover:bg-gray-50">
+                                        <td className="py-3 border-r border-gray-200 text-gray-700 font-medium sticky left-[60px] z-20 bg-white hover:bg-gray-50 text-center">
                                             {student.rollNo}
                                         </td>
-                                        <td className="py-3 px-4 border-r border-gray-200 text-left font-semibold text-gray-800 sticky left-[140px] lg:left-[180px] bg-white z-20 hover:bg-gray-50 truncate max-w-[150px] lg:max-w-[200px]">
+                                        <td className="py-3 px-4 border-r border-gray-200 text-left font-semibold text-gray-800 sticky left-[140px] z-20 bg-white hover:bg-gray-50 truncate max-w-[200px]">
                                             <div className="flex items-center gap-2">
                                                 <span>{student.name}</span>
                                             </div>
                                         </td>
-                                        
-                                        {/* Conditional columns based on filters */}
-                                        {filters.program && (
-                                            <td className="py-3 px-2 border-r border-gray-200 text-gray-600 text-left truncate max-w-[100px]">
-                                                {student.program}
-                                            </td>
-                                        )}
-                                        {filters.batch && (
-                                            <td className="py-3 border-r border-gray-200 text-gray-600">
-                                                {student.batch}
-                                            </td>
-                                        )}
-                                        {filters.division && (
-                                            <td className="py-3 border-r border-gray-200 text-gray-600">
-                                                {student.division}
-                                            </td>
-                                        )}
-                                        {filters.paper && (
-                                            <td className="py-3 px-2 border-r border-gray-200 text-gray-600 text-left truncate max-w-[120px]">
-                                                {student.paper}
-                                            </td>
-                                        )}
-                                        
+
                                         {/* Attendance days */}
                                         {days.map(day => (
                                             <td key={day} className="py-2 border-r border-gray-100 p-1 relative">
-                                                <div 
+                                                <div
                                                     onClick={(e) => handleCellClick(student.id, day, e)}
-                                                    className={`attendance-cell flex items-center justify-center w-8 h-8 md:w-9 md:h-9 mx-auto cursor-pointer transition-all duration-200 hover:scale-105 hover:shadow-md ${
-                                                        getStatusStyle(student.attendance[day])
-                                                    } ${
-                                                        editingCell && editingCell.studentId === student.id && editingCell.day === day
+                                                    className={`attendance-cell flex items-center justify-center w-8 h-8 md:w-9 md:h-9 mx-auto cursor-pointer transition-all duration-200 hover:scale-105 hover:shadow-md ${getStatusStyle(student.attendance[day])
+                                                        } ${editingCell && editingCell.studentId === student.id && editingCell.day === day
                                                             ? 'ring-1 ring-blue-500 ring-offset-1 z-30'
                                                             : ''
-                                                    }`}
+                                                        }`}
                                                 >
                                                     <span className="font-bold text-sm">
                                                         {student.attendance[day] || ''}
                                                     </span>
                                                 </div>
-                                                
+
                                                 {/* Dropdown directly in the cell */}
                                                 {editingCell && editingCell.studentId === student.id && editingCell.day === day && (
-                                                    <div 
+                                                    <div
                                                         className="attendance-dropdown absolute left-1/2 transform -translate-x-1/2 mt-1 z-40 bg-white border border-gray-200 rounded-lg shadow-xl p-3 min-w-[180px]"
                                                         style={{ top: '100%' }}
                                                     >
@@ -591,16 +582,46 @@ export default function CardView() {
                                                 )}
                                             </td>
                                         ))}
-                                        
-                                        <td className="py-3">
+
+                                        {/* Total Present */}
+                                        <td className="py-3 bg-green-50">
                                             <div className="flex items-center justify-center">
-                                                <span className="font-bold text-gray-800 bg-blue-50 px-3 py-1.5 rounded-lg border border-blue-100">
-                                                    {student.total}
+                                                <span className="font-bold text-green-700 bg-green-100 px-3 py-1.5 rounded-lg border border-green-200">
+                                                    {student.totalPresent}
+                                                </span>
+                                            </div>
+                                        </td>
+
+                                        {/* Total Absent */}
+                                        <td className="py-3 bg-red-50">
+                                            <div className="flex items-center justify-center">
+                                                <span className="font-bold text-red-700 bg-red-100 px-3 py-1.5 rounded-lg border border-red-200">
+                                                    {student.totalAbsent}
                                                 </span>
                                             </div>
                                         </td>
                                     </tr>
                                 ))}
+
+                                {/* Daily Present Count Row */}
+                                {students.length > 0 && (
+                                    <tr className="bg-blue-50 border-t-2 border-blue-200">
+                                        <td colSpan="3" className="py-3 px-4 font-bold text-gray-800 sticky left-0 z-20 bg-blue-50">
+                                            Daily Present Count
+                                        </td>
+                                        {days.map(day => {
+                                            const presentCount = students.filter(s => s.attendance[day] === 'P').length;
+                                            return (
+                                                <td key={day} className="py-3 text-center">
+                                                    <span className="font-bold text-blue-700 bg-blue-100 px-2 py-1 rounded">
+                                                        {presentCount}
+                                                    </span>
+                                                </td>
+                                            );
+                                        })}
+                                        <td colSpan="2" className="py-3"></td>
+                                    </tr>
+                                )}
                             </tbody>
                         </table>
                     </div>
@@ -631,7 +652,7 @@ export default function CardView() {
                         </div>
                     </div>
                 </div>
-            </div>
-        </div>
+            </div >
+        </div >
     );
 }
