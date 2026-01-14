@@ -397,15 +397,15 @@ const Assessment = () => {
       <div className="hidden lg:block bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead className="bg-primary-600">
+            <thead className="table-header">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-50 uppercase tracking-wider">Assessment</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-50 uppercase tracking-wider">Subject</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-50 uppercase tracking-wider">Start Date</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-50 uppercase tracking-wider">End Date</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-50 uppercase tracking-wider">Status</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-50 uppercase tracking-wider">Progress</th>
-                <th className="px-6 py-3 text-center text-xs font-medium text-gray-50 uppercase tracking-wider">Actions</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-50 uppercase tracking-wider bg-[#2162C1]">Assessment</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-50 uppercase tracking-wider bg-[#2162C1]">Subject</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-50 uppercase tracking-wider bg-[#2162C1]">Start Date</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-50 uppercase tracking-wider bg-[#2162C1]">End Date</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-50 uppercase tracking-wider bg-[#2162C1]">Status</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-50 uppercase tracking-wider bg-[#2162C1]">Progress</th>
+                <th className="px-6 py-3 text-center text-xs font-medium text-gray-50 uppercase tracking-wider bg-[#2162C1]">Actions</th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
