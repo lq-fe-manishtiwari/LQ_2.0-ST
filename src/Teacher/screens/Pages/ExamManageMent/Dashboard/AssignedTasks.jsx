@@ -1,4 +1,6 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+
 import SweetAlert from "react-bootstrap-sweetalert";
 import { examgService } from "../Services/Exam.service";
 import { fetchExamScheduleById } from "../Services/examSchedule.graphql.service";
@@ -11,6 +13,8 @@ import BulkUpload from "../Component/BulkUpload";
 import UploadExamPaper from "../Component/UploadExamPaper";
 
 const AssignedTasks = () => {
+  const navigate = useNavigate();
+
   const [exams, setExams] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -94,28 +98,38 @@ const formatDate = (dateStr) =>
     }
   };
 
-  const handleAction = async (duty, examScheduleId, subject) => {
-    setSelectedDuty(duty);
-    setSelectedExamScheduleId(examScheduleId);
-    setSelectedSubject(subject);
+ const handleAction = async (duty, examScheduleId, subject) => {
+  setSelectedDuty(duty);
+  setSelectedExamScheduleId(examScheduleId);
+  setSelectedSubject(subject);
 
-    switch (duty.duty_type) {
-      case "CREATE_PAPERS":
-        setShowCreateModal(true);
-        break;
+  switch (duty.duty_type) {
+    case "CREATE_PAPERS":
+      setShowCreateModal(true);
+      break;
 
-      case "PAPER_REVALUATION":
-        setActiveComponent("PAPER_REVALUATION");
-        break;
+    case "PAPER_REVALUATION":
+      // Navigate to the revaluation page
+      navigate("/teacher/exam/Evaluation", {
+        state: { examScheduleId, subjectId: subject?.subject_id }
+      });
+      break;
 
-      case "MARKS_ENTRY":
-        setShowMarksModal(true);
-        break;
+    case "ANSWER_SHEET_MARKING":
+      // Navigate to the answer sheets page
+      navigate("/teacher/exam/answer-sheets", {
+        state: { examScheduleId, subjectId: subject?.subject_id }
+      });
+      break;
 
-      default:
-        break;
-    }
-  };
+    case "MARKS_ENTRY":
+      setShowMarksModal(true);
+      break;
+
+    default:
+      break;
+  }
+};
 
   const closeAll = () => {
     setActiveComponent(null);
