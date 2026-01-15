@@ -5,6 +5,7 @@ import CardView from "../CardView/CardView";
 import TimetableView from "../TimetableView/TimetableView";
 import TabularView from "../TabularView/TabularView";
 import QRAttendanceDashboard from "../QRAttendance/QRAttendanceDashboard";
+import AttendanceReports from "../Reports/AttendanceReport";
 
 export default function AttendanceRoutes() {
     return (
@@ -18,6 +19,7 @@ export default function AttendanceRoutes() {
                 <Route path="tabular-view" element={<TabularView />} />
                 <Route path="timetable-view" element={<TimetableView />} />
                 <Route path="qr-attendance" element={<QRAttendanceDashboard />} />
+                <Route path="reports" element={<AttendanceReports />} />
             </Route>
         </Routes>
     );

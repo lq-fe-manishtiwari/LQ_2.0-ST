@@ -742,7 +742,7 @@ export default function SubjectSelectionDashboard() {
                     </div>
                     <input
                         type="search"
-                        placeholder="Search subject selections..."
+                        placeholder="Search paper selections..."
                         value={searchTerm}
                         onChange={(e) => handleSearchChange(e.target.value)}
                         className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 placeholder-gray-400 text-gray-900 bg-white shadow-sm"

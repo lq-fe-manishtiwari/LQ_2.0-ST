@@ -38,7 +38,6 @@ const SubjectSelectionConfigView = ({
             subjectIds: (set.subjects || []).map(s => s.id || s.subject_id),
             subjectSetId: set.subject_set_id || null
         })) || [],
-        // subject_set_id: existingConfig.subject_sets?.[0]?.subject_set_id || existingConfig.subject_set_id || existingConfig.id || null,
     } : {
         subjectTypeId: subjectType?.id,
         verticalId: vertical?.id || null,
@@ -51,7 +50,6 @@ const SubjectSelectionConfigView = ({
         selectionType: "Same Set Only",
         numberOfSets: "",
         subjectSetRequest: [],
-        // subject_set_id: null,
     };
 
     const [config, setConfig] = useState(initialConfig);
@@ -68,10 +66,10 @@ const SubjectSelectionConfigView = ({
         e.preventDefault();
         const payload = {
             ...config,
-            // subject_set_id: config.subject_set_id,
             subjectSetRequest: config.subjectSetRequest || []
         };
         onSave(payload);
+        setIsEditing(false);
     };
 
     const handleSaveSubjectSets = (setsConfiguration) => {
@@ -88,7 +86,7 @@ const SubjectSelectionConfigView = ({
     // Display name for the configuration
     const displayName = vertical ? `${vertical.name}` : subjectType?.name || "Configuration";
     const availableSubjects = existingConfig?.allocated_subject_count || subjectType?.subject_count || 0;
-    console.log("existingConfig",existingConfig)
+    console.log("existingConfig", existingConfig)
 
     return (
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
@@ -107,7 +105,7 @@ const SubjectSelectionConfigView = ({
                         <Eye size={16} />
                         Details
                     </button>
-                    
+
                     <button
                         onClick={() => setShowManagement(!showManagement)}
                         className="flex items-center gap-2 text-sm text-gray-600 hover:text-gray-800"
@@ -181,7 +179,7 @@ const SubjectSelectionConfigView = ({
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                                        Student Limit Per Subject
+                                        Student Limit Per Paper
                                     </label>
                                     <input disabled={!isEditing}
                                         type="number"
@@ -197,7 +195,7 @@ const SubjectSelectionConfigView = ({
                             {/* Available Subjects Display */}
                             <div className="pt-2">
                                 <p className="text-sm text-gray-600">
-                                    Available Subjects: <span className="font-semibold text-gray-900">{availableSubjects}</span>
+                                    Available Paper: <span className="font-semibold text-gray-900">{availableSubjects}</span>
                                     {config.numberOfSets && ` ( ${config.numberOfSets} Sets )`}
                                 </p>
                             </div>
@@ -207,7 +205,7 @@ const SubjectSelectionConfigView = ({
                         <div className="lg:col-span-1">
                             <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
                                 <h4 className="text-sm font-semibold text-orange-800 mb-3">
-                                    Subject Sets Configuration
+                                    Paper Sets Configuration
                                 </h4>
 
                                 <div className="space-y-3">

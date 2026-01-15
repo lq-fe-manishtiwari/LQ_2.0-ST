@@ -451,18 +451,33 @@ const Assessment = () => {
                         <button 
                           onClick={() => navigate(`/teacher/assessments/assessment/view/${a.id}`)}
                           className="p-1 text-blue-600 hover:bg-blue-50 rounded"
+                          title="View Assessment"
                         >
                           <Eye className="w-4 h-4" />
                         </button>
                         <button 
                           onClick={() => navigate(`/teacher/assessments/assessment/edit/${a.id}`)}
                           className="p-1 text-green-600 hover:bg-green-50 rounded"
+                          title="Edit Assessment"
                         >
                           <Edit className="w-4 h-4" />
                         </button>
+                        <button
+  onClick={() =>
+    navigate(`/teacher/assessments/check-papers/${a.id}`, {
+      state: { assessmentData: a },
+    })
+  }
+  className="p-1 text-purple-600 hover:bg-purple-50 rounded"
+  title="Check Papers"
+>
+  <Clipboard className="w-4 h-4" />
+</button>
+
                         <button 
                           onClick={() => handleDeleteConfirm(a.id)}
                           className="p-1 text-red-600 hover:bg-red-50 rounded"
+                          title="Delete Assessment"
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>
@@ -560,18 +575,28 @@ const Assessment = () => {
                 <button 
                   onClick={() => navigate(`/teacher/assessments/assessment/view/${a.id}`)}
                   className="p-2 text-blue-600 hover:bg-blue-50 rounded"
+                  title="View Assessment"
                 >
                   <Eye className="w-4 h-4" />
                 </button>
                 <button 
                   onClick={() => navigate(`/teacher/assessments/assessment/edit/${a.id}`)}
                   className="p-2 text-green-600 hover:bg-green-50 rounded"
+                  title="Edit Assessment"
                 >
                   <Edit className="w-4 h-4" />
                 </button>
                 <button 
+                  onClick={() => navigate('/admin-assessment/assessment/check-papers', { state: { assessmentData: a } })}
+                  className="p-2 text-purple-600 hover:bg-purple-50 rounded"
+                  title="Check Papers"
+                >
+                  <Clipboard className="w-4 h-4" />
+                </button>
+                <button 
                   onClick={() => handleDeleteConfirm(a.id)}
                   className="p-2 text-red-600 hover:bg-red-50 rounded"
+                  title="Delete Assessment"
                 >
                   <Trash2 className="w-4 h-4" />
                 </button>

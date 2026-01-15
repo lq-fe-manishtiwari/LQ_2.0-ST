@@ -49,15 +49,12 @@ const CreatePaper = ({ dutyId, examSchedule, subjectId, subjectName, onClose }) 
     return date.toISOString().slice(0, 16); // "YYYY-MM-DDTHH:mm"
   };
 
-  // Auto-fill tool name, start/end time, and duration directly from props
+  // Auto-fill tool name, start/end time, duration, and marks directly from props
   useEffect(() => {
     console.log('examSchedule in CreatePaper:', examSchedule);
     console.log('subjectId in CreatePaper:', subjectId);
     
     if (!examSchedule || !subjectId) return;
-
-    // Tool name / ID
-    setSelectedToolName(examSchedule.examToolTypeName || "Theory");
 
     // Find the course that matches the selected subject
     const matchingCourse = examSchedule.courses?.find(
@@ -65,8 +62,15 @@ const CreatePaper = ({ dutyId, examSchedule, subjectId, subjectName, onClose }) 
     );
 
     console.log('matchingCourse found:', matchingCourse);
+    console.log('Complete matchingCourse structure:', JSON.stringify(matchingCourse, null, 2));
+    console.log('toolName:', matchingCourse?.toolName);
+    console.log('minimumMarks:', matchingCourse?.minimumMarks);
+    console.log('maximumMarks:', matchingCourse?.maximumMarks);
 
     if (matchingCourse) {
+      // Access tool data from the nested 'tool' object
+      setSelectedToolName(matchingCourse.tool?.toolName || "Theory");
+
       const start = toDateTimeLocal(matchingCourse.startExamDateTime);
       const end = toDateTimeLocal(matchingCourse.endExamDateTime);
 
@@ -76,12 +80,18 @@ const CreatePaper = ({ dutyId, examSchedule, subjectId, subjectName, onClose }) 
         duration = (diffMs / (1000 * 60 * 60)).toFixed(1); // hours with 1 decimal
       }
 
-      setFormData((prev) => ({
-        ...prev,
+      const newFormData = {
+        ...formData,
+        exam_tool_id: matchingCourse.tool?.toolId || "",
         start_date_time: start,
         end_date_time: end,
         exam_duration: duration,
-      }));
+        min_marks: matchingCourse.tool?.minimumMarks || "",
+        max_marks: matchingCourse.tool?.maximumMarks || ""
+      };
+      
+      console.log('Setting formData:', newFormData);
+      setFormData(newFormData);
     }
   }, [examSchedule, subjectId]);
 
@@ -214,7 +224,7 @@ const CreatePaper = ({ dutyId, examSchedule, subjectId, subjectName, onClose }) 
                 <p className="text-gray-900 font-semibold">{examSchedule?.examScheduleName || "N/A"}</p>
               </div>
               <div className="flex items-center gap-2">
-                <span className="font-medium text-gray-600">Subject:</span>
+                <span className="font-medium text-gray-600">Paper:</span>
                 <p className="text-gray-900 font-semibold">{subjectName || "N/A"}</p>
               </div>
               <div className="flex items-center gap-2">
@@ -268,34 +278,20 @@ const CreatePaper = ({ dutyId, examSchedule, subjectId, subjectName, onClose }) 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Minimum Marks *</label>
-                  <input
-                    type="number"
-                    name="min_marks"
-                    value={formData.min_marks}
-                    onChange={handleFormChange}
-                    placeholder="e.g. 35"
-                    min="0"
-                    required
-                    className="w-full border rounded-lg px-4 py-2.5"
-                  />
+                  <div className="w-full border rounded-lg px-4 py-2.5 bg-gray-50 text-gray-700">
+                    {formData.min_marks || "Loading..."}
+                  </div>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Maximum Marks *</label>
-                  <input
-                    type="number"
-                    name="max_marks"
-                    value={formData.max_marks}
-                    onChange={handleFormChange}
-                    placeholder="e.g. 100"
-                    min="0"
-                    required
-                    className="w-full border rounded-lg px-4 py-2.5"
-                  />
+                  <div className="w-full border rounded-lg px-4 py-2.5 bg-gray-50 text-gray-700">
+                    {formData.max_marks || "Loading..."}
+                  </div>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Exam Tool</label>
                   <div className="w-full border rounded-lg px-4 py-2.5 bg-gray-50 text-gray-700">
-                    {selectedToolName || "Auto-filled"}
+                    {selectedToolName || "Loading..."}
                   </div>
                 </div>
               </div>

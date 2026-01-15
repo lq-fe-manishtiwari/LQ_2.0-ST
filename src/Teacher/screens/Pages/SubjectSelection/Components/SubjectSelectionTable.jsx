@@ -13,7 +13,7 @@ const SubjectSelectionTable = ({ data = [], onEdit, onDelete }) => {
                 <div className="text-center">
                     <p className="text-gray-500 text-lg">No configurations found</p>
                     <p className="text-gray-400 text-sm mt-2">
-                        Create your first subject selection configuration
+                        Create your first Paper selection configuration
                     </p>
                 </div>
             </div>

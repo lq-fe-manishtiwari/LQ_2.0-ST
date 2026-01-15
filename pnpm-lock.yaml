@@ -38,6 +38,9 @@ importers:
       formik:
         specifier: ^2.4.6
         version: 2.4.9(@types/react@19.2.7)(react@19.2.3)
+      graphql:
+        specifier: ^16.12.0
+        version: 16.12.0
       html2canvas:
         specifier: ^1.4.1
         version: 1.4.1

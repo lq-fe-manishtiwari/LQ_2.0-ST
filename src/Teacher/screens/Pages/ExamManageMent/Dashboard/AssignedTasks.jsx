@@ -78,6 +78,8 @@ const formatDate = (dateStr) =>
             endExamDateTime: course.endExamDateTime,
             currentStudentStrength: course.currentStudentStrength,
             classrooms: course.classrooms || [],
+            tool: course.tool, // Pass the whole tool object
+            subjectDetails: course.subjectDetails, // Pass subject details
           })) || [],
       };
 

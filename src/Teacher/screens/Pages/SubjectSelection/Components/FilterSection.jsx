@@ -38,12 +38,6 @@ const CustomSelect = ({ label, value, onChange, options, placeholder, disabled =
 
         {isOpen && !disabled && (
           <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
-            <div
-              className="px-4 py-2 text-sm text-gray-700 cursor-pointer hover:bg-blue-50 transition-colors"
-              onClick={() => handleSelect('')}
-            >
-              {placeholder}
-            </div>
             {options.map(option => (
               <div
                 key={option}
@@ -150,7 +144,7 @@ const FilterSection = ({
                     value={getProgramValue()}
                     onChange={handleProgramChange}
                     options={programOptions}
-                    placeholder="All Programs"
+                    placeholder="Select Program"
                 />
 
                 {/* Batch Filter */}
@@ -159,7 +153,7 @@ const FilterSection = ({
                     value={getBatchValue()}
                     onChange={handleBatchChange}
                     options={batchOptions}
-                    placeholder="All Batches"
+                    placeholder="Select Batch"
                     disabled={!filters.programId}
                 />
 
@@ -169,7 +163,7 @@ const FilterSection = ({
                     value={getAcademicYearValue()}
                     onChange={handleAcademicYearChange}
                     options={academicYearOptions}
-                    placeholder="All Academic Years"
+                    placeholder="Select Academic Year"
                     disabled={!filters.batchId}
                 />
 
@@ -179,7 +173,7 @@ const FilterSection = ({
                     value={getSemesterValue()}
                     onChange={handleSemesterChange}
                     options={semesterOptions}
-                    placeholder="All Semesters"
+                    placeholder="Select Semester"
                     disabled={!filters.batchId}
                 />
             </div>
