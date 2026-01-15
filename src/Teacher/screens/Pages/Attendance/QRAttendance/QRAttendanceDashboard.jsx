@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
-import { QrCode, Download, Share2, Users, Clock, CheckCircle, XCircle, RefreshCw } from 'lucide-react';
-import { QRCodeSVG } from 'qrcode.react';
+import React, { useState, useEffect, useRef } from 'react';
+import { QrCode, Download, Share2, Users, Clock, CheckCircle, XCircle, RefreshCw, Loader } from 'lucide-react';
+import { QRCodeSVG, QRCodeCanvas } from 'qrcode.react';
 import AttendanceFilters from '../Components/AttendanceFilters';
 import { timetableService } from '../../Timetable/Services/timetable.service';
 import { TeacherAttendanceManagement } from '../Services/attendance.service';
@@ -49,6 +49,13 @@ const QRAttendanceDashboard = () => {
     // Alerts
     const [successAlert, setSuccessAlert] = useState(null);
     const [errorAlert, setErrorAlert] = useState(null);
+    const qrCanvasRef = useRef(null);
+    const hiddenQRRef = useRef(null);
+    const [isGenerating, setIsGenerating] = useState(false);
+    const [tempQRUrl, setTempQRUrl] = useState('');
+    const [qrDuration, setQrDuration] = useState(5); // Default 5 minutes
+    const [existingQRSession, setExistingQRSession] = useState(null);
+    const [loadingExistingQR, setLoadingExistingQR] = useState(false);
 
     // Company Logo - Using SVG text "LQ" for clean display
     const [companyLogo] = useState(() => {
@@ -267,63 +274,202 @@ const QRAttendanceDashboard = () => {
         fetchStudents();
     }, [filters.academicYear, filters.semester, filters.division, filters.paper]);
 
+    // Check for existing QR session when filters are complete
+    useEffect(() => {
+        const checkExistingQR = async () => {
+            if (filters.academicYear && filters.semester && filters.division && filters.paper && selectedSlot && selectedDate) {
+                setLoadingExistingQR(true);
+                try {
+                    const params = {
+                        academicYearId: filters.academicYear,
+                        semesterId: filters.semester,
+                        divisionId: filters.division,
+                        paperId: filters.paper,
+                        timeSlotId: selectedSlot.time_slot_id,
+                        date: selectedDate
+                    };
+
+                    console.log("Checking for existing QR session:", params);
+                    const response = await TeacherAttendanceManagement.getQRCodeSession(params);
+
+                    if (response.success && response.data) {
+                        console.log("Existing QR session found:", response.data);
+
+                        // Check if QR is still valid (not expired)
+                        const endTime = new Date(`${response.data.date} ${response.data.end_time}`);
+                        const now = new Date();
+
+                        if (now < endTime) {
+                            // QR is still valid, use it
+                            setExistingQRSession(response.data);
+                            setSuccessAlert("Existing QR code found and loaded!");
+                        } else {
+                            // QR expired
+                            setExistingQRSession(null);
+                            console.log("Existing QR has expired");
+                        }
+                    } else {
+                        setExistingQRSession(null);
+                        console.log("No existing QR session found");
+                    }
+                } catch (error) {
+                    console.error("Error checking existing QR:", error);
+                    setExistingQRSession(null);
+                } finally {
+                    setLoadingExistingQR(false);
+                }
+            } else {
+                setExistingQRSession(null);
+            }
+        };
+
+        checkExistingQR();
+    }, [filters.academicYear, filters.semester, filters.division, filters.paper, selectedSlot, selectedDate]);
+
     // Generate QR Session
-    const generateQRSession = () => {
+    const generateQRSession = async () => {
         if (!filters.division || !selectedSlot || !filters.paper) {
             setErrorAlert("Please select all filters and time slot");
             return;
         }
 
-        const sessionId = `ATT_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        // If existing QR session is available, use it
+        if (existingQRSession) {
+            console.log("Using existing QR session:", existingQRSession);
 
-        // Find subject name from allocations
-        let subjectName = '';
-        for (const alloc of allocations) {
-            if (alloc.subjects && Array.isArray(alloc.subjects)) {
-                const subject = alloc.subjects.find(s => s.subject_id == filters.paper);
-                if (subject) {
-                    subjectName = subject.name;
-                    break;
-                }
-            }
+            // Reconstruct session data from existing QR
+            const sessionData = {
+                sessionId: `EXISTING_${existingQRSession.id}`,
+                academic_year_id: existingQRSession.academic_year_id,
+                semester_id: existingQRSession.semester_id,
+                division_id: existingQRSession.division_id,
+                subject_id: existingQRSession.paper_id,
+                subject_name: existingQRSession.subject_name || '',
+                timetable_id: selectedSlot.timetable_id,
+                timetable_allocation_id: selectedSlot.timetable_allocation_id || null,
+                time_slot_id: existingQRSession.time_slot_id,
+                date: existingQRSession.date,
+                slotTime: selectedSlot.name,
+                timestamp: existingQRSession.start_time,
+                expiresAt: new Date(`${existingQRSession.date} ${existingQRSession.end_time}`).toISOString()
+            };
+
+            setQrSession({
+                ...sessionData,
+                qrUrl: existingQRSession.shareable_link,
+                shortCode: existingQRSession.laptop_code,
+                shareableLink: existingQRSession.shareable_link
+            });
+            setSessionActive(true);
+            setAttendanceRecords([]);
+            setSuccessAlert("Existing QR Code loaded successfully!");
+            return;
         }
 
-        // Complete attendance data structure for QR
-        const sessionData = {
-            sessionId,
-            // IDs for attendance marking
-            academic_year_id: parseInt(filters.academicYear),
-            semester_id: parseInt(filters.semester),
-            division_id: parseInt(filters.division),
-            subject_id: parseInt(filters.paper),
-            subject_name: subjectName,
-            timetable_id: selectedSlot.timetable_id,
-            timetable_allocation_id: selectedSlot.timetable_allocation_id || null,
-            time_slot_id: selectedSlot.time_slot_id,
-            date: selectedDate,
-            // Display info
-            slotTime: selectedSlot.name,
-            timestamp: new Date().toISOString(),
-            expiresAt: new Date(Date.now() + 30 * 60 * 1000).toISOString()
-        };
+        // Validate duration
+        const validDuration = qrDuration && qrDuration > 0 ? qrDuration : 5;
 
-        // Create URL with encoded session data
-        const baseUrl = window.location.origin;
-        const encodedData = btoa(JSON.stringify(sessionData)); // Base64 encode
-        const qrUrl = `${baseUrl}/student/timetable/mark-attendance?s=${encodedData}`;
+        setIsGenerating(true);
+        try {
+            const sessionId = `ATT_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
-        // Create short session code for manual entry
-        const shortCode = sessionId.split('_')[1].substring(0, 6).toUpperCase();
+            // Find subject name from allocations
+            let subjectName = '';
+            for (const alloc of allocations) {
+                if (alloc.subjects && Array.isArray(alloc.subjects)) {
+                    const subject = alloc.subjects.find(s => s.subject_id == filters.paper);
+                    if (subject) {
+                        subjectName = subject.name;
+                        break;
+                    }
+                }
+            }
 
-        setQrSession({
-            ...sessionData,
-            qrUrl, // Full URL for QR code
-            shortCode, // 6-digit code for manual entry
-            shareableLink: qrUrl // Same as QR URL
-        });
-        setSessionActive(true);
-        setAttendanceRecords([]);
-        setSuccessAlert("QR Code generated successfully! Share with students.");
+            const now = new Date();
+            const expires = new Date(now.getTime() + validDuration * 60 * 1000); // Use validated duration
+
+            // Complete attendance data structure for QR
+            const sessionData = {
+                sessionId,
+                academic_year_id: parseInt(filters.academicYear),
+                semester_id: parseInt(filters.semester),
+                division_id: parseInt(filters.division),
+                subject_id: parseInt(filters.paper),
+                subject_name: subjectName,
+                timetable_id: selectedSlot.timetable_id,
+                timetable_allocation_id: selectedSlot.timetable_allocation_id || null,
+                time_slot_id: selectedSlot.time_slot_id,
+                date: selectedDate,
+                slotTime: selectedSlot.name,
+                timestamp: now.toISOString(),
+                expiresAt: expires.toISOString()
+            };
+
+            const baseUrl = window.location.origin;
+            const encodedData = btoa(JSON.stringify(sessionData)); // Base64 encode
+            const qrUrl = `${baseUrl}/student/timetable/mark-attendance?s=${encodedData}`;
+            const shortCode = sessionId.split('_')[1].substring(0, 6).toUpperCase();
+
+            // 1. Set Temp URL to render hidden QR
+            setTempQRUrl(qrUrl);
+
+            // 2. Wait for render (short delay to ensure canvas updates)
+            await new Promise(resolve => setTimeout(resolve, 300));
+
+            // 3. Get Canvas and convert to blob
+            const canvas = document.querySelector('div[style*="fixed"] canvas');
+            if (!canvas) throw new Error("QR Generation failed: Canvas not found");
+
+            const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+            const file = new File([blob], `qr_attendance_${sessionId}.png`, { type: 'image/png' });
+
+            // 4. Upload to S3
+            console.log("Uploading QR to S3...");
+            const s3Response = await TeacherAttendanceManagement.uploadFileToS3(file);
+            console.log("S3 Upload Response:", s3Response);
+
+            const qrLink = typeof s3Response === 'string' ? s3Response : (s3Response.path || s3Response.url || s3Response.data?.path || s3Response.data?.url || "");
+
+            // 5. Save to QR Codes table
+            const qrPayload = {
+                academic_year_id: parseInt(filters.academicYear),
+                semester_id: parseInt(filters.semester),
+                division_id: parseInt(filters.division),
+                paper_id: parseInt(filters.paper),
+                time_slot_id: selectedSlot.time_slot_id,
+                date: selectedDate,
+                start_time: now.toLocaleTimeString('en-GB', { hour12: false }), // HH:mm:ss
+                end_time: expires.toLocaleTimeString('en-GB', { hour12: false }), // HH:mm:ss
+                qr_code_link: qrLink,
+                laptop_code: shortCode,
+                shareable_link: qrUrl
+            };
+
+            console.log("Saving QR Session to DB:", qrPayload);
+            const saveResponse = await TeacherAttendanceManagement.saveQRCodeSession(qrPayload);
+
+            if (saveResponse.success) {
+                setQrSession({
+                    ...sessionData,
+                    qrUrl,
+                    shortCode,
+                    shareableLink: qrUrl
+                });
+                setSessionActive(true);
+                setAttendanceRecords([]);
+                setSuccessAlert("QR Code generated and saved successfully!");
+            } else {
+                // We'll still activate the session if it failed to save, but warn the user?
+                // Actually user said "modify ... means ... save krni h", so if save fails, we should probably report error.
+                throw new Error(saveResponse.message || "Failed to save session to database");
+            }
+
+        } catch (err) {
+            console.error("QR Generation Error:", err);
+            setErrorAlert("Error generating QR: " + (err.message || String(err)));
+        } finally {
+            setIsGenerating(false);
+        }
     };
 
 
@@ -335,27 +481,15 @@ const QRAttendanceDashboard = () => {
 
     // Download QR Code
     const downloadQR = () => {
-        const svg = document.getElementById('qr-code-svg');
-        if (!svg) return;
+        const canvas = document.getElementById('qr-code-canvas');
+        if (!canvas) return;
 
-        const svgData = new XMLSerializer().serializeToString(svg);
-        const canvas = document.createElement('canvas');
-        const ctx = canvas.getContext('2d');
-        const img = new Image();
+        const pngFile = canvas.toDataURL('image/png');
 
-        img.onload = () => {
-            canvas.width = img.width;
-            canvas.height = img.height;
-            ctx.drawImage(img, 0, 0);
-            const pngFile = canvas.toDataURL('image/png');
-
-            const downloadLink = document.createElement('a');
-            downloadLink.download = `attendance-qr-${selectedDate}.png`;
-            downloadLink.href = pngFile;
-            downloadLink.click();
-        };
-
-        img.src = 'data:image/svg+xml;base64,' + btoa(svgData);
+        const downloadLink = document.createElement('a');
+        downloadLink.download = `attendance-qr-${selectedDate}.png`;
+        downloadLink.href = pngFile;
+        downloadLink.click();
     };
 
     // Simulate student scanning
@@ -417,17 +551,90 @@ const QRAttendanceDashboard = () => {
                         />
                     </div>
 
+                    {/* QR Duration Input */}
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                            QR Code Validity (Minutes)
+                        </label>
+                        <input
+                            type="number"
+                            value={qrDuration}
+                            onChange={(e) => {
+                                const val = e.target.value;
+                                setQrDuration(val === '' ? '' : parseInt(val));
+                            }}
+                            disabled={sessionActive}
+                            placeholder="Enter minutes (e.g., 5)"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 outline-none disabled:bg-gray-100 disabled:cursor-not-allowed"
+                        />
+                        <p className="text-xs text-gray-500 mt-1">Enter QR validity duration in minutes</p>
+                    </div>
                 </div>
 
-                {/* Generate Button */}
-                <div className="mt-6 flex gap-3">
+                {/* Existing QR Notification */}
+                {existingQRSession && !sessionActive && (
+                    <div className="mt-4 bg-blue-50 border border-blue-200 rounded-lg p-4">
+                        <div className="flex items-start gap-3">
+                            <div className="flex-shrink-0">
+                                <CheckCircle className="w-6 h-6 text-blue-600" />
+                            </div>
+                            <div className="flex-1">
+                                <h3 className="text-sm font-semibold text-blue-900 mb-1">
+                                    Existing QR Code Found
+                                </h3>
+                                <div className="text-xs text-blue-700 space-y-1">
+                                    <p>
+                                        <span className="font-medium">Created:</span>{' '}
+                                        {new Date(`${existingQRSession.date} ${existingQRSession.start_time}`).toLocaleString()}
+                                    </p>
+                                    <p>
+                                        <span className="font-medium">Valid Until:</span>{' '}
+                                        {new Date(`${existingQRSession.date} ${existingQRSession.end_time}`).toLocaleString()}
+                                    </p>
+                                </div>
+                                <p className="text-xs text-blue-600 mt-2">
+                                    You can use the existing QR code or generate a new one.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* Generate Buttons */}
+                <div className="mt-6 flex flex-wrap gap-3 items-center">
+                    {loadingExistingQR && (
+                        <div className="flex items-center gap-2 text-sm text-gray-600">
+                            <Loader size={16} className="animate-spin" />
+                            Checking for existing QR...
+                        </div>
+                    )}
+
+                    {existingQRSession && !sessionActive && (
+                        <button
+                            onClick={generateQRSession}
+                            disabled={loadingExistingQR}
+                            className="px-6 py-3 bg-green-600 text-white rounded-lg font-semibold flex items-center gap-2 hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-all shadow-sm"
+                        >
+                            <CheckCircle size={20} />
+                            Use Existing QR
+                        </button>
+                    )}
+
                     <button
-                        onClick={generateQRSession}
-                        disabled={sessionActive || !filters.division || !selectedSlot || !filters.paper}
-                        className="px-6 py-3 bg-primary-600 text-white rounded-lg font-semibold flex items-center gap-2 hover:bg-primary-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-all shadow-sm"
+                        onClick={async () => {
+                            // Clear existing session to force new generation
+                            setExistingQRSession(null);
+                            await generateQRSession();
+                        }}
+                        disabled={isGenerating || sessionActive || !filters.division || !selectedSlot || !filters.paper || loadingExistingQR}
+                        className={`px-6 py-3 ${existingQRSession ? 'bg-blue-600 hover:bg-blue-700' : 'bg-primary-600 hover:bg-primary-700'} text-white rounded-lg font-semibold flex items-center gap-2 disabled:bg-gray-300 disabled:cursor-not-allowed transition-all shadow-sm`}
                     >
-                        <QrCode size={20} />
-                        Generate QR Code
+                        {isGenerating ? (
+                            <Loader size={20} className="animate-spin" />
+                        ) : (
+                            <QrCode size={20} />
+                        )}
+                        {isGenerating ? "Generating & Saving..." : existingQRSession ? "Generate New QR Code" : "Generate QR Code"}
                     </button>
 
                     {sessionActive && (
@@ -459,8 +666,9 @@ const QRAttendanceDashboard = () => {
 
                         {/* QR Code */}
                         <div className="flex justify-center p-8 bg-gray-50 rounded-xl mb-4">
-                            <QRCodeSVG
-                                id="qr-code-svg"
+                            <QRCodeCanvas
+                                id="qr-code-canvas"
+                                ref={qrCanvasRef}
                                 value={qrSession.qrUrl}
                                 size={400}
                                 level="H"
@@ -696,6 +904,23 @@ const QRAttendanceDashboard = () => {
                     {errorAlert}
                 </SweetAlert>
             )}
+
+            {/* Hidden canvas for pre-generating QR for S3 upload */}
+            <div style={{ position: 'fixed', left: '-9999px', top: '-9999px' }}>
+                <QRCodeCanvas
+                    ref={hiddenQRRef}
+                    value={tempQRUrl}
+                    size={400}
+                    level="H"
+                    includeMargin={true}
+                    imageSettings={{
+                        src: companyLogo,
+                        height: 80,
+                        width: 80,
+                        excavate: true,
+                    }}
+                />
+            </div>
         </div>
     );
 };

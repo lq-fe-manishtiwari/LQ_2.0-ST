@@ -1,12 +1,50 @@
-import { authHeader, handleResponse, handlePostResponse, authHeaderToPost, TimetableAPI, TeacherAcademicAPI } from '../../../../../_services/api';
+import { authHeader, handleResponse, handlePostResponse, authHeaderToPost, TimetableAPI, AcademicAPI } from '../../../../../_services/api';
 
 export const TeacherAttendanceManagement = {
+    uploadFileToS3,
     saveDailyAttendance,
     getAttendanceStudents,
     getTimeSlots,
     getAttendanceStatuses,
     getAttendanceList,
+    saveQRCodeSession,
+    getQRCodeSession,
 };
+
+// Upload file to S3
+function uploadFileToS3(file) {
+    console.log("uploadFileToS3 called with file:", file);
+    const formData = new FormData();
+    formData.append('file', file);
+    const authHeaders = authHeader();
+    const requestOptions = {
+        method: 'POST',
+        headers: {
+            'Authorization': authHeaders.Authorization
+        },
+        body: formData
+    };
+
+    const url = `${AcademicAPI}/admin/academic/s3/upload`;
+
+    return fetch(url, requestOptions)
+        .then(response => {
+            console.log("S3 upload response:", response);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            // S3 upload returns plain text URL, not JSON
+            return response.text();
+        })
+        .then(data => {
+            console.log("S3 upload data:", data);
+            return data;
+        })
+        .catch(error => {
+            console.error("S3 upload error:", error);
+            throw error;
+        });
+}
 
 function saveDailyAttendance(attendanceData) {
     const requestOptions = {
@@ -103,5 +141,45 @@ function getAttendanceList(payload) {
         .catch(error => ({
             success: false,
             message: error.message || 'Failed to fetch attendance list'
+        }));
+}
+
+function saveQRCodeSession(data) {
+    const requestOptions = {
+        method: 'POST',
+        headers: authHeaderToPost(),
+        body: JSON.stringify(data),
+    };
+
+    return fetch(`${TimetableAPI}/qr-codes`, requestOptions)
+        .then(handlePostResponse)
+        .then(data => ({
+            success: true,
+            data: data
+        }))
+        .catch(error => ({
+            success: false,
+            message: error.message || 'Failed to save QR session'
+        }));
+}
+
+function getQRCodeSession(params) {
+    const { academicYearId, semesterId, divisionId, paperId, timeSlotId, date } = params;
+    const queryString = `academicYearId=${academicYearId}&semesterId=${semesterId}&divisionId=${divisionId}&paperId=${paperId}&timeSlotId=${timeSlotId}&date=${date}`;
+
+    const requestOptions = {
+        method: 'GET',
+        headers: authHeader(),
+    };
+
+    return fetch(`${TimetableAPI}/qr-codes?${queryString}`, requestOptions)
+        .then(handleResponse)
+        .then(data => ({
+            success: true,
+            data: data
+        }))
+        .catch(error => ({
+            success: false,
+            message: error.message || 'Failed to fetch QR session'
         }));
 }
