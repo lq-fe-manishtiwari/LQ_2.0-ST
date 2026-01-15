@@ -448,16 +448,15 @@ export function uploadFileToS3(file) {
   const formData = new FormData();
   formData.append("file", file);
 
-  const requestOptions = {
+  return fetch(`${AcademicAPI}/s3/upload`, {
     method: "POST",
     headers: authHeaderToFile(),
     body: formData,
-  };
-
-  return fetch(`${AcademicAPI}/s3/upload`, requestOptions)
-    .then(handlePostResponse)
-    .then((response) => {
-      return response;
+  })
+    .then(res => res.ok ? res.text() : res.text().then(err => Promise.reject(new Error(err))))
+    .then(text => {
+      try { return JSON.parse(text).response || JSON.parse(text).url || text.trim(); }
+      catch { return text.trim(); }
     });
 }
 
