@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Plus, Trash2 } from "lucide-react";
 import { examPaperService } from "../Services/ExamPaper.Service";
+import SweetAlert from "react-bootstrap-sweetalert";
 
 const HARD_CODED_QUESTIONS = [
   {
@@ -24,6 +25,7 @@ const CreatePaper = ({ dutyId, examSchedule, subjectId, subjectName, onClose }) 
   const [sections, setSections] = useState([]);
   const [showPreview, setShowPreview] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [alert, setAlert] = useState(null);
 
   const [formData, setFormData] = useState({
     paper_name: "",
@@ -41,34 +43,26 @@ const CreatePaper = ({ dutyId, examSchedule, subjectId, subjectName, onClose }) 
 
   const [selectedToolName, setSelectedToolName] = useState("");
 
-  // Helper to format datetime for <input type="datetime-local">
   const toDateTimeLocal = (dateInput) => {
     if (!dateInput) return "";
     const date = new Date(dateInput);
     if (isNaN(date.getTime())) return "";
-    return date.toISOString().slice(0, 16); // "YYYY-MM-DDTHH:mm"
+    return date.toISOString().slice(0, 16);
   };
 
-  // Auto-fill tool name, start/end time, duration, and marks directly from props
   useEffect(() => {
     console.log('examSchedule in CreatePaper:', examSchedule);
     console.log('subjectId in CreatePaper:', subjectId);
     
     if (!examSchedule || !subjectId) return;
 
-    // Find the course that matches the selected subject
     const matchingCourse = examSchedule.courses?.find(
       (course) => String(course.subjectId) === String(subjectId)
     );
 
     console.log('matchingCourse found:', matchingCourse);
-    console.log('Complete matchingCourse structure:', JSON.stringify(matchingCourse, null, 2));
-    console.log('toolName:', matchingCourse?.toolName);
-    console.log('minimumMarks:', matchingCourse?.minimumMarks);
-    console.log('maximumMarks:', matchingCourse?.maximumMarks);
 
     if (matchingCourse) {
-      // Access tool data from the nested 'tool' object
       setSelectedToolName(matchingCourse.tool?.toolName || "Theory");
 
       const start = toDateTimeLocal(matchingCourse.startExamDateTime);
@@ -77,28 +71,24 @@ const CreatePaper = ({ dutyId, examSchedule, subjectId, subjectName, onClose }) 
       let duration = "";
       if (start && end) {
         const diffMs = new Date(end) - new Date(start);
-        duration = (diffMs / (1000 * 60 * 60)).toFixed(1); // hours with 1 decimal
+        duration = (diffMs / (1000 * 60 * 60)).toFixed(1);
       }
 
-      const newFormData = {
-        ...formData,
+      setFormData((prev) => ({
+        ...prev,
         exam_tool_id: matchingCourse.tool?.toolId || "",
         start_date_time: start,
         end_date_time: end,
         exam_duration: duration,
-        min_marks: matchingCourse.tool?.minimumMarks || "",
-        max_marks: matchingCourse.tool?.maximumMarks || ""
-      };
-      
-      console.log('Setting formData:', newFormData);
-      setFormData(newFormData);
+        min_marks: matchingCourse.minimumMarks || matchingCourse.tool?.minimumMarks || "",
+        max_marks: matchingCourse.maximumMarks || matchingCourse.tool?.maximumMarks || ""
+      }));
     }
   }, [examSchedule, subjectId]);
 
-  // Add a new section
   const addSection = () => {
     const newId = sections.length + 1;
-    const newLetter = String.fromCharCode(65 + sections.length); // A, B, C...
+    const newLetter = String.fromCharCode(65 + sections.length);
     setSections([
       ...sections,
       {
@@ -111,12 +101,39 @@ const CreatePaper = ({ dutyId, examSchedule, subjectId, subjectName, onClose }) 
     ]);
   };
 
-  // Remove a section
   const removeSection = (id) => {
-    setSections(sections.filter((sec) => sec.id !== id));
+    setAlert(
+      <SweetAlert
+        warning
+        showCancel
+        confirmBtnText="OK"
+        cancelBtnText="Cancel"
+        confirmBtnBsStyle="warning"
+        confirmBtnCssClass="btn-confirm fw-bold"
+        cancelBtnBsStyle="default"
+        title="Delete Section?"
+        onConfirm={() => {
+          setSections(sections.filter((sec) => sec.id !== id));
+          setAlert(
+            <SweetAlert 
+              success 
+              title="Deleted!" 
+              confirmBtnText="OK"
+              confirmBtnBsStyle="success"
+              confirmBtnCssClass="btn-confirm fw-bold"
+              onConfirm={() => setAlert(null)}
+            >
+              Section removed successfully.
+            </SweetAlert>
+          );
+        }}
+        onCancel={() => setAlert(null)}
+      >
+        Are you sure you want to delete this section? This action cannot be undone.
+      </SweetAlert>
+    );
   };
 
-  // Update section fields
   const updateSection = (id, field, value) => {
     setSections(
       sections.map((section) =>
@@ -125,7 +142,6 @@ const CreatePaper = ({ dutyId, examSchedule, subjectId, subjectName, onClose }) 
     );
   };
 
-  // Toggle question selection in a section
   const toggleQuestion = (sectionId, question) => {
     setSections((prev) =>
       prev.map((section) => {
@@ -148,7 +164,6 @@ const CreatePaper = ({ dutyId, examSchedule, subjectId, subjectName, onClose }) 
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  // Form validation
   const isFormValid = () => {
     return (
       formData.paper_name &&
@@ -163,15 +178,26 @@ const CreatePaper = ({ dutyId, examSchedule, subjectId, subjectName, onClose }) 
     );
   };
 
-  // Submit handler
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!isFormValid()) {
-      alert("Please fill all required fields.");
+      setAlert(
+        <SweetAlert
+          warning
+          title="Incomplete Form!"
+          confirmBtnText="OK"
+          confirmBtnBsStyle="warning"
+          confirmBtnCssClass="btn-confirm fw-bold"
+          onConfirm={() => setAlert(null)}
+        >
+          Please fill all required fields.
+        </SweetAlert>
+      );
       return;
     }
 
     setLoading(true);
+
     try {
       const activeCollege = JSON.parse(localStorage.getItem("activeCollege"));
       const userProfile = JSON.parse(localStorage.getItem("userProfile"));
@@ -200,20 +226,46 @@ const CreatePaper = ({ dutyId, examSchedule, subjectId, subjectName, onClose }) 
       };
 
       await examPaperService.saveExampaper(paperData);
-      alert("Exam Paper Created Successfully!");
-      onClose();
+
+      setAlert(
+        <SweetAlert
+          success
+          title="Success!"
+          confirmBtnText="OK"
+          confirmBtnBsStyle="success"
+          confirmBtnCssClass="btn-confirm fw-bold"
+          onConfirm={() => {
+            setAlert(null);
+            onClose();
+          }}
+        >
+          Exam Paper created successfully!
+        </SweetAlert>
+      );
+
     } catch (error) {
       console.error("Failed to create paper:", error);
-      alert("Failed to create exam paper. Please try again.");
+
+      setAlert(
+        <SweetAlert
+          danger
+          title="Error!"
+          confirmBtnText="OK"
+          confirmBtnBsStyle="danger"
+          confirmBtnCssClass="btn-confirm fw-bold"
+          onConfirm={() => setAlert(null)}
+        >
+          Failed to create exam paper. Please try again.
+        </SweetAlert>
+      );
     } finally {
       setLoading(false);
     }
   };
 
   return (
-<div className="min-h-screen bg-gray-50 p-6">
-  <div className="bg-gray-50 w-full max-w-6xl mx-auto rounded-xl shadow-lg">
-
+    <div className="min-h-screen bg-gray-50 p-6">
+      <div className="bg-gray-50 w-full max-w-6xl mx-auto rounded-xl shadow-lg">
         <div className="p-8">
           {/* Exam Schedule Details Card */}
           <div className="bg-blue-50 rounded-lg p-5 mb-8">
@@ -516,10 +568,13 @@ const CreatePaper = ({ dutyId, examSchedule, subjectId, subjectName, onClose }) 
               </div>
             </div>
           )}
+
+          {/* Render SweetAlert */}
+          {alert}
         </div>
       </div>
     </div>
   );
 };
 
-export default CreatePaper; 
+export default CreatePaper;
