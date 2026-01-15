@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { QrCode, Download, Share2, Users, Clock, CheckCircle, XCircle, RefreshCw, Loader } from 'lucide-react';
 import { QRCodeSVG, QRCodeCanvas } from 'qrcode.react';
 import AttendanceFilters from '../Components/AttendanceFilters';
-import { timetableService } from '../../Timetable/Services/timetable.service';
+//import { timetableService } from '../../Timetable/Services/timetable.service';
 import { TeacherAttendanceManagement } from '../Services/attendance.service';
 import { api } from '../../../../../_services/api';
 import SweetAlert from 'react-bootstrap-sweetalert';
