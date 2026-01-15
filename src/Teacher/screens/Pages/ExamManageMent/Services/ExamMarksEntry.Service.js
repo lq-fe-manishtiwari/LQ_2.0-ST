@@ -8,7 +8,20 @@ import {
 export const examMarksEntryService = {
   getMarksBySchedule,
   submitMarksBatch,
+  getMarksByScheduleWithPaperURL
 };
+
+function getMarksByScheduleWithPaperURL(examScheduleId,subject_id) {
+  const requestOptions = {
+    method: "GET",
+    headers: authHeader(),
+  };
+
+  return fetch(
+    `${ExamMGMAPI}/admin/exam-marks/exam-schedule/${examScheduleId}/subject/${subject_id}?includeExamPaper=true`,
+    requestOptions
+  ).then(handleResponse);
+}
 
 
 function getMarksBySchedule(examScheduleId,subject_id) {

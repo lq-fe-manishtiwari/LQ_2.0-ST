@@ -136,6 +136,13 @@ const formatDate = (dateStr) =>
     "PAPER_REVALUATION",
   ].includes(activeComponent);
 
+  const dutyTypeLabels = {
+  CREATE_PAPERS: "Create Papers",
+  PAPER_REVALUATION: "Paper Revaluation",
+  MARKS_ENTRY: "Marks Entry",
+  ANSWER_SHEET_MARKING: "Answer Sheet Marking",
+};
+
   return (
     <div className="bg-gray-50 min-h-screen">
       {/* 🔹 ASSIGNED TASKS UI (HIDDEN WHEN FULL PAGE ACTIVE) */}
@@ -194,9 +201,9 @@ const formatDate = (dateStr) =>
                               <td className="px-4 py-3">
                                 {formatDate(duty.end_date)}
                               </td>
-                              <td className="px-4 py-3">
-                                {duty.duty_type}
-                              </td>
+                           <td className="px-4 py-3">
+                              {dutyTypeLabels[duty.duty_type] || duty.duty_type}
+                            </td>
                               <td className="px-4 py-3">
                                 <button
                                   onClick={() =>

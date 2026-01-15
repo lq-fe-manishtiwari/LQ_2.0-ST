@@ -11,6 +11,7 @@ export default function MarksEntry({
 }) {
   const [students, setStudents] = useState([]);
   const [marksData, setMarksData] = useState([]);
+  const [originalMarks, setOriginalMarks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [sweetAlert, setSweetAlert] = useState(null);
@@ -36,28 +37,29 @@ export default function MarksEntry({
 
         setStudents(studentsList);
 
-        // Map students and extract marks from subject_marks[0] if exists
-        setMarksData(
-          studentsList.map((s) => {
-            const mark = s.subject_marks?.[0] || {}; // Get first (and only) subject mark
+        const preparedMarks = studentsList.map((s) => {
+          const mark = s.subject_marks?.[0] || {};
 
-            return {
-              student_id: s.student_id,
-              student_firstname: s.student_firstname || "",
-              student_middlename: s.student_middlename || "",
-              student_lastname: s.student_lastname || "",
-              roll_number: s.roll_number || "",
-              permanent_registration_number: s.permanent_registration_number || "",
-              marks_obtained: mark.marks_obtained ?? "", // Pre-fill if exists
-              attendance_status: mark.attendance_status || "PRESENT",
-              exam_marks_id: mark.exam_marks_id || null,
-            };
-          })
-        );
+          return {
+            student_id: s.student_id,
+            student_firstname: s.student_firstname || "",
+            student_middlename: s.student_middlename || "",
+            student_lastname: s.student_lastname || "",
+            roll_number: s.roll_number || "",
+            permanent_registration_number: s.permanent_registration_number || "",
+            marks_obtained: mark.marks_obtained ?? "",
+            attendance_status: mark.attendance_status || "PRESENT",
+            exam_marks_id: mark.exam_marks_id || null,
+          };
+        });
+
+        setMarksData(preparedMarks);
+        setOriginalMarks(JSON.parse(JSON.stringify(preparedMarks))); // snapshot for comparison
       } catch (err) {
         console.error("Failed to load students", err);
         setStudents([]);
         setMarksData([]);
+        setOriginalMarks([]);
       } finally {
         setLoading(false);
       }
@@ -82,7 +84,7 @@ export default function MarksEntry({
       const nextInput = document.querySelector(`input[data-index="${index + 1}"]`);
       if (nextInput) {
         nextInput.focus();
-        nextInput.select(); // Optional: select text for quick overwrite
+        nextInput.select(); // optional
       }
     }
   };
@@ -91,21 +93,24 @@ export default function MarksEntry({
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    const filledMarks = marksData.filter(
-      (m) =>
-        m.marks_obtained !== "" &&
-        m.marks_obtained !== null &&
-        !isNaN(m.marks_obtained)
-    );
+    // Only include students who were edited
+    const editedStudents = marksData.filter((s) => {
+      const original = originalMarks.find((o) => o.student_id === s.student_id);
+      return (
+        !original || // safety
+        Number(s.marks_obtained) !== Number(original.marks_obtained) ||
+        s.attendance_status !== original.attendance_status
+      );
+    });
 
-    if (filledMarks.length === 0) {
+    if (editedStudents.length === 0) {
       setSweetAlert(
         <SweetAlert
           warning
-          title="No Marks Entered"
+          title="No Changes Detected"
           onConfirm={() => setSweetAlert(null)}
         >
-          Please enter or update marks for at least one student.
+          No marks or attendance were modified.
         </SweetAlert>
       );
       return;
@@ -114,14 +119,13 @@ export default function MarksEntry({
     setSubmitting(true);
 
     try {
-      const payload = filledMarks.map((s) => ({
+      const payload = editedStudents.map((s) => ({
         exam_schedule_id: examSchedule.examScheduleId,
         subject_id: Number(subjectId),
         marks_obtained: Number(s.marks_obtained),
         attendance_status: s.attendance_status || "PRESENT",
-        ...(s.exam_marks_id
-          ? { exam_marks_id: s.exam_marks_id }
-          : { student_id: s.student_id }),
+        student_id: s.student_id,           // always include
+        ...(s.exam_marks_id ? { exam_marks_id: s.exam_marks_id } : {}), // include if exists
       }));
 
       await examMarksEntryService.submitMarksBatch(payload);
@@ -138,6 +142,8 @@ export default function MarksEntry({
           Marks submitted successfully!
         </SweetAlert>
       );
+
+      setOriginalMarks(JSON.parse(JSON.stringify(marksData))); // update snapshot
     } catch (err) {
       console.error("Submit failed", err);
       setSweetAlert(
@@ -158,22 +164,18 @@ export default function MarksEntry({
     <>
       {sweetAlert}
 
-<div className="min-h-screen bg-gray-50 p-6">
-  <div className="bg-gray-50 w-full max-w-6xl mx-auto rounded-xl shadow-lg">
+      <div className="min-h-screen bg-gray-50 p-6">
+        <div className="bg-gray-50 w-full max-w-6xl mx-auto rounded-xl shadow-lg">
 
           {/* Header */}
           <div className="p-3 text-blue-700 rounded-t-xl">
             <div className="flex justify-between items-start">
               <div>
                 <h4 className="text-2xl font-bold mb-4">Marks Entry</h4>
-                   <span className="font-semibold">Exam Schedule:</span>{" "}
-                    <span className="font-medium">
-                      {examSchedule?.examScheduleName || "N/A"}
-                    </span>{" "}
-                        <span className="font-semibold">Paper:</span>{" "}
-                    <span className="font-medium">{subjectName || "N/A"}</span>
-
-               
+                <span className="font-semibold">Exam Schedule:</span>{" "}
+                <span className="font-medium">{examSchedule?.examScheduleName || "N/A"}</span>{" "}
+                <span className="font-semibold">Paper:</span>{" "}
+                <span className="font-medium">{subjectName || "N/A"}</span>
               </div>
 
               <button
@@ -224,17 +226,9 @@ export default function MarksEntry({
                               index % 2 === 0 ? "bg-gray-50" : "bg-white"
                             }`}
                           >
-                            <td className="px-6 py-3 text-center font-medium">
-                              {s.roll_number || "-"}
-                            </td>
-
-                            <td className="px-6 py-3">
-                              {`${s.student_firstname} ${s.student_middlename || ""} ${s.student_lastname}`.trim()}
-                            </td>
-
-                            <td className="px-6 py-3 text-gray-600">
-                              {s.permanent_registration_number || "-"}
-                            </td>
+                            <td className="px-6 py-3 text-center font-medium">{s.roll_number || "-"}</td>
+                            <td className="px-6 py-3">{`${s.student_firstname} ${s.student_middlename || ""} ${s.student_lastname}`.trim()}</td>
+                            <td className="px-6 py-3 text-gray-600">{s.permanent_registration_number || "-"}</td>
 
                             <td className="px-6 py-3">
                               <input
