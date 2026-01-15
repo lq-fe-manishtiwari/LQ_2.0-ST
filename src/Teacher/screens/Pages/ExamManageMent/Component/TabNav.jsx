@@ -11,7 +11,8 @@ const tabs = [
   { label: "OSM", to: "/teacher/exam/answer-sheets" },
   { label: "Marks Entry", to: "/teacher/exam/marksEntry" },
   // { label: "Edit Requests", to: "/teacher/exam/EditRequests" },
-  { label: "Re-Evaluation", to: "/teacher/exam/Evaluation" }
+  { label: "Re-Evaluation", to: "/teacher/exam/Evaluation" },
+  { label: "Reports", to: "/teacher/exam/reports" },
 
 ];
 
