@@ -1,8 +1,13 @@
 import React, { useState, useEffect } from 'react';
-// import HeaderFilters from "../../Timetable/Dashboard/HeaderFilters";
-// import { timetableService } from '../../Timetable/Services/timetable.service';
+import AttendanceFilters from "../../Attendance/Components/AttendanceFilters";
+import { timetableService } from '../../TimeTable/Services/timetable.service';
+
 
 const MonthlyReport = () => {
+    const [allocations, setAllocations] = useState([]);
+    const [loadingAllocations, setLoadingAllocations] = useState(false);
+
+
     // Date range state instead of single month
     const [startDate, setStartDate] = useState(() => {
         const date = new Date();
@@ -176,12 +181,19 @@ const MonthlyReport = () => {
     return (
         <div className="space-y-6">
             {/* Header Filters */}
-            <div className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
-                <h3 className="text-lg font-medium mb-4">Academic Filters</h3>
-                {/* <HeaderFilters
+            <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
+                <h3 className="text-lg font-semibold text-gray-800 mb-4">
+                    Academic Filters
+                </h3>
+
+                <AttendanceFilters
                     filters={filters}
-                    setFilters={setFilters}
-                /> */}
+                    onFilterChange={setFilters}
+                    allocations={allocations}
+                    loadingAllocations={loadingAllocations}
+                    showPaperFilter={false}
+                    showTimeSlotFilter={false}
+                />
             </div>
 
             {/* Additional Filters */}

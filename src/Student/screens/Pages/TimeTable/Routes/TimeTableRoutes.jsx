@@ -1,6 +1,8 @@
 import { Routes, Route, Navigate } from "react-router-dom";
 import TimeTableLayout from "../TimeTableLayout";
 import MyView from "../MyView";
+import Reports from "../Reports"
+import Dashboard from "../Dashboard"
 
 export default function TimeTableRoutes() {
   return (
@@ -11,6 +13,8 @@ export default function TimeTableRoutes() {
       <Route element={<TimeTableLayout />}>
         <Route path="my-view" element={<MyView />} />
         {/* <Route path="submitted-feedback" element={<SubmittedFeedback />} />  */}
+       <Route path="reports" element={<Reports />} />
+       <Route path="dashboard" element={<Dashboard />} />
       </Route>
     </Routes>
   );
