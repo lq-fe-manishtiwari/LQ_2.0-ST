@@ -71,7 +71,11 @@ const AttendanceFilters = ({
   loadingTimeSlots = false,
   showActiveFilters = true,
   compact = false,
-  disabled = false
+  disabled = false,
+
+  /* NEW FLAGS */
+  showPaperFilter = true,
+  showTimeSlotFilter = true,
 }) => {
   // Helper function to get unique options
   const getUniqueOptions = (filterFn, mapFn) => {
@@ -209,100 +213,127 @@ const AttendanceFilters = ({
 
       {/* Filters Grid */}
       {showFilters && (
-        <div className={`grid grid-cols-1 ${compact ? 'md:grid-cols-2' : 'md:grid-cols-2 lg:grid-cols-3'} gap-4 mb-4 p-4 bg-gray-50 rounded-lg border border-gray-200`}>
-          <CustomSelect
-            label="Program"
-            value={filters.program}
-            onChange={(e) => handleFilterChange('program', e.target.value)}
-            options={programOptions}
-            placeholder="Select Program"
-            disabled={disabled || loadingAllocations}
-            loading={loadingAllocations}
-          />
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-4">
+          <div className="md:col-span-1">
+            <CustomSelect
+              label="Program"
+              value={filters.program}
+              onChange={(e) => handleFilterChange('program', e.target.value)}
+              options={programOptions}
+              placeholder="Select Program"
+              disabled={disabled || loadingAllocations}
+              loading={loadingAllocations}
+            />
+          </div>
 
-          <CustomSelect
-            label="Batch"
-            value={filters.batch}
-            onChange={(e) => handleFilterChange('batch', e.target.value)}
-            options={batchOptions}
-            placeholder="Select Batch"
-            disabled={disabled || loadingAllocations || !filters.program}
-            loading={loadingAllocations}
-          />
+          <div className="md:col-span-1">
+            <CustomSelect
+              label="Batch"
+              value={filters.batch}
+              onChange={(e) => handleFilterChange('batch', e.target.value)}
+              options={batchOptions}
+              placeholder="Select Batch"
+              disabled={disabled || loadingAllocations || !filters.program}
+              loading={loadingAllocations}
+            />
+          </div>
 
-          <CustomSelect
-            label="Academic Year"
-            value={filters.academicYear}
-            onChange={(e) => handleFilterChange('academicYear', e.target.value)}
-            options={academicYearOptions}
-            placeholder="Select Academic Year"
-            disabled={disabled || loadingAllocations || !filters.batch}
-            loading={loadingAllocations}
-          />
+          <div className="md:col-span-1">
+            <CustomSelect
+              label="Academic Year"
+              value={filters.academicYear}
+              onChange={(e) => handleFilterChange('academicYear', e.target.value)}
+              options={academicYearOptions}
+              placeholder="Select Academic Year"
+              disabled={disabled || loadingAllocations || !filters.batch}
+              loading={loadingAllocations}
+            />
+          </div>
 
-          <CustomSelect
-            label="Semester"
-            value={filters.semester}
-            onChange={(e) => handleFilterChange('semester', e.target.value)}
-            options={semesterOptions}
-            placeholder="Select Semester"
-            disabled={disabled || loadingAllocations || !filters.academicYear}
-            loading={loadingAllocations}
-          />
+          <div className="md:col-span-1">
+            <CustomSelect
+              label="Semester"
+              value={filters.semester}
+              onChange={(e) => handleFilterChange('semester', e.target.value)}
+              options={semesterOptions}
+              placeholder="Select Semester"
+              disabled={disabled || loadingAllocations || !filters.academicYear}
+              loading={loadingAllocations}
+            />
+          </div>
 
-          <CustomSelect
-            label="Division"
-            value={filters.division}
-            onChange={(e) => handleFilterChange('division', e.target.value)}
-            options={divisionOptions}
-            placeholder="Select Division"
-            disabled={disabled || loadingAllocations || !filters.semester}
-            loading={loadingAllocations}
-          />
+          <div className="md:col-span-1">
+            <CustomSelect
+              label="Division"
+              value={filters.division}
+              onChange={(e) => handleFilterChange('division', e.target.value)}
+              options={divisionOptions}
+              placeholder="Select Division"
+              disabled={disabled || loadingAllocations || !filters.semester}
+              loading={loadingAllocations}
+            />
+          </div>
 
-          <CustomSelect
-            label="Paper"
-            value={filters.paper}
-            onChange={(e) => handleFilterChange('paper', e.target.value)}
-            options={paperOptions()}
-            placeholder="Select Paper"
-            disabled={disabled || loadingAllocations || !filters.division}
-            loading={loadingAllocations}
-          />
+          {showPaperFilter && (
+            <div className="md:col-span-1">
+              <CustomSelect
+                label="Paper"
+                value={filters.paper}
+                onChange={(e) => handleFilterChange('paper', e.target.value)}
+                options={paperOptions}
+                placeholder="Select Paper"
+                disabled={disabled}
+              />
+            </div>
+          )}
 
-          <CustomSelect
-            label="Time Slot"
-            value={filters.timeSlot}
-            onChange={(e) => handleFilterChange('timeSlot', e.target.value)}
-            options={timeSlots.map(slot => ({
-              value: slot.timetable_id?.toString() || slot.time_slot_id?.toString(),
-              name: `${slot.start_time?.slice(0, 5)} - ${slot.end_time?.slice(0, 5)}`
-            }))}
-            placeholder="Select Time Slot"
-            disabled={disabled || !filters.paper || loadingTimeSlots}
-            loading={loadingTimeSlots}
-          />
+
+          {showTimeSlotFilter && (
+            <div className="md:col-span-1">
+              <CustomSelect
+                label="Time Slot"
+                value={filters.timeSlot}
+                onChange={(e) => handleFilterChange('timeSlot', e.target.value)}
+                options={timeSlots.map(slot => ({
+                  value:
+                    slot.timetable_id?.toString() ||
+                    slot.time_slot_id?.toString(),
+                  name: `${slot.start_time?.slice(0, 5)} - ${slot.end_time?.slice(0, 5)}`
+                }))}
+                placeholder="Select Time Slot"
+                disabled={disabled || !filters.paper || loadingTimeSlots}
+                loading={loadingTimeSlots}
+              />
+            </div>
+          )}
+
 
           {/* Filter Actions */}
           <div className={`${compact ? 'md:col-span-2' : 'lg:col-span-3'} flex justify-end gap-3 pt-2`}>
-            {onResetFilters && (
-              <button
-                onClick={onResetFilters}
-                className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-                disabled={disabled || loadingAllocations}
-              >
-                Reset Filters
-              </button>
+            {(onResetFilters || onApplyFilters) && (
+              <div className="flex justify-end gap-3 mt-4">
+                {onResetFilters && (
+                  <button
+                    onClick={onResetFilters}
+                    className="px-4 py-2 border border-slate-300 text-slate-700 rounded-xl hover:bg-slate-50 text-sm font-semibold"
+                    disabled={disabled || loadingAllocations}
+                  >
+                    Reset Filters
+                  </button>
+                )}
+
+                {onApplyFilters && (
+                  <button
+                    onClick={onApplyFilters}
+                    className="px-5 py-2 bg-primary-600 text-white rounded-xl hover:bg-primary-700 text-sm font-semibold"
+                    disabled={disabled || loadingAllocations}
+                  >
+                    Apply Filters
+                  </button>
+                )}
+              </div>
             )}
-            {onApplyFilters && (
-              <button
-                onClick={onApplyFilters}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-                disabled={disabled || loadingAllocations}
-              >
-                Apply Filters
-              </button>
-            )}
+
           </div>
         </div>
       )}
