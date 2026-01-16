@@ -132,7 +132,7 @@ const submitRevaluation = async () => {
                   <td className="p-3 font-medium">
                     {item.exam_schedule_name}
                   </td>
-                  <td className="p-3">{item.program?.program_name}</td>
+                  <td className="p-3">{item.academic_year?.program?.program_name}</td>
                   <td className="p-3">{item.semester?.name}</td>
                   <td className="p-3">{item.total_marks_obtained}</td>
                   <td className="p-3">{item.total_maximum_marks}</td>

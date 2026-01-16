@@ -121,9 +121,12 @@ const ReEvaluation = () => {
                   <td className="px-4 py-3">
                     #{item.revaluation_request_id}
                   </td>
-                   <td className="px-4 py-3">
-                    {new Date(item.created_at).toLocaleDateString()}
+                 <td className="px-4 py-3">
+                    {item.created_at
+                      ? new Date(item.created_at).toLocaleDateString('en-GB')
+                      : '-'}
                   </td>
+
 
                   <td className="px-4 py-3">
                     {item.exam_schedule_name}

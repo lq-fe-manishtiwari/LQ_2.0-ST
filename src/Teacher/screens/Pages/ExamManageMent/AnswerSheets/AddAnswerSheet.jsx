@@ -1,134 +1,374 @@
-import React, { useState } from "react";
-import { Link } from "react-router-dom";
+import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { ArrowLeft } from "lucide-react";
+import SweetAlert from "react-bootstrap-sweetalert";
+import { uploadFileToS3 } from "../../../../../_services/api";
+import { examMarksEntryService } from "../Services/ExamMarksEntry.Service";
+import { examgService } from "../Services/Exam.service";
+import { toast } from "react-toastify";
+
+/* ================= USER ================= */
+const teacher = JSON.parse(localStorage.getItem("userProfile"));
+const teacherId = teacher?.teacher_id;
 
 const AddAnswerSheet = () => {
-  const [program, setProgram] = useState("Diploma CS234");
-  const [classYear, setClassYear] = useState("FY");
-  const [examSchedule, setExamSchedule] = useState("");
-  const [course, setCourse] = useState("");
+  const navigate = useNavigate();
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    console.log({
-      program,
-      classYear,
-      examSchedule,
-      course,
-    });
-    alert("Answer Sheet Added Successfully!");
+  /* ================= FILTERS ================= */
+  const [filters, setFilters] = useState({
+    schedule: "",
+    paper: "",
+  });
+
+  const [examSchedules, setExamSchedules] = useState([]);
+  const [subjects, setSubjects] = useState([]);
+
+  /* ================= DATA ================= */
+  const [students, setStudents] = useState([]);
+  const [answerSheets, setAnswerSheets] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [uploadingId, setUploadingId] = useState(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [sweetAlert, setSweetAlert] = useState(null);
+
+  /* ================= LOAD EXAM SCHEDULES ================= */
+  useEffect(() => {
+    if (!teacherId) return;
+
+    examgService
+      .getTeacherDutyAllocationsByTeacher(teacherId)
+      .then((res) => setExamSchedules(res || []))
+      .catch(console.error);
+  }, []);
+
+  /* ================= FILTER HANDLERS ================= */
+  const handleScheduleChange = (e) => {
+    const scheduleId = e.target.value;
+
+    setFilters({ schedule: scheduleId, paper: "" });
+    setStudents([]);
+    setAnswerSheets([]);
+    setSubjects([]);
+
+    if (!scheduleId) return;
+
+    const selectedSchedule = examSchedules.find(
+      (ex) => ex.exam_schedule_id === Number(scheduleId)
+    );
+
+    setSubjects(selectedSchedule?.teacher_subject_duties || []);
   };
 
+  const handlePaperChange = (e) => {
+    setFilters((prev) => ({
+      ...prev,
+      paper: e.target.value,
+    }));
+  };
+
+  /* ================= LOAD STUDENTS ================= */
+  useEffect(() => {
+    const loadStudents = async () => {
+      if (!filters.schedule || !filters.paper) {
+        setStudents([]);
+        setAnswerSheets([]);
+        return;
+      }
+
+      setLoading(true);
+      try {
+        const res = await examMarksEntryService.getMarksBySchedule(
+          filters.schedule,
+          filters.paper
+        );
+
+        const list = res.data?.students || res.data || [];
+        list.sort((a, b) => Number(a.roll_number) - Number(b.roll_number));
+
+        setStudents(list);
+
+        setAnswerSheets(
+          list.map((s) => ({
+            student_id: s.student_id,
+            roll_number: s.roll_number,
+            student_name: `${s.student_firstname || ""} ${s.student_lastname || ""}`,
+            prn: s.permanent_registration_number || "",
+            attendance_status: "PRESENT",
+            answersheetUrl: "",
+          }))
+        );
+      } catch (err) {
+        console.error(err);
+        toast.error("Failed to load students");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadStudents();
+  }, [filters.schedule, filters.paper]);
+
+  /* ================= FILE UPLOAD ================= */
+  const handleFileUpload = async (studentId, file) => {
+    if (!file) return;
+
+    setUploadingId(studentId);
+    toast.info("Uploading answer sheet...");
+
+    try {
+      const s3Url = await uploadFileToS3(file);
+
+      setAnswerSheets((prev) =>
+        prev.map((s) =>
+          s.student_id === studentId
+            ? { ...s, answersheetUrl: s3Url }
+            : s
+        )
+      );
+
+      toast.success("File uploaded successfully");
+    } catch (err) {
+      console.error(err);
+      toast.error("Upload failed");
+    } finally {
+      setUploadingId(null);
+    }
+  };
+
+  /* ================= ATTENDANCE ================= */
+  const handleAttendanceChange = (studentId, value) => {
+    setAnswerSheets((prev) =>
+      prev.map((s) =>
+        s.student_id === studentId
+          ? { ...s, attendance_status: value }
+          : s
+      )
+    );
+  };
+
+  /* ================= SUBMIT ================= */
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+
+    const valid = answerSheets.filter((s) => s.answersheetUrl);
+
+    if (!valid.length) {
+      setSweetAlert(
+        <SweetAlert
+          warning
+          title="Nothing to Submit"
+          onConfirm={() => setSweetAlert(null)}
+        >
+          Please upload at least one answer sheet.
+        </SweetAlert>
+      );
+      return;
+    }
+
+    setSubmitting(true);
+
+    try {
+      const payload = valid.map((s) => ({
+        exam_schedule_id: Number(filters.schedule),
+        subject_id: Number(filters.paper),
+        student_id: s.student_id,
+        attendance_status: s.attendance_status,
+        marks_distribution: [{ answersheetUrl: s.answersheetUrl }],
+      }));
+
+      await examMarksEntryService.submitMarksBatch(payload);
+
+      setSweetAlert(
+        <SweetAlert
+          success
+          title="Success!"
+          onConfirm={() => {
+            setSweetAlert(null);
+            navigate("/exam-management/answer-sheets");
+          }}
+        >
+          Answer sheets saved successfully!
+        </SweetAlert>
+      );
+    } catch (err) {
+      console.error(err);
+      setSweetAlert(
+        <SweetAlert
+          danger
+          title="Save Failed"
+          onConfirm={() => setSweetAlert(null)}
+        >
+          Failed to save answer sheets.
+        </SweetAlert>
+      );
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  /* ================= RENDER ================= */
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
-      {/* Back Button & Title */}
-      <div className="max-w-5xl mx-auto">
-        <div className="flex items-center gap-4 mb-8">
-          <h1 className="text-3xl font-bold text-blue-700">Add Answer Sheet</h1>
-        </div>
+    <div className="min-h-screen p-6 bg-gray-50">
+      {sweetAlert}
 
-        {/* Form Card */}
-        <div className="bg-white rounded-2xl shadow-lg p-10">
-          <form onSubmit={handleSubmit}>
-            {/* Grid for Fields */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-12">
-              {/* Program */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Program <span className="text-red-500">*</span>
-                </label>
-                <select
-                  value={program}
-                  onChange={(e) => setProgram(e.target.value)}
-                  required
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 bg-white"
-                >
-                  <option value="Diploma CS234">Diploma CS234</option>
-                  <option value="PGDM">PGDM</option>
-                  <option value="MBA">MBA</option>
-                  <option value="B.Tech">B.Tech</option>
-                </select>
-              </div>
+      {/* Header */}
+      <div className="flex justify-between items-center mb-6">
+        <h4 className="text-xl font-semibold text-blue-900">
+          Upload Answer Sheets
+        </h4>
 
-              {/* Class */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Class <span className="text-red-500">*</span>
-                </label>
-                <select
-                  value={classYear}
-                  onChange={(e) => setClassYear(e.target.value)}
-                  required
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 bg-white"
-                >
-                  <option value="FY">FY</option>
-                  <option value="SY">SY</option>
-                  <option value="TY">TY</option>
-                  <option value="Final Year">Final Year</option>
-                </select>
-              </div>
+        <button
+          onClick={() => navigate(-1)}
+          className="flex items-center gap-2 px-4 py-2 bg-[#2162c1] text-white rounded-lg text-sm font-medium"
+        >
+          <ArrowLeft size={18} />
+          Back
+        </button>
+      </div>
 
-              {/* Exam Schedule */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Exam Schedule <span className="text-red-500">*</span>
-                </label>
-                <select
-                  value={examSchedule}
-                  onChange={(e) => setExamSchedule(e.target.value)}
-                  required
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 bg-white"
-                >
-                  <option value="" disabled>
-                    Select Schedule
-                  </option>
-                  <option value="Mid Term">Mid Term</option>
-                  <option value="End Term">End Term</option>
-                  <option value="Supplementary">Supplementary</option>
-                  <option value="Re-exam">Re-exam</option>
-                </select>
-              </div>
-
-              {/* Course */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Course <span className="text-red-500">*</span>
-                </label>
-                <select
-                  value={course}
-                  onChange={(e) => setCourse(e.target.value)}
-                  required
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 bg-white"
-                >
-                  <option value="" disabled>
-                    Select Course
-                  </option>
-                  <option value="Data Structures">Data Structures</option>
-                  <option value="Database Management">Database Management</option>
-                  <option value="Finance Management">Finance Management</option>
-                  <option value="Operating Systems">Operating Systems</option>
-                  <option value="Marketing">Marketing</option>
-                </select>
-              </div>
-            </div>
-
-            {/* Buttons */}
-            <div className="flex justify-in justify-center gap-6">
-              <Link
-                to="/teacher/exam/answer-sheets"
-                className="px-8 py-3 border border-gray-300 rounded-lg hover:bg-gray-50"
+      {/* ================= FILTERS ================= */}
+      <div className="bg-white rounded-xl shadow p-4 mb-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <select
+            value={filters.schedule}
+            onChange={handleScheduleChange}
+            className="border rounded-lg px-4 py-2"
+          >
+            <option value="">Select Exam Schedule</option>
+            {examSchedules.map((exam) => (
+              <option
+                key={exam.exam_schedule_id}
+                value={exam.exam_schedule_id}
               >
-                Cancel
-              </Link>
-              <button
-                type="submit"
-                className="px-12 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium"
-              >
-                Submit
-              </button>
-            </div>
-          </form>
+                {exam.exam_schedule_name}
+              </option>
+            ))}
+          </select>
+
+          <select
+            value={filters.paper}
+            onChange={handlePaperChange}
+            disabled={!subjects.length}
+            className="border rounded-lg px-4 py-2 disabled:bg-gray-100"
+          >
+            <option value="">Select Subject</option>
+            {subjects.map((sub) => (
+              <option key={sub.subject_id} value={sub.subject_id}>
+                {sub.subject_name}
+              </option>
+            ))}
+          </select>
         </div>
       </div>
+
+      {/* ================= LOADING ================= */}
+      {loading && (
+        <p className="text-center text-blue-600 font-medium mt-6">
+          Loading students...
+        </p>
+      )}
+
+      {/* ================= TABLE ================= */}
+      {!loading && students.length > 0 && (
+        <form onSubmit={handleSubmit}>
+          <div className="overflow-hidden rounded-xl shadow bg-white">
+            <div className="overflow-x-auto max-h-[65vh]">
+              <table className="w-full text-sm">
+                <thead className="table-header">
+                  <tr>
+                    <th className="px-4 py-2 w-20 text-center">Roll</th>
+                    <th className="px-4 py-2">Student</th>
+                    <th className="px-4 py-2">PRN</th>
+                    <th className="px-4 py-2 w-40 text-center">Attendance</th>
+                    <th className="px-4 py-2 w-72 text-center">Answer Sheet</th>
+                  </tr>
+                </thead>
+
+                <tbody>
+                  {answerSheets.map((s) => (
+                    <tr key={s.student_id} className="border-b">
+                      <td className="px-4 py-3 text-center">
+                        {s.roll_number}
+                      </td>
+                      <td className="px-4 py-3">{s.student_name}</td>
+                      <td className="px-4 py-3 text-center">
+                        {s.prn || "—"}
+                      </td>
+
+                      <td className="px-4 py-3">
+                        <select
+                          value={s.attendance_status}
+                          onChange={(e) =>
+                            handleAttendanceChange(
+                              s.student_id,
+                              e.target.value
+                            )
+                          }
+                          className="w-full border rounded px-2 py-1"
+                        >
+                          <option value="PRESENT">Present</option>
+                          <option value="ABSENT">Absent</option>
+                          <option value="MALPRACTICE">Malpractice</option>
+                          <option value="REVIEW_FOR_ENTRY">
+                            Review for Entry
+                          </option>
+                        </select>
+                      </td>
+
+                      <td className="px-4 py-3 text-center">
+                        <input
+                          type="file"
+                          accept=".pdf,.png,.jpg,.jpeg"
+                          disabled={uploadingId === s.student_id}
+                          onChange={(e) =>
+                            handleFileUpload(
+                              s.student_id,
+                              e.target.files[0]
+                            )
+                          }
+                        />
+
+                        {s.answersheetUrl && (
+                          <div className="text-xs text-green-600 mt-1">
+                            Uploaded ✓
+                          </div>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div className="flex justify-center mt-8">
+            <button
+              type="submit"
+              disabled={
+                submitting ||
+                !answerSheets.some((s) => s.answersheetUrl)
+              }
+              className={`px-10 py-3 rounded-lg font-medium text-white ${
+                submitting ||
+                !answerSheets.some((s) => s.answersheetUrl)
+                  ? "bg-gray-400 cursor-not-allowed"
+                  : "bg-blue-600 hover:bg-blue-700"
+              }`}
+            >
+              {submitting ? "Saving..." : "Save Answer Sheets"}
+            </button>
+          </div>
+        </form>
+      )}
+
+      {!loading &&
+        students.length === 0 &&
+        filters.schedule &&
+        filters.paper && (
+          <div className="mt-10 text-center text-gray-500">
+            No students found for selected schedule and subject.
+          </div>
+        )}
     </div>
   );
 };

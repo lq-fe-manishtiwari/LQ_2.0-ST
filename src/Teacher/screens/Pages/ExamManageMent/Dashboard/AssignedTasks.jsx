@@ -1,4 +1,6 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+
 import SweetAlert from "react-bootstrap-sweetalert";
 import { examgService } from "../Services/Exam.service";
 import { fetchExamScheduleById } from "../Services/examSchedule.graphql.service";
@@ -8,12 +10,16 @@ import CreatePaper from "../Component/CreatePaper";
 import Evaluation from "../Component/Evaluation";
 import MarksEntry from "../Component/MarksEntry";
 import BulkUpload from "../Component/BulkUpload";
+import UploadExamPaper from "../Component/UploadExamPaper";
 
 const AssignedTasks = () => {
+  const navigate = useNavigate();
+
   const [exams, setExams] = useState([]);
   const [loading, setLoading] = useState(true);
 
   const [showMarksModal, setShowMarksModal] = useState(false);
+  const [showCreateModal, setShowCreateModal] = useState(false);
   const [activeComponent, setActiveComponent] = useState(null);
   const [selectedDuty, setSelectedDuty] = useState(null);
   const [selectedExamScheduleId, setSelectedExamScheduleId] = useState(null);
@@ -92,32 +98,43 @@ const formatDate = (dateStr) =>
     }
   };
 
-  const handleAction = async (duty, examScheduleId, subject) => {
-    setSelectedDuty(duty);
-    setSelectedExamScheduleId(examScheduleId);
-    setSelectedSubject(subject);
+ const handleAction = async (duty, examScheduleId, subject) => {
+  setSelectedDuty(duty);
+  setSelectedExamScheduleId(examScheduleId);
+  setSelectedSubject(subject);
 
-    switch (duty.duty_type) {
-      case "CREATE_PAPERS":
-        await fetchAndSetSchedule(examScheduleId, "CREATE_PAPERS");
-        break;
+  switch (duty.duty_type) {
+    case "CREATE_PAPERS":
+      setShowCreateModal(true);
+      break;
 
-      case "PAPER_REVALUATION":
-        setActiveComponent("PAPER_REVALUATION");
-        break;
+    case "PAPER_REVALUATION":
+      // Navigate to the revaluation page
+      navigate("/teacher/exam/Evaluation", {
+        state: { examScheduleId, subjectId: subject?.subject_id }
+      });
+      break;
 
-      case "MARKS_ENTRY":
-        setShowMarksModal(true);
-        break;
+    case "ANSWER_SHEET_MARKING":
+      // Navigate to the answer sheets page
+      navigate("/teacher/exam/answer-sheets", {
+        state: { examScheduleId, subjectId: subject?.subject_id }
+      });
+      break;
 
-      default:
-        break;
-    }
-  };
+    case "MARKS_ENTRY":
+      setShowMarksModal(true);
+      break;
+
+    default:
+      break;
+  }
+};
 
   const closeAll = () => {
     setActiveComponent(null);
     setShowMarksModal(false);
+    setShowCreateModal(false);
     setSelectedDuty(null);
     setSelectedExamScheduleId(null);
     setSelectedSubject(null);
@@ -127,10 +144,18 @@ const formatDate = (dateStr) =>
   /* ✅ ONLY ADDITION */
   const isFullPageActive = [
     "CREATE_PAPERS",
+    "UPLOAD_PAPER",
     "MARKS_ENTRY",
     "BULK_UPLOAD",
     "PAPER_REVALUATION",
   ].includes(activeComponent);
+
+  const dutyTypeLabels = {
+  CREATE_PAPERS: "Create Papers",
+  PAPER_REVALUATION: "Paper Revaluation",
+  MARKS_ENTRY: "Marks Entry",
+  ANSWER_SHEET_MARKING: "Answer Sheet Marking",
+};
 
   return (
     <div className="bg-gray-50 min-h-screen">
@@ -190,9 +215,9 @@ const formatDate = (dateStr) =>
                               <td className="px-4 py-3">
                                 {formatDate(duty.end_date)}
                               </td>
-                              <td className="px-4 py-3">
-                                {duty.duty_type}
-                              </td>
+                           <td className="px-4 py-3">
+                              {dutyTypeLabels[duty.duty_type] || duty.duty_type}
+                            </td>
                               <td className="px-4 py-3">
                                 <button
                                   onClick={() =>
@@ -248,6 +273,65 @@ const formatDate = (dateStr) =>
         />
       )}
 
+      {/* 🔵 CREATE PAPER METHOD MODAL */}
+      {showCreateModal && selectedDuty && (
+        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl w-[500px] p-6">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-lg font-semibold">Create Exam Paper</h2>
+              <button
+                onClick={() => setShowCreateModal(false)}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                ✕
+              </button>
+            </div>
+
+            <p className="text-sm text-gray-600 mb-6">
+              Choose how you want to create the exam paper
+            </p>
+
+            <div className="grid grid-cols-1 gap-4">
+              <button
+                onClick={async () => {
+                  setShowCreateModal(false);
+                  await fetchAndSetSchedule(
+                    selectedExamScheduleId,
+                    "CREATE_PAPERS"
+                  );
+                }}
+                className="border rounded-lg p-4 hover:border-green-500 hover:bg-green-50 transition text-left"
+              >
+                <h3 className="font-medium text-green-700 mb-1">
+                  Create using Questions
+                </h3>
+                <p className="text-sm text-gray-600">
+                  Create exam paper by selecting or adding questions.
+                </p>
+              </button>
+
+              <button
+                onClick={async () => {
+                  setShowCreateModal(false);
+                  await fetchAndSetSchedule(
+                    selectedExamScheduleId,
+                    "UPLOAD_PAPER"
+                  );
+                }}
+                className="border rounded-lg p-4 hover:border-blue-500 hover:bg-blue-50 transition text-left"
+              >
+                <h3 className="font-medium text-blue-700 mb-1">
+                  Upload Exam Paper
+                </h3>
+                <p className="text-sm text-gray-600">
+                  Upload exam paper file
+                </p>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* 🔽 FULL PAGE COMPONENTS */}
       {activeComponent === "CREATE_PAPERS" && bulkData && selectedDuty && (
         <CreatePaper
@@ -279,6 +363,16 @@ const formatDate = (dateStr) =>
 
       {activeComponent === "BULK_UPLOAD" && bulkData && selectedDuty && (
         <BulkUpload
+          dutyId={selectedDuty.teacher_exam_duty_assignment_id}
+          examSchedule={bulkData}
+          subjectId={selectedSubject?.subject_id}
+          subjectName={selectedSubject?.subject_name}
+          onClose={closeAll}
+        />
+      )}
+
+      {activeComponent === "UPLOAD_PAPER" && bulkData && selectedDuty && (
+        <UploadExamPaper
           dutyId={selectedDuty.teacher_exam_duty_assignment_id}
           examSchedule={bulkData}
           subjectId={selectedSubject?.subject_id}

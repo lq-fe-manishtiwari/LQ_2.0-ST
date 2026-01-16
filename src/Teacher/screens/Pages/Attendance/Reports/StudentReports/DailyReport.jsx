@@ -1,11 +1,19 @@
 import React, { useState, useEffect } from 'react';
-// import HeaderFilters from "../../../Timetable/Dashboard/HeaderFilters";
-// import { timetableService } from '../../../Timetable/Services/timetable.service';
+import AttendanceFilters from "../../../Attendance/Components/AttendanceFilters";
+import { timetableService } from "../../../TimeTable/Services/timetable.service";
+import { api } from '../../../../../../_services/api';
+
 
 const StudentDailyReport = () => {
+
+    const [currentTeacherId, setCurrentTeacherId] = useState(null);
+
+
     const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
     const [selectedSubject, setSelectedSubject] = useState('all');
     const [filterType, setFilterType] = useState('all'); // 'all', 'present', 'absent'
+
+
 
     // Header filters state
     const [filters, setFilters] = useState({
@@ -27,6 +35,12 @@ const StudentDailyReport = () => {
         divisionId: null,
         collegeId: null
     });
+
+    // Allocations
+    // ===============================
+    const [allocations, setAllocations] = useState([]);
+    const [loadingAllocations, setLoadingAllocations] = useState(false);
+
 
     // Subject/Paper options
     const [paperOptions, setPaperOptions] = useState([]);
@@ -62,6 +76,70 @@ const StudentDailyReport = () => {
             }));
         }
     }, []);
+
+
+    // This for the filter
+    useEffect(() => {
+        const getTeacherIdFromStorage = () => {
+            let teacherId = null;
+
+            const userProfileStr =
+                localStorage.getItem("userProfile") ||
+                sessionStorage.getItem("userProfile");
+
+            if (userProfileStr) {
+                try {
+                    const userProfile = JSON.parse(userProfileStr);
+                    if (userProfile?.teacher_id) {
+                        teacherId = userProfile.teacher_id;
+                    }
+                } catch (e) {
+                    console.error("Error parsing userProfile:", e);
+                }
+            }
+
+            return teacherId ? parseInt(teacherId, 10) : null;
+        };
+
+        const teacherId = getTeacherIdFromStorage();
+        if (teacherId && !isNaN(teacherId)) {
+            setCurrentTeacherId(teacherId);
+        }
+    }, []);
+
+
+    useEffect(() => {
+        const fetchAllocations = async () => {
+            if (!currentTeacherId) return;
+
+            setLoadingAllocations(true);
+            try {
+                const response = await api.getTeacherAllocatedPrograms(currentTeacherId);
+
+                if (response?.success) {
+                    const data = response.data;
+                    const allAllocations = [
+                        ...(data.class_teacher_allocation || []),
+                        ...(data.normal_allocation || [])
+                    ];
+                    setAllocations(allAllocations);
+                } else {
+                    setAllocations([]);
+                }
+            } catch (error) {
+                console.error("Error fetching allocations:", error);
+                setAllocations([]);
+            } finally {
+                setLoadingAllocations(false);
+            }
+        };
+
+        fetchAllocations();
+    }, [currentTeacherId]);
+
+
+
+
 
     // Fetch papers/subjects
     useEffect(() => {
@@ -143,12 +221,21 @@ const StudentDailyReport = () => {
         <div className="space-y-6">
             {/* Academic Filters */}
             <div className="bg-blue-50 border border-blue-200 rounded-xl p-6">
-                <h3 className="text-lg font-bold text-blue-900 mb-4">Academic Filters</h3>
-                {/* <HeaderFilters
+                <h3 className="text-lg font-bold text-blue-900 mb-4">
+                    Academic Filters
+                </h3>
+
+                <AttendanceFilters
                     filters={filters}
-                    setFilters={setFilters}
-                /> */}
+                    onFilterChange={setFilters}
+                    showPaperFilter={false}
+                    showTimeSlotFilter={false}
+                    allocations={allocations}
+                    loadingAllocations={loadingAllocations}
+                />
+
             </div>
+
 
             {/* Date, Subject and Export */}
             <div className="flex flex-col md:flex-row gap-4">
@@ -342,5 +429,8 @@ const StudentDailyReport = () => {
         </div>
     );
 };
+
+
+
 
 export default StudentDailyReport;

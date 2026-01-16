@@ -36,30 +36,41 @@ const EditPaper = ({ paper, onCancel, onSuccess }) => {
     remark: "",
   });
 
-  // Load schedule details and dependent data (subjects, tools)
+  // Load schedule details and dependent data
   useEffect(() => {
     if (!paper?.exam_schedule_id || !collegeId) return;
 
     const loadData = async () => {
-        setLoadingSchedule(true);
-        try {
-            const scheduleData = await fetchExamScheduleById(paper.exam_schedule_id);
+      setLoadingSchedule(true);
+      try {
+        const scheduleData = await fetchExamScheduleById(paper.exam_schedule_id);
 
-            setExamSchedule(scheduleData);
+        setExamSchedule(scheduleData);
 
-            if (scheduleData?.courses) {
-                const courseSubjects = scheduleData.courses.map(course => ({
-                    id: course.subjectId,
-                    subject_name: course.subjectDetails?.subjectName || `Subject ${course.subjectId}`
-                }));
-                setSubjects(courseSubjects);
-            }
-        } catch (error) {
-            console.error("Failed to load schedule/tool details:", error);
-            setAlert(<SweetAlert danger title="Error">Failed to load required data.</SweetAlert>);
-        } finally {
-            setLoadingSchedule(false);
+        if (scheduleData?.courses) {
+          const courseSubjects = scheduleData.courses.map(course => ({
+            id: course.subjectId,
+            subject_name: course.subjectDetails?.subjectName || `Subject ${course.subjectId}`
+          }));
+          setSubjects(courseSubjects);
         }
+      } catch (error) {
+        console.error("Failed to load schedule/tool details:", error);
+        setAlert(
+          <SweetAlert
+            danger
+            title="Error"
+            confirmBtnText="OK"
+            confirmBtnBsStyle="danger"
+            confirmBtnCssClass="btn-confirm fw-bold"
+            onConfirm={() => setAlert(null)}
+          >
+            Failed to load required data.
+          </SweetAlert>
+        );
+      } finally {
+        setLoadingSchedule(false);
+      }
     };
 
     loadData();
@@ -72,7 +83,7 @@ const EditPaper = ({ paper, onCancel, onSuccess }) => {
     if (!paper || !examSchedule) return;
 
     const matchingCourse = examSchedule.courses?.find(
-        (c) => String(c.subjectId) === String(paper.subject_id)
+      (c) => String(c.subjectId) === String(paper.subject_id)
     );
 
     setFormData({
@@ -129,12 +140,38 @@ const EditPaper = ({ paper, onCancel, onSuccess }) => {
   };
 
   const removeSection = (id) => {
-    setSections(sections.filter((s) => s.id !== id));
+    setAlert(
+      <SweetAlert
+        warning
+        showCancel
+        confirmBtnText="OK"
+        cancelBtnText="Cancel"
+        confirmBtnBsStyle="warning"
+        confirmBtnCssClass="btn-confirm fw-bold"
+        cancelBtnBsStyle="default"
+        title="Delete Section?"
+        onConfirm={() => {
+          setSections(sections.filter((s) => s.id !== id));
+          setAlert(
+            <SweetAlert
+              success
+              title="Deleted!"
+              confirmBtnText="OK"
+              confirmBtnBsStyle="success"
+              confirmBtnCssClass="btn-confirm fw-bold"
+              onConfirm={() => setAlert(null)}
+            >
+              Section removed successfully.
+            </SweetAlert>
+          );
+        }}
+        onCancel={() => setAlert(null)}
+      >
+        Are you sure you want to delete this section? This action cannot be undone.
+      </SweetAlert>
+    );
   };
 
-  // ─────────────────────────────────────────────
-  // Submit update
-  // ─────────────────────────────────────────────
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
@@ -167,17 +204,32 @@ const EditPaper = ({ paper, onCancel, onSuccess }) => {
       );
 
       setAlert(
-        <SweetAlert success title="Updated">
-          Exam paper updated successfully
+        <SweetAlert
+          success
+          title="Success!"
+          confirmBtnText="OK"
+          confirmBtnBsStyle="success"
+          confirmBtnCssClass="btn-confirm fw-bold"
+          onConfirm={() => {
+            setAlert(null);
+            onSuccess?.();
+          }}
+        >
+          Exam paper updated successfully!
         </SweetAlert>
       );
-
-      onSuccess?.();
     } catch (err) {
       console.error(err);
       setAlert(
-        <SweetAlert danger title="Error">
-          Failed to update exam paper
+        <SweetAlert
+          danger
+          title="Error!"
+          confirmBtnText="OK"
+          confirmBtnBsStyle="danger"
+          confirmBtnCssClass="btn-confirm fw-bold"
+          onConfirm={() => setAlert(null)}
+        >
+          Failed to update exam paper. Please try again.
         </SweetAlert>
       );
     } finally {
@@ -188,9 +240,9 @@ const EditPaper = ({ paper, onCancel, onSuccess }) => {
   // ─────────────────────────────────────────────
   // UI
   // ─────────────────────────────────────────────
-    if (loadingSchedule) {
-        return <div className="p-6 text-center">Loading paper details...</div>;
-    }
+  if (loadingSchedule) {
+    return <div className="p-6 text-center">Loading paper details...</div>;
+  }
 
   return (
     <div className="p-6 bg-gray-50 min-h-screen">
@@ -204,113 +256,113 @@ const EditPaper = ({ paper, onCancel, onSuccess }) => {
         {/* BASIC INFO */}
         <div className="bg-white p-6 rounded-xl shadow grid md:grid-cols-2 gap-6">
           <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Exam Schedule</label>
-              <div className="w-full border rounded-lg px-4 py-2.5 bg-gray-100">
-                  {examSchedule?.examScheduleName || "Loading..."}
-              </div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Exam Schedule</label>
+            <div className="w-full border rounded-lg px-4 py-2.5 bg-gray-100">
+              {examSchedule?.examScheduleName || "Loading..."}
+            </div>
           </div>
 
           <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Semester</label>
-              <div className="w-full border rounded-lg px-4 py-2.5 bg-gray-100">
-                  {examSchedule?.semester?.name || "Loading..."}
-              </div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Semester</label>
+            <div className="w-full border rounded-lg px-4 py-2.5 bg-gray-100">
+              {examSchedule?.semester?.name || "Loading..."}
+            </div>
           </div>
 
-          <select
-            name="subject_id"
-            value={formData.subject_id}
-            onChange={(e) => {
+            <select
+              name="subject_id"
+              value={formData.subject_id}
+              onChange={(e) => {
                 const newSubjectId = e.target.value;
                 const course = examSchedule?.courses?.find(c => String(c.subjectId) === String(newSubjectId));
                 setFormData(prev => ({
-                    ...prev,
-                    subject_id: newSubjectId,
-                    exam_tool_id: course?.tool?.toolId ? String(course.tool.toolId) : prev.exam_tool_id
+                  ...prev,
+                  subject_id: newSubjectId,
+                  exam_tool_id: course?.tool?.toolId ? String(course.tool.toolId) : prev.exam_tool_id
                 }));
-            }}
+              }}
             className="border rounded-lg px-4 py-2"
-          >
-            <option value="">Select Subject</option>
-            {subjects?.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.subject_name}
-              </option>
-            ))}
-          </select>
+            >
+              <option value="">Select Subject</option>
+              {subjects?.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.subject_name}
+                </option>
+              ))}
+            </select>
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Exam Tool</label>
             <div className="w-full border rounded-lg px-4 py-2.5 bg-gray-100 text-gray-700">
               {(() => {
-                 const course = examSchedule?.courses?.find(c => String(c.subjectId) === String(formData.subject_id));
-                 return course?.tool?.toolName || "Auto-filled";
+                const course = examSchedule?.courses?.find(c => String(c.subjectId) === String(formData.subject_id));
+                return course?.tool?.toolName || "Auto-filled";
               })()}
             </div>
           </div>
 
-          <input
-            name="paper_name"
-            value={formData.paper_name}
-            onChange={handleChange}
-            placeholder="Paper Name"
+            <input
+              name="paper_name"
+              value={formData.paper_name}
+              onChange={handleChange}
+              placeholder="Paper Name"
             className="border rounded-lg px-4 py-2"
-          />
+            />
 
-          <input
-            name="paper_description"
-            value={formData.paper_description}
-            onChange={handleChange}
-            placeholder="Paper Description"
+            <input
+              name="paper_description"
+              value={formData.paper_description}
+              onChange={handleChange}
+              placeholder="Paper Description"
             className="border rounded-lg px-4 py-2"
-          />
+            />
         </div>
 
         {/* DATE & MARKS */}
         <div className="bg-white p-6 rounded-xl shadow grid md:grid-cols-3 gap-6">
-          <input
-            type="datetime-local"
-            name="start_date_time"
-            value={formData.start_date_time}
-            onChange={handleChange}
+            <input
+              type="datetime-local"
+              name="start_date_time"
+              value={formData.start_date_time}
+              onChange={handleChange}
             className="border rounded-lg px-4 py-2"
-          />
-          <input
-            type="datetime-local"
-            name="end_date_time"
-            value={formData.end_date_time}
-            onChange={handleChange}
+            />
+            <input
+              type="datetime-local"
+              name="end_date_time"
+              value={formData.end_date_time}
+              onChange={handleChange}
             className="border rounded-lg px-4 py-2"
-          />
-          <input
-            name="exam_duration"
-            value={formData.exam_duration}
-            onChange={handleChange}
-            placeholder="Duration (hrs)"
+            />
+            <input
+              name="exam_duration"
+              value={formData.exam_duration}
+              onChange={handleChange}
+              placeholder="Duration (hrs)"
             className="border rounded-lg px-4 py-2"
-          />
+            />
 
-          <input
-            name="min_marks"
-            value={formData.min_marks}
-            onChange={handleChange}
-            placeholder="Min Marks"
+            <input
+              name="min_marks"
+              value={formData.min_marks}
+              onChange={handleChange}
+              placeholder="Min Marks"
             className="border rounded-lg px-4 py-2"
-          />
-          <input
-            name="max_marks"
-            value={formData.max_marks}
-            onChange={handleChange}
-            placeholder="Max Marks"
+            />
+            <input
+              name="max_marks"
+              value={formData.max_marks}
+              onChange={handleChange}
+              placeholder="Max Marks"
             className="border rounded-lg px-4 py-2"
-          />
-          <input
-            name="remark"
-            value={formData.remark}
-            onChange={handleChange}
-            placeholder="Remark"
+            />
+            <input
+              name="remark"
+              value={formData.remark}
+              onChange={handleChange}
+              placeholder="Remark"
             className="border rounded-lg px-4 py-2"
-          />
+            />
         </div>
 
         {/* SECTIONS */}
@@ -357,7 +409,7 @@ const EditPaper = ({ paper, onCancel, onSuccess }) => {
         <button
           type="button"
           onClick={addSection}
-          className="bg-green-600 text-white px-6 py-3 rounded-lg flex items-center gap-2"
+          className="bg-green-600 text-white px-6 py-3 rounded-lg flex items-center gap-2 hover:bg-green-700"
         >
           <Plus size={18} /> Add Section
         </button>
@@ -367,14 +419,14 @@ const EditPaper = ({ paper, onCancel, onSuccess }) => {
           <button
             type="button"
             onClick={onCancel}
-            className="px-8 py-3 border rounded-lg"
+            className="px-8 py-3 border border-gray-300 rounded-lg hover:bg-gray-100"
           >
             Cancel
           </button>
           <button
             type="submit"
             disabled={loading}
-            className="px-8 py-3 bg-blue-600 text-white rounded-lg"
+            className="px-8 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
           >
             {loading ? "Updating..." : "Update Paper"}
           </button>
