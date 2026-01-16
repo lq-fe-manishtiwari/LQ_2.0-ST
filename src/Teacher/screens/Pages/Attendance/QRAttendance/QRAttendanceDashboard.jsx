@@ -4,6 +4,7 @@ import { QRCodeSVG, QRCodeCanvas } from 'qrcode.react';
 import AttendanceFilters from '../Components/AttendanceFilters';
 //import { timetableService } from '../../Timetable/Services/timetable.service';
 import { TeacherAttendanceManagement } from '../Services/attendance.service';
+import { attendanceWebSocket } from '../Services/websocket.service';
 import { api } from '../../../../../_services/api';
 import SweetAlert from 'react-bootstrap-sweetalert';
 
@@ -56,6 +57,10 @@ const QRAttendanceDashboard = () => {
     const [qrDuration, setQrDuration] = useState(5); // Default 5 minutes
     const [existingQRSession, setExistingQRSession] = useState(null);
     const [loadingExistingQR, setLoadingExistingQR] = useState(false);
+
+    // WebSocket states
+    const [liveCount, setLiveCount] = useState(0);
+    const [wsConnected, setWsConnected] = useState(false);
 
     // Company Logo - Using SVG text "LQ" for clean display
     const [companyLogo] = useState(() => {
@@ -292,7 +297,17 @@ const QRAttendanceDashboard = () => {
                     console.log("Checking for existing QR session:", params);
                     const response = await TeacherAttendanceManagement.getQRCodeSession(params);
 
-                    if (response.success && response.data) {
+                    console.log("QR Session API Response:", response);
+
+                    // Check if response has actual data with required fields
+                    const hasValidData = response.success &&
+                        response.data &&
+                        typeof response.data === 'object' &&
+                        !Array.isArray(response.data) &&
+                        Object.keys(response.data).length > 0 &&
+                        response.data.id; // Must have ID
+
+                    if (hasValidData) {
                         console.log("Existing QR session found:", response.data);
 
                         // Check if QR is still valid (not expired)
@@ -301,16 +316,15 @@ const QRAttendanceDashboard = () => {
 
                         if (now < endTime) {
                             // QR is still valid, use it
-                            setExistingQRSession(response.data);
-                            setSuccessAlert("Existing QR code found and loaded!");
+                            console.log("Existing QR is still valid");
                         } else {
-                            // QR expired
-                            setExistingQRSession(null);
-                            console.log("Existing QR has expired");
+                            // QR expired but still show it
+                            console.log("Existing QR has expired but showing anyway");
                         }
+                        setExistingQRSession(response.data);
                     } else {
                         setExistingQRSession(null);
-                        console.log("No existing QR session found");
+                        console.log("No existing QR session found or empty/invalid data");
                     }
                 } catch (error) {
                     console.error("Error checking existing QR:", error);
@@ -325,6 +339,99 @@ const QRAttendanceDashboard = () => {
 
         checkExistingQR();
     }, [filters.academicYear, filters.semester, filters.division, filters.paper, selectedSlot, selectedDate]);
+
+    // WebSocket connection for live attendance updates
+    useEffect(() => {
+        if (sessionActive && qrSession) {
+            console.log('🔌 Initializing WebSocket for live attendance...');
+
+            const serverUrl = import.meta.env.VITE_API_URL_WebSocket;
+
+            // Get auth token from localStorage
+            let authToken = '';
+            try {
+                // Try refreshToken first
+                const refreshTokenData = localStorage.getItem('refreshToken');
+                if (refreshTokenData) {
+                    const parsed = JSON.parse(refreshTokenData);
+                    authToken = parsed.token || parsed.accessToken || parsed;
+                }
+
+                // Fallback to currentUser token
+                if (!authToken) {
+                    const currentUserData = localStorage.getItem('currentUser');
+                    if (currentUserData) {
+                        const parsed = JSON.parse(currentUserData);
+                        authToken = parsed.token || parsed.accessToken || '';
+                    }
+                }
+
+                // If still no token, try direct token key
+                if (!authToken) {
+                    authToken = localStorage.getItem('token') || localStorage.getItem('accessToken') || '';
+                }
+            } catch (error) {
+                console.error('❌ Error parsing token from localStorage:', error);
+            }
+
+            if (!authToken) {
+                console.error('❌ No auth token found for WebSocket');
+                return;
+            }
+
+            console.log('🔑 Using auth token for WebSocket:', authToken.substring(0, 20) + '...');
+
+            // Prepare session key
+            const sessionKey = {
+                academic_year_id: qrSession.academic_year_id,
+                semester_id: qrSession.semester_id,
+                division_id: qrSession.division_id,
+                subject_id: qrSession.subject_id,
+                timetable_id: qrSession.timetable_id,
+                timetable_allocation_id: qrSession.timetable_allocation_id,
+                date: qrSession.date,
+                time_slot_id: qrSession.time_slot_id
+            };
+
+            let subscriptionId = null;
+
+            // Connect to WebSocket
+            attendanceWebSocket.connect(
+                serverUrl,
+                authToken,
+                (frame) => {
+                    console.log('✅ WebSocket connected for attendance tracking');
+                    setWsConnected(true);
+
+                    // Subscribe AFTER connection is established
+                    console.log('📡 Subscribing with session key:', sessionKey);
+
+                    subscriptionId = attendanceWebSocket.subscribeToSession(sessionKey, (data) => {
+                        console.log('📨 Live attendance update received:', data);
+                        console.log('📊 Current liveCount:', liveCount, '→ New count:', data.marked || 0);
+                        setLiveCount(data.marked || 0);
+                    });
+
+                    console.log('✅ Subscription ID:', subscriptionId);
+                },
+                (error) => {
+                    console.error('❌ WebSocket connection error:', error);
+                    setWsConnected(false);
+                }
+            );
+
+            // Cleanup on unmount or session end
+            return () => {
+                console.log('🔌 Cleaning up WebSocket connection');
+                if (subscriptionId) {
+                    attendanceWebSocket.unsubscribe(subscriptionId);
+                }
+                attendanceWebSocket.disconnect();
+                setWsConnected(false);
+                setLiveCount(0);
+            };
+        }
+    }, [sessionActive, qrSession]);
 
     // Generate QR Session
     const generateQRSession = async () => {
@@ -572,7 +679,7 @@ const QRAttendanceDashboard = () => {
                 </div>
 
                 {/* Existing QR Notification */}
-                {existingQRSession && !sessionActive && (
+                {!loadingExistingQR && existingQRSession && !sessionActive && (
                     <div className="mt-4 bg-blue-50 border border-blue-200 rounded-lg p-4">
                         <div className="flex items-start gap-3">
                             <div className="flex-shrink-0">
@@ -585,11 +692,33 @@ const QRAttendanceDashboard = () => {
                                 <div className="text-xs text-blue-700 space-y-1">
                                     <p>
                                         <span className="font-medium">Created:</span>{' '}
-                                        {new Date(`${existingQRSession.date} ${existingQRSession.start_time}`).toLocaleString()}
+                                        {(() => {
+                                            try {
+                                                const dateTimeStr = `${existingQRSession.date}T${existingQRSession.start_time}`;
+                                                const date = new Date(dateTimeStr);
+                                                return date.toLocaleString('en-IN', {
+                                                    dateStyle: 'medium',
+                                                    timeStyle: 'short'
+                                                });
+                                            } catch (e) {
+                                                return `${existingQRSession.date} ${existingQRSession.start_time}`;
+                                            }
+                                        })()}
                                     </p>
                                     <p>
                                         <span className="font-medium">Valid Until:</span>{' '}
-                                        {new Date(`${existingQRSession.date} ${existingQRSession.end_time}`).toLocaleString()}
+                                        {(() => {
+                                            try {
+                                                const dateTimeStr = `${existingQRSession.date}T${existingQRSession.end_time}`;
+                                                const date = new Date(dateTimeStr);
+                                                return date.toLocaleString('en-IN', {
+                                                    dateStyle: 'medium',
+                                                    timeStyle: 'short'
+                                                });
+                                            } catch (e) {
+                                                return `${existingQRSession.date} ${existingQRSession.end_time}`;
+                                            }
+                                        })()}
                                     </p>
                                 </div>
                                 <p className="text-xs text-blue-600 mt-2">
@@ -609,7 +738,7 @@ const QRAttendanceDashboard = () => {
                         </div>
                     )}
 
-                    {existingQRSession && !sessionActive && (
+                    {!loadingExistingQR && existingQRSession && !sessionActive && (
                         <button
                             onClick={generateQRSession}
                             disabled={loadingExistingQR}
@@ -787,7 +916,26 @@ const QRAttendanceDashboard = () => {
                     <div className="space-y-4">
                         {/* Stats */}
                         <div className="grid grid-cols-2 gap-4">
-                            <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-200">
+                            {/* Live Count Card */}
+                            <div className={`rounded-xl p-4 shadow-sm border ${wsConnected ? 'bg-blue-50 border-blue-200' : 'bg-gray-50 border-gray-200'}`}>
+                                <div className="flex items-center justify-between">
+                                    <div>
+                                        <div className="flex items-center gap-2">
+                                            <p className="text-xs text-blue-600 uppercase font-semibold">Live Marked</p>
+                                            {wsConnected && (
+                                                <span className="flex items-center gap-1 text-xs text-green-600">
+                                                    <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+                                                    Live
+                                                </span>
+                                            )}
+                                        </div>
+                                        <p className="text-3xl font-bold text-blue-700">{liveCount}</p>
+                                    </div>
+                                    <Users className="w-10 h-10 text-blue-400" />
+                                </div>
+                            </div>
+
+                            {/* <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-200">
                                 <div className="flex items-center justify-between">
                                     <div>
                                         <p className="text-xs text-gray-500 uppercase">Total Scans</p>
@@ -795,8 +943,8 @@ const QRAttendanceDashboard = () => {
                                     </div>
                                     <Users className="w-10 h-10 text-gray-400" />
                                 </div>
-                            </div>
-                            <div className="bg-green-50 rounded-xl p-4 shadow-sm border border-green-200">
+                            </div> */}
+                            {/* <div className="bg-green-50 rounded-xl p-4 shadow-sm border border-green-200">
                                 <div className="flex items-center justify-between">
                                     <div>
                                         <p className="text-xs text-green-600 uppercase">Present</p>
@@ -804,7 +952,7 @@ const QRAttendanceDashboard = () => {
                                     </div>
                                     <CheckCircle className="w-10 h-10 text-green-500" />
                                 </div>
-                            </div>
+                            </div> */}
                         </div>
 
                         {/* Live Attendance List */}
