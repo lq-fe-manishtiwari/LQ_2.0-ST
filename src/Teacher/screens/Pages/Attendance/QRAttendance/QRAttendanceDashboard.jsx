@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useLocation } from 'react-router-dom';
 import { QrCode, Download, Share2, Users, Clock, CheckCircle, XCircle, RefreshCw, Loader } from 'lucide-react';
 import { QRCodeSVG, QRCodeCanvas } from 'qrcode.react';
 import AttendanceFilters from '../Components/AttendanceFilters';
@@ -9,6 +10,9 @@ import { api } from '../../../../../_services/api';
 import SweetAlert from 'react-bootstrap-sweetalert';
 
 const QRAttendanceDashboard = () => {
+    const location = useLocation();
+    const slotData = location.state?.slot;
+
     // Teacher and allocations
     const [currentTeacherId, setCurrentTeacherId] = useState(null);
     const [allocations, setAllocations] = useState([]);
@@ -61,6 +65,8 @@ const QRAttendanceDashboard = () => {
     // WebSocket states
     const [liveCount, setLiveCount] = useState(0);
     const [wsConnected, setWsConnected] = useState(false);
+    // Auto-select from slot data
+    const [autoSelectCompleted, setAutoSelectCompleted] = useState(false);
 
     // Company Logo - Using SVG text "LQ" for clean display
     const [companyLogo] = useState(() => {
@@ -101,6 +107,39 @@ const QRAttendanceDashboard = () => {
         }
     }, []);
 
+    // Initialize from slot data
+    useEffect(() => {
+        if (slotData) {
+            console.log("Received slot data for QR:", slotData);
+
+            // Set filters from slot data
+            setFilters(prev => ({
+                ...prev,
+                program: slotData.program_id?.toString() || '',
+                batch: slotData.batch_id?.toString() || '',
+                academicYear: slotData.academic_year_id?.toString() || '',
+                semester: slotData.semester_id?.toString() || '',
+                division: slotData.division_id?.toString() || '',
+                paper: slotData.subject_id?.toString() || ''
+            }));
+
+            // Set date from slot data
+            if (slotData.date) {
+                setSelectedDate(slotData.date);
+            }
+
+            // Set teacher ID from slot data
+            if (slotData.teacher_id) {
+                setCurrentTeacherId(slotData.teacher_id);
+            }
+
+            // Mark auto-select as completed
+            setAutoSelectCompleted(true);
+
+            setSuccessAlert("Timetable data loaded successfully! Filters are auto-selected.");
+        }
+    }, [slotData]);
+
     // Fetch allocations
     useEffect(() => {
         const fetchAllocations = async () => {
@@ -133,22 +172,6 @@ const QRAttendanceDashboard = () => {
             fetchAllocations();
         }
     }, [currentTeacherId]);
-
-    // Auto-select first available filter values
-    useEffect(() => {
-        if (allocations.length > 0 && !filters.paper) {
-            const firstAlloc = allocations[0];
-            const newFilters = {
-                program: firstAlloc.program?.program_id?.toString() || '',
-                batch: firstAlloc.batch?.batch_id?.toString() || '',
-                academicYear: firstAlloc.academic_year_id?.toString() || '',
-                semester: firstAlloc.semester_id?.toString() || '',
-                division: firstAlloc.division_id?.toString() || '',
-                paper: firstAlloc.subjects?.[0]?.subject_id?.toString() || ''
-            };
-            setFilters(newFilters);
-        }
-    }, [allocations]);
 
     // Extract IDs from filters
     useEffect(() => {
@@ -193,10 +216,10 @@ const QRAttendanceDashboard = () => {
                             time_slot_id: slot.time_slot_id,
                             timetable_id: slot.timetable_id,
                             timetable_allocation_id: slot.timetable_allocation_id,
-                            start_time: slot.start_time,  // For AttendanceFilters component
-                            end_time: slot.end_time,      // For AttendanceFilters component
-                            start: slot.start_time,       // For internal use
-                            end: slot.end_time,           // For internal use
+                            start_time: slot.start_time,
+                            end_time: slot.end_time,
+                            start: slot.start_time,
+                            end: slot.end_time,
                             name: `${slot.start_time?.slice(0, 5)} - ${slot.end_time?.slice(0, 5)}`,
                             description: slot.description,
                             slot_name: slot.slot_name
@@ -204,16 +227,44 @@ const QRAttendanceDashboard = () => {
 
                         setTimeSlots(formattedSlots);
 
-                        // Auto-select first time slot
-                        const firstSlot = formattedSlots[0];
-                        setSelectedSlot(firstSlot);
+                        // Auto-select the correct time slot from slotData
+                        if (slotData?.time_slot_id) {
+                            const matchedSlot = formattedSlots.find(slot =>
+                                slot.time_slot_id === slotData.time_slot_id ||
+                                slot.id === slotData.time_slot_id ||
+                                (slot.start_time === slotData.start_time && slot.end_time === slotData.end_time)
+                            );
 
-                        // Update filters.timeSlot for AttendanceFilters component
-                        const firstSlotId = firstSlot.timetable_id?.toString() || firstSlot.time_slot_id?.toString();
-                        setFilters(prev => ({ ...prev, timeSlot: firstSlotId }));
+                            if (matchedSlot) {
+                                setSelectedSlot(matchedSlot);
+                                setFilters(prev => ({
+                                    ...prev,
+                                    timeSlot: matchedSlot.timetable_id?.toString() ||
+                                        matchedSlot.time_slot_id?.toString()
+                                }));
+                                console.log("Auto-selected time slot from timetable:", matchedSlot);
+                            } else if (formattedSlots.length > 0) {
+                                // Fallback to first slot
+                                const firstSlot = formattedSlots[0];
+                                setSelectedSlot(firstSlot);
+                                setFilters(prev => ({
+                                    ...prev,
+                                    timeSlot: firstSlot.timetable_id?.toString() ||
+                                        firstSlot.time_slot_id?.toString()
+                                }));
+                            }
+                        } else if (formattedSlots.length > 0) {
+                            // Auto-select first time slot
+                            const firstSlot = formattedSlots[0];
+                            setSelectedSlot(firstSlot);
+                            setFilters(prev => ({
+                                ...prev,
+                                timeSlot: firstSlot.timetable_id?.toString() ||
+                                    firstSlot.time_slot_id?.toString()
+                            }));
+                        }
 
                         console.log("QR Attendance - Time slots loaded:", formattedSlots);
-                        console.log("QR Attendance - Auto-selected first slot:", firstSlot);
                     } else {
                         // All slots are holidays, clear everything
                         setTimeSlots([]);
@@ -236,8 +287,10 @@ const QRAttendanceDashboard = () => {
             }
         };
 
-        fetchTimeSlots();
-    }, [filters.paper, filters.academicYear, filters.semester, filters.division, currentTeacherId, selectedDate, apiIds.collegeId]);
+        if (autoSelectCompleted && filters.paper) {
+            fetchTimeSlots();
+        }
+    }, [filters.paper, filters.academicYear, filters.semester, filters.division, currentTeacherId, selectedDate, apiIds.collegeId, autoSelectCompleted]);
 
     // Fetch students when paper is selected
     useEffect(() => {
@@ -276,7 +329,9 @@ const QRAttendanceDashboard = () => {
             }
         };
 
-        fetchStudents();
+        if (filters.paper) {
+            fetchStudents();
+        }
     }, [filters.academicYear, filters.semester, filters.division, filters.paper]);
 
     // Check for existing QR session when filters are complete
@@ -337,7 +392,9 @@ const QRAttendanceDashboard = () => {
             }
         };
 
-        checkExistingQR();
+        if (selectedSlot) {
+            checkExistingQR();
+        }
     }, [filters.academicYear, filters.semester, filters.division, filters.paper, selectedSlot, selectedDate]);
 
     // WebSocket connection for live attendance updates
@@ -444,6 +501,22 @@ const QRAttendanceDashboard = () => {
         if (existingQRSession) {
             console.log("Using existing QR session:", existingQRSession);
 
+            // Find subject name from allocations or slotData
+            let subjectName = '';
+            if (slotData?.subject_name) {
+                subjectName = slotData.subject_name;
+            } else {
+                for (const alloc of allocations) {
+                    if (alloc.subjects && Array.isArray(alloc.subjects)) {
+                        const subject = alloc.subjects.find(s => s.subject_id == filters.paper);
+                        if (subject) {
+                            subjectName = subject.name;
+                            break;
+                        }
+                    }
+                }
+            }
+
             // Reconstruct session data from existing QR
             const sessionData = {
                 sessionId: `EXISTING_${existingQRSession.id}`,
@@ -451,14 +524,15 @@ const QRAttendanceDashboard = () => {
                 semester_id: existingQRSession.semester_id,
                 division_id: existingQRSession.division_id,
                 subject_id: existingQRSession.paper_id,
-                subject_name: existingQRSession.subject_name || '',
+                subject_name: subjectName,
                 timetable_id: selectedSlot.timetable_id,
                 timetable_allocation_id: selectedSlot.timetable_allocation_id || null,
                 time_slot_id: existingQRSession.time_slot_id,
                 date: existingQRSession.date,
                 slotTime: selectedSlot.name,
                 timestamp: existingQRSession.start_time,
-                expiresAt: new Date(`${existingQRSession.date} ${existingQRSession.end_time}`).toISOString()
+                expiresAt: new Date(`${existingQRSession.date} ${existingQRSession.end_time}`).toISOString(),
+                divisionName: slotData?.division_name || `Division ${existingQRSession.division_id}`
             };
 
             setQrSession({
@@ -480,20 +554,24 @@ const QRAttendanceDashboard = () => {
         try {
             const sessionId = `ATT_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
-            // Find subject name from allocations
+            // Find subject name from allocations or slotData
             let subjectName = '';
-            for (const alloc of allocations) {
-                if (alloc.subjects && Array.isArray(alloc.subjects)) {
-                    const subject = alloc.subjects.find(s => s.subject_id == filters.paper);
-                    if (subject) {
-                        subjectName = subject.name;
-                        break;
+            if (slotData?.subject_name) {
+                subjectName = slotData.subject_name;
+            } else {
+                for (const alloc of allocations) {
+                    if (alloc.subjects && Array.isArray(alloc.subjects)) {
+                        const subject = alloc.subjects.find(s => s.subject_id == filters.paper);
+                        if (subject) {
+                            subjectName = subject.name;
+                            break;
+                        }
                     }
                 }
             }
 
             const now = new Date();
-            const expires = new Date(now.getTime() + validDuration * 60 * 1000); // Use validated duration
+            const expires = new Date(now.getTime() + validDuration * 60 * 1000);
 
             // Complete attendance data structure for QR
             const sessionData = {
@@ -509,11 +587,12 @@ const QRAttendanceDashboard = () => {
                 date: selectedDate,
                 slotTime: selectedSlot.name,
                 timestamp: now.toISOString(),
-                expiresAt: expires.toISOString()
+                expiresAt: expires.toISOString(),
+                divisionName: slotData?.division_name || `Division ${filters.division}`
             };
 
             const baseUrl = window.location.origin;
-            const encodedData = btoa(JSON.stringify(sessionData)); // Base64 encode
+            const encodedData = btoa(JSON.stringify(sessionData));
             const qrUrl = `${baseUrl}/student/timetable/mark-attendance?s=${encodedData}`;
             const shortCode = sessionId.split('_')[1].substring(0, 6).toUpperCase();
 
@@ -566,8 +645,6 @@ const QRAttendanceDashboard = () => {
                 setAttendanceRecords([]);
                 setSuccessAlert("QR Code generated and saved successfully!");
             } else {
-                // We'll still activate the session if it failed to save, but warn the user?
-                // Actually user said "modify ... means ... save krni h", so if save fails, we should probably report error.
                 throw new Error(saveResponse.message || "Failed to save session to database");
             }
 
@@ -578,7 +655,6 @@ const QRAttendanceDashboard = () => {
             setIsGenerating(false);
         }
     };
-
 
     // Stop session
     const stopSession = () => {
@@ -629,6 +705,37 @@ const QRAttendanceDashboard = () => {
                 <p className="text-gray-600 text-sm md:text-base mt-1">
                     Generate QR codes for quick attendance marking
                 </p>
+
+                {/* Slot Info Display */}
+                {/* {slotData && (
+                    <div className="mt-3 bg-blue-50 border border-blue-200 rounded-lg p-3">
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <p className="text-sm font-semibold text-blue-800">
+                                    📋 Timetable Slot Information
+                                </p>
+                                <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mt-2 text-xs text-blue-700">
+                                    <div>
+                                        <span className="font-medium">Subject:</span> {slotData.subject_name}
+                                    </div>
+                                    <div>
+                                        <span className="font-medium">Date:</span> {slotData.date}
+                                    </div>
+                                    <div>
+                                        <span className="font-medium">Time:</span> {slotData.start_time?.slice(0, 5)} - {slotData.end_time?.slice(0, 5)}
+                                    </div>
+                                    <div>
+                                        <span className="font-medium">Division:</span> {slotData.division_name}
+                                    </div>
+                                </div>
+                            </div>
+                            <CheckCircle className="w-6 h-6 text-green-500" />
+                        </div>
+                        <p className="text-xs text-blue-600 mt-2">
+                            All filters have been auto-selected from the timetable slot.
+                        </p>
+                    </div>
+                )} */}
             </div>
 
             {/* Filters */}
@@ -642,6 +749,7 @@ const QRAttendanceDashboard = () => {
                     loadingTimeSlots={loadingSlots}
                     showFilters={true}
                     compact={false}
+                    slotData={slotData} // Pass slot data to filters
                 />
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
@@ -677,6 +785,23 @@ const QRAttendanceDashboard = () => {
                         <p className="text-xs text-gray-500 mt-1">Enter QR validity duration in minutes</p>
                     </div>
                 </div>
+
+                {/* Selected Time Slot Info */}
+                {/* {selectedSlot && (
+                    <div className="mt-4 bg-green-50 border border-green-200 rounded-lg p-3">
+                        <div className="flex items-center gap-2">
+                            <Clock className="w-4 h-4 text-green-600" />
+                            <span className="text-sm font-semibold text-green-800">
+                                Selected Time Slot: {selectedSlot.name}
+                            </span>
+                        </div>
+                        {slotData && (
+                            <p className="text-xs text-green-600 mt-1">
+                                Auto-selected from timetable slot
+                            </p>
+                        )}
+                    </div>
+                )} */}
 
                 {/* Existing QR Notification */}
                 {!loadingExistingQR && existingQRSession && !sessionActive && (
@@ -803,12 +928,12 @@ const QRAttendanceDashboard = () => {
                                 level="H"
                                 includeMargin={true}
                                 imageSettings={{
-                                    src: companyLogo, // Company logo from state (backend in future)
+                                    src: companyLogo,
                                     x: undefined,
                                     y: undefined,
                                     height: 80,
                                     width: 80,
-                                    excavate: true, // Creates white background behind logo
+                                    excavate: true,
                                 }}
                             />
                         </div>
@@ -1025,7 +1150,7 @@ const QRAttendanceDashboard = () => {
                         </li>
                         <li className="flex gap-2">
                             <span className="font-bold">6.</span>
-                            <span>QR code expires after 30 minutes for security</span>
+                            <span>QR code expires after set duration for security</span>
                         </li>
                     </ol>
                 </div>
