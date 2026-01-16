@@ -207,84 +207,98 @@ const AttendanceFilters = ({
         </div>
       )}
 
-      {/* Filters Grid */}
+      {/* Filters Grid - 3 filters per row */}
       {showFilters && (
-        <div className={`grid grid-cols-1 ${compact ? 'md:grid-cols-2' : 'md:grid-cols-2 lg:grid-cols-3'} gap-4 mb-4 p-4 bg-gray-50 rounded-lg border border-gray-200`}>
-          <CustomSelect
-            label="Program"
-            value={filters.program}
-            onChange={(e) => handleFilterChange('program', e.target.value)}
-            options={programOptions}
-            placeholder="Select Program"
-            disabled={disabled || loadingAllocations}
-            loading={loadingAllocations}
-          />
+        <div className="space-y-4 mb-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
+          
+          {/* First Row - 3 filters */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <CustomSelect
+              label="Program"
+              value={filters.program}
+              onChange={(e) => handleFilterChange('program', e.target.value)}
+              options={programOptions}
+              placeholder="Select Program"
+              disabled={disabled || loadingAllocations}
+              loading={loadingAllocations}
+            />
+            
+            <CustomSelect
+              label="Batch"
+              value={filters.batch}
+              onChange={(e) => handleFilterChange('batch', e.target.value)}
+              options={batchOptions}
+              placeholder="Select Batch"
+              disabled={disabled || loadingAllocations || !filters.program}
+              loading={loadingAllocations}
+            />
+            
+            <CustomSelect
+              label="Academic Year"
+              value={filters.academicYear}
+              onChange={(e) => handleFilterChange('academicYear', e.target.value)}
+              options={academicYearOptions}
+              placeholder="Select Academic Year"
+              disabled={disabled || loadingAllocations || !filters.batch}
+              loading={loadingAllocations}
+            />
+          </div>
 
-          <CustomSelect
-            label="Batch"
-            value={filters.batch}
-            onChange={(e) => handleFilterChange('batch', e.target.value)}
-            options={batchOptions}
-            placeholder="Select Batch"
-            disabled={disabled || loadingAllocations || !filters.program}
-            loading={loadingAllocations}
-          />
+          {/* Second Row - 3 filters */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <CustomSelect
+              label="Semester"
+              value={filters.semester}
+              onChange={(e) => handleFilterChange('semester', e.target.value)}
+              options={semesterOptions}
+              placeholder="Select Semester"
+              disabled={disabled || loadingAllocations || !filters.academicYear}
+              loading={loadingAllocations}
+            />
+            
+            <CustomSelect
+              label="Division"
+              value={filters.division}
+              onChange={(e) => handleFilterChange('division', e.target.value)}
+              options={divisionOptions}
+              placeholder="Select Division"
+              disabled={disabled || loadingAllocations || !filters.semester}
+              loading={loadingAllocations}
+            />
+            
+            <CustomSelect
+              label="Paper"
+              value={filters.paper}
+              onChange={(e) => handleFilterChange('paper', e.target.value)}
+              options={paperOptions()}
+              placeholder="Select Paper"
+              disabled={disabled || loadingAllocations || !filters.division}
+              loading={loadingAllocations}
+            />
+          </div>
 
-          <CustomSelect
-            label="Academic Year"
-            value={filters.academicYear}
-            onChange={(e) => handleFilterChange('academicYear', e.target.value)}
-            options={academicYearOptions}
-            placeholder="Select Academic Year"
-            disabled={disabled || loadingAllocations || !filters.batch}
-            loading={loadingAllocations}
-          />
+          {/* Third Row - Time Slot (with 2 empty columns for alignment) */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <CustomSelect
+              label="Time Slot"
+              value={filters.timeSlot}
+              onChange={(e) => handleFilterChange('timeSlot', e.target.value)}
+              options={timeSlots.map(slot => ({
+                value: slot.timetable_id?.toString() || slot.time_slot_id?.toString(),
+                name: `${slot.start_time?.slice(0, 5)} - ${slot.end_time?.slice(0, 5)}`
+              }))}
+              placeholder="Select Time Slot"
+              disabled={disabled || !filters.paper || loadingTimeSlots}
+              loading={loadingTimeSlots}
+            />
+            
+            {/* Empty columns to maintain 3-column layout */}
+            <div className="hidden md:block"></div>
+            <div className="hidden md:block"></div>
+          </div>
 
-          <CustomSelect
-            label="Semester"
-            value={filters.semester}
-            onChange={(e) => handleFilterChange('semester', e.target.value)}
-            options={semesterOptions}
-            placeholder="Select Semester"
-            disabled={disabled || loadingAllocations || !filters.academicYear}
-            loading={loadingAllocations}
-          />
-
-          <CustomSelect
-            label="Division"
-            value={filters.division}
-            onChange={(e) => handleFilterChange('division', e.target.value)}
-            options={divisionOptions}
-            placeholder="Select Division"
-            disabled={disabled || loadingAllocations || !filters.semester}
-            loading={loadingAllocations}
-          />
-
-          <CustomSelect
-            label="Paper"
-            value={filters.paper}
-            onChange={(e) => handleFilterChange('paper', e.target.value)}
-            options={paperOptions()}
-            placeholder="Select Paper"
-            disabled={disabled || loadingAllocations || !filters.division}
-            loading={loadingAllocations}
-          />
-
-          <CustomSelect
-            label="Time Slot"
-            value={filters.timeSlot}
-            onChange={(e) => handleFilterChange('timeSlot', e.target.value)}
-            options={timeSlots.map(slot => ({
-              value: slot.timetable_id?.toString() || slot.time_slot_id?.toString(),
-              name: `${slot.start_time?.slice(0, 5)} - ${slot.end_time?.slice(0, 5)}`
-            }))}
-            placeholder="Select Time Slot"
-            disabled={disabled || !filters.paper || loadingTimeSlots}
-            loading={loadingTimeSlots}
-          />
-
-          {/* Filter Actions */}
-          <div className={`${compact ? 'md:col-span-2' : 'lg:col-span-3'} flex justify-end gap-3 pt-2`}>
+          {/* Action Buttons - Full width */}
+          <div className="flex justify-end gap-3 pt-2">
             {onResetFilters && (
               <button
                 onClick={onResetFilters}
