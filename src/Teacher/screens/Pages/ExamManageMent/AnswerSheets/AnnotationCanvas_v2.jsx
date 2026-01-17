@@ -5,13 +5,17 @@ import { Pen, Eraser, Type, Undo, Redo, Trash2, ZoomIn, ZoomOut, CheckCircle, XI
 // Configure PDF.js worker
 pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
 
-const AnnotationCanvas = React.forwardRef(({ fileUrl, fileType }, ref) => {
+const AnnotationCanvas = React.forwardRef(({ fileUrl, fileType, onMarksUpdate }, ref) => {
     const canvasRef = useRef(null);
+    const containerRef = useRef(null);
+
     const [isDrawing, setIsDrawing] = useState(false);
     const [tool, setTool] = useState("pen");
     const [color, setColor] = useState("#FF0000");
     const [brushSize, setBrushSize] = useState(3);
     const [zoom, setZoom] = useState(1);
+    const [fitToScreen, setFitToScreen] = useState(true);
+
     const [numPages, setNumPages] = useState(null);
     const [pageNumber, setPageNumber] = useState(1);
     const [pdfLoaded, setPdfLoaded] = useState(false);
@@ -19,7 +23,12 @@ const AnnotationCanvas = React.forwardRef(({ fileUrl, fileType }, ref) => {
     const [historyStep, setHistoryStep] = useState(-1);
     const [backgroundImage, setBackgroundImage] = useState(null);
     const [selectedStamp, setSelectedStamp] = useState(null);
-    const [pageAnnotations, setPageAnnotations] = useState({}); // Store annotations per page
+    const [pageAnnotations, setPageAnnotations] = useState({});
+
+    // Marks management
+    const [marksDistribution, setMarksDistribution] = useState([]);
+
+   console.log("marking",marksDistribution);
 
     const isPDF = fileType === "application/pdf" || fileType === "pdf";
     const lastPos = useRef({ x: 0, y: 0 });
@@ -33,6 +42,38 @@ const AnnotationCanvas = React.forwardRef(({ fileUrl, fileType }, ref) => {
         });
     }, []);
 
+    // Fit canvas size when needed
+    useEffect(() => {
+        const updateSize = () => {
+            if (!canvasRef.current || !containerRef.current || !backgroundImage) return;
+
+            const canvas = canvasRef.current;
+            const container = containerRef.current;
+
+            if (fitToScreen) {
+                const padding = 32;
+                const maxW = container.clientWidth - padding;
+                const maxH = container.clientHeight - padding;
+
+                const ratio = Math.min(
+                    maxW / backgroundImage.width,
+                    maxH / backgroundImage.height,
+                    1.5
+                );
+
+                canvas.style.width = `${backgroundImage.width * ratio}px`;
+                canvas.style.height = `${backgroundImage.height * ratio}px`;
+            } else {
+                canvas.style.width = `${backgroundImage.width * zoom}px`;
+                canvas.style.height = `${backgroundImage.height * zoom}px`;
+            }
+        };
+
+        updateSize();
+        window.addEventListener('resize', updateSize);
+        return () => window.removeEventListener('resize', updateSize);
+    }, [fitToScreen, zoom, backgroundImage]);
+
     // Load PDF/Image as background
     useEffect(() => {
         if (!canvasRef.current) return;
@@ -41,12 +82,10 @@ const AnnotationCanvas = React.forwardRef(({ fileUrl, fileType }, ref) => {
         const ctx = canvas.getContext('2d');
 
         if (isPDF && pdfLoaded) {
-            // PDF will be loaded via onPageLoadSuccess
             return;
         }
 
         if (!isPDF) {
-            // Load image
             const img = new Image();
             img.crossOrigin = "anonymous";
             img.onload = () => {
@@ -64,7 +103,6 @@ const AnnotationCanvas = React.forwardRef(({ fileUrl, fileType }, ref) => {
     useEffect(() => {
         if (canvasRef.current && pageAnnotations[pageNumber]) {
             const ctx = canvasRef.current.getContext('2d');
-            // Small delay to ensure PDF background is drawn first
             setTimeout(() => {
                 ctx.putImageData(pageAnnotations[pageNumber], 0, 0);
                 console.log('Restored annotations for page', pageNumber);
@@ -96,7 +134,6 @@ const AnnotationCanvas = React.forwardRef(({ fileUrl, fileType }, ref) => {
                 console.log('Drawing PDF to canvas...');
                 ctx.drawImage(pdfCanvas, 0, 0);
 
-                // Save PDF as background image
                 const img = new Image();
                 img.src = pdfCanvas.toDataURL();
                 setBackgroundImage(img);
@@ -116,7 +153,6 @@ const AnnotationCanvas = React.forwardRef(({ fileUrl, fileType }, ref) => {
         if (!canvasRef.current) return;
         const canvas = canvasRef.current;
         const ctx = canvas.getContext('2d');
-        // Use ImageData for lossless storage
         const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
         const newHistory = history.slice(0, historyStep + 1);
         newHistory.push(imageData);
@@ -144,35 +180,66 @@ const AnnotationCanvas = React.forwardRef(({ fileUrl, fileType }, ref) => {
         };
     };
 
-    const startDrawing = (e) => {
-        const pos = getMousePos(e);
+   const startDrawing = (e) => {
+    const pos = getMousePos(e);
 
-        // If stamp is selected, place it at click position
-        if (selectedStamp) {
-            const canvas = canvasRef.current;
-            const ctx = canvas.getContext('2d');
-
-            ctx.font = "bold 48px Arial";
-            ctx.fillStyle = selectedStamp === "✓" ? "#10B981" : selectedStamp === "✗" ? "#EF4444" : "#3B82F6";
-            ctx.fillText(selectedStamp, pos.x - 20, pos.y + 20);
-
-            saveToHistory();
-            setSelectedStamp(null); // Clear selection after placing
-            return;
-        }
-
-        // Normal drawing
-        setIsDrawing(true);
-        lastPos.current = pos;
+    if (selectedStamp) {
+        const stampValue = selectedStamp; // ✅ CAPTURE VALUE
 
         const canvas = canvasRef.current;
         const ctx = canvas.getContext('2d');
 
-        if (tool === "pen" || tool === "highlighter") {
-            ctx.beginPath();
-            ctx.moveTo(pos.x, pos.y);
+        ctx.font = "bold 48px Arial";
+        ctx.fillStyle =
+            stampValue === "✓" ? "#10B981" :
+            stampValue === "✗" ? "#EF4444" :
+            "#3B82F6";
+
+        ctx.fillText(stampValue, pos.x - 20, pos.y + 20);
+        saveToHistory();
+
+        const numericMark = parseFloat(stampValue);
+
+        if (!isNaN(numericMark)) {
+            setTimeout(() => {
+                const questionStr = prompt(
+                    `Mark ${numericMark} placed.\n\nEnter Question Number:`
+                );
+
+                if (!questionStr) return;
+
+                const qNo = parseInt(questionStr.trim(), 10);
+                if (isNaN(qNo) || qNo <= 0) return;
+
+                setMarksDistribution(prev => {
+                    const filtered = prev.filter(item => item.question !== qNo);
+                    const updated = [...filtered, { question: qNo, marks: numericMark }]
+                        .sort((a, b) => a.question - b.question);
+
+                    console.log("Updated Marks Distribution:", updated); // ✅ DEBUG
+                    onMarksUpdate?.(updated);
+
+                    return updated;
+                });
+            }, 100);
         }
-    };
+
+        setSelectedStamp(null); // ✅ MOVE HERE
+        return;
+    }
+
+    /* ===== NORMAL DRAWING ===== */
+
+    setIsDrawing(true);
+    lastPos.current = pos;
+
+    const ctx = canvasRef.current.getContext('2d');
+    if (tool === "pen" || tool === "highlighter") {
+        ctx.beginPath();
+        ctx.moveTo(pos.x, pos.y);
+    }
+};
+
 
     const draw = (e) => {
         if (!isDrawing) return;
@@ -208,6 +275,7 @@ const AnnotationCanvas = React.forwardRef(({ fileUrl, fileType }, ref) => {
         if (isDrawing) {
             setIsDrawing(false);
             saveToHistory();
+            // No automatic question prompt here — only quick numeric marks trigger it
         }
     };
 
@@ -215,7 +283,6 @@ const AnnotationCanvas = React.forwardRef(({ fileUrl, fileType }, ref) => {
         if (historyStep > 0) {
             const canvas = canvasRef.current;
             const ctx = canvas.getContext('2d');
-            // Restore ImageData directly - lossless
             ctx.putImageData(history[historyStep - 1], 0, 0);
             setHistoryStep(historyStep - 1);
         }
@@ -225,7 +292,6 @@ const AnnotationCanvas = React.forwardRef(({ fileUrl, fileType }, ref) => {
         if (historyStep < history.length - 1) {
             const canvas = canvasRef.current;
             const ctx = canvas.getContext('2d');
-            // Restore ImageData directly - lossless
             ctx.putImageData(history[historyStep + 1], 0, 0);
             setHistoryStep(historyStep + 1);
         }
@@ -250,12 +316,11 @@ const AnnotationCanvas = React.forwardRef(({ fileUrl, fileType }, ref) => {
 
     const addStamp = (value) => {
         setSelectedStamp(value);
-        setTool("stamp"); // Switch to stamp mode
+        setTool("stamp");
     };
 
     const handlePrevPage = () => {
         if (pageNumber > 1) {
-            // Save current page annotations
             if (canvasRef.current) {
                 const ctx = canvasRef.current.getContext('2d');
                 const currentPageData = ctx.getImageData(0, 0, canvasRef.current.width, canvasRef.current.height);
@@ -265,7 +330,6 @@ const AnnotationCanvas = React.forwardRef(({ fileUrl, fileType }, ref) => {
                 }));
             }
 
-            // Go to previous page
             setPageNumber(pageNumber - 1);
             setHistory([]);
             setHistoryStep(-1);
@@ -274,7 +338,6 @@ const AnnotationCanvas = React.forwardRef(({ fileUrl, fileType }, ref) => {
 
     const handleNextPage = () => {
         if (pageNumber < numPages) {
-            // Save current page annotations
             if (canvasRef.current) {
                 const ctx = canvasRef.current.getContext('2d');
                 const currentPageData = ctx.getImageData(0, 0, canvasRef.current.width, canvasRef.current.height);
@@ -284,7 +347,6 @@ const AnnotationCanvas = React.forwardRef(({ fileUrl, fileType }, ref) => {
                 }));
             }
 
-            // Go to next page
             setPageNumber(pageNumber + 1);
             setHistory([]);
             setHistoryStep(-1);
@@ -294,7 +356,6 @@ const AnnotationCanvas = React.forwardRef(({ fileUrl, fileType }, ref) => {
     useImperativeHandle(ref, () => ({
         exportCanvas: () => {
             if (canvasRef.current) {
-                // Return the canvas element itself for blob conversion
                 return canvasRef.current;
             }
             return null;
@@ -304,48 +365,35 @@ const AnnotationCanvas = React.forwardRef(({ fileUrl, fileType }, ref) => {
         },
         exportAllPages: async () => {
             if (!isPDF || !numPages) {
-                // Single page - return current canvas
                 if (canvasRef.current) {
                     return [canvasRef.current.toDataURL('image/png')];
                 }
                 return [];
             }
 
-            // Multi-page PDF - export all pages
             const allPages = [];
             const currentPage = pageNumber;
 
-            console.log('Exporting all pages, current page:', currentPage);
-
-            // Export all pages including saved annotations
             for (let page = 1; page <= numPages; page++) {
-                console.log(`Exporting page ${page}/${numPages}`);
-
                 if (page === currentPage) {
-                    // Current page - export current canvas
                     if (canvasRef.current) {
                         allPages.push(canvasRef.current.toDataURL('image/png'));
                     }
                 } else {
-                    // Other pages - check if we have saved annotations
                     if (pageAnnotations[page]) {
-                        // Create temporary canvas to render saved page
                         const tempCanvas = document.createElement('canvas');
                         tempCanvas.width = canvasRef.current.width;
                         tempCanvas.height = canvasRef.current.height;
                         const tempCtx = tempCanvas.getContext('2d');
                         tempCtx.putImageData(pageAnnotations[page], 0, 0);
                         allPages.push(tempCanvas.toDataURL('image/png'));
-                    } else {
-                        // No annotations on this page - would need to load PDF page
-                        console.warn(`Page ${page} has no annotations, skipping`);
                     }
                 }
             }
 
-            console.log('Total pages exported:', allPages.length);
             return allPages;
-        }
+        },
+        getMarksDistribution: () => marksDistribution
     }));
 
     return (
@@ -431,6 +479,15 @@ const AnnotationCanvas = React.forwardRef(({ fileUrl, fileType }, ref) => {
                         <ZoomIn size={20} />
                     </button>
 
+                    {/* Fit toggle */}
+                    <button
+                        onClick={() => setFitToScreen(!fitToScreen)}
+                        className={`p-2 rounded-lg ${fitToScreen ? 'bg-indigo-600 text-white' : 'bg-gray-200 text-gray-800'} hover:opacity-90 transition`}
+                        title={fitToScreen ? "Actual size" : "Fit to screen"}
+                    >
+                        {fitToScreen ? "Fit" : "Actual"}
+                    </button>
+
                     {/* PDF Page Navigation */}
                     {isPDF && numPages > 1 && (
                         <>
@@ -486,10 +543,17 @@ const AnnotationCanvas = React.forwardRef(({ fileUrl, fileType }, ref) => {
                         <XIcon size={18} /> ✗
                     </button>
                 </div>
+
+                {/* Summary of entered marks */}
+                {marksDistribution.length > 0 && (
+                    <div className="mt-2 text-sm text-gray-700">
+                        Marks entered: {marksDistribution.map(m => `Q${m.question}: ${m.marks}`).join(" • ")}
+                    </div>
+                )}
             </div>
 
             {/* Canvas Area */}
-            <div className="flex-1 overflow-auto p-4 bg-gray-50">
+            <div ref={containerRef} className="flex-1 overflow-auto p-4 bg-gray-50">
                 <div className="w-full h-full flex items-center justify-center">
                     {isPDF && (
                         <div style={{ position: 'absolute', left: '-9999px' }}>

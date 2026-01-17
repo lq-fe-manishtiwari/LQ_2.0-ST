@@ -71,7 +71,11 @@ const AttendanceFilters = ({
   loadingTimeSlots = false,
   showActiveFilters = true,
   compact = false,
-  disabled = false
+  disabled = false,
+
+  /* NEW FLAGS */
+  showPaperFilter = true,
+  showTimeSlotFilter = true,
 }) => {
   // Helper function to get unique options
   const getUniqueOptions = (filterFn, mapFn) => {
@@ -210,7 +214,7 @@ const AttendanceFilters = ({
       {/* Filters Grid - 3 filters per row */}
       {showFilters && (
         <div className="space-y-4 mb-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
-          
+
           {/* First Row - 3 filters */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <CustomSelect
@@ -222,7 +226,7 @@ const AttendanceFilters = ({
               disabled={disabled || loadingAllocations}
               loading={loadingAllocations}
             />
-            
+
             <CustomSelect
               label="Batch"
               value={filters.batch}
@@ -232,7 +236,7 @@ const AttendanceFilters = ({
               disabled={disabled || loadingAllocations || !filters.program}
               loading={loadingAllocations}
             />
-            
+
             <CustomSelect
               label="Academic Year"
               value={filters.academicYear}
@@ -255,7 +259,7 @@ const AttendanceFilters = ({
               disabled={disabled || loadingAllocations || !filters.academicYear}
               loading={loadingAllocations}
             />
-            
+
             <CustomSelect
               label="Division"
               value={filters.division}
@@ -265,7 +269,7 @@ const AttendanceFilters = ({
               disabled={disabled || loadingAllocations || !filters.semester}
               loading={loadingAllocations}
             />
-            
+
             <CustomSelect
               label="Paper"
               value={filters.paper}
@@ -291,7 +295,7 @@ const AttendanceFilters = ({
               disabled={disabled || !filters.paper || loadingTimeSlots}
               loading={loadingTimeSlots}
             />
-            
+
             {/* Empty columns to maintain 3-column layout */}
             <div className="hidden md:block"></div>
             <div className="hidden md:block"></div>
@@ -317,6 +321,7 @@ const AttendanceFilters = ({
                 Apply Filters
               </button>
             )}
+
           </div>
         </div>
       )}

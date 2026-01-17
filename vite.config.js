@@ -14,6 +14,10 @@ export default defineConfig({
       '@/Redux': path.resolve(__dirname, './src/Redux'),
     },
   },
+  define: {
+    // Fix for sockjs-client: define global as window
+    global: 'window',
+  },
   optimizeDeps: {
     include: ['@apollo/client', '@apollo/client/react', '@apollo/client/core'],
   },

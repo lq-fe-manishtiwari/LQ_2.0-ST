@@ -86,10 +86,28 @@ export default function BulkUpload({
         mark.marks_obtained ?? "",
         mark.attendance_status || "PRESENT",
         100, // You can make this dynamic if max_marks is available
+        s.student_id, // Hidden column for student_id
+        mark.exam_marks_id || "", // Hidden column for exam_marks_id
       ];
     });
 
     const worksheet = XLSX.utils.aoa_to_sheet([templateHeaders, ...rows]);
+
+    // Set column widths and hide student_id and exam_marks_id columns (F and G)
+    worksheet['!cols'] = [
+      { wch: 15 }, // Roll No
+      { wch: 25 }, // Student Name
+      { wch: 15 }, // Marks Obtained
+      { wch: 20 }, // Attendance Status
+      { wch: 15 }, // Total Marks
+      { wch: 10, hidden: true }, // Student ID (hidden)
+      { wch: 10, hidden: true }, // Exam Marks ID (hidden)
+    ];
+
+    // Ensure the range includes all columns including hidden ones
+    const range = XLSX.utils.decode_range(worksheet['!ref']);
+    range.e.c = Math.max(range.e.c, 6); // Ensure range goes to column G (index 6)
+    worksheet['!ref'] = XLSX.utils.encode_range(range);
 
     // Add dropdown for Attendance
     const attendanceOptions = ["PRESENT", "ABSENT", "MALPRACTICE", "REVIEW_FOR_ENTRY"];
@@ -171,10 +189,13 @@ export default function BulkUpload({
             marks_obtained: marks,
             attendance_status: r[attendIndex] || "PRESENT",
             total_marks: total,
+            student_id: r[5] || null, // Student ID from hidden column
+            exam_marks_id: r[6] || null, // Exam marks ID from hidden column
             _error: errors.length ? errors.join(", ") : null,
           };
         });
 
+        console.log("Parsed data:", data); // Debug log
         setParsedData(data);
       } catch (err) {
         console.error(err);
@@ -237,9 +258,8 @@ export default function BulkUpload({
       subject_id: Number(subjectId),
       marks_obtained: Number(row.marks_obtained),
       attendance_status: row.attendance_status || "PRESENT",
-      // Note: Since we don't have student_id/exam_marks_id from Excel,
-      // backend should match by roll_no + schedule + subject
-      // OR you can enhance template to include hidden student_id column
+      student_id: row.student_id,
+      ...(row.exam_marks_id && { exam_marks_id: row.exam_marks_id }),
     }));
 
     try {
@@ -263,6 +283,7 @@ export default function BulkUpload({
         <SweetAlert
           success
           title="Success!"
+          confirmBtnCssClass="btn-confirm"
           onConfirm={() => {
             setShowSuccess(false);
             onSuccess();
