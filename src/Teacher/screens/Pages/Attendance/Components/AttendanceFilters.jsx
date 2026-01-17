@@ -213,10 +213,8 @@ const AttendanceFilters = ({
 
       {/* Filters Grid - 3 filters per row */}
       {showFilters && (
-        <div className="space-y-4 mb-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
-
-          {/* First Row - 3 filters */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-4">
+          <div className="md:col-span-1">
             <CustomSelect
               label="Program"
               value={filters.program}
@@ -226,7 +224,9 @@ const AttendanceFilters = ({
               disabled={disabled || loadingAllocations}
               loading={loadingAllocations}
             />
+          </div>
 
+          <div className="md:col-span-1">
             <CustomSelect
               label="Batch"
               value={filters.batch}
@@ -236,7 +236,9 @@ const AttendanceFilters = ({
               disabled={disabled || loadingAllocations || !filters.program}
               loading={loadingAllocations}
             />
+          </div>
 
+          <div className="md:col-span-1">
             <CustomSelect
               label="Academic Year"
               value={filters.academicYear}
@@ -248,8 +250,7 @@ const AttendanceFilters = ({
             />
           </div>
 
-          {/* Second Row - 3 filters */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="md:col-span-1">
             <CustomSelect
               label="Semester"
               value={filters.semester}
@@ -259,7 +260,9 @@ const AttendanceFilters = ({
               disabled={disabled || loadingAllocations || !filters.academicYear}
               loading={loadingAllocations}
             />
+          </div>
 
+          <div className="md:col-span-1">
             <CustomSelect
               label="Division"
               value={filters.division}
@@ -269,57 +272,66 @@ const AttendanceFilters = ({
               disabled={disabled || loadingAllocations || !filters.semester}
               loading={loadingAllocations}
             />
-
-            <CustomSelect
-              label="Paper"
-              value={filters.paper}
-              onChange={(e) => handleFilterChange('paper', e.target.value)}
-              options={paperOptions()}
-              placeholder="Select Paper"
-              disabled={disabled || loadingAllocations || !filters.division}
-              loading={loadingAllocations}
-            />
           </div>
 
-          {/* Third Row - Time Slot (with 2 empty columns for alignment) */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <CustomSelect
-              label="Time Slot"
-              value={filters.timeSlot}
-              onChange={(e) => handleFilterChange('timeSlot', e.target.value)}
-              options={timeSlots.map(slot => ({
-                value: slot.timetable_id?.toString() || slot.time_slot_id?.toString(),
-                name: `${slot.start_time?.slice(0, 5)} - ${slot.end_time?.slice(0, 5)}`
-              }))}
-              placeholder="Select Time Slot"
-              disabled={disabled || !filters.paper || loadingTimeSlots}
-              loading={loadingTimeSlots}
-            />
+          {showPaperFilter && (
+            <div className="md:col-span-1">
+              <CustomSelect
+                label="Paper"
+                value={filters.paper}
+                onChange={(e) => handleFilterChange('paper', e.target.value)}
+                options={paperOptions}
+                placeholder="Select Paper"
+                disabled={disabled}
+              />
+            </div>
+          )}
 
-            {/* Empty columns to maintain 3-column layout */}
-            <div className="hidden md:block"></div>
-            <div className="hidden md:block"></div>
-          </div>
 
-          {/* Action Buttons - Full width */}
-          <div className="flex justify-end gap-3 pt-2">
-            {onResetFilters && (
-              <button
-                onClick={onResetFilters}
-                className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-                disabled={disabled || loadingAllocations}
-              >
-                Reset Filters
-              </button>
-            )}
-            {onApplyFilters && (
-              <button
-                onClick={onApplyFilters}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-                disabled={disabled || loadingAllocations}
-              >
-                Apply Filters
-              </button>
+          {showTimeSlotFilter && (
+            <div className="md:col-span-1">
+              <CustomSelect
+                label="Time Slot"
+                value={filters.timeSlot}
+                onChange={(e) => handleFilterChange('timeSlot', e.target.value)}
+                options={timeSlots.map(slot => ({
+                  value:
+                    slot.timetable_id?.toString() ||
+                    slot.time_slot_id?.toString(),
+                  name: `${slot.start_time?.slice(0, 5)} - ${slot.end_time?.slice(0, 5)}`
+                }))}
+                placeholder="Select Time Slot"
+                disabled={disabled || !filters.paper || loadingTimeSlots}
+                loading={loadingTimeSlots}
+              />
+            </div>
+          )}
+
+
+          {/* Filter Actions */}
+          <div className={`${compact ? 'md:col-span-2' : 'lg:col-span-3'} flex justify-end gap-3 pt-2`}>
+            {(onResetFilters || onApplyFilters) && (
+              <div className="flex justify-end gap-3 mt-4">
+                {onResetFilters && (
+                  <button
+                    onClick={onResetFilters}
+                    className="px-4 py-2 border border-slate-300 text-slate-700 rounded-xl hover:bg-slate-50 text-sm font-semibold"
+                    disabled={disabled || loadingAllocations}
+                  >
+                    Reset Filters
+                  </button>
+                )}
+
+                {onApplyFilters && (
+                  <button
+                    onClick={onApplyFilters}
+                    className="px-5 py-2 bg-primary-600 text-white rounded-xl hover:bg-primary-700 text-sm font-semibold"
+                    disabled={disabled || loadingAllocations}
+                  >
+                    Apply Filters
+                  </button>
+                )}
+              </div>
             )}
 
           </div>

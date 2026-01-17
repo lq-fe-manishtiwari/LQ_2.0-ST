@@ -316,7 +316,7 @@ const Attendencedashboard = () => {
                 Attendance Summary
             </h1>
 
-            {/* Top Stats */}
+            {/* Top Stats
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
                 <StatCard
                     title="Total Students Enrolled"
@@ -346,7 +346,7 @@ const Attendencedashboard = () => {
                     color="bg-green-50 text-green-600"
                     delay={300}
                 />
-            </div>
+            </div> */}
 
             <div className="grid grid-cols-1 xl:grid-cols-2 gap-8 mb-8">
                 {/* Left Column */}
