@@ -72,10 +72,10 @@ export default function HRMRoutes() {
 
       <Route path="tasks" element={<TaskLayout />}>
         <Route index element={<Navigate to="task-assignment" replace />} />
-        <Route path="my-tasks" element={<MyTasks />} />
-        <Route path="my-tasks/add" element={<CreateTask />} />
-        <Route path="my-tasks/view/:id" element={<ViewMyTasks />} />
-        <Route path="my-tasks/edit/:id" element={<MyTaskEdit />} />
+        <Route path="professional-tasks" element={<MyTasks />} />
+        <Route path="professional-tasks/add" element={<CreateTask />} />
+        <Route path="professional-tasks/view/:id" element={<ViewMyTasks />} />
+        <Route path="professional-tasks/edit/:id" element={<MyTaskEdit />} />
         <Route path="task-assignment" element={<TaskAssignment />} />
         <Route path="task-assignment/create-task" element={<TaskForm />} />
         <Route path="task-assignment/task-view/:id" element={<TaskView />} />

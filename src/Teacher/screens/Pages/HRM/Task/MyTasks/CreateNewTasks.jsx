@@ -414,7 +414,7 @@ export default function CreateTask() {
   };
 
   const handleCancel = () => {
-    navigate("/hrm/tasks/my-tasks");
+    navigate("/hrm/tasks/professional-tasks");
   };
 
   const getCurrentDateTime = () => {
@@ -618,7 +618,7 @@ export default function CreateTask() {
       {/* Success Alert */}
       {showSuccessAlert && (
         <SweetAlert success title="Success!" confirmBtnCssClass="btn-confirm"
-          cancelBtnCssClass="btn-cancel" onConfirm={() => { setShowSuccessAlert(false); navigate("/hrm/tasks/my-tasks"); }}
+          cancelBtnCssClass="btn-cancel" onConfirm={() => { setShowSuccessAlert(false); navigate("/hrm/tasks/professional-tasks"); }}
           confirmBtnText="Go to Tasks" showCancel={true} cancelBtnText="Create Another"
           onCancel={() => {
             setShowSuccessAlert(false);

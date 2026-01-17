@@ -664,12 +664,12 @@ export default function MyTasks() {
 
   const handleView = (task) => {
     // navigate(`/performance-management/my-tasks/view/${task.id}`);
-    navigate(`/pms/my-task/view/${task.id}`);
+    navigate(`/pms/professional-task/view/${task.id}`);
   };
   
   const handleEdit = (task) => {
     // navigate(`/performance-management/my-tasks/edit/${task.id}`);
-    navigate(`/pms/my-task/edit/${task.id}`);
+    navigate(`/pms/professional-task/edit/${task.id}`);
   };
   
   // UPDATED DELETE HANDLERS - ADDED

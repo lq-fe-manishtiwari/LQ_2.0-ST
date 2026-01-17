@@ -5,7 +5,8 @@ import { Plus, Upload } from "lucide-react";
 
 const tabs = [
   { label: "Task Assignment", to: "/teacher/hrm/tasks/task-assignment" },
-  { label: "My Tasks", to: "/teacher/hrm/tasks/my-tasks" },
+  { label: "Professional Task", to: "/teacher/hrm/tasks/professional-tasks" },
+  { label: "Personal Task", to: "/teacher/hrm/tasks/my-tasks" },
   { label: "Timesheet", to: "/teacher/hrm/tasks/timesheet" },
 ];
 
