@@ -313,10 +313,10 @@ const QRAttendanceDashboard = () => {
 
                 const response = await TeacherAttendanceManagement.getAttendanceStudents(params);
 
-                if (response.success && response.data && response.data.length > 0) {
-                    setStudents(response.data);
-                    setStudentCount(response.data.length);
-                    console.log(`QR Attendance - ${response.data.length} students loaded`);
+                if (response.success && response.data && response.data?.students?.length > 0) {
+                    setStudents(response.data?.students);
+                    setStudentCount(response.data?.students?.length);
+                    console.log(`QR Attendance - ${response.data?.students?.length} students loaded`);
                 } else {
                     setStudents([]);
                     setStudentCount(0);

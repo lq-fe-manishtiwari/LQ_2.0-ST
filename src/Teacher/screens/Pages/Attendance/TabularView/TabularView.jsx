@@ -151,6 +151,24 @@ export default function TabularView() {
         handleTimetableNavigation();
     }, [fromTimetable, passedSlot, filtersSetFromTimetable]);
 
+    // Auto-select first available filter values
+    useEffect(() => {
+        if (allocations.length > 0 && !filters.paper && !fromTimetable) {
+            const firstAlloc = allocations[0];
+            const newFilters = {
+                program: firstAlloc.program?.program_id?.toString() || '',
+                batch: firstAlloc.batch?.batch_id?.toString() || '',
+                academicYear: firstAlloc.academic_year_id?.toString() || '',
+                semester: firstAlloc.semester_id?.toString() || '',
+                division: firstAlloc.division_id?.toString() || '',
+                paper: firstAlloc.subjects?.[0]?.subject_id?.toString() || '',
+                timeSlot: ''
+            };
+            console.log("DEBUG: Auto-selecting first allocation for TabularView", newFilters);
+            setFilters(newFilters);
+        }
+    }, [allocations, fromTimetable]);
+
     // Restore saved state on component mount (only if not from timetable)
     useEffect(() => {
         if (!fromTimetable) {
@@ -348,73 +366,47 @@ export default function TabularView() {
     // Fetch students based on filters
     useEffect(() => {
         const fetchStudents = async () => {
-            // If coming from timetable, prioritize using slot data
-            if (fromTimetable && passedSlot && !studentsFetched) {
-                console.log("DEBUG: Fetching students with timetable slot data");
+            // Determine params based on source
+            let params = null;
+            let isFromTimetable = false;
 
-                const params = {
+            if (fromTimetable && passedSlot && !studentsFetched) {
+                params = {
                     academicYearId: passedSlot.academic_year_id,
                     semesterId: passedSlot.semester_id,
                     divisionId: passedSlot.division_id,
                     subjectId: passedSlot.subject_id
                 };
-
-                console.log("DEBUG: Fetch params from timetable:", params);
-
-                setLoadingStudents(true);
-                try {
-                    const response = await AttendanceManagement.getAttendanceStudents(params);
-
-                    if (response && response.data && response.data.length > 0) {
-                        const formattedStudents = response.data.map(s => {
-                            const fullName = [s.firstname, s.middlename, s.lastname].filter(Boolean).join(' ');
-                            return {
-                                ...s,
-                                id: s.student_id,
-                                name: fullName,
-                                roll_number: s.roll_number,
-                                email: s.email,
-                                avatar: s.avatar,
-                                status: 'P', // Default to present
-                                selected: false,
-                                program_id: s.program_id || parseInt(filters.program || passedSlot.program_id),
-                                batch_id: s.batch_id || parseInt(filters.batch || passedSlot.batch_id),
-                                academic_year_id: s.academic_year_id || parseInt(filters.academicYear || passedSlot.academic_year_id),
-                                semester_id: s.semester_id || parseInt(filters.semester || passedSlot.semester_id),
-                                division_id: s.division_id || parseInt(filters.division || passedSlot.division_id),
-                                subject_id: s.subject_id || parseInt(filters.paper || passedSlot.subject_id)
-                            };
-                        });
-                        console.log("DEBUG: Students fetched from timetable slot:", formattedStudents.length);
-                        setStudents(formattedStudents);
-                        setStudentsFetched(true);
-                    } else {
-                        console.log("DEBUG: No students found via timetable slot");
-                        setStudents([]);
-                        setStudentsFetched(true);
-                    }
-                } catch (error) {
-                    console.error("DEBUG: Error fetching students from timetable:", error);
-                    setStudents([]);
-                    setStudentsFetched(true);
-                } finally {
-                    setLoadingStudents(false);
-                }
+                isFromTimetable = true;
+            } else if (filters.academicYear && filters.semester && filters.division && filters.paper) {
+                params = {
+                    academicYearId: filters.academicYear,
+                    semesterId: filters.semester,
+                    divisionId: filters.division,
+                    subjectId: filters.paper
+                };
             }
-            // Normal fetch based on filters
-            else if (filters.academicYear && filters.semester && filters.division && filters.paper) {
-                setLoadingStudents(true);
-                try {
-                    const params = {
-                        academicYearId: filters.academicYear,
-                        semesterId: filters.semester,
-                        divisionId: filters.division,
-                        subjectId: filters.paper
-                    };
-                    const response = await TeacherAttendanceManagement.getAttendanceStudents(params);
 
-                    if (response && response.data && response.data.length > 0) {
-                        const formattedStudents = response.data.map(s => {
+            if (!params) {
+                // Clear students if filters are incomplete and not from timetable
+                if (students.length > 0) {
+                    setStudents([]);
+                    setStudentsFetched(false);
+                }
+                return;
+            }
+
+            setLoadingStudents(true);
+            try {
+                const response = await TeacherAttendanceManagement.getAttendanceStudents(params);
+
+                if (response && response.success && response.data) {
+                    // Handle both response formats: { students: [] } or just []
+                    const studentList = Array.isArray(response.data) ? response.data :
+                        (response.data.students || []);
+
+                    if (studentList.length > 0) {
+                        const formattedStudents = studentList.map(s => {
                             const fullName = [s.firstname, s.middlename, s.lastname].filter(Boolean).join(' ');
                             return {
                                 ...s,
@@ -425,38 +417,33 @@ export default function TabularView() {
                                 avatar: s.avatar,
                                 status: 'P', // Default to present
                                 selected: false,
-                                program_id: s.program_id || parseInt(filters.program),
-                                batch_id: s.batch_id || parseInt(filters.batch),
-                                academic_year_id: s.academic_year_id || parseInt(filters.academicYear),
-                                semester_id: s.semester_id || parseInt(filters.semester),
-                                division_id: s.division_id || parseInt(filters.division),
-                                subject_id: s.subject_id || parseInt(filters.paper)
+                                program_id: s.program_id || parseInt(filters.program || (isFromTimetable ? passedSlot.program_id : 0)),
+                                batch_id: s.batch_id || parseInt(filters.batch || (isFromTimetable ? passedSlot.batch_id : 0)),
+                                academic_year_id: s.academic_year_id || parseInt(params.academicYearId),
+                                semester_id: s.semester_id || parseInt(params.semesterId),
+                                division_id: s.division_id || parseInt(params.divisionId),
+                                subject_id: s.subject_id || parseInt(params.subjectId)
                             };
                         });
-                        console.log("DEBUG: Students fetched normally:", formattedStudents.length);
+                        console.log(`DEBUG: Students fetched successful, count: ${formattedStudents.length}`);
                         setStudents(formattedStudents);
                         setStudentsFetched(true);
                     } else {
-                        console.log("DEBUG: No students found normally");
+                        console.log("DEBUG: No students found in division");
                         setStudents([]);
                         setStudentsFetched(true);
                     }
-                } catch (error) {
-                    console.error("DEBUG: Error fetching students normally:", error);
-                    setStudents([]);
-                    setStudentsFetched(true);
-                } finally {
-                    setLoadingStudents(false);
                 }
-            } else {
-                // Clear students if filters are reset
+            } catch (error) {
+                console.error("DEBUG: Error fetching students:", error);
                 setStudents([]);
-                setStudentsFetched(false);
+            } finally {
+                setLoadingStudents(false);
             }
         };
 
         fetchStudents();
-    }, [filters.academicYear, filters.semester, filters.division, filters.paper, fromTimetable, passedSlot, filtersSetFromTimetable, studentsFetched]);
+    }, [filters.academicYear, filters.semester, filters.division, filters.paper, fromTimetable, passedSlot, filtersSetFromTimetable]);
 
     // Fetch existing attendance when time slot is selected
     useEffect(() => {
@@ -1022,196 +1009,215 @@ export default function TabularView() {
                         </p>
                     </div>
                 ) : filteredStudents.length > 0 ? (
-                    <div className="overflow-x-auto">
-                        <table className="w-full">
-                            <thead className="table-header">
-                                <tr>
-                                    <th className="table-th text-center">
-                                        <div className="flex items-center">
-                                            <input
-                                                type="checkbox"
-                                                checked={selectAll}
-                                                onChange={handleSelectAll}
-                                                className="w-3 h-3 sm:w-4 sm:h-4 text-blue-600 bg-white border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
-                                            />
-                                        </div>
-                                    </th>
-                                    <th className="table-th text-center">
-                                        Profile
-                                    </th>
-                                    <th className="table-th text-center">Name</th>
-                                    <th className="table-th text-center">Roll No.</th>
-                                    {/* <th className="table-th text-center">
+                    <>
+                        <div className="bg-white px-6 py-4 border-b border-gray-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                            <div className="flex items-center gap-6">
+                                <div className="flex items-center gap-2">
+                                    <div className="w-2.5 h-2.5 rounded-full bg-green-500"></div>
+                                    <span className="text-sm font-semibold text-gray-700">Total Present: </span>
+                                    <span className="text-lg font-bold text-green-600">{filteredStudents.filter(s => s.status === 'P').length}</span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <div className="w-2.5 h-2.5 rounded-full bg-red-500"></div>
+                                    <span className="text-sm font-semibold text-gray-700">Total Absent: </span>
+                                    <span className="text-lg font-bold text-red-600">{filteredStudents.filter(s => s.status === 'A').length}</span>
+                                </div>
+                            </div>
+                            <div className="text-sm text-gray-500 font-medium">
+                                Showing {filteredStudents.length} Students
+                            </div>
+                        </div>
+                        <div className="overflow-x-auto">
+                            <table className="w-full">
+                                <thead className="table-header">
+                                    <tr>
+                                        <th className="table-th text-center">
+                                            <div className="flex items-center">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={selectAll}
+                                                    onChange={handleSelectAll}
+                                                    className="w-3 h-3 sm:w-4 sm:h-4 text-blue-600 bg-white border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
+                                                />
+                                            </div>
+                                        </th>
+                                        <th className="table-th text-center">
+                                            Profile
+                                        </th>
+                                        <th className="table-th text-center">Name</th>
+                                        <th className="table-th text-center">Roll No.</th>
+                                        {/* <th className="table-th text-center">
                                         Program
                                     </th> */}
-                                    <th className="table-th text-center">
-                                        Batch
-                                    </th>
-                                    <th className="table-th text-center">
-                                        Division
-                                    </th>
-                                    {/* <th className="table-th text-center">
+                                        <th className="table-th text-center">
+                                            Batch
+                                        </th>
+                                        <th className="table-th text-center">
+                                            Division
+                                        </th>
+                                        {/* <th className="table-th text-center">
                                         Paper
                                     </th> */}
-                                    <th className="table-th text-center">
-                                        Semester
-                                    </th>
-                                    {/* <th className="table-th text-center">
+                                        <th className="table-th text-center">
+                                            Semester
+                                        </th>
+                                        {/* <th className="table-th text-center">
                                         Acadmic Year
                                     </th> */}
-                                    <th className="table-th text-center">Attendance</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-gray-100">
-                                {filteredStudents.map((student) => {
-                                    // Get filter options for display
-                                    const getUniqueOptions = (filterFn, mapFn) => {
-                                        const map = new Map();
-                                        allocations.filter(filterFn).forEach(item => {
-                                            const { id, name } = mapFn(item);
-                                            if (id) map.set(id, name);
-                                        });
-                                        return Array.from(map.entries()).map(([value, name]) => ({ value: value.toString(), name }));
-                                    };
+                                        <th className="table-th text-center">Attendance</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-gray-100">
+                                    {filteredStudents.map((student) => {
+                                        // Get filter options for display
+                                        const getUniqueOptions = (filterFn, mapFn) => {
+                                            const map = new Map();
+                                            allocations.filter(filterFn).forEach(item => {
+                                                const { id, name } = mapFn(item);
+                                                if (id) map.set(id, name);
+                                            });
+                                            return Array.from(map.entries()).map(([value, name]) => ({ value: value.toString(), name }));
+                                        };
 
-                                    const programOptions = getUniqueOptions(
-                                        () => true,
-                                        (item) => ({ id: item.program?.program_id, name: item.program?.program_name })
-                                    );
+                                        const programOptions = getUniqueOptions(
+                                            () => true,
+                                            (item) => ({ id: item.program?.program_id, name: item.program?.program_name })
+                                        );
 
-                                    const batchOptions = getUniqueOptions(
-                                        (item) => !filters.program || item.program?.program_id == filters.program,
-                                        (item) => ({ id: item.batch?.batch_id, name: item.batch?.batch_name })
-                                    );
+                                        const batchOptions = getUniqueOptions(
+                                            (item) => !filters.program || item.program?.program_id == filters.program,
+                                            (item) => ({ id: item.batch?.batch_id, name: item.batch?.batch_name })
+                                        );
 
-                                    const academicYearOptions = getUniqueOptions(
-                                        (item) => (!filters.program || item.program?.program_id == filters.program) &&
-                                            (!filters.batch || item.batch?.batch_id == filters.batch),
-                                        (item) => ({ id: item.academic_year_id, name: item.academic_year?.name })
-                                    );
+                                        const academicYearOptions = getUniqueOptions(
+                                            (item) => (!filters.program || item.program?.program_id == filters.program) &&
+                                                (!filters.batch || item.batch?.batch_id == filters.batch),
+                                            (item) => ({ id: item.academic_year_id, name: item.academic_year?.name })
+                                        );
 
-                                    const semesterOptions = getUniqueOptions(
-                                        (item) => (!filters.program || item.program?.program_id == filters.program) &&
-                                            (!filters.batch || item.batch?.batch_id == filters.batch) &&
-                                            (!filters.academicYear || item.academic_year_id == filters.academicYear),
-                                        (item) => ({ id: item.semester_id, name: item.semester?.name })
-                                    );
+                                        const semesterOptions = getUniqueOptions(
+                                            (item) => (!filters.program || item.program?.program_id == filters.program) &&
+                                                (!filters.batch || item.batch?.batch_id == filters.batch) &&
+                                                (!filters.academicYear || item.academic_year_id == filters.academicYear),
+                                            (item) => ({ id: item.semester_id, name: item.semester?.name })
+                                        );
 
-                                    const divisionOptions = getUniqueOptions(
-                                        (item) => (!filters.program || item.program?.program_id == filters.program) &&
-                                            (!filters.batch || item.batch?.batch_id == filters.batch) &&
-                                            (!filters.academicYear || item.academic_year_id == filters.academicYear) &&
-                                            (!filters.semester || item.semester_id == filters.semester),
-                                        (item) => ({ id: item.division_id, name: item.division?.division_name })
-                                    );
+                                        const divisionOptions = getUniqueOptions(
+                                            (item) => (!filters.program || item.program?.program_id == filters.program) &&
+                                                (!filters.batch || item.batch?.batch_id == filters.batch) &&
+                                                (!filters.academicYear || item.academic_year_id == filters.academicYear) &&
+                                                (!filters.semester || item.semester_id == filters.semester),
+                                            (item) => ({ id: item.division_id, name: item.division?.division_name })
+                                        );
 
-                                    const paperOptions = () => {
-                                        const map = new Map();
-                                        allocations.filter(item =>
-                                            (!filters.program || item.program?.program_id == filters.program) &&
-                                            (!filters.batch || item.batch?.batch_id == filters.batch) &&
-                                            (!filters.academicYear || item.academic_year_id == filters.academicYear) &&
-                                            (!filters.semester || item.semester_id == filters.semester) &&
-                                            (!filters.division || item.division_id == filters.division)
-                                        ).forEach(alloc => {
-                                            if (alloc.subjects && Array.isArray(alloc.subjects)) {
-                                                alloc.subjects.forEach(sub => {
-                                                    map.set(sub.subject_id.toString(), sub.name);
-                                                });
-                                            }
-                                        });
-                                        return Array.from(map.entries()).map(([value, name]) => ({ value, name }));
-                                    };
+                                        const paperOptions = () => {
+                                            const map = new Map();
+                                            allocations.filter(item =>
+                                                (!filters.program || item.program?.program_id == filters.program) &&
+                                                (!filters.batch || item.batch?.batch_id == filters.batch) &&
+                                                (!filters.academicYear || item.academic_year_id == filters.academicYear) &&
+                                                (!filters.semester || item.semester_id == filters.semester) &&
+                                                (!filters.division || item.division_id == filters.division)
+                                            ).forEach(alloc => {
+                                                if (alloc.subjects && Array.isArray(alloc.subjects)) {
+                                                    alloc.subjects.forEach(sub => {
+                                                        map.set(sub.subject_id.toString(), sub.name);
+                                                    });
+                                                }
+                                            });
+                                            return Array.from(map.entries()).map(([value, name]) => ({ value, name }));
+                                        };
 
-                                    const programName = programOptions.find(p => p.value === student.program_id?.toString())?.name || student.program;
-                                    const batchName = batchOptions.find(b => b.value === student.batch_id?.toString())?.name || student.batch;
-                                    const divisionName = divisionOptions.find(d => d.value === student.division_id?.toString())?.name || student.division;
-                                    const paperName = paperOptions().find(p => p.value === student.subject_id?.toString())?.name || student.paper;
-                                    const academicYearName = academicYearOptions.find(y => y.value === student.academic_year_id?.toString())?.name || student.academicYear;
-                                    const semesterName = semesterOptions.find(s => s.value === student.semester_id?.toString())?.name || student.semester;
+                                        const programName = programOptions.find(p => p.value === student.program_id?.toString())?.name || student.program;
+                                        const batchName = batchOptions.find(b => b.value === student.batch_id?.toString())?.name || student.batch;
+                                        const divisionName = divisionOptions.find(d => d.value === student.division_id?.toString())?.name || student.division;
+                                        const paperName = paperOptions().find(p => p.value === student.subject_id?.toString())?.name || student.paper;
+                                        const academicYearName = academicYearOptions.find(y => y.value === student.academic_year_id?.toString())?.name || student.academicYear;
+                                        const semesterName = semesterOptions.find(s => s.value === student.semester_id?.toString())?.name || student.semester;
 
-                                    return (
-                                        <tr
-                                            key={student.id}
-                                            className={`hover:bg-gray-50 transition-colors relative z-0 ${student.selected ? 'bg-blue-50' : ''}`}
-                                        >
-                                            <td className="py-3 px-3 sm:px-6">
-                                                <div className="flex items-center">
-                                                    <input
-                                                        type="checkbox"
-                                                        checked={student.selected}
-                                                        onChange={() => handleCheckboxChange(student.id)}
-                                                        className="w-3 h-3 sm:w-4 sm:h-4 text-blue-600 bg-white border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
-                                                    />
-                                                </div>
-                                            </td>
-                                            <td className="py-3 px-3 sm:px-6 hidden sm:table-cell">
-                                                <div className="bg-blue-100 rounded-lg p-2 w-10 h-10 flex items-center justify-center text-blue-600 shrink-0 border border-blue-200">
-                                                    <User size={18} />
-                                                </div>
-                                            </td>
-                                            <td className="py-3 px-3 sm:px-6">
-                                                <div className="flex flex-col">
-                                                    <span className="text-gray-800 font-medium text-xs sm:text-sm whitespace-nowrap">{student.name}</span>
-                                                    <span className="text-gray-500 text-xs sm:hidden">
-                                                        {programName} • {batchName}
-                                                    </span>
-                                                </div>
-                                            </td>
-                                            <td className="py-3 px-3 sm:px-6 text-gray-800 text-xs sm:text-sm font-medium whitespace-nowrap">
-                                                {student.roll_number || 'N/A'}
-                                            </td>
-                                            <td className="py-3 px-3 sm:px-6 text-gray-600 text-xs sm:text-sm whitespace-nowrap hidden lg:table-cell">
-                                                {batchName}
-                                            </td>
-                                            <td className="py-3 px-3 sm:px-6 text-gray-600 text-xs sm:text-sm whitespace-nowrap hidden md:table-cell">
-                                                {divisionName}
-                                            </td>
-                                            <td className="py-3 px-3 sm:px-6 text-gray-600 text-xs sm:text-sm whitespace-nowrap hidden xl:table-cell">
-                                                {semesterName}
-                                            </td>
-                                            <td className="py-3 px-3 sm:px-6">
-                                                <div className="flex justify-center">
-                                                    <button
-                                                        onClick={() => toggleStudentStatus(student.id)}
-                                                        className={`relative inline-flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition-all duration-300 transform hover:scale-105 active:scale-95 shadow-sm hover:shadow-md ${student.status === 'P' ? "bg-gradient-to-r from-green-100 to-emerald-100 text-green-700" :
-                                                            student.status === 'A' ? "bg-gradient-to-r from-red-100 to-rose-100 text-red-700" :
-                                                                student.status === 'OA' ? "bg-gradient-to-r from-orange-100 to-orange-200 text-orange-700" :
-                                                                    student.status === 'SA' ? "bg-gradient-to-r from-yellow-100 to-yellow-200 text-yellow-700" :
-                                                                        student.status === 'ML' ? "bg-gradient-to-r from-blue-100 to-blue-200 text-blue-700" :
-                                                                            student.status === 'SL' ? "bg-gradient-to-r from-indigo-100 to-indigo-200 text-indigo-700" :
-                                                                                "bg-gray-100 text-gray-700"
-                                                            }`}
-                                                        style={{
-                                                            animation: "statusChange 0.4s ease-out",
-                                                        }}
-                                                    >
-                                                        {student.status === 'P' ? <Check size={16} className="animate-bounce-in" /> :
-                                                            student.status === 'A' ? <X size={16} className="animate-bounce-in" /> :
-                                                                student.status === 'OA' ? <Activity size={16} className="animate-bounce-in" /> :
-                                                                    student.status === 'SA' ? <Trophy size={16} className="animate-bounce-in" /> :
-                                                                        student.status === 'ML' ? <Stethoscope size={16} className="animate-bounce-in" /> :
-                                                                            student.status === 'SL' ? <AlertCircle size={16} className="animate-bounce-in" /> :
-                                                                                <MoreHorizontal size={16} className="animate-bounce-in" />
-                                                        }
-                                                        <span className="font-semibold">
-                                                            {student.status === 'P' ? 'Present' :
-                                                                student.status === 'A' ? 'Absent' :
-                                                                    student.status === 'OA' ? 'Other' :
-                                                                        student.status === 'SA' ? 'Sports' :
-                                                                            student.status === 'ML' ? 'Medical' :
-                                                                                student.status === 'SL' ? 'Sick' :
-                                                                                    student.status}
+                                        return (
+                                            <tr
+                                                key={student.id}
+                                                className={`hover:bg-gray-50 transition-colors relative z-0 ${student.selected ? 'bg-blue-50' : ''}`}
+                                            >
+                                                <td className="py-3 px-3 sm:px-6">
+                                                    <div className="flex items-center">
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={student.selected}
+                                                            onChange={() => handleCheckboxChange(student.id)}
+                                                            className="w-3 h-3 sm:w-4 sm:h-4 text-blue-600 bg-white border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
+                                                        />
+                                                    </div>
+                                                </td>
+                                                <td className="py-3 px-3 sm:px-6 hidden sm:table-cell">
+                                                    <div className="bg-blue-100 rounded-lg p-2 w-10 h-10 flex items-center justify-center text-blue-600 shrink-0 border border-blue-200">
+                                                        <User size={18} />
+                                                    </div>
+                                                </td>
+                                                <td className="py-3 px-3 sm:px-6">
+                                                    <div className="flex flex-col">
+                                                        <span className="text-gray-800 font-medium text-xs sm:text-sm whitespace-nowrap">{student.name}</span>
+                                                        <span className="text-gray-500 text-xs sm:hidden">
+                                                            {programName} • {batchName}
                                                         </span>
-                                                    </button>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    );
-                                })}
-                            </tbody>
-                        </table>
-                    </div>
+                                                    </div>
+                                                </td>
+                                                <td className="py-3 px-3 sm:px-6 text-gray-800 text-xs sm:text-sm font-medium whitespace-nowrap">
+                                                    {student.roll_number || 'N/A'}
+                                                </td>
+                                                <td className="py-3 px-3 sm:px-6 text-gray-600 text-xs sm:text-sm whitespace-nowrap hidden lg:table-cell">
+                                                    {batchName}
+                                                </td>
+                                                <td className="py-3 px-3 sm:px-6 text-gray-600 text-xs sm:text-sm whitespace-nowrap hidden md:table-cell">
+                                                    {divisionName}
+                                                </td>
+                                                <td className="py-3 px-3 sm:px-6 text-gray-600 text-xs sm:text-sm whitespace-nowrap hidden xl:table-cell">
+                                                    {semesterName}
+                                                </td>
+                                                <td className="py-3 px-3 sm:px-6">
+                                                    <div className="flex justify-center">
+                                                        <button
+                                                            onClick={() => toggleStudentStatus(student.id)}
+                                                            className={`relative inline-flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition-all duration-300 transform hover:scale-105 active:scale-95 shadow-sm hover:shadow-md ${student.status === 'P' ? "bg-gradient-to-r from-green-100 to-emerald-100 text-green-700" :
+                                                                student.status === 'A' ? "bg-gradient-to-r from-red-100 to-rose-100 text-red-700" :
+                                                                    student.status === 'OA' ? "bg-gradient-to-r from-orange-100 to-orange-200 text-orange-700" :
+                                                                        student.status === 'SA' ? "bg-gradient-to-r from-yellow-100 to-yellow-200 text-yellow-700" :
+                                                                            student.status === 'ML' ? "bg-gradient-to-r from-blue-100 to-blue-200 text-blue-700" :
+                                                                                student.status === 'SL' ? "bg-gradient-to-r from-indigo-100 to-indigo-200 text-indigo-700" :
+                                                                                    "bg-gray-100 text-gray-700"
+                                                                }`}
+                                                            style={{
+                                                                animation: "statusChange 0.4s ease-out",
+                                                            }}
+                                                        >
+                                                            {student.status === 'P' ? <Check size={16} className="animate-bounce-in" /> :
+                                                                student.status === 'A' ? <X size={16} className="animate-bounce-in" /> :
+                                                                    student.status === 'OA' ? <Activity size={16} className="animate-bounce-in" /> :
+                                                                        student.status === 'SA' ? <Trophy size={16} className="animate-bounce-in" /> :
+                                                                            student.status === 'ML' ? <Stethoscope size={16} className="animate-bounce-in" /> :
+                                                                                student.status === 'SL' ? <AlertCircle size={16} className="animate-bounce-in" /> :
+                                                                                    <MoreHorizontal size={16} className="animate-bounce-in" />
+                                                            }
+                                                            <span className="font-semibold">
+                                                                {student.status === 'P' ? 'Present' :
+                                                                    student.status === 'A' ? 'Absent' :
+                                                                        student.status === 'OA' ? 'Other' :
+                                                                            student.status === 'SA' ? 'Sports' :
+                                                                                student.status === 'ML' ? 'Medical' :
+                                                                                    student.status === 'SL' ? 'Sick' :
+                                                                                        student.status}
+                                                            </span>
+                                                        </button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        );
+                                    })}
+                                </tbody>
+                            </table>
+                        </div>
+                    </>
                 ) : null}
             </div>
 
