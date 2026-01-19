@@ -778,7 +778,7 @@ const TimetableView = () => {
 
                             <button
                                 type="button"
-                                onClick={() => navigate('/teacher/attendance/generate-qr', { state: { slot } })}
+                                onClick={() => navigate('/teacher/attendance/qr-attendance', { state: { slot } })}
                                 className="text-xs px-3 py-1 bg-blue-500 hover:bg-blue-600 text-white rounded-full transition"
                             >
                                 Generate QR

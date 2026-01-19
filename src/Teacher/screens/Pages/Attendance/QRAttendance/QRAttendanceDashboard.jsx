@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
-import { QrCode, Download, Share2, Users, Clock, CheckCircle, XCircle, RefreshCw, Loader } from 'lucide-react';
+import { QrCode, Download, Share2, Users, Clock, CheckCircle, XCircle, RefreshCw, Loader, AlertCircle } from 'lucide-react';
 import { QRCodeSVG, QRCodeCanvas } from 'qrcode.react';
 import AttendanceFilters from '../Components/AttendanceFilters';
 //import { timetableService } from '../../Timetable/Services/timetable.service';
@@ -24,7 +24,8 @@ const QRAttendanceDashboard = () => {
         academicYear: '',
         semester: '',
         division: '',
-        paper: ''
+        paper: '',
+        timeSlot: ''
     });
 
     const [apiIds, setApiIds] = useState({
@@ -82,30 +83,90 @@ const QRAttendanceDashboard = () => {
         return `data:image/svg+xml;base64,${btoa(svg)}`;
     });
 
+    // Formatters
+    const formatDateTime = (dateStr, timeStr) => {
+        try {
+            if (!dateStr || !timeStr) return "N/A";
+            const dateTimeStr = `${dateStr}T${timeStr}`;
+            const date = new Date(dateTimeStr);
+            if (isNaN(date.getTime())) {
+                return `${dateStr} ${timeStr}`;
+            }
+            return date.toLocaleString('en-IN', {
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+                hour12: true
+            });
+        } catch (e) {
+            return `${dateStr} ${timeStr}`;
+        }
+    };
+
+    const formatDateOnly = (dateStr) => {
+        try {
+            if (!dateStr) return "N/A";
+            const date = new Date(dateStr);
+            if (isNaN(date.getTime())) return dateStr;
+            return date.toLocaleDateString('en-IN', {
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric'
+            });
+        } catch (e) {
+            return dateStr;
+        }
+    };
+
     // Fetch teacher ID and college ID
     useEffect(() => {
-        const userProfile = localStorage.getItem("userProfile");
-        if (userProfile) {
-            try {
+        try {
+            // 1. Try to get from userProfile (as originally implemented)
+            const userProfile = localStorage.getItem("userProfile");
+            console.log("DEBUG: userProfile:", userProfile);
+            if (userProfile) {
                 const profile = JSON.parse(userProfile);
-                const teacherId = parseInt(profile.teacher_id);
-                const collegeId = parseInt(profile.college_id);
+                if (profile.teacher_id) setCurrentTeacherId(parseInt(profile.teacher_id));
+                if (profile.college_id) setApiIds(prev => ({ ...prev, collegeId: parseInt(profile.college_id) }));
+            }
 
-                if (!isNaN(teacherId)) {
-                    setCurrentTeacherId(teacherId);
+            // 2. Fallback to currentUser (matching TimetableView.jsx logic)
+            const currentUserStr = localStorage.getItem('currentUser');
+            console.log("DEBUG: currentUser:", currentUserStr);
+            if (currentUserStr) {
+                const currentUser = JSON.parse(currentUserStr);
+                const teacherIdFromJti = currentUser.jti;
+                if (teacherIdFromJti && !currentTeacherId) {
+                    setCurrentTeacherId(teacherIdFromJti);
+                    console.log("DEBUG: Setting teacherId from jti:", teacherIdFromJti);
                 }
+            }
 
-                if (!isNaN(collegeId)) {
+            // 3. Fallback to activeCollege (matching TimetableView.jsx logic)
+            const activeCollegeStr = localStorage.getItem('activeCollege');
+            console.log("DEBUG: activeCollege:", activeCollegeStr);
+            if (activeCollegeStr) {
+                const activeCollege = JSON.parse(activeCollegeStr);
+                if (activeCollege.id && !apiIds.collegeId) {
                     setApiIds(prev => ({
                         ...prev,
-                        collegeId: collegeId
+                        collegeId: activeCollege.id
                     }));
+                    console.log("DEBUG: Setting collegeId from activeCollege:", activeCollege.id);
                 }
-            } catch (error) {
-                console.error("Error parsing user profile:", error);
             }
+
+            // 4. Also check slotData as fallback
+            if (slotData?.teacher_id && !currentTeacherId) {
+                setCurrentTeacherId(slotData.teacher_id);
+            }
+
+        } catch (error) {
+            console.error("Error setting IDs from local storage:", error);
         }
-    }, []);
+    }, [slotData]);
 
     // Initialize from slot data
     useEffect(() => {
@@ -137,6 +198,9 @@ const QRAttendanceDashboard = () => {
             setAutoSelectCompleted(true);
 
             setSuccessAlert("Timetable data loaded successfully! Filters are auto-selected.");
+        } else {
+            // If no slot data, we are ready for manual selection
+            setAutoSelectCompleted(true);
         }
     }, [slotData]);
 
@@ -184,113 +248,119 @@ const QRAttendanceDashboard = () => {
     }, [filters.academicYear, filters.semester, filters.division]);
 
     // Fetch time slots from timetable-classes API
-    useEffect(() => {
-        const fetchTimeSlots = async () => {
-            if (!filters.paper || !filters.academicYear || !filters.semester || !filters.division || !currentTeacherId || !apiIds.collegeId) {
-                setTimeSlots([]);
-                setSelectedSlot(null);
-                return;
-            }
+    const fetchTimeSlots = async () => {
+        // Essential fields required for the API
+        const { paper, academicYear, semester, division } = filters;
+        if (!paper || !academicYear || !semester || !division || !currentTeacherId || !apiIds.collegeId) {
+            console.log("DEBUG: fetchTimeSlots skipping - missing fields:", {
+                paper, academicYear, semester, division, teacherId: currentTeacherId, collegeId: apiIds.collegeId
+            });
+            setTimeSlots([]);
+            setSelectedSlot(null);
+            return;
+        }
 
-            setLoadingSlots(true);
-            try {
-                const params = {
-                    teacherId: currentTeacherId,
-                    subjectId: filters.paper,
-                    date: selectedDate,
-                    academicYearId: filters.academicYear,
-                    semesterId: filters.semester,
-                    divisionId: filters.division,
-                    collegeId: apiIds.collegeId
-                };
+        setLoadingSlots(true);
+        try {
+            const params = {
+                teacherId: currentTeacherId,
+                subjectId: paper,
+                date: selectedDate,
+                academicYearId: academicYear,
+                semesterId: semester,
+                divisionId: division,
+                collegeId: apiIds.collegeId
+            };
 
-                const response = await TeacherAttendanceManagement.getTimeSlots(params);
+            const response = await TeacherAttendanceManagement.getTimeSlots(params);
+            console.log("DEBUG: getTimeSlots response:", response);
 
-                if (response.success && response.data && response.data.length > 0) {
-                    // Filter out holidays - only show non-holiday time slots
-                    const validTimeSlots = response.data.filter(slot => !slot.is_holiday);
+            if (response.success && response.data && Array.isArray(response.data)) {
+                console.log(`DEBUG: Processing ${response.data.length} slots from API`);
 
-                    if (validTimeSlots.length > 0) {
-                        const formattedSlots = validTimeSlots.map(slot => ({
-                            id: slot.timetable_id || slot.time_slot_id,
-                            time_slot_id: slot.time_slot_id,
-                            timetable_id: slot.timetable_id,
-                            timetable_allocation_id: slot.timetable_allocation_id,
-                            start_time: slot.start_time,
-                            end_time: slot.end_time,
-                            start: slot.start_time,
-                            end: slot.end_time,
-                            name: `${slot.start_time?.slice(0, 5)} - ${slot.end_time?.slice(0, 5)}`,
-                            description: slot.description,
-                            slot_name: slot.slot_name
+                const formattedSlots = response.data.map(slot => ({
+                    id: slot.time_slot_id?.toString(),
+                    time_slot_id: slot.time_slot_id,
+                    timetable_id: slot.timetable_id,
+                    timetable_allocation_id: slot.timetable_allocation_id,
+                    start_time: slot.start_time,
+                    end_time: slot.end_time,
+                    name: `${slot.start_time?.slice(0, 5)} - ${slot.end_time?.slice(0, 5)}${slot.is_holiday ? ' (Holiday)' : ''}`,
+                    description: slot.description,
+                    slot_name: slot.slot_name,
+                    is_holiday: slot.is_holiday,
+                    holiday_name: slot.holiday_name
+                }));
+
+                setTimeSlots(formattedSlots);
+
+                // HANDLE SELECTION
+                if (formattedSlots.length > 0) {
+                    let slotToSelect = null;
+
+                    // 1. If we have slotData from navigation, prioritize matching it
+                    if (slotData?.time_slot_id) {
+                        slotToSelect = formattedSlots.find(s =>
+                            s.time_slot_id == slotData.time_slot_id ||
+                            s.timetable_id == slotData.time_slot_id
+                        );
+                    }
+
+                    // 2. If no matching slotData or not available, use current filter or first slot
+                    if (!slotToSelect && filters.timeSlot) {
+                        slotToSelect = formattedSlots.find(s => s.id === filters.timeSlot);
+                    }
+
+                    // 3. Fallback to first slot
+                    if (!slotToSelect) {
+                        slotToSelect = formattedSlots[0];
+                    }
+
+                    if (slotToSelect) {
+                        setSelectedSlot(slotToSelect);
+                        setFilters(prev => ({
+                            ...prev,
+                            timeSlot: slotToSelect.id
                         }));
-
-                        setTimeSlots(formattedSlots);
-
-                        // Auto-select the correct time slot from slotData
-                        if (slotData?.time_slot_id) {
-                            const matchedSlot = formattedSlots.find(slot =>
-                                slot.time_slot_id === slotData.time_slot_id ||
-                                slot.id === slotData.time_slot_id ||
-                                (slot.start_time === slotData.start_time && slot.end_time === slotData.end_time)
-                            );
-
-                            if (matchedSlot) {
-                                setSelectedSlot(matchedSlot);
-                                setFilters(prev => ({
-                                    ...prev,
-                                    timeSlot: matchedSlot.timetable_id?.toString() ||
-                                        matchedSlot.time_slot_id?.toString()
-                                }));
-                                console.log("Auto-selected time slot from timetable:", matchedSlot);
-                            } else if (formattedSlots.length > 0) {
-                                // Fallback to first slot
-                                const firstSlot = formattedSlots[0];
-                                setSelectedSlot(firstSlot);
-                                setFilters(prev => ({
-                                    ...prev,
-                                    timeSlot: firstSlot.timetable_id?.toString() ||
-                                        firstSlot.time_slot_id?.toString()
-                                }));
-                            }
-                        } else if (formattedSlots.length > 0) {
-                            // Auto-select first time slot
-                            const firstSlot = formattedSlots[0];
-                            setSelectedSlot(firstSlot);
-                            setFilters(prev => ({
-                                ...prev,
-                                timeSlot: firstSlot.timetable_id?.toString() ||
-                                    firstSlot.time_slot_id?.toString()
-                            }));
-                        }
-
-                        console.log("QR Attendance - Time slots loaded:", formattedSlots);
-                    } else {
-                        // All slots are holidays, clear everything
-                        setTimeSlots([]);
-                        setSelectedSlot(null);
-                        setFilters(prev => ({ ...prev, timeSlot: '' }));
+                        console.log("DEBUG: Selected slot set to:", slotToSelect.id);
                     }
                 } else {
-                    // No time slots available
-                    setTimeSlots([]);
                     setSelectedSlot(null);
                     setFilters(prev => ({ ...prev, timeSlot: '' }));
                 }
-            } catch (error) {
-                console.error('Error loading time slots:', error);
+            } else {
                 setTimeSlots([]);
                 setSelectedSlot(null);
                 setFilters(prev => ({ ...prev, timeSlot: '' }));
-            } finally {
-                setLoadingSlots(false);
             }
-        };
+        } catch (error) {
+            console.error('Error loading time slots:', error);
+            setTimeSlots([]);
+            setSelectedSlot(null);
+        } finally {
+            setLoadingSlots(false);
+        }
+    };
 
-        if (autoSelectCompleted && filters.paper) {
+    useEffect(() => {
+        if (filters.paper && currentTeacherId && apiIds.collegeId) {
             fetchTimeSlots();
         }
-    }, [filters.paper, filters.academicYear, filters.semester, filters.division, currentTeacherId, selectedDate, apiIds.collegeId, autoSelectCompleted]);
+    }, [filters.paper, filters.academicYear, filters.semester, filters.division, selectedDate, currentTeacherId, apiIds.collegeId]);
+
+    // Sync selectedSlot when filters.timeSlot changes
+    useEffect(() => {
+        if (filters.timeSlot && timeSlots.length > 0) {
+            const matchedSlot = timeSlots.find(slot =>
+                (slot.timetable_id?.toString() === filters.timeSlot) ||
+                (slot.time_slot_id?.toString() === filters.timeSlot)
+            );
+            if (matchedSlot && matchedSlot !== selectedSlot) {
+                setSelectedSlot(matchedSlot);
+                console.log("Sync - Selected slot updated from filters:", matchedSlot);
+            }
+        }
+    }, [filters.timeSlot, timeSlots]);
 
     // Fetch students when paper is selected
     useEffect(() => {
@@ -355,18 +425,14 @@ const QRAttendanceDashboard = () => {
                     console.log("QR Session API Response:", response);
 
                     // Check if response has actual data with required fields
-                    const hasValidData = response.success &&
-                        response.data &&
-                        typeof response.data === 'object' &&
-                        !Array.isArray(response.data) &&
-                        Object.keys(response.data).length > 0 &&
-                        response.data.id; // Must have ID
-
+                    const hasValidData = response?.data[0]?.id;
+                    console.log("hasValidData", hasValidData);
                     if (hasValidData) {
-                        console.log("Existing QR session found:", response.data);
+                        const sessionDataObj = response.data[0];
+                        console.log("Existing QR session found:", sessionDataObj);
 
                         // Check if QR is still valid (not expired)
-                        const endTime = new Date(`${response.data.date} ${response.data.end_time}`);
+                        const endTime = new Date(`${sessionDataObj.date} ${sessionDataObj.end_time}`);
                         const now = new Date();
 
                         if (now < endTime) {
@@ -376,7 +442,7 @@ const QRAttendanceDashboard = () => {
                             // QR expired but still show it
                             console.log("Existing QR has expired but showing anyway");
                         }
-                        setExistingQRSession(response.data);
+                        setExistingQRSession(sessionDataObj);
                     } else {
                         setExistingQRSession(null);
                         console.log("No existing QR session found or empty/invalid data");
@@ -800,7 +866,16 @@ const QRAttendanceDashboard = () => {
                         <input
                             type="date"
                             value={selectedDate}
-                            onChange={(e) => setSelectedDate(e.target.value)}
+                            onChange={(e) => {
+                                const newDate = e.target.value;
+                                setSelectedDate(newDate);
+                                // Reset slots and session when date changes
+                                setTimeSlots([]);
+                                setSelectedSlot(null);
+                                setFilters(prev => ({ ...prev, timeSlot: '' }));
+                                setQrSession(null);
+                                setSessionActive(false);
+                            }}
                             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 outline-none"
                         />
                     </div>
@@ -856,33 +931,11 @@ const QRAttendanceDashboard = () => {
                                 <div className="text-xs text-blue-700 space-y-1">
                                     <p>
                                         <span className="font-medium">Created:</span>{' '}
-                                        {(() => {
-                                            try {
-                                                const dateTimeStr = `${existingQRSession.date}T${existingQRSession.start_time}`;
-                                                const date = new Date(dateTimeStr);
-                                                return date.toLocaleString('en-IN', {
-                                                    dateStyle: 'medium',
-                                                    timeStyle: 'short'
-                                                });
-                                            } catch (e) {
-                                                return `${existingQRSession.date} ${existingQRSession.start_time}`;
-                                            }
-                                        })()}
+                                        {formatDateTime(existingQRSession.date, existingQRSession.start_time)}
                                     </p>
                                     <p>
                                         <span className="font-medium">Valid Until:</span>{' '}
-                                        {(() => {
-                                            try {
-                                                const dateTimeStr = `${existingQRSession.date}T${existingQRSession.end_time}`;
-                                                const date = new Date(dateTimeStr);
-                                                return date.toLocaleString('en-IN', {
-                                                    dateStyle: 'medium',
-                                                    timeStyle: 'short'
-                                                });
-                                            } catch (e) {
-                                                return `${existingQRSession.date} ${existingQRSession.end_time}`;
-                                            }
-                                        })()}
+                                        {formatDateTime(existingQRSession.date, existingQRSession.end_time)}
                                     </p>
                                 </div>
                                 <p className="text-xs text-blue-600 mt-2">
@@ -941,6 +994,20 @@ const QRAttendanceDashboard = () => {
                     )}
                 </div>
             </div>
+
+            {/* Holiday Info */}
+            {selectedSlot?.is_holiday && (
+                <div className="mb-6 bg-orange-50 border border-orange-200 rounded-xl p-4 flex items-center gap-3">
+                    <AlertCircle className="w-6 h-6 text-orange-600" />
+                    <div>
+                        <h4 className="text-sm font-bold text-orange-900">Holiday Detected</h4>
+                        <p className="text-xs text-orange-700">
+                            Today is marked as <span className="font-semibold underline">{selectedSlot.holiday_name || 'a Holiday'}</span>.
+                            Attendance marking might not be required, but you can still proceed if needed.
+                        </p>
+                    </div>
+                </div>
+            )}
 
             {/* QR Code Display */}
             {qrSession && (
@@ -1032,7 +1099,7 @@ const QRAttendanceDashboard = () => {
                                     <span className="font-semibold">Division:</span> {qrSession.divisionName}
                                 </div>
                                 <div>
-                                    <span className="font-semibold">Date:</span> {qrSession.date}
+                                    <span className="font-semibold">Date:</span> {formatDateOnly(qrSession.date)}
                                 </div>
                                 <div>
                                     <span className="font-semibold">Slot:</span> {qrSession.slotTime}

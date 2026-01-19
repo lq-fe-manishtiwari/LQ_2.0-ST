@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { QrCode, CheckCircle, AlertCircle, Loader, User, Hash, Calendar } from 'lucide-react';
+import { QrCode, CheckCircle, AlertCircle, Loader, User, Hash, Calendar, Clock } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { StudentAttendanceManagement } from './Services/attendance.service';
-
+import { StudentService } from '../Profile/Student.Service';
 const MarkAttendancePage = () => {
     const navigate = useNavigate();
     const [method, setMethod] = useState(null); // 'qr', 'code', or 'link'
@@ -14,6 +14,10 @@ const MarkAttendancePage = () => {
     const [loading, setLoading] = useState(false);
     const [success, setSuccess] = useState(false);
     const [error, setError] = useState(null);
+    const [alreadyMarked, setAlreadyMarked] = useState(false);
+    const [checkingAttendance, setCheckingAttendance] = useState(false);
+    const [remainingTime, setRemainingTime] = useState(null); // in seconds
+    const [isExpired, setIsExpired] = useState(false);
 
     // Check if user is a teacher - redirect to dashboard
     useEffect(() => {
@@ -93,6 +97,47 @@ const MarkAttendancePage = () => {
         }
     }, []);
 
+    // Timer Effect
+    useEffect(() => {
+        if (!sessionData?.expiresAt || success) return;
+
+        const timer = setInterval(() => {
+            const now = new Date().getTime();
+            const expiry = new Date(sessionData.expiresAt).getTime();
+            const diff = Math.max(0, Math.floor((expiry - now) / 1000));
+
+            setRemainingTime(diff);
+
+            if (diff <= 0) {
+                setIsExpired(true);
+                clearInterval(timer);
+            } else {
+                setIsExpired(false);
+            }
+        }, 1000);
+
+        return () => clearInterval(timer);
+    }, [sessionData, success]);
+
+    const formatTime = (seconds) => {
+        if (seconds === null || seconds < 0) return "00:00";
+        const mins = Math.floor(seconds / 60);
+        const secs = seconds % 60;
+        return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    };
+
+    const formatReadableTime = (isoString) => {
+        try {
+            return new Date(isoString).toLocaleTimeString('en-IN', {
+                hour: '2-digit',
+                minute: '2-digit',
+                hour12: true
+            });
+        } catch (e) {
+            return isoString;
+        }
+    };
+
     // Load current user data from localStorage
     useEffect(() => {
         console.log("=== Loading Student Data ===");
@@ -123,7 +168,18 @@ const MarkAttendancePage = () => {
 
                 setStudentId(extractedStudentId);
                 setStudentName(fullName);
-                setRollNo(extractedRollNo);
+
+
+
+                StudentService.getStudentHistory(extractedStudentId)
+                    .then((response) => {
+                        console.log("Student History:", response);
+                        setRollNo(response[0]?.roll_number);
+
+                    })
+                    .catch((error) => {
+                        console.error("Error fetching student history:", error);
+                    });
 
                 console.log("✅ Student data loaded successfully");
             } else {
@@ -133,6 +189,38 @@ const MarkAttendancePage = () => {
             console.error("❌ Error loading user data:", err);
         }
     }, []);
+
+    // Check if attendance is already marked
+    useEffect(() => {
+        const checkAttendanceStatus = async () => {
+            if (sessionData && studentId && !alreadyMarked && !success) {
+                setCheckingAttendance(true);
+                try {
+                    const params = {
+                        timeSlotId: sessionData.time_slot_id,
+                        subjectId: sessionData.subject_id,
+                        studentId: studentId,
+                        date: sessionData.date
+                    };
+
+                    console.log("Checking if attendance already exists:", params);
+                    const response = await StudentAttendanceManagement.checkExistence(params);
+                    console.log("Check existence response:", response);
+
+                    if (response.success && response.data?.exists === true) {
+                        console.log("⚠️ Attendance already marked for this session");
+                        setAlreadyMarked(true);
+                    }
+                } catch (err) {
+                    console.error("Error checking attendance existence:", err);
+                } finally {
+                    setCheckingAttendance(false);
+                }
+            }
+        };
+
+        checkAttendanceStatus();
+    }, [sessionData, studentId, alreadyMarked, success]);
 
     const handleCodeSubmit = async (e) => {
         e.preventDefault();
@@ -167,6 +255,16 @@ const MarkAttendancePage = () => {
 
     const handleAttendanceSubmit = async (e) => {
         e.preventDefault();
+
+        if (isExpired) {
+            setError("This QR code has expired. Please ask your teacher for a new one.");
+            return;
+        }
+
+        if (alreadyMarked) {
+            setError("Your attendance is already marked for this session.");
+            return;
+        }
 
         if (!rollNo || !studentName) {
             setError("Please fill in all fields");
@@ -307,18 +405,51 @@ const MarkAttendancePage = () => {
                         <h1 className="text-2xl font-bold text-gray-800 mb-2">
                             Mark Your Attendance
                         </h1>
-                        <div className="bg-blue-50 rounded-lg p-3 mt-3 space-y-1">
+                        <div className="bg-primary-50 rounded-lg p-3 mt-3 space-y-1 text-left relative overflow-hidden">
                             {sessionData.subject_name && (
-                                <p className="text-sm text-blue-900 font-bold">
+                                <p className="text-sm text-primary-900 font-bold">
                                     📚 {sessionData.subject_name}
                                 </p>
                             )}
-                            <p className="text-sm text-blue-900 font-semibold">
-                                📅 {sessionData.date}
-                            </p>
-                            <p className="text-sm text-blue-700">
-                                🕐 {sessionData.slotTime}
-                            </p>
+                            <div className="grid grid-cols-2 gap-2 mt-2">
+                                <p className="text-xs text-primary-700">
+                                    <span className="font-semibold block">Date:</span>
+                                    {sessionData.date}
+                                </p>
+                                <p className="text-xs text-primary-700">
+                                    <span className="font-semibold block">Slot:</span>
+                                    {sessionData.slotTime}
+                                </p>
+                            </div>
+                            <div className="grid grid-cols-2 gap-2 mt-2 pt-2 border-t border-primary-100">
+                                <p className="text-xs text-green-700">
+                                    <span className="font-semibold block">Starts:</span>
+                                    {formatReadableTime(sessionData.timestamp)}
+                                </p>
+                                <p className="text-xs text-red-700">
+                                    <span className="font-semibold block">Ends:</span>
+                                    {formatReadableTime(sessionData.expiresAt)}
+                                </p>
+                            </div>
+
+                            {remainingTime !== null && !isExpired && (
+                                <div className="mt-3 bg-white/50 border border-primary-200 rounded-lg p-3 flex items-center justify-between">
+                                    <div className="flex items-center gap-2 text-primary-700">
+                                        <Clock className="w-4 h-4 animate-pulse" />
+                                        <span className="text-xs font-bold uppercase tracking-wider">Time Remaining</span>
+                                    </div>
+                                    <span className={`text-lg font-mono font-bold ${remainingTime < 60 ? 'text-red-600 animate-pulse' : 'text-primary-700'}`}>
+                                        {formatTime(remainingTime)}
+                                    </span>
+                                </div>
+                            )}
+
+                            {isExpired && (
+                                <div className="mt-3 bg-red-100 border border-red-200 rounded-lg p-3 flex items-center gap-2 text-red-700">
+                                    <AlertCircle className="w-4 h-4" />
+                                    <span className="text-xs font-bold">QR CODE EXPIRED</span>
+                                </div>
+                            )}
                         </div>
                     </div>
 
@@ -351,26 +482,54 @@ const MarkAttendancePage = () => {
                             />
                         </div>
 
+                        {alreadyMarked && !isExpired && (
+                            <div className="bg-orange-50 border border-orange-200 rounded-xl p-4 flex gap-3">
+                                <CheckCircle className="w-5 h-5 text-orange-500 flex-shrink-0" />
+                                <p className="text-sm text-orange-800 font-medium">
+                                    Attendance already marked for this session!
+                                </p>
+                            </div>
+                        )}
+
                         {error && (
-                            <div className="bg-red-50 border border-red-200 rounded-xl p-3 text-sm text-red-700">
-                                {error}
+                            <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex gap-3">
+                                <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0" />
+                                <p className="text-sm text-red-800 font-medium">{error}</p>
                             </div>
                         )}
 
                         <button
                             type="submit"
-                            disabled={loading}
-                            className="w-full px-6 py-3 bg-primary-600 text-white rounded-xl font-semibold hover:bg-primary-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2"
+                            disabled={loading || alreadyMarked || checkingAttendance || isExpired}
+                            className={`w-full px-6 py-4 rounded-xl font-bold text-white shadow-lg transition-all duration-300 flex items-center justify-center gap-2 ${(loading || alreadyMarked || checkingAttendance || isExpired)
+                                ? 'bg-gray-400 cursor-not-allowed grayscale'
+                                : 'bg-primary-600 hover:bg-primary-700 hover:scale-[1.02] active:scale-[0.98]'
+                                }`}
                         >
-                            {loading ? (
+                            {isExpired ? (
+                                <>
+                                    <AlertCircle className="w-5 h-5" />
+                                    QR Code Expired
+                                </>
+                            ) : checkingAttendance ? (
+                                <>
+                                    <Loader className="w-5 h-5 animate-spin" />
+                                    Checking status...
+                                </>
+                            ) : alreadyMarked ? (
+                                <>
+                                    <CheckCircle className="w-5 h-5" />
+                                    Already Marked
+                                </>
+                            ) : loading ? (
                                 <>
                                     <Loader className="w-5 h-5 animate-spin" />
                                     Marking Attendance...
                                 </>
                             ) : (
                                 <>
-                                    <CheckCircle className="w-5 h-5" />
-                                    Mark Attendance
+                                    <QrCode className="w-5 h-5" />
+                                    Confirm & Mark Attendance
                                 </>
                             )}
                         </button>

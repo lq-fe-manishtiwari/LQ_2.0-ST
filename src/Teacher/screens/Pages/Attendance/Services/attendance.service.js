@@ -28,7 +28,7 @@ function uploadFileToS3(file) {
         body: formData
     };
 
-    const url = `${AcademicAPI}/admin/academic/s3/upload`;
+    const url = `${AcademicAPI}/s3/upload`;
 
     return fetch(url, requestOptions)
         .then(response => {
@@ -220,7 +220,7 @@ function getGroupedAttendance(filters) {
         headers: authHeader(),
     };
 
-    return fetch(`${TimetableAPI}/api/qr-codes/records?${queryString}`, requestOptions)
+    return fetch(`${TimetableAPI}/qr-codes/records?${queryString}`, requestOptions)
         .then(handleResponse)
         .then(data => ({
             success: true,
