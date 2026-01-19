@@ -10,6 +10,7 @@ export const TeacherAttendanceManagement = {
     saveQRCodeSession,
     getQRCodeSession,
     getSessionAttendanceCount,
+    getGroupedAttendance,
     getAttendanceBySubject
 };
 
@@ -206,6 +207,28 @@ function getSessionAttendanceCount(params) {
         .catch(error => ({
             success: false,
             message: error.message || 'Failed to fetch attendance count'
+        }));
+}
+
+// Get grouped attendance records for polling
+function getGroupedAttendance(filters) {
+    const { academicYearId, semesterId, divisionId, timeSlotId, date, subjectId } = filters;
+    const queryString = `academicYearId=${academicYearId}&semesterId=${semesterId}&divisionId=${divisionId}&timeSlotId=${timeSlotId}&date=${date}&subjectId=${subjectId}`;
+
+    const requestOptions = {
+        method: 'GET',
+        headers: authHeader(),
+    };
+
+    return fetch(`${TimetableAPI}/api/qr-codes/records?${queryString}`, requestOptions)
+        .then(handleResponse)
+        .then(data => ({
+            success: true,
+            data: data
+        }))
+        .catch(error => ({
+            success: false,
+            message: error.message || 'Failed to fetch grouped attendance'
         }));
 }
 

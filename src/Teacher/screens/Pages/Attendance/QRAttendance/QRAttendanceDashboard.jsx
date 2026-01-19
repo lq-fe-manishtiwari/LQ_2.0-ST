@@ -5,7 +5,6 @@ import { QRCodeSVG, QRCodeCanvas } from 'qrcode.react';
 import AttendanceFilters from '../Components/AttendanceFilters';
 //import { timetableService } from '../../Timetable/Services/timetable.service';
 import { TeacherAttendanceManagement } from '../Services/attendance.service';
-import { attendanceWebSocket } from '../Services/websocket.service';
 import { api } from '../../../../../_services/api';
 import SweetAlert from 'react-bootstrap-sweetalert';
 
@@ -398,67 +397,73 @@ const QRAttendanceDashboard = () => {
         }
     }, [filters.academicYear, filters.semester, filters.division, filters.paper, selectedSlot, selectedDate]);
 
-    // REST API polling for live attendance updates (replaced WebSocket)
+    // REST API polling for live attendance updates
     useEffect(() => {
         if (sessionActive && qrSession) {
-            console.log('📊 Starting REST API polling for live attendance...');
+            console.log('� Starting 15s REST API polling for live attendance...');
 
-            // Function to fetch attendance count
-            const fetchAttendanceCount = async () => {
+            // Function to fetch grouped attendance
+            const fetchLiveAttendance = async () => {
+                if (isRefreshing) return;
+                setIsRefreshing(true);
                 try {
-                    setIsRefreshing(true);
-
                     const params = {
                         academicYearId: qrSession.academic_year_id,
                         semesterId: qrSession.semester_id,
                         divisionId: qrSession.division_id,
-                        subjectId: qrSession.subject_id,
-                        timetableId: qrSession.timetable_id,
-                        timetableAllocationId: qrSession.timetable_allocation_id,
+                        timeSlotId: qrSession.time_slot_id,
                         date: qrSession.date,
-                        timeSlotId: qrSession.time_slot_id
+                        subjectId: qrSession.subject_id
                     };
 
-                    console.log('📡 Fetching attendance count:', params);
+                    console.log('📡 Polling grouped attendance:', params);
 
-                    const response = await TeacherAttendanceManagement.getSessionAttendanceCount(params);
+                    const response = await TeacherAttendanceManagement.getGroupedAttendance(params);
 
                     if (response.success && response.data) {
-                        console.log('✅ Attendance count received:', response.data);
+                        // Flatten students from all groups
+                        const allStudents = response.data.flatMap(group =>
+                            (group.students || []).map(student => ({
+                                studentId: student.student_id,
+                                name: `${student.firstname || ''} ${student.lastname || ''}`.trim(),
+                                rollNo: student.roll_number,
+                                scannedAt: new Date().toISOString() // Fallback
+                            }))
+                        );
 
-                        // Update live count from response
-                        const count = response.data.marked || response.data.count || 0;
-                        setLiveCount(count);
+                        // Filter unique students by ID
+                        const uniqueStudentsMap = new Map();
+                        allStudents.forEach(s => {
+                            if (!uniqueStudentsMap.has(s.studentId)) {
+                                uniqueStudentsMap.set(s.studentId, s);
+                            }
+                        });
+                        const uniqueStudents = Array.from(uniqueStudentsMap.values());
 
-                        // Update last refresh time
+                        console.log(`📊 Polled data: ${uniqueStudents.length} students found`);
+                        setAttendanceRecords(uniqueStudents);
+                        setLiveCount(uniqueStudents.length);
                         setLastRefreshTime(new Date());
-
-                        // If response has student list, update attendance records
-                        if (response.data.students && Array.isArray(response.data.students)) {
-                            setAttendanceRecords(response.data.students);
-                        }
-                    } else {
-                        console.warn('⚠️ Failed to fetch attendance count:', response.message);
                     }
                 } catch (error) {
-                    console.error('❌ Error fetching attendance count:', error);
+                    console.error('❌ Error polling attendance:', error);
                 } finally {
                     setIsRefreshing(false);
                 }
             };
 
             // Initial fetch
-            fetchAttendanceCount();
+            fetchLiveAttendance();
 
-            // Set up polling interval (2 minutes = 120000ms)
+            // Set up polling interval (15 seconds)
             const pollingInterval = setInterval(() => {
-                console.log('🔄 Auto-refreshing attendance count...');
-                fetchAttendanceCount();
-            }, 120000); // 2 minutes
+                console.log('🔄 Auto-refreshing attendance...');
+                fetchLiveAttendance();
+            }, 15000);
 
             // Cleanup on unmount or session end
             return () => {
-                console.log('🛑 Stopping attendance count polling');
+                console.log('🛑 Stopping attendance polling');
                 clearInterval(pollingInterval);
                 setLiveCount(0);
                 setLastRefreshTime(null);
@@ -480,33 +485,45 @@ const QRAttendanceDashboard = () => {
                 academicYearId: qrSession.academic_year_id,
                 semesterId: qrSession.semester_id,
                 divisionId: qrSession.division_id,
-                subjectId: qrSession.subject_id,
-                timetableId: qrSession.timetable_id,
-                timetableAllocationId: qrSession.timetable_allocation_id,
+                timeSlotId: qrSession.time_slot_id,
                 date: qrSession.date,
-                timeSlotId: qrSession.time_slot_id
+                subjectId: qrSession.subject_id
             };
 
-            console.log('🔄 Manual refresh - Fetching attendance count:', params);
+            console.log('🔄 Manual refresh - Fetching attendance:', params);
 
-            const response = await TeacherAttendanceManagement.getSessionAttendanceCount(params);
+            const response = await TeacherAttendanceManagement.getGroupedAttendance(params);
 
             if (response.success && response.data) {
-                const count = response.data.marked || response.data.count || 0;
-                setLiveCount(count);
+                // Flatten and deduplicate students
+                const allStudents = response.data.flatMap(group =>
+                    (group.students || []).map(student => ({
+                        studentId: student.student_id,
+                        name: `${student.firstname || ''} ${student.lastname || ''}`.trim(),
+                        rollNo: student.roll_number,
+                        scannedAt: new Date().toISOString()
+                    }))
+                );
+
+                const uniqueStudentsMap = new Map();
+                allStudents.forEach(s => {
+                    if (!uniqueStudentsMap.has(s.studentId)) {
+                        uniqueStudentsMap.set(s.studentId, s);
+                    }
+                });
+                const uniqueStudents = Array.from(uniqueStudentsMap.values());
+
+                setAttendanceRecords(uniqueStudents);
+                setLiveCount(uniqueStudents.length);
                 setLastRefreshTime(new Date());
 
-                if (response.data.students && Array.isArray(response.data.students)) {
-                    setAttendanceRecords(response.data.students);
-                }
-
-                setSuccessAlert(`Refreshed! ${count} students marked attendance`);
+                setSuccessAlert(`Refreshed! ${uniqueStudents.length} students found`);
             } else {
-                setErrorAlert(response.message || 'Failed to refresh attendance count');
+                setErrorAlert(response.message || 'Failed to refresh attendance');
             }
         } catch (error) {
             console.error('❌ Error refreshing attendance:', error);
-            setErrorAlert('Failed to refresh attendance count');
+            setErrorAlert('Failed to refresh attendance');
         } finally {
             setIsRefreshing(false);
         }
