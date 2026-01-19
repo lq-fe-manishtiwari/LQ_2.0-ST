@@ -149,7 +149,7 @@ export default function TabularView() {
         };
 
         handleTimetableNavigation();
-    }, [fromTimetable, passedSlot, filtersSetFromTimetable]);
+    }, [fromTimetable, passedSlot]);
 
     // Auto-select first available filter values
     useEffect(() => {
@@ -317,51 +317,46 @@ export default function TabularView() {
                         collegeId: collegeId
                     };
                     const response = await TeacherAttendanceManagement.getTimeSlots(params);
+                    console.log("DEBUG: getTimeSlots response:", response);
 
                     if (response && response.data && response.data.length > 0) {
                         // Filter out holidays - only show non-holiday time slots
                         const validTimeSlots = response.data.filter(slot => !slot.is_holiday);
 
                         if (validTimeSlots.length > 0) {
+                            console.log("DEBUG: Setting validTimeSlots:", validTimeSlots);
                             setTimeSlots(validTimeSlots);
-                            // Auto-select first time slot only if not already set from timetable
-                            if (!filters.timeSlot || !filtersSetFromTimetable) {
-                                const firstSlotId = validTimeSlots[0].timetable_id?.toString() || validTimeSlots[0].time_slot_id?.toString();
+                            // Auto-select first time slot only if none currently selected
+                            if (!filters.timeSlot) {
+                                const firstSlotId = validTimeSlots[0].time_slot_id?.toString();
+                                console.log("DEBUG: Auto-selecting first time slot:", firstSlotId);
                                 setFilters(prev => ({ ...prev, timeSlot: firstSlotId }));
                             }
                         } else {
                             // All slots are holidays, clear everything
                             setTimeSlots([]);
-                            if (!filtersSetFromTimetable) {
-                                setFilters(prev => ({ ...prev, timeSlot: '' }));
-                            }
+                            setFilters(prev => ({ ...prev, timeSlot: '' }));
                         }
                     } else {
                         // No time slots available
                         setTimeSlots([]);
-                        if (!filtersSetFromTimetable) {
-                            setFilters(prev => ({ ...prev, timeSlot: '' }));
-                        }
+                        setFilters(prev => ({ ...prev, timeSlot: '' }));
                     }
                 } catch (error) {
                     console.error("Error fetching time slots:", error);
                     setTimeSlots([]);
-                    if (!filtersSetFromTimetable) {
-                        setFilters(prev => ({ ...prev, timeSlot: '' }));
-                    }
+                    setFilters(prev => ({ ...prev, timeSlot: '' }));
                 } finally {
                     setLoadingTimeSlots(false);
                 }
             } else {
                 setTimeSlots([]);
-                if (!filtersSetFromTimetable) {
-                    setFilters(prev => ({ ...prev, timeSlot: '' }));
-                }
+                setFilters(prev => ({ ...prev, timeSlot: '' }));
             }
         };
 
         fetchTimeSlots();
-    }, [filters.paper, filters.academicYear, filters.semester, filters.division, currentTeacherId, selectedDate, collegeId, fromTimetable, filtersSetFromTimetable, timeSlots.length]);
+    }, [filters.paper, filters.academicYear, filters.semester, filters.division, currentTeacherId, selectedDate, collegeId, fromTimetable, filtersSetFromTimetable]);
 
     // Fetch students based on filters
     useEffect(() => {
@@ -448,6 +443,11 @@ export default function TabularView() {
     // Fetch existing attendance when time slot is selected
     useEffect(() => {
         const fetchExistingAttendance = async () => {
+            console.log("DEBUG: fetchExistingAttendance triggered", {
+                timeSlot: filters.timeSlot,
+                studentsCount: students.length,
+                filters: filters
+            });
             if (filters.timeSlot && students.length > 0 && filters.academicYear && filters.semester && filters.division && filters.paper) {
                 try {
                     let selectedTimeSlot;
@@ -457,9 +457,17 @@ export default function TabularView() {
                         selectedTimeSlot = timeSlots[0];
                     } else {
                         // Find in fetched time slots or manual slots based on current filter
+                        // Prefer time_slot_id for matching as it's more specific
                         selectedTimeSlot = timeSlots.find(slot =>
-                            (slot.timetable_id?.toString() || slot.time_slot_id?.toString()) === filters.timeSlot
+                            slot.time_slot_id?.toString() === filters.timeSlot
                         );
+
+                        // Fallback to timetable_id only if no match found with time_slot_id
+                        if (!selectedTimeSlot) {
+                            selectedTimeSlot = timeSlots.find(slot =>
+                                slot.timetable_id?.toString() === filters.timeSlot
+                            );
+                        }
                     }
 
                     if (!selectedTimeSlot) return;
@@ -475,9 +483,11 @@ export default function TabularView() {
                         date: selectedDate
                     };
 
+                    console.log("DEBUG: Fetching existing attendance with payload:", payload);
                     setLoadingStudents(true);
 
                     const response = await TeacherAttendanceManagement.getAttendanceList(payload);
+                    console.log("DEBUG: Attendance List Response:", response);
 
                     if (response && response.success && response.data && response.data.length > 0) {
                         // Attendance exists, update student statuses
@@ -532,9 +542,11 @@ export default function TabularView() {
 
     // Filter handlers
     const handleFilterChange = (newFilters) => {
+        console.log("DEBUG: handleFilterChange called with:", newFilters);
         setFilters(newFilters);
         // If user manually changes filters, reset the timetable flag
         if (filtersSetFromTimetable) {
+            console.log("DEBUG: Resetting filtersSetFromTimetable to false");
             setFiltersSetFromTimetable(false);
         }
     };
@@ -749,10 +761,18 @@ export default function TabularView() {
         if (fromTimetable && timeSlots.length > 0 && timeSlots[0]?.fromTimetable) {
             selectedTimeSlot = timeSlots[0];
         } else {
-            // Find in fetched time slots
+            // Find in fetched time slots or manual slots based on current filter
+            // Prefer time_slot_id for matching as it's more specific
             selectedTimeSlot = timeSlots.find(slot =>
-                (slot.timetable_id?.toString() || slot.time_slot_id?.toString()) === filters.timeSlot
+                slot.time_slot_id?.toString() === filters.timeSlot
             );
+
+            // Fallback to timetable_id only if no match found with time_slot_id
+            if (!selectedTimeSlot) {
+                selectedTimeSlot = timeSlots.find(slot =>
+                    slot.timetable_id?.toString() === filters.timeSlot
+                );
+            }
         }
 
         if (!selectedTimeSlot) {
@@ -763,7 +783,37 @@ export default function TabularView() {
 
         // Map status codes to status IDs from API
         const getStatusId = (statusCode) => {
-            const status = attendanceStatuses.find(s => s.status_code === statusCode);
+            // First try direct match
+            let status = attendanceStatuses.find(s => s.status_code === statusCode);
+
+            // If not found and it's 'P', try common alternatives
+            if (!status && statusCode === 'P') {
+                status = attendanceStatuses.find(s =>
+                    s.status_code === 'PR' ||
+                    s.status_code?.toUpperCase() === 'PRESENT' ||
+                    s.status_name?.toUpperCase() === 'PRESENT'
+                );
+            }
+
+            // If not found and it's 'A', try common alternatives
+            if (!status && statusCode === 'A') {
+                status = attendanceStatuses.find(s =>
+                    s.status_code === 'AB' ||
+                    s.status_code?.toUpperCase() === 'ABSENT' ||
+                    s.status_name?.toUpperCase() === 'ABSENT'
+                );
+            }
+
+            // Last resort: case-insensitive name matching
+            if (!status) {
+                const searchLabel = statusCode === 'P' ? 'PRESENT' : statusCode === 'A' ? 'ABSENT' : statusCode;
+                status = attendanceStatuses.find(s =>
+                    s.status_name?.toUpperCase().includes(searchLabel) ||
+                    s.status_code?.toUpperCase().includes(searchLabel)
+                );
+            }
+
+            console.log(`DEBUG: Mapping status code ${statusCode} to ID:`, status?.status_id);
             return status?.status_id || null;
         };
 
@@ -850,6 +900,9 @@ export default function TabularView() {
     };
 
     const activeStudent = students.find(s => s.id === activePopup);
+
+    console.log("DEBUG: TabularView Rendering - Current Filters:", filters);
+    console.log("DEBUG: TabularView Rendering - Available TimeSlots:", timeSlots);
 
     return (
         <div className="bg-white rounded-lg shadow-sm overflow-hidden border border-gray-200 relative min-h-[400px]">

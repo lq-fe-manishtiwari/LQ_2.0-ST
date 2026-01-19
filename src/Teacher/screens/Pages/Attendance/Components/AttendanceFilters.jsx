@@ -7,6 +7,7 @@ const CustomSelect = ({ label, value, onChange, options, placeholder, disabled =
   const dropdownRef = useRef(null);
 
   const handleSelect = (selectedValue) => {
+    console.log(`DEBUG: CustomSelect handleSelect - Label: ${label}, Value: ${selectedValue}`);
     onChange({ target: { value: selectedValue } });
     setIsOpen(false);
   };
@@ -138,8 +139,10 @@ const AttendanceFilters = ({
   };
 
   const handleFilterChange = (field, value) => {
+    console.log(`DEBUG: AttendanceFilters handleFilterChange - Field: ${field}, Value: ${value}`);
     if (onFilterChange) {
       const newFilters = { ...filters, [field]: value };
+      console.log("DEBUG: AttendanceFilters calling onFilterChange with:", newFilters);
 
       // Reset subsequent filters
       if (field === 'program') {
@@ -294,12 +297,22 @@ const AttendanceFilters = ({
                 label="Time Slot"
                 value={filters.timeSlot}
                 onChange={(e) => handleFilterChange('timeSlot', e.target.value)}
-                options={timeSlots.map(slot => ({
-                  value:
-                    slot.timetable_id?.toString() ||
-                    slot.time_slot_id?.toString(),
-                  name: `${slot.start_time?.slice(0, 5)} - ${slot.end_time?.slice(0, 5)}`
-                }))}
+                options={(() => {
+                  const map = new Map();
+                  timeSlots.forEach(slot => {
+                    // Use time_slot_id as the primary unique key
+                    const val = slot.time_slot_id?.toString();
+                    if (val && !map.has(val)) {
+                      map.set(val, {
+                        value: val,
+                        name: `${slot.start_time?.slice(0, 5)} - ${slot.end_time?.slice(0, 5)} (${slot.slot_name || ''})`
+                      });
+                    }
+                  });
+                  const options = Array.from(map.values());
+                  console.log("DEBUG: AttendanceFilters generated TimeSlot options:", options);
+                  return options;
+                })()}
                 placeholder="Select Time Slot"
                 disabled={disabled || !filters.paper || loadingTimeSlots}
                 loading={loadingTimeSlots}
