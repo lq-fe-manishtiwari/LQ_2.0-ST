@@ -10,6 +10,7 @@ export const TeacherAttendanceManagement = {
     saveQRCodeSession,
     getQRCodeSession,
     getSessionAttendanceCount,
+    getAttendanceBySubject
 };
 
 // Upload file to S3
@@ -205,5 +206,24 @@ function getSessionAttendanceCount(params) {
         .catch(error => ({
             success: false,
             message: error.message || 'Failed to fetch attendance count'
+        }));
+}
+
+function getAttendanceBySubject(payload) {
+    const requestOptions = {
+        method: 'POST',
+        headers: authHeaderToPost(),
+        body: JSON.stringify(payload),
+    };
+
+    return fetch(`${TimetableAPI}/admin/academic/attendance/list-attendance-by-subject`, requestOptions)
+        .then(handlePostResponse)
+        .then(data => ({
+            success: true,
+            data: data
+        }))
+        .catch(error => ({
+            success: false,
+            message: error.message || 'Failed to fetch attendance by subject'
         }));
 }

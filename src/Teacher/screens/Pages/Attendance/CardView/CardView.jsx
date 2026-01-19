@@ -33,15 +33,6 @@ export default function CardView() {
     // State for student attendance data
     const [students, setStudents] = useState([]);
 
-    // State for tracking which cell is being edited
-    const [editingCell, setEditingCell] = useState(null);
-
-    // State to track if changes have been made
-    const [hasChanges, setHasChanges] = useState(false);
-
-    // Years array (last 5 years and next 2 years)
-    const years = Array.from({ length: 8 }, (_, i) => new Date().getFullYear() - 5 + i);
-
     // Months array
     const months = [
         { value: 1, label: 'January' },
@@ -163,9 +154,6 @@ export default function CardView() {
     // Filter handlers
     const handleFilterChange = (newFilters) => {
         setFilters(newFilters);
-        // Reset changes when filters change
-        setHasChanges(false);
-        setEditingCell(null);
     };
 
     const toggleFilters = () => {
@@ -185,7 +173,6 @@ export default function CardView() {
 
     const applyFilters = () => {
         setShowFilters(false);
-        // Refresh data based on new filters
         loadStudentsData();
     };
 
@@ -194,7 +181,6 @@ export default function CardView() {
         return new Date(year, month, 0).getDate();
     };
 
-    // Update days when month/year changes
     const days = Array.from({ length: getDaysInMonth(selectedYear, selectedMonth) }, (_, i) => i + 1);
 
     // Load students data from API based on filters
@@ -205,37 +191,74 @@ export default function CardView() {
         }
 
         try {
-            const params = {
-                academicYearId: filters.academicYear,
-                semesterId: filters.semester,
-                divisionId: filters.division,
-                subjectId: filters.paper
+            const year = selectedYear;
+            const month = selectedMonth;
+            const firstDay = new Date(year, month - 1, 1);
+            const lastDay = new Date(year, month, 0);
+
+            const formatDate = (date) => {
+                const y = date.getFullYear();
+                const m = String(date.getMonth() + 1).padStart(2, '0');
+                const d = String(date.getDate()).padStart(2, '0');
+                return `${y}-${m}-${d}`;
             };
 
-            const response = await TeacherAttendanceManagement.getAttendanceStudents(params);
+            const startDateStr = formatDate(firstDay);
+            const endDateStr = formatDate(lastDay);
 
-            if (response && response.data && response.data.length > 0) {
-                const formattedStudents = response.data.map((s, index) => {
-                    const fullName = [s.firstname, s.middlename, s.lastname].filter(Boolean).join(' ');
+            const currentAlloc = allocations.find(a =>
+                a.academic_year_id == filters.academicYear &&
+                a.semester_id == filters.semester &&
+                a.division_id == filters.division &&
+                a.subjects?.some(s => s.subject_id == filters.paper)
+            );
 
-                    // Initialize attendance for all days in month
-                    const attendance = {};
-                    days.forEach(day => {
-                        attendance[day] = 'A'; // Default to Absent
-                    });
+            const payload = {
+                academic_year_id: parseInt(filters.academicYear),
+                semester_id: parseInt(filters.semester),
+                division_id: parseInt(filters.division),
+                subject_id: parseInt(filters.paper),
+                start_date: startDateStr,
+                end_date: endDateStr,
+                timetable_allocation_id: currentAlloc?.timetable_allocation_id || null,
+                timetable_id: currentAlloc?.timetable_id || null
+            };
 
-                    // Calculate totals
-                    const totalPresent = Object.values(attendance).filter(status => status === 'P').length;
-                    const totalAbsent = Object.values(attendance).filter(status => status === 'A').length;
+            const response = await TeacherAttendanceManagement.getAttendanceBySubject(payload);
 
+            if (response && response.success && response.data) {
+                const studentMap = {};
+
+                response.data.forEach(record => {
+                    const studentId = record.student_id;
+                    if (!studentMap[studentId]) {
+                        const sDetails = record.student_details || {};
+                        studentMap[studentId] = {
+                            id: studentId,
+                            rollNo: sDetails.roll_number || 'N/A',
+                            name: [sDetails.firstname, sDetails.middlename, sDetails.lastname].filter(Boolean).join(' '),
+                            attendance: {},
+                        };
+                        days.forEach(d => {
+                            studentMap[studentId].attendance[d] = '';
+                        });
+                    }
+
+                    const dateObj = new Date(record.date);
+                    const day = dateObj.getDate();
+
+                    if (studentMap[studentId].attendance.hasOwnProperty(day)) {
+                        studentMap[studentId].attendance[day] = record.status?.status_code || '';
+                    }
+                });
+
+                const formattedStudents = Object.values(studentMap).map((student, index) => {
+                    const attendanceValues = Object.values(student.attendance);
                     return {
-                        id: s.student_id,
+                        ...student,
                         srNo: String(index + 1).padStart(2, '0'),
-                        rollNo: s.roll_number || 'N/A',
-                        name: fullName,
-                        attendance,
-                        totalPresent,
-                        totalAbsent
+                        totalPresent: attendanceValues.filter(v => v === 'P').length,
+                        totalAbsent: attendanceValues.filter(v => v === 'A').length
                     };
                 });
 
@@ -244,33 +267,16 @@ export default function CardView() {
                 setStudents([]);
             }
         } catch (error) {
-            console.error("Error fetching students:", error);
+            console.error("Error fetching attendance data:", error);
             setStudents([]);
         }
     };
 
-    // Fetch students when filters or month/year changes
     useEffect(() => {
         loadStudentsData();
     }, [selectedYear, selectedMonth, filters, allocations]);
 
-    // Handle click outside dropdown
-    useEffect(() => {
-        const handleClickOutside = (event) => {
-            if (!event.target.closest('.attendance-cell') && !event.target.closest('.attendance-dropdown')) {
-                setEditingCell(null);
-            }
-        };
-
-        document.addEventListener('mousedown', handleClickOutside);
-        return () => {
-            document.removeEventListener('mousedown', handleClickOutside);
-        };
-    }, []);
-
-    // Map API statuses to dropdown format with dynamic colors
     const hexToTextColor = (hexColor) => {
-        // Simple mapping - you can expand this based on your color palette
         const colorMap = {
             '#00FF00': 'text-green-600',
             '#de2b2b': 'text-red-600',
@@ -278,6 +284,7 @@ export default function CardView() {
             '#79bdcd': 'text-blue-600',
             '#c4c73d': 'text-yellow-600',
             '#c170c7': 'text-purple-600',
+            '#4cb84c': 'text-green-600',
         };
         return colorMap[hexColor] || 'text-gray-600';
     };
@@ -294,76 +301,19 @@ export default function CardView() {
         return statusObj?.textColor || 'text-gray-400';
     };
 
-    // Function to get month name
     const getMonthName = (monthNumber) => {
         return months.find(m => m.value === monthNumber)?.label || '';
     };
 
-    // Handle attendance change
-    const handleAttendanceChange = (studentId, day, newStatus) => {
-        setStudents(prevStudents => {
-            const updatedStudents = prevStudents.map(student => {
-                if (student.id === studentId) {
-                    const updatedAttendance = {
-                        ...student.attendance,
-                        [day]: newStatus
-                    };
-
-                    // Calculate totals
-                    const totalPresent = Object.values(updatedAttendance).filter(status => status === 'P').length;
-                    const totalAbsent = Object.values(updatedAttendance).filter(status => status === 'A').length;
-
-                    return {
-                        ...student,
-                        attendance: updatedAttendance,
-                        totalPresent,
-                        totalAbsent
-                    };
-                }
-                return student;
-            });
-
-            return updatedStudents;
-        });
-
-        setHasChanges(true);
-        setEditingCell(null);
-    };
-
-    // Handle cell click
-    const handleCellClick = (studentId, day, event) => {
-        if (editingCell && editingCell.studentId === studentId && editingCell.day === day) {
-            setEditingCell(null);
-        } else {
-            setEditingCell({ studentId, day });
-        }
-    };
-
-    // Handle submit
-    const handleSubmit = () => {
-        console.log('Submitting attendance data:', students);
-        // Here you would typically send data to API
-        alert('Attendance submitted successfully!');
-        setHasChanges(false);
-    };
-
-    // Effect to refetch data when filter changes
-    useEffect(() => {
-        loadStudentsData();
-    }, [selectedYear, selectedMonth]);
-
     return (
         <div className="min-h-screen bg-gray-50 md:p-6">
-            {/* Main Header */}
-            <div className="bg-white  md:p-6 rounded-xl shadow-sm border border-gray-200 mb-6">
-                <div className="space-y-1 mb-6">
+            <div className="bg-white md:p-6 rounded-xl shadow-sm border border-gray-200 mb-6">
+                <div className="mb-6">
                     <h3 className="text-xl md:text-2xl font-bold text-gray-800">
                         Student Attendance - {getMonthName(selectedMonth)} {selectedYear}
                     </h3>
-                    <p className="text-sm text-gray-600">Click on any attendance cell to update status</p>
                 </div>
 
-                {/* Academic Filters */}
                 <AttendanceFilters
                     filters={filters}
                     onFilterChange={handleFilterChange}
@@ -376,10 +326,8 @@ export default function CardView() {
                     compact={true}
                 />
 
-                {/* Month/Year Selector and Submit Button */}
                 <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6 mt-6">
                     <div className="flex flex-col sm:flex-row gap-3">
-                        {/* Month-Year Picker */}
                         <div className="w-full sm:w-64">
                             <label className="block text-sm font-medium text-gray-700 mb-1">
                                 Select Month & Year
@@ -396,32 +344,8 @@ export default function CardView() {
                             />
                         </div>
                     </div>
-
-                    {/* Submit Button */}
-                    <div className="mt-2 lg:mt-0">
-                        <button
-                            onClick={handleSubmit}
-                            disabled={!hasChanges}
-                            className={`px-6 py-3 rounded-lg font-medium transition-all duration-200 flex items-center gap-2 ${hasChanges
-                                ? 'bg-blue-600 text-white hover:bg-blue-700 cursor-pointer shadow-md hover:shadow-lg'
-                                : 'bg-gray-100 text-gray-500 cursor-not-allowed'
-                                }`}
-                        >
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
-                            </svg>
-                            Submit Attendance
-                        </button>
-                        {hasChanges && (
-                            <p className="text-xs text-amber-600 mt-1 font-medium">
-                                ⚠ You have unsaved changes
-                            </p>
-                        )}
-                    </div>
                 </div>
 
-
-                {/* Legend - Dynamic from API */}
                 <div className="mt-6 grid grid-cols-2 sm:grid-cols-4 gap-3">
                     {attendanceOptions.map(option => (
                         <div key={option.value} className="flex items-center gap-2 p-2 bg-gray-50 rounded-lg border border-gray-200">
@@ -435,224 +359,89 @@ export default function CardView() {
                         </div>
                     ))}
                 </div>
-            </div >
+            </div>
 
-            {/* Table Container */}
-            < div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden" >
-                {/* Header showing active filters */}
-                {
-                    (filters.program || filters.batch || filters.academicYear || filters.semester || filters.division || filters.paper) && (
-                        <div className="bg-blue-50 border-b border-blue-200 px-4 py-3">
-                            <div className="flex flex-wrap items-center gap-2">
-                                <span className="text-sm font-medium text-blue-800">Active Filters:</span>
-                                {filters.program && (
-                                    <span className="inline-flex items-center gap-1 px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-xs">
-                                        Program: {allocations.find(a => a.program?.program_id == filters.program)?.program?.program_name || filters.program}
-                                    </span>
-                                )}
-                                {filters.batch && (
-                                    <span className="inline-flex items-center gap-1 px-3 py-1 bg-green-100 text-green-800 rounded-full text-xs">
-                                        Batch: {allocations.find(a => a.batch?.batch_id == filters.batch)?.batch?.batch_name || filters.batch}
-                                    </span>
-                                )}
-                                {filters.academicYear && (
-                                    <span className="inline-flex items-center gap-1 px-3 py-1 bg-purple-100 text-purple-800 rounded-full text-xs">
-                                        Academic Year: {allocations.find(a => a.academic_year_id == filters.academicYear)?.academic_year?.name || filters.academicYear}
-                                    </span>
-                                )}
-                                {filters.semester && (
-                                    <span className="inline-flex items-center gap-1 px-3 py-1 bg-yellow-100 text-yellow-800 rounded-full text-xs">
-                                        Semester: {allocations.find(a => a.semester_id == filters.semester)?.semester?.name || filters.semester}
-                                    </span>
-                                )}
-                                {filters.division && (
-                                    <span className="inline-flex items-center gap-1 px-3 py-1 bg-red-100 text-red-800 rounded-full text-xs">
-                                        Division: {allocations.find(a => a.division_id == filters.division)?.division?.division_name || filters.division}
-                                    </span>
-                                )}
-                                {filters.paper && (
-                                    <span className="inline-flex items-center gap-1 px-3 py-1 bg-indigo-100 text-indigo-800 rounded-full text-xs">
-                                        Paper: {(() => {
-                                            const allocation = allocations.find(a =>
-                                                a.subjects?.some(s => s.subject_id == filters.paper)
-                                            );
-                                            if (allocation) {
-                                                const subject = allocation.subjects.find(s => s.subject_id == filters.paper);
-                                                return subject?.name || filters.paper;
-                                            }
-                                            return filters.paper;
-                                        })()}
-                                    </span>
-                                )}
-                            </div>
-                        </div>
-                    )
-                }
-
-                {/* Horizontal scroll container */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
                 <div className="overflow-x-auto relative">
-                    <div className="min-w-[800px] sm:min-w-[1000px] lg:min-w-[1200px] xl:min-w-[1400px]">
+                    <div className="min-w-[1000px]">
                         <table className="w-full">
-                            <thead className="table-header">
-                                <tr>
-                                    <th className="table-th text-center sticky left-0 z-30 bg-gray-50">
+                            <thead>
+                                <tr className="bg-gray-50 border-b border-gray-200">
+                                    <th className="px-3 py-3 text-center bg-gray-50 border-r border-gray-200 text-xs font-semibold text-gray-600 uppercase tracking-wider">
                                         Sr No
                                     </th>
-                                    <th className="table-th text-center sticky left-[60px] z-30 bg-gray-50">
+                                    <th className="px-3 py-3 text-center bg-gray-50 border-r border-gray-200 text-xs font-semibold text-gray-600 uppercase tracking-wider">
                                         Roll No.
                                     </th>
-                                    <th className="table-th text-left sticky left-[140px] z-30 bg-gray-50">
+                                    <th className="px-4 py-3 text-left bg-gray-50 border-r border-gray-200 text-xs font-semibold text-gray-600 uppercase tracking-wider">
                                         Student Name
                                     </th>
                                     {days.map(day => (
-                                        <th key={day} className="table-th text-center">
+                                        <th key={day} className="px-2 py-3 text-center border-r border-gray-200 text-xs font-semibold text-gray-600">
                                             {day}
                                         </th>
                                     ))}
-                                    <th className="table-th text-center bg-green-50">
-                                        <div className="flex flex-col items-center">
-                                            <span>Total</span>
-                                            <span className="text-xs opacity-90">Present</span>
-                                        </div>
+                                    <th className="px-3 py-3 text-center bg-green-50 border-r border-gray-200 text-xs font-semibold text-green-700">
+                                        Present
                                     </th>
-                                    <th className="table-th text-center bg-red-50">
-                                        <div className="flex flex-col items-center">
-                                            <span>Total</span>
-                                            <span className="text-xs opacity-90">Absent</span>
-                                        </div>
+                                    <th className="px-3 py-3 text-center bg-red-50 text-xs font-semibold text-red-700">
+                                        Absent
                                     </th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-100">
-                                {students.map((student, index) => (
-                                    <tr key={student.id} className="hover:bg-gray-50/80 transition-colors">
-                                        <td className="py-3 border-r border-gray-200 text-gray-600 font-medium sticky left-0 z-20 bg-white hover:bg-gray-50">
-                                            <div className="flex items-center justify-center">
-                                                <span className="w-6 h-6 flex items-center justify-center bg-gray-100 rounded-full text-sm">
-                                                    {student.srNo}
-                                                </span>
-                                            </div>
+                                {students.map((student) => (
+                                    <tr key={student.id} className="hover:bg-gray-50/50 transition-colors">
+                                        <td className="px-3 py-3 border-r border-gray-200 text-center bg-white">
+                                            {student.srNo}
                                         </td>
-                                        <td className="py-3 border-r border-gray-200 text-gray-700 font-medium sticky left-[60px] z-20 bg-white hover:bg-gray-50 text-center">
+                                        <td className="px-3 py-3 border-r border-gray-200 text-center bg-white">
                                             {student.rollNo}
                                         </td>
-                                        <td className="py-3 px-4 border-r border-gray-200 text-left font-semibold text-gray-800 sticky left-[140px] z-20 bg-white hover:bg-gray-50 truncate max-w-[200px]">
-                                            <div className="flex items-center gap-2">
-                                                <span>{student.name}</span>
-                                            </div>
+                                        <td className="px-4 py-3 border-r border-gray-200 text-left bg-white font-medium">
+                                            {student.name}
                                         </td>
-
-                                        {/* Attendance days */}
                                         {days.map(day => (
-                                            <td key={day} className="py-2 border-r border-gray-100 p-1 relative">
-                                                <div
-                                                    onClick={(e) => handleCellClick(student.id, day, e)}
-                                                    className={`attendance-cell flex items-center justify-center w-8 h-8 md:w-9 md:h-9 mx-auto cursor-pointer transition-all duration-200 hover:scale-105 hover:shadow-md ${getStatusStyle(student.attendance[day])
-                                                        } ${editingCell && editingCell.studentId === student.id && editingCell.day === day
-                                                            ? 'ring-1 ring-blue-500 ring-offset-1 z-30'
-                                                            : ''
-                                                        }`}
-                                                >
-                                                    <span className="font-bold text-sm">
-                                                        {student.attendance[day] || ''}
-                                                    </span>
-                                                </div>
-
-                                                {/* Dropdown directly in the cell */}
-                                                {editingCell && editingCell.studentId === student.id && editingCell.day === day && (
-                                                    <div
-                                                        className="attendance-dropdown absolute left-1/2 transform -translate-x-1/2 mt-1 z-40 bg-white border border-gray-200 rounded-lg shadow-xl p-3 min-w-[180px]"
-                                                        style={{ top: '100%' }}
-                                                    >
-                                                        <div className="space-y-2">
-                                                            {attendanceOptions.map(option => (
-                                                                <button
-                                                                    key={option.value}
-                                                                    onClick={() => handleAttendanceChange(student.id, day, option.value)}
-                                                                    className={`w-full ${option.textColor} px-4 py-3 rounded-lg cursor-pointer transition-all duration-150 hover:scale-[1.02] hover:shadow-sm flex items-center justify-between group border`}
-                                                                >
-                                                                    <span className={`font-bold text-base ${option.textColor}`}>
-                                                                        {option.value}
-                                                                    </span>
-                                                                    <span className="text-sm text-gray-600">{option.label}</span>
-                                                                </button>
-                                                            ))}
-                                                        </div>
-                                                    </div>
-                                                )}
+                                            <td key={day} className={`px-2 py-3 text-center border-r border-gray-200 font-bold ${getStatusStyle(student.attendance[day])}`}>
+                                                {student.attendance[day]}
                                             </td>
                                         ))}
-
-                                        {/* Total Present */}
-                                        <td className="py-3 bg-green-50">
-                                            <div className="flex items-center justify-center">
-                                                <span className="font-bold text-green-700 bg-green-100 px-3 py-1.5 rounded-lg border border-green-200">
-                                                    {student.totalPresent}
-                                                </span>
-                                            </div>
+                                        <td className="px-3 py-3 text-center bg-green-50/30 border-r border-gray-200 font-bold text-green-700">
+                                            {student.totalPresent}
                                         </td>
-
-                                        {/* Total Absent */}
-                                        <td className="py-3 bg-red-50">
-                                            <div className="flex items-center justify-center">
-                                                <span className="font-bold text-red-700 bg-red-100 px-3 py-1.5 rounded-lg border border-red-200">
-                                                    {student.totalAbsent}
-                                                </span>
-                                            </div>
+                                        <td className="px-3 py-3 text-center bg-red-50/30 font-bold text-red-700">
+                                            {student.totalAbsent}
                                         </td>
                                     </tr>
                                 ))}
 
                                 {/* Daily Present Count Row */}
                                 {students.length > 0 && (
-                                    <tr className="bg-blue-50 border-t-2 border-blue-200">
-                                        <td colSpan="3" className="py-3 px-4 font-bold text-gray-800 sticky left-0 z-20 bg-blue-50">
+                                    <tr className="bg-blue-50/50 font-bold border-t-2 border-blue-100">
+                                        <td colSpan="3" className="px-4 py-3 text-blue-800 text-sm">
                                             Daily Present Count
                                         </td>
                                         {days.map(day => {
                                             const presentCount = students.filter(s => s.attendance[day] === 'P').length;
                                             return (
-                                                <td key={day} className="py-3 text-center">
-                                                    <span className="font-bold text-blue-700 bg-blue-100 px-2 py-1 rounded">
-                                                        {presentCount}
-                                                    </span>
+                                                <td key={day} className="px-2 py-3 text-center border-r border-gray-200 text-blue-700">
+                                                    {presentCount > 0 ? presentCount : '-'}
                                                 </td>
                                             );
                                         })}
-                                        <td colSpan="2" className="py-3"></td>
+                                        <td colSpan="2" className="bg-blue-50/50"></td>
                                     </tr>
                                 )}
                             </tbody>
                         </table>
                     </div>
                 </div>
-
-                {/* Table Footer */}
                 <div className="bg-gray-50 border-t border-gray-200 px-4 py-3">
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between text-sm text-gray-600">
-                        <div>
-                            Showing <span className="font-semibold">{students.length}</span> students
-                            {(filters.program || filters.batch || filters.division) && (
-                                <span className="ml-2 text-blue-600">
-                                    • Filtered
-                                </span>
-                            )}
-                        </div>
-                        <div className="mt-2 sm:mt-0">
-                            <div className="flex items-center gap-4">
-                                <div className="flex items-center gap-2">
-                                    <div className="w-2 h-2 bg-gray-300 rounded-full"></div>
-                                    <span>Click cell to edit</span>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                    <div className="w-2 h-2 bg-blue-300 rounded-full"></div>
-                                    <span>Editing mode</span>
-                                </div>
-                            </div>
-                        </div>
+                    <div className="text-sm text-gray-600">
+                        Showing <span className="font-semibold">{students.length}</span> students
                     </div>
                 </div>
-            </div >
-        </div >
+            </div>
+        </div>
     );
 }
