@@ -452,11 +452,11 @@ export default function TabularView() {
                 try {
                     let selectedTimeSlot;
 
-                    // If coming from timetable with manual time slot
-                    if (fromTimetable && timeSlots.length > 0 && timeSlots[0]?.fromTimetable) {
+                    // If coming from timetable with manual time slot and it hasn't been changed
+                    if (fromTimetable && filtersSetFromTimetable && timeSlots.length > 0 && timeSlots[0]?.fromTimetable) {
                         selectedTimeSlot = timeSlots[0];
                     } else {
-                        // Find in fetched time slots
+                        // Find in fetched time slots or manual slots based on current filter
                         selectedTimeSlot = timeSlots.find(slot =>
                             (slot.timetable_id?.toString() || slot.time_slot_id?.toString()) === filters.timeSlot
                         );
@@ -474,6 +474,8 @@ export default function TabularView() {
                         timetable_id: selectedTimeSlot.timetable_id,
                         date: selectedDate
                     };
+
+                    setLoadingStudents(true);
 
                     const response = await TeacherAttendanceManagement.getAttendanceList(payload);
 
@@ -494,11 +496,20 @@ export default function TabularView() {
                                 return student;
                             })
                         );
+                    } else {
+                        // No attendance data for this slot, reset all to 'P'
+                        setStudents(prevStudents =>
+                            prevStudents.map(student => ({
+                                ...student,
+                                status: 'P'
+                            }))
+                        );
                     }
-                    // If no attendance data, keep default 'P' status
                 } catch (error) {
                     console.error("Error fetching existing attendance:", error);
                     // Keep default statuses on error
+                } finally {
+                    setLoadingStudents(false);
                 }
             }
         };
@@ -1009,7 +1020,7 @@ export default function TabularView() {
                         </p>
                     </div>
                 ) : filteredStudents.length > 0 ? (
-                    <>
+                    <div className="attendance-content-wrapper">
                         <div className="bg-white px-6 py-4 border-b border-gray-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                             <div className="flex items-center gap-6">
                                 <div className="flex items-center gap-2">
@@ -1217,7 +1228,7 @@ export default function TabularView() {
                                 </tbody>
                             </table>
                         </div>
-                    </>
+                    </div>
                 ) : null}
             </div>
 

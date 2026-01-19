@@ -29,7 +29,7 @@ const CustomSelect = ({ label, value, onChange, options, placeholder, disabled =
         onClick={() => !disabled && !loading && setIsOpen(!isOpen)}
       >
         <span className={`${value ? 'text-gray-900' : 'text-gray-400'} truncate`}>
-          {loading ? "Loading..." : (value ? options.find(o => o.value == value)?.name || placeholder : placeholder)}
+          {loading ? "Loading..." : (value ? (Array.isArray(options) ? options.find(o => o.value == value)?.name : null) || placeholder : placeholder)}
         </span>
         <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${isOpen ? 'rotate-180' : 'rotate-0'}`} />
       </div>
@@ -41,7 +41,7 @@ const CustomSelect = ({ label, value, onChange, options, placeholder, disabled =
           >
             {placeholder}
           </div>
-          {options.map(option => (
+          {Array.isArray(options) && options.map(option => (
             <div
               key={option.value}
               className="px-4 py-2 text-sm text-gray-700 cursor-pointer hover:bg-blue-50 transition-colors truncate"
@@ -280,7 +280,7 @@ const AttendanceFilters = ({
                 label="Paper"
                 value={filters.paper}
                 onChange={(e) => handleFilterChange('paper', e.target.value)}
-                options={paperOptions}
+                options={paperOptions()}
                 placeholder="Select Paper"
                 disabled={disabled}
               />
