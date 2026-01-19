@@ -9,6 +9,7 @@ export const TeacherAttendanceManagement = {
     getAttendanceList,
     saveQRCodeSession,
     getQRCodeSession,
+    getSessionAttendanceCount,
 };
 
 // Upload file to S3
@@ -181,5 +182,28 @@ function getQRCodeSession(params) {
         .catch(error => ({
             success: false,
             message: error.message || 'Failed to fetch QR session'
+        }));
+}
+
+// Get session attendance count (REST API polling instead of WebSocket)
+function getSessionAttendanceCount(params) {
+    const { academicYearId, semesterId, divisionId, subjectId, timetableId, timetableAllocationId, date, timeSlotId } = params;
+
+    const queryString = `academicYearId=${academicYearId}&semesterId=${semesterId}&divisionId=${divisionId}&subjectId=${subjectId}&timetableId=${timetableId}&timetableAllocationId=${timetableAllocationId}&date=${date}&timeSlotId=${timeSlotId}`;
+
+    const requestOptions = {
+        method: 'GET',
+        headers: authHeader(),
+    };
+
+    return fetch(`${TimetableAPI}/admin/academic/attendance/session-count?${queryString}`, requestOptions)
+        .then(handleResponse)
+        .then(data => ({
+            success: true,
+            data: data
+        }))
+        .catch(error => ({
+            success: false,
+            message: error.message || 'Failed to fetch attendance count'
         }));
 }
