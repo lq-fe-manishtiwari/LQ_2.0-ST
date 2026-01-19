@@ -62,9 +62,10 @@ const QRAttendanceDashboard = () => {
     const [existingQRSession, setExistingQRSession] = useState(null);
     const [loadingExistingQR, setLoadingExistingQR] = useState(false);
 
-    // WebSocket states
+    // REST API polling states (replaced WebSocket)
     const [liveCount, setLiveCount] = useState(0);
-    const [wsConnected, setWsConnected] = useState(false);
+    const [isRefreshing, setIsRefreshing] = useState(false);
+    const [lastRefreshTime, setLastRefreshTime] = useState(null);
     // Auto-select from slot data
     const [autoSelectCompleted, setAutoSelectCompleted] = useState(false);
 
@@ -397,98 +398,119 @@ const QRAttendanceDashboard = () => {
         }
     }, [filters.academicYear, filters.semester, filters.division, filters.paper, selectedSlot, selectedDate]);
 
-    // WebSocket connection for live attendance updates
+    // REST API polling for live attendance updates (replaced WebSocket)
     useEffect(() => {
         if (sessionActive && qrSession) {
-            console.log('🔌 Initializing WebSocket for live attendance...');
+            console.log('📊 Starting REST API polling for live attendance...');
 
-            const serverUrl = import.meta.env.VITE_API_URL_WebSocket;
+            // Function to fetch attendance count
+            const fetchAttendanceCount = async () => {
+                try {
+                    setIsRefreshing(true);
 
-            // Get auth token from localStorage
-            let authToken = '';
-            try {
-                // Try refreshToken first
-                const refreshTokenData = localStorage.getItem('refreshToken');
-                if (refreshTokenData) {
-                    const parsed = JSON.parse(refreshTokenData);
-                    authToken = parsed.token || parsed.accessToken || parsed;
-                }
+                    const params = {
+                        academicYearId: qrSession.academic_year_id,
+                        semesterId: qrSession.semester_id,
+                        divisionId: qrSession.division_id,
+                        subjectId: qrSession.subject_id,
+                        timetableId: qrSession.timetable_id,
+                        timetableAllocationId: qrSession.timetable_allocation_id,
+                        date: qrSession.date,
+                        timeSlotId: qrSession.time_slot_id
+                    };
 
-                // Fallback to currentUser token
-                if (!authToken) {
-                    const currentUserData = localStorage.getItem('currentUser');
-                    if (currentUserData) {
-                        const parsed = JSON.parse(currentUserData);
-                        authToken = parsed.token || parsed.accessToken || '';
+                    console.log('📡 Fetching attendance count:', params);
+
+                    const response = await TeacherAttendanceManagement.getSessionAttendanceCount(params);
+
+                    if (response.success && response.data) {
+                        console.log('✅ Attendance count received:', response.data);
+
+                        // Update live count from response
+                        const count = response.data.marked || response.data.count || 0;
+                        setLiveCount(count);
+
+                        // Update last refresh time
+                        setLastRefreshTime(new Date());
+
+                        // If response has student list, update attendance records
+                        if (response.data.students && Array.isArray(response.data.students)) {
+                            setAttendanceRecords(response.data.students);
+                        }
+                    } else {
+                        console.warn('⚠️ Failed to fetch attendance count:', response.message);
                     }
+                } catch (error) {
+                    console.error('❌ Error fetching attendance count:', error);
+                } finally {
+                    setIsRefreshing(false);
                 }
-
-                // If still no token, try direct token key
-                if (!authToken) {
-                    authToken = localStorage.getItem('token') || localStorage.getItem('accessToken') || '';
-                }
-            } catch (error) {
-                console.error('❌ Error parsing token from localStorage:', error);
-            }
-
-            if (!authToken) {
-                console.error('❌ No auth token found for WebSocket');
-                return;
-            }
-
-            console.log('🔑 Using auth token for WebSocket:', authToken.substring(0, 20) + '...');
-
-            // Prepare session key
-            const sessionKey = {
-                academic_year_id: qrSession.academic_year_id,
-                semester_id: qrSession.semester_id,
-                division_id: qrSession.division_id,
-                subject_id: qrSession.subject_id,
-                timetable_id: qrSession.timetable_id,
-                timetable_allocation_id: qrSession.timetable_allocation_id,
-                date: qrSession.date,
-                time_slot_id: qrSession.time_slot_id
             };
 
-            let subscriptionId = null;
+            // Initial fetch
+            fetchAttendanceCount();
 
-            // Connect to WebSocket
-            attendanceWebSocket.connect(
-                serverUrl,
-                authToken,
-                (frame) => {
-                    console.log('✅ WebSocket connected for attendance tracking');
-                    setWsConnected(true);
-
-                    // Subscribe AFTER connection is established
-                    console.log('📡 Subscribing with session key:', sessionKey);
-
-                    subscriptionId = attendanceWebSocket.subscribeToSession(sessionKey, (data) => {
-                        console.log('📨 Live attendance update received:', data);
-                        console.log('📊 Current liveCount:', liveCount, '→ New count:', data.marked || 0);
-                        setLiveCount(data.marked || 0);
-                    });
-
-                    console.log('✅ Subscription ID:', subscriptionId);
-                },
-                (error) => {
-                    console.error('❌ WebSocket connection error:', error);
-                    setWsConnected(false);
-                }
-            );
+            // Set up polling interval (2 minutes = 120000ms)
+            const pollingInterval = setInterval(() => {
+                console.log('🔄 Auto-refreshing attendance count...');
+                fetchAttendanceCount();
+            }, 120000); // 2 minutes
 
             // Cleanup on unmount or session end
             return () => {
-                console.log('🔌 Cleaning up WebSocket connection');
-                if (subscriptionId) {
-                    attendanceWebSocket.unsubscribe(subscriptionId);
-                }
-                attendanceWebSocket.disconnect();
-                setWsConnected(false);
+                console.log('🛑 Stopping attendance count polling');
+                clearInterval(pollingInterval);
                 setLiveCount(0);
+                setLastRefreshTime(null);
             };
         }
     }, [sessionActive, qrSession]);
+
+    // Manual refresh function
+    const refreshAttendanceCount = async () => {
+        if (!sessionActive || !qrSession) {
+            setErrorAlert('No active session to refresh');
+            return;
+        }
+
+        try {
+            setIsRefreshing(true);
+
+            const params = {
+                academicYearId: qrSession.academic_year_id,
+                semesterId: qrSession.semester_id,
+                divisionId: qrSession.division_id,
+                subjectId: qrSession.subject_id,
+                timetableId: qrSession.timetable_id,
+                timetableAllocationId: qrSession.timetable_allocation_id,
+                date: qrSession.date,
+                timeSlotId: qrSession.time_slot_id
+            };
+
+            console.log('🔄 Manual refresh - Fetching attendance count:', params);
+
+            const response = await TeacherAttendanceManagement.getSessionAttendanceCount(params);
+
+            if (response.success && response.data) {
+                const count = response.data.marked || response.data.count || 0;
+                setLiveCount(count);
+                setLastRefreshTime(new Date());
+
+                if (response.data.students && Array.isArray(response.data.students)) {
+                    setAttendanceRecords(response.data.students);
+                }
+
+                setSuccessAlert(`Refreshed! ${count} students marked attendance`);
+            } else {
+                setErrorAlert(response.message || 'Failed to refresh attendance count');
+            }
+        } catch (error) {
+            console.error('❌ Error refreshing attendance:', error);
+            setErrorAlert('Failed to refresh attendance count');
+        } finally {
+            setIsRefreshing(false);
+        }
+    };
 
     // Generate QR Session
     const generateQRSession = async () => {
@@ -1041,22 +1063,41 @@ const QRAttendanceDashboard = () => {
                     <div className="space-y-4">
                         {/* Stats */}
                         <div className="grid grid-cols-2 gap-4">
-                            {/* Live Count Card */}
-                            <div className={`rounded-xl p-4 shadow-sm border ${wsConnected ? 'bg-blue-50 border-blue-200' : 'bg-gray-50 border-gray-200'}`}>
-                                <div className="flex items-center justify-between">
-                                    <div>
+                            {/* Live Count Card with Refresh */}
+                            <div className="rounded-xl p-4 shadow-sm border bg-blue-50 border-blue-200">
+                                <div className="flex flex-col gap-2">
+                                    <div className="flex items-center justify-between">
                                         <div className="flex items-center gap-2">
-                                            <p className="text-xs text-blue-600 uppercase font-semibold">Live Marked</p>
-                                            {wsConnected && (
-                                                <span className="flex items-center gap-1 text-xs text-green-600">
-                                                    <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
-                                                    Live
-                                                </span>
+                                            <p className="text-xs text-blue-600 uppercase font-semibold">Attendance Count</p>
+                                            {isRefreshing && (
+                                                <Loader size={12} className="animate-spin text-blue-600" />
                                             )}
                                         </div>
-                                        <p className="text-3xl font-bold text-blue-700">{liveCount}</p>
+                                        <button
+                                            onClick={refreshAttendanceCount}
+                                            disabled={isRefreshing || !sessionActive}
+                                            className="p-1.5 rounded-full hover:bg-blue-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                            title="Refresh attendance count"
+                                        >
+                                            <RefreshCw size={16} className={`text-blue-600 ${isRefreshing ? 'animate-spin' : ''}`} />
+                                        </button>
                                     </div>
-                                    <Users className="w-10 h-10 text-blue-400" />
+
+                                    <div className="flex items-end justify-between">
+                                        <div>
+                                            <p className="text-3xl font-bold text-blue-700">{liveCount}</p>
+                                            {lastRefreshTime && (
+                                                <p className="text-xs text-blue-500 mt-1">
+                                                    Updated: {lastRefreshTime.toLocaleTimeString()}
+                                                </p>
+                                            )}
+                                        </div>
+                                        <Users className="w-10 h-10 text-blue-400" />
+                                    </div>
+
+                                    <div className="text-xs text-blue-600 mt-1">
+                                        Auto-refreshes every 2 minutes
+                                    </div>
                                 </div>
                             </div>
 

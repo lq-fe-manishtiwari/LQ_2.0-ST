@@ -60,7 +60,7 @@ const CustomSelect = ({ label, value, onChange, options, placeholder, disabled =
   );
 };
 
-export default function CreateTask() {
+export default function AddPersonalTask() {
   const navigate = useNavigate();
   const [form, setForm] = useState({
     title: "",
@@ -414,7 +414,7 @@ export default function CreateTask() {
   };
 
   const handleCancel = () => {
-    navigate("/hrm/tasks/professional-tasks");
+    navigate("/teacher/hrm/tasks/personal-tasks");
   };
 
   const getCurrentDateTime = () => {
@@ -445,7 +445,7 @@ export default function CreateTask() {
       <div className="flex items-center justify-between mb-4 sm:mb-6">
         <div className="flex items-center gap-2">
           {/* <Plus className="w-6 h-6 text-[#2162C1]" /> */}
-          <h2 className="pageheading text-lg sm:text-xl md:text-2xl">Add Task</h2>
+          <h2 className="pageheading text-lg sm:text-xl md:text-2xl">Add Personal Task</h2>
         </div>
         <button
           className="bg-blue-600 hover:bg-blue-700 text-white w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center rounded-full shadow-md transition-all"
@@ -618,7 +618,7 @@ export default function CreateTask() {
       {/* Success Alert */}
       {showSuccessAlert && (
         <SweetAlert success title="Success!" confirmBtnCssClass="btn-confirm"
-          cancelBtnCssClass="btn-cancel" onConfirm={() => { setShowSuccessAlert(false); navigate("/hrm/tasks/professional-tasks"); }}
+          cancelBtnCssClass="btn-cancel" onConfirm={() => { setShowSuccessAlert(false); navigate("/teacher/hrm/tasks/personal-tasks"); }}
           confirmBtnText="Go to Tasks" showCancel={true} cancelBtnText="Create Another"
           onCancel={() => {
             setShowSuccessAlert(false);

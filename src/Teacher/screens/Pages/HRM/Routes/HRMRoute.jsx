@@ -39,6 +39,10 @@ import MyTaskEdit from "../Task/MyTasks/MyEditTask";
 import TaskView from "../Task/TaskAssignment/TaskView";
 import CreateTask from "../Task/MyTasks/CreateNewTasks";
 import TimeSheetDashboard from "../Task/Timesheet/Timesheet";
+import PersonalTask from "../Task/PersonalTask/PersonalTask";
+import AddPersonalTask from "../Task/PersonalTask/AddPersonalTask";
+import ViewPersonalTask from "../Task/PersonalTask/ViewPersonalTask";
+import EditPersonalTask from "../Task/PersonalTask/EditPersonalTask";
 
 
 export default function HRMRoutes() {
@@ -72,10 +76,14 @@ export default function HRMRoutes() {
 
       <Route path="tasks" element={<TaskLayout />}>
         <Route index element={<Navigate to="task-assignment" replace />} />
-        <Route path="my-tasks" element={<MyTasks />} />
-        <Route path="my-tasks/add" element={<CreateTask />} />
-        <Route path="my-tasks/view/:id" element={<ViewMyTasks />} />
-        <Route path="my-tasks/edit/:id" element={<MyTaskEdit />} />
+        <Route path="professional-tasks" element={<MyTasks />} />
+        <Route path="professional-tasks/add" element={<CreateTask />} />
+        <Route path="professional-tasks/view/:id" element={<ViewMyTasks />} />
+        <Route path="professional-tasks/edit/:id" element={<MyTaskEdit />} />
+        <Route path="personal-tasks" element={<PersonalTask />} />
+        <Route path="personal-tasks/add" element={<AddPersonalTask />} />
+        <Route path="personal-tasks/view/:id" element={<ViewPersonalTask />} />
+        <Route path="personal-tasks/edit/:id" element={<EditPersonalTask />} />
         <Route path="task-assignment" element={<TaskAssignment />} />
         <Route path="task-assignment/create-task" element={<TaskForm />} />
         <Route path="task-assignment/task-view/:id" element={<TaskView />} />
