@@ -3,6 +3,7 @@ import TimeTableLayout from "../TimeTableLayout";
 import MyView from "../MyView";
 import Reports from "../Reports"
 import Dashboard from "../Dashboard"
+import MarkAttendancePage from "../MarkAttendancePage";
 
 export default function TimeTableRoutes() {
   return (

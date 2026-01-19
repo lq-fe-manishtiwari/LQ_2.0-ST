@@ -3,7 +3,7 @@ import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { Eye, X } from "lucide-react";
 import { TaskManagement } from '../../Services/TaskManagement.service';
 
-export default function ViewMyTasks() {
+export default function ViewPersonalTask() {
   const navigate = useNavigate();
   const { id } = useParams();
   const location = useLocation();
@@ -117,12 +117,12 @@ export default function ViewMyTasks() {
         {/* LEFT: ICON + HEADING */}
         <div className="flex items-center gap-2">
           <Eye className="w-6 h-6 text-[#2162C1]" />
-          <h2 className="pageheading text-lg sm:text-xl md:text-2xl">Task Details</h2>
+          <h2 className="pageheading text-lg sm:text-xl md:text-2xl">Personal Task Details</h2>
         </div>
 
         {/* RIGHT: BACK BUTTON */}
         <button
-          onClick={() => navigate("/hrm/tasks/professional-tasks")}
+          onClick={() => navigate("/teacher/hrm/tasks/personal-tasks")}
           className="bg-blue-600 hover:bg-blue-700 text-white w-9 h-9 sm:w-10 sm:h-10 
                      flex items-center justify-center rounded-full shadow-md transition-all"
         >

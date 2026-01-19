@@ -533,7 +533,7 @@ const formatDate = (isoString) => {
 };
 
 // Main component
-export default function MyTasks() {
+export default function PersonalTask() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [mobileTabStart, setMobileTabStart] = useState(0);
@@ -855,16 +855,16 @@ export default function MyTasks() {
   };
 
   const handleView = (task) => {
-    navigate(`/teacher/hrm/tasks/professional-tasks/view/${task.id}`, { state: { taskData: task } });
+    navigate(`/teacher/hrm/tasks/personal-tasks/view/${task.id}`, { state: { taskData: task } });
   };
 
   const handleEdit = (task) => {
     // Find the original task data from the API response
     const originalTask = tasks.find(t => t.id === task.id);
     if (originalTask && originalTask.originalData) {
-      navigate(`/hrm/tasks/professional-tasks/edit/${task.id}`, { state: { taskData: originalTask.originalData } });
+      navigate(`/hrm/tasks/personal-tasks/edit/${task.id}`, { state: { taskData: originalTask.originalData } });
     } else {
-      navigate(`/hrm/tasks/professional-tasks/edit/${task.id}`);
+      navigate(`/hrm/tasks/personal-tasks/edit/${task.id}`);
     }
   };
 
@@ -1083,7 +1083,7 @@ export default function MyTasks() {
           </button>
           {/* Create Task - All screens */}
           <button
-            onClick={() => navigate("/teacher/hrm/tasks/professional-tasks/add")}
+            onClick={() => navigate("/teacher/hrm/tasks/personal-tasks/add")}
             className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-medium px-4 py-2 rounded-md shadow-md transition-all hover:shadow-lg flex-1 sm:flex-none justify-center"
           >
             <Plus className="w-4 h-4" aria-hidden="true" />

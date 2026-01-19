@@ -61,7 +61,7 @@ const CustomSelect = ({ label, value, onChange, options, placeholder, disabled =
   );
 };
 
-export default function MyTaskEdit() {
+export default function EditPersonalTask() {
   const navigate = useNavigate();
   const { id } = useParams();
   const location = useLocation();
@@ -364,7 +364,7 @@ export default function MyTaskEdit() {
   };
 
   const handleCancel = () => {
-    navigate("/hrm/tasks/professional-tasks");
+    navigate("/teacher/hrm/tasks/personal-tasks");
   };
 
   return (
@@ -373,7 +373,7 @@ export default function MyTaskEdit() {
         <div className="flex items-center gap-2">
           {/* <Edit className="w-6 h-6 text-[#2162C1]" /> */}
           <h2 className="pageheading text-lg sm:text-xl md:text-2xl">
-            Edit Task
+            Edit Personal Task
           </h2>
         </div>
 
@@ -590,7 +590,7 @@ export default function MyTaskEdit() {
           title="Success!"
           onConfirm={() => {
             setShowSuccessAlert(false);
-            navigate("/hrm/tasks/professional-tasks");
+            navigate("/teacher/hrm/tasks/personal-tasks");
           }}
           confirmBtnText="OK"
           confirmBtnCssClass="btn-confirm"

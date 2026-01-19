@@ -15,7 +15,8 @@ import {
     Menu,
     Tag,
     Layers,
-    AlertCircle
+    AlertCircle,
+        PartyPopper, 
 } from "lucide-react";
 import { timetableService } from '../Services/timetable.service';
 
@@ -45,6 +46,20 @@ const MyViewDashboard = () => {
     const [showMonthPopup, setShowMonthPopup] = useState(false);
     const [popupDate, setPopupDate] = useState(null);
     const [popupData, setPopupData] = useState([]);
+
+    // Check holiday
+    const getHolidayInfoForDay = (date) => {
+        const dateStr = formatDateToYMD(date);
+        const dayData = timetableData.filter(item => item && item.date === dateStr);
+        
+        if (dayData.length > 0 && dayData[0].is_holiday) {
+            return {
+                isHoliday: true,
+                holidayName: dayData[0].holiday_name || "Holiday"
+            };
+        }
+        return { isHoliday: false, holidayName: null };
+    };
 
     const isSameDay = (d1, d2) => {
         if (!d1 || !d2) return false;
@@ -154,7 +169,6 @@ const MyViewDashboard = () => {
     ];
     const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
-    // Navigation handlers
     const handlePrevMonth = () => {
         setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1));
     };
@@ -271,34 +285,26 @@ const MyViewDashboard = () => {
                     // Map the API response to our component format
                     timetableArray = response.daily_schedules.flatMap(dailySchedule => {
                         const date = dailySchedule.date;
+                        const isHoliday = dailySchedule.is_holiday;
+                        const holidayName = dailySchedule.holiday_name;
 
                         // If no slots for this day, return empty array
                         if (!dailySchedule.slots || !Array.isArray(dailySchedule.slots)) {
                             return [];
                         }
 
-                        // Map each slot to our format
                         return dailySchedule.slots.map(slot => ({
-                            // Basic information
                             id: slot.time_slot_id || `${date}_${slot.start_time}`,
                             date: date,
                             day_of_week: dailySchedule.day_of_week,
-
-                            // Time information
                             start_time: slot.start_time,
                             end_time: slot.end_time,
                             slot_name: slot.slot_name,
-
-                            // Subject information
                             subject_id: slot.subject_id,
                             subject_name: slot.subject_name,
                             subject_code: slot.subject_id ? `SUB-${slot.subject_id}` : "",
-
-                            // Teacher information
                             teacher_id: slot.teacher_id,
                             teacher_name: slot.teacher_name,
-
-                            // Academic information
                             academic_year_id: slot.academic_year_id,
                             academic_year_name: slot.academic_year_name,
                             program_id: slot.program_id,
@@ -309,33 +315,22 @@ const MyViewDashboard = () => {
                             semester_name: slot.semester_name,
                             division_id: slot.division_id,
                             division_name: slot.division_name,
-
-                            // Location
                             classroom_id: slot.classroom_id,
                             classroom_name: slot.classroom_name,
                             room_number: slot.classroom_name || "Not Assigned",
-
-                            // Type and notes
                             class_type: slot.slot_name || "Lecture",
                             type: slot.entry_type || "REGULAR",
                             notes: slot.notes,
-
-                            // Source and exception handling
                             source: slot.source,
                             is_exception: slot.is_exception || false,
                             exception_type: slot.exception_type,
                             original_teacher_id: slot.original_teacher_id,
                             original_teacher_name: slot.original_teacher_name,
-
-                            // Department (from program_name)
                             department: slot.program_name || "",
-
-                            // College (from state)
                             college: collegeName,
-
-                            // Holiday information
-                            is_holiday: dailySchedule.is_holiday || slot.is_holiday,
-                            holiday_name: dailySchedule.holiday_name || slot.holiday_name
+                            // Holiday information from daily_schedule
+                            is_holiday: isHoliday,
+                            holiday_name: holidayName
                         }));
                     });
 
@@ -411,7 +406,6 @@ const MyViewDashboard = () => {
     }, [selectedDate, viewMode, teacherId, collegeId, collegeName]);
 
     const filterTimetableData = (data, date, mode) => {
-
         if (!data || !Array.isArray(data)) {
             console.error("filterTimetableData: data is not an array", data);
             setFilteredData([]);
@@ -461,7 +455,6 @@ const MyViewDashboard = () => {
         }
     };
 
-    // Calendar days for sidebar
     const calendarData = useMemo(() => {
         const year = currentDate.getFullYear();
         const month = currentDate.getMonth();
@@ -500,7 +493,6 @@ const MyViewDashboard = () => {
                 return false;
             }
         }).sort((a, b) => {
-
             const timeA = a.start_time || "00:00";
             const timeB = b.start_time || "00:00";
             return timeA.localeCompare(timeB);
@@ -539,9 +531,15 @@ const MyViewDashboard = () => {
                 return timeA.localeCompare(timeB);
             });
 
+            // Check if day is holiday
+            const isHoliday = daySchedule.length > 0 && daySchedule[0].is_holiday;
+            const holidayName = isHoliday ? daySchedule[0].holiday_name : null;
+
             days.push({
                 date,
-                schedule: daySchedule
+                schedule: daySchedule,
+                isHoliday,
+                holidayName
             });
         }
 
@@ -582,7 +580,9 @@ const MyViewDashboard = () => {
                 schedule: [],
                 totalSlots: 0,
                 visibleSlots: [],
-                hiddenSlotsCount: 0
+                hiddenSlotsCount: 0,
+                isHoliday: false,
+                holidayName: null
             }));
         }
 
@@ -622,6 +622,9 @@ const MyViewDashboard = () => {
                 }
             });
 
+            const isHoliday = schedule.length > 0 && schedule[0].is_holiday;
+            const holidayName = isHoliday ? schedule[0].holiday_name : null;
+
             return {
                 date: dayDate,
                 dateStr: formatDateToYMD(dayDate),
@@ -629,206 +632,266 @@ const MyViewDashboard = () => {
                 isCurrentMonth: dayDate.getMonth() === selectedDate.getMonth(),
                 schedule: schedule,
                 totalSlots: schedule.length,
-                visibleSlots: schedule.slice(0, 2),
-                hiddenSlotsCount: Math.max(0, schedule.length - 2)
+                visibleSlots: isHoliday ? [] : schedule.slice(0, 2),
+                hiddenSlotsCount: isHoliday ? 0 : Math.max(0, schedule.length - 2),
+                isHoliday,
+                holidayName
             };
         });
     }, [filteredData, selectedDate]);
 
-    // Get unique time slots for week view
     const uniqueTimeSlots = useMemo(() => {
         if (!Array.isArray(filteredData)) return [];
 
         const slots = new Set();
         filteredData.forEach(item => {
-            if (item && item.start_time) {
+            if (item && item.start_time && !item.is_holiday) {
                 slots.add(item.start_time);
             }
         });
         return Array.from(slots).sort();
     }, [filteredData]);
 
-    // Slot Detail Card Component
-    const SlotDetailCard = ({ slot }) => (
-        <div className="bg-white rounded-xl p-4 border border-slate-200 shadow-sm hover:shadow-md transition-shadow">
-            <div className="flex flex-col md:flex-row gap-4">
-                {/* Left Column - Time and Type */}
-                <div className="w-full md:w-28 flex flex-col items-center justify-center gap-3 border-b md:border-b-0 md:border-r border-slate-100 pb-4 md:pb-0 pr-0 md:pr-4">
-                    <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-primary-100 text-primary-600">
-                        <BookOpen size={18} />
-                    </div>
-                    <div className="flex flex-col items-center">
-                        <span className="text-xs text-slate-500">Time</span>
-                        <span className="text-sm font-bold text-slate-700">
-                            {formatTimeForDisplay12hr(slot.start_time)} - {formatTimeForDisplay12hr(slot.end_time)}
-                        </span>
-                    </div>
+    // Holiday Card Component
+    const HolidayCard = ({ holidayName, date }) => (
+        <div className="bg-gradient-to-r from-amber-50 to-yellow-50 border-2 border-amber-200 rounded-2xl p-6 md:p-8 shadow-sm">
+            <div className="flex flex-col md:flex-row items-center gap-6">
+                <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-amber-100 to-yellow-100 flex items-center justify-center text-amber-600 border-2 border-amber-200">
+                    <PartyPopper size={32} />
                 </div>
-
-                {/* Right Column - Details */}
-                <div className="flex-1">
-                    {/* Tags */}
-                    <div className="flex flex-wrap items-center gap-2 mb-3">
-                        <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-primary-50 text-primary-600">
-                            {slot.class_type || slot.type || "Lecture"}
+                <div className="flex-1 text-center md:text-left">
+                    <div className="flex items-center gap-2 mb-2 justify-center md:justify-start">
+                        <span className="text-xs font-bold px-3 py-1 rounded-full bg-amber-100 text-amber-700">
+                            Holiday
                         </span>
-                        {slot.subject_code && (
-                            <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-blue-50 text-blue-600">
-                                {slot.subject_code}
-                            </span>
-                        )}
-                        {slot.is_exception && (
-                            <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-orange-50 text-orange-600">
-                                {slot.exception_type === "SUBSTITUTED" ? "Substitution" : "Exception"}
-                            </span>
-                        )}
-                        {slot.day_of_week && (
-                            <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-purple-50 text-purple-600">
-                                {slot.day_of_week}
+                        {date && (
+                            <span className="text-xs text-amber-600">
+                                {formatDateToReadable(date)}
                             </span>
                         )}
                     </div>
-
-                    {/* Subject */}
-                    <h3 className="text-base font-bold text-slate-800 mb-3">
-                        {slot.subject_name || slot.subject || "Subject Name"}
-                    </h3>
-
-                    {/* Additional Info */}
-                    {(slot.program_name || slot.semester_name || slot.batch_name || slot.division_name) && (
-                        <div className="flex flex-wrap gap-2 mb-3">
-                            {slot.program_name && (
-                                <span className="text-xs text-slate-600 bg-slate-100 px-2 py-0.5 rounded">
-                                    {slot.program_name}
-                                </span>
-                            )}
-                            {slot.semester_name && (
-                                <span className="text-xs text-slate-600 bg-slate-100 px-2 py-0.5 rounded">
-                                    {slot.semester_name}
-                                </span>
-                            )}
-                            {slot.batch_name && (
-                                <span className="text-xs text-slate-600 bg-slate-100 px-2 py-0.5 rounded">
-                                    {slot.batch_name}
-                                </span>
-                            )}
-                            {slot.division_name && (
-                                <span className="text-xs text-slate-600 bg-slate-100 px-2 py-0.5 rounded">
-                                    Div: {slot.division_name}
-                                </span>
-                            )}
-                        </div>
-                    )}
-
-                    <div className="flex flex-col gap-4 md:gap-6">
-                        {/* ===== TOP : Teacher & Room Info ===== */}
-                        <div className="flex flex-col md:flex-row gap-4 md:gap-8">
-                            <div className="flex items-center gap-3">
-                                <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center shrink-0">
-                                    <User size={14} className="text-slate-500" />
-                                </div>
-                                <div>
-                                    <span className="text-xs text-slate-500">Teacher</span>
-                                    <p className="text-sm font-medium">
-                                        {slot.teacher_name || slot.teacher || "Teacher Name"}
-                                        {slot.original_teacher_name && slot.is_exception && (
-                                            <span className="text-xs text-orange-600 ml-1">
-                                                (Sub for: {slot.original_teacher_name})
-                                            </span>
-                                        )}
-                                    </p>
-                                </div>
-                            </div>
-                            <div className="flex items-center gap-3">
-                                <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center shrink-0">
-                                    <Building2 size={14} className="text-slate-500" />
-                                </div>
-                                <div>
-                                    <span className="text-xs text-slate-500">Room</span>
-                                    <p className="text-sm font-medium">
-                                        {slot.room_number || slot.room || slot.classroom || "Classroom"}
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* ===== BOTTOM : Action Buttons ===== */}
-                        <div className="flex flex-wrap gap-2 md:gap-3">
-                            <button
-                                type="button"
-                                onClick={() => navigate('/teacher/timetable/View-Upadate-Timetable', { state: { slot } })}
-                                className="text-xs px-3 py-1 bg-orange-500 hover:bg-orange-600 text-white rounded-full transition"
-                            >
-                                Update
-                            </button>
-
-                            <button
-                                type="button"
-                                onClick={() => navigate('/teacher/attendance/tabular-view', {
-                                    state: {
-                                        slot,
-                                        fromTimetable: true
-                                    }
-                                })}
-                                className="text-xs px-3 py-1 bg-green-500 hover:bg-green-600 text-white rounded-full transition"
-                            >
-                                Mark Attendance
-                            </button>
-
-                            <button
-                                type="button"
-                                onClick={() => navigate('/teacher/attendance/qr-attendance', { state: { slot } })}
-                                className="text-xs px-3 py-1 bg-blue-500 hover:bg-blue-600 text-white rounded-full transition"
-                            >
-                                Generate QR
-                            </button>
-                        </div>
-                    </div>
-                </div>
+                    <h2 className="text-2xl md:text-3xl font-bold text-amber-800 mb-2">
+                        {holidayName || "Holiday"}
+                    </h2>
+                    <p className="text-amber-600">
+                        No classes scheduled for today. Enjoy your holiday!
+                    </p>
+</div>
             </div>
         </div>
     );
 
-    const CompactSlotCard = ({ slot }) => (
-        <div
-            className="px-2 py-1.5 rounded-md bg-primary-50 border border-primary-100 hover:bg-primary-100 transition-colors cursor-pointer"
-            onClick={(e) => {
-                e.stopPropagation();
-                handleWeekSlotClick(slot);
-            }}
-        >
-            <div className="flex items-center gap-2">
-                <div className="w-2 h-2 rounded-full bg-primary-500"></div>
-                <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between">
-                        <span className="text-xs font-bold text-primary-700 truncate">
-                            {slot.subject_name || slot.subject || "Subject"}
-                        </span>
-                        <span className="text-[10px] text-primary-500 ml-1 shrink-0">
-                            {formatTimeForDisplay(slot.start_time)}
-                        </span>
+    const SlotDetailCard = ({ slot }) => {
+        // If slot is holiday, show holiday card instead
+        if (slot.is_holiday) {
+            return <HolidayCard holidayName={slot.holiday_name} />;
+        }
+
+        return (
+            <div className="bg-white rounded-xl p-4 border border-slate-200 shadow-sm hover:shadow-md transition-shadow">
+                <div className="flex flex-col md:flex-row gap-4">
+                    <div className="w-full md:w-28 flex flex-col items-center justify-center gap-3 border-b md:border-b-0 md:border-r border-slate-100 pb-4 md:pb-0 pr-0 md:pr-4">
+                        <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-primary-100 text-primary-600">
+                            <BookOpen size={18} />
+                        </div>
+                        <div className="flex flex-col items-center">
+                            <span className="text-xs text-slate-500">Time</span>
+                            <span className="text-sm font-bold text-slate-700">
+                                {formatTimeForDisplay12hr(slot.start_time)} - {formatTimeForDisplay12hr(slot.end_time)}
+                            </span>
+                        </div>
                     </div>
-                    <div className="text-[10px] text-primary-600 mt-0.5 truncate">
-                        {slot.teacher_name?.split(' ')[0] || "Teacher"} • {slot.room_number || "Room"}
+
+                    <div className="flex-1">
+                        <div className="flex flex-wrap items-center gap-2 mb-3">
+                            <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-primary-50 text-primary-600">
+                                {slot.class_type || slot.type || "Lecture"}
+                            </span>
+                            {slot.subject_code && (
+                                <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-blue-50 text-blue-600">
+                                    {slot.subject_code}
+                                </span>
+                            )}
+                            {slot.is_exception && (
+                                <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-orange-50 text-orange-600">
+                                    {slot.exception_type === "SUBSTITUTED" ? "Substitution" : "Exception"}
+                                </span>
+                            )}
+                            {slot.day_of_week && (
+                                <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-purple-50 text-purple-600">
+                                    {slot.day_of_week}
+                                </span>
+                            )}
+                        </div>
+
+                        <h3 className="text-base font-bold text-slate-800 mb-3">
+                            {slot.subject_name || slot.subject || "Subject Name"}
+                        </h3>
+
+                        {(slot.program_name || slot.semester_name || slot.batch_name || slot.division_name) && (
+                            <div className="flex flex-wrap gap-2 mb-3">
+                                {slot.program_name && (
+                                    <span className="text-xs text-slate-600 bg-slate-100 px-2 py-0.5 rounded">
+                                        {slot.program_name}
+                                    </span>
+                                )}
+                                {slot.semester_name && (
+                                    <span className="text-xs text-slate-600 bg-slate-100 px-2 py-0.5 rounded">
+                                        {slot.semester_name}
+                                    </span>
+                                )}
+                                {slot.batch_name && (
+                                    <span className="text-xs text-slate-600 bg-slate-100 px-2 py-0.5 rounded">
+                                        {slot.batch_name}
+                                    </span>
+                                )}
+                                {slot.division_name && (
+                                    <span className="text-xs text-slate-600 bg-slate-100 px-2 py-0.5 rounded">
+                                        Div: {slot.division_name}
+                                    </span>
+                                )}
+                            </div>
+                        )}
+
+                        <div className="flex flex-col gap-4 md:gap-6">
+                            <div className="flex flex-col md:flex-row gap-4 md:gap-8">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center shrink-0">
+                                        <User size={14} className="text-slate-500" />
+                                    </div>
+                                    <div>
+                                        <span className="text-xs text-slate-500">Teacher</span>
+                                        <p className="text-sm font-medium">
+                                            {slot.teacher_name || slot.teacher || "Teacher Name"}
+                                            {slot.original_teacher_name && slot.is_exception && (
+                                                <span className="text-xs text-orange-600 ml-1">
+                                                    (Sub for: {slot.original_teacher_name})
+                                                </span>
+                                            )}
+                                        </p>
+                                    </div>
+                                </div>
+                                <div className="flex items-center gap-3">
+                                    <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center shrink-0">
+                                        <Building2 size={14} className="text-slate-500" />
+                                    </div>
+                                    <div>
+                                        <span className="text-xs text-slate-500">Room</span>
+                                        <p className="text-sm font-medium">
+                                            {slot.room_number || slot.room || slot.classroom || "Classroom"}
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="flex flex-wrap gap-2 md:gap-3">
+                                <button
+                                    type="button"
+                                    onClick={() => navigate('/teacher/timetable/View-Upadate-Timetable', { state: { slot } })}
+                                    className="text-xs px-3 py-1 bg-orange-500 hover:bg-orange-600 text-white rounded-full transition"
+                                >
+                                    Update
+                                </button>
+
+                                <button
+                                    type="button"
+                                    onClick={() => navigate('/teacher/attendance/tabular-view', {
+                                        state: {
+                                            slot,
+                                            fromTimetable: true
+                                        }
+                                    })}
+                                    className="text-xs px-3 py-1 bg-green-500 hover:bg-green-600 text-white rounded-full transition"
+                                >
+                                    Mark Attendance
+                                </button>
+
+                                <button
+                                    type="button"
+                                    onClick={() => navigate('/teacher/attendance/qr-attendance', { state: { slot } })}
+                                    className="text-xs px-3 py-1 bg-blue-500 hover:bg-blue-600 text-white rounded-full transition"
+                                >
+                                    Generate QR
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
-    );
+        );
+    };
+
+    const CompactSlotCard = ({ slot }) => {
+        // If slot is holiday, show holiday indicator
+        if (slot.is_holiday) {
+            return (
+                <div className="px-2 py-1.5 rounded-md bg-gradient-to-r from-amber-50 to-yellow-50 border border-amber-200">
+                    <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 rounded-full bg-amber-500"></div>
+                        <div className="flex-1 min-w-0">
+                            <div className="flex items-center justify-between">
+                                <span className="text-xs font-bold text-amber-700 truncate">
+                                    {slot.holiday_name || "Holiday"}
+                                </span>
+                            </div>
+                            <div className="text-[10px] text-amber-600 mt-0.5">
+                                No classes scheduled
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        return (
+            <div
+                className="px-2 py-1.5 rounded-md bg-primary-50 border border-primary-100 hover:bg-primary-100 transition-colors cursor-pointer"
+                onClick={(e) => {
+                    e.stopPropagation();
+                    handleWeekSlotClick(slot);
+                }}
+            >
+                <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full bg-primary-500"></div>
+                    <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between">
+                            <span className="text-xs font-bold text-primary-700 truncate">
+                                {slot.subject_name || slot.subject || "Subject"}
+                            </span>
+                            <span className="text-[10px] text-primary-500 ml-1 shrink-0">
+                                {formatTimeForDisplay(slot.start_time)}
+                            </span>
+                        </div>
+                        <div className="text-[10px] text-primary-600 mt-0.5 truncate">
+                            {slot.teacher_name?.split(' ')[0] || "Teacher"} • {slot.room_number || "Room"}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        );
+    };
 
     // Empty State Components
-    const EmptyDayState = () => (
-        <div className="h-[400px] flex flex-col items-center justify-center bg-white rounded-2xl border-2 border-dashed border-slate-200 p-6">
-            <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center text-3xl mb-4 opacity-50">
-                <BookOpen size={32} className="text-slate-400" />
+    const EmptyDayState = () => {
+        const holidayInfo = getHolidayInfoForDay(selectedDate);
+        
+        if (holidayInfo.isHoliday) {
+            return <HolidayCard holidayName={holidayInfo.holidayName} date={selectedDate} />;
+        }
+
+        return (
+            <div className="h-[400px] flex flex-col items-center justify-center bg-white rounded-2xl border-2 border-dashed border-slate-200 p-6">
+                <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center text-3xl mb-4 opacity-50">
+                    <BookOpen size={32} className="text-slate-400" />
+                </div>
+                <h2 className="text-xl font-bold text-slate-400">No Classes Scheduled</h2>
+                <p className="text-slate-400 mt-1 text-center">
+                    No sessions for {dayNames[selectedDate.getDay()]}<br />
+                    <span className="text-sm">Enjoy your free time!</span>
+                </p>
             </div>
-            <h2 className="text-xl font-bold text-slate-400">No Classes Scheduled</h2>
-            <p className="text-slate-400 mt-1 text-center">
-                No sessions for {dayNames[selectedDate.getDay()]}<br />
-                <span className="text-sm">Enjoy your free time!</span>
-            </p>
-        </div>
-    );
+        );
+    };
 
     const EmptyWeekState = () => (
         <div className="h-[500px] flex flex-col items-center justify-center bg-white rounded-3xl border-2 border-dashed border-slate-200 p-6">
@@ -863,8 +926,6 @@ const MyViewDashboard = () => {
             }
         } else if (viewMode === "Week") {
             const weekRange = getWeekRange(selectedDate);
-
-
             if (weekRange.start.getMonth() === weekRange.end.getMonth()) {
                 return `Week`;
             }
@@ -874,6 +935,9 @@ const MyViewDashboard = () => {
 
         return "Today";
     };
+
+    // Check if selected date is holiday
+    const selectedDateHolidayInfo = getHolidayInfoForDay(selectedDate);
 
     return (
         <div className="h-full bg-slate-50 flex flex-col overflow-hidden">
@@ -1009,7 +1073,7 @@ const MyViewDashboard = () => {
 
                                 <div className="grid grid-cols-7 gap-1">
                                     {calendarData.map((item, idx) => {
-                                        const hasClasses = Array.isArray(timetableData) && timetableData.some(slot => {
+                                        const dayData = Array.isArray(timetableData) ? timetableData.filter(slot => {
                                             if (!slot || !slot.date) return false;
                                             try {
                                                 const slotDate = new Date(slot.date);
@@ -1017,7 +1081,9 @@ const MyViewDashboard = () => {
                                             } catch (e) {
                                                 return false;
                                             }
-                                        });
+                                        }) : [];
+                                        
+                                        const isHoliday = dayData.length > 0 && dayData[0].is_holiday;
                                         const isToday = item.fullDate && isSameDay(item.fullDate, new Date());
 
                                         return (
@@ -1030,14 +1096,17 @@ const MyViewDashboard = () => {
                                                                 ? "bg-primary-600 text-white shadow-lg shadow-primary-200 font-bold"
                                                                 : isToday
                                                                     ? "bg-blue-50 text-blue-600 hover:bg-blue-100"
-                                                                    : "bg-slate-50 text-slate-600 hover:bg-primary-50 hover:text-primary-600"
+                                                                        : "bg-slate-50 text-slate-600 hover:bg-primary-50 hover:text-primary-600"
                                                             }`}
                                                     >
                                                         <span>{item.day}</span>
                                                         {isToday && (
                                                             <div className={`absolute bottom-1 w-1 h-1 rounded-full ${isSameDay(item.fullDate, selectedDate) ? 'bg-white' : 'bg-blue-500'}`}></div>
                                                         )}
-                                                        {hasClasses && !isToday && (
+                                                        {isHoliday && !isToday && (
+                                                            <div className={`absolute bottom-1 w-1 h-1 rounded-full ${isSameDay(item.fullDate, selectedDate) ? 'bg-white' : 'bg-amber-500'}`}></div>
+                                                        )}
+                                                        {!isHoliday && dayData.length > 0 && !isToday && (
                                                             <div className={`absolute bottom-1 w-1 h-1 rounded-full ${isSameDay(item.fullDate, selectedDate) ? 'bg-white' : 'bg-primary-500'}`}></div>
                                                         )}
                                                     </button>
@@ -1067,7 +1136,6 @@ const MyViewDashboard = () => {
 
                                     <div className="h-4 w-[1px] bg-slate-300 mx-1"></div>
                                     <button
-
                                         className="px-2.5 py-1 rounded-lg border border-slate-200 bg-white text-xs font-bold text-slate-700 hover:bg-slate-50"
                                     >
                                         {getDynamicButtonLabel()}
@@ -1134,7 +1202,6 @@ const MyViewDashboard = () => {
                             <div className="p-4 border-b border-slate-200 bg-white">
                                 <div className="flex items-center justify-between">
                                     <button
-
                                         className="px-3 py-2 rounded-lg border border-slate-200 bg-white text-sm font-bold text-slate-700 hover:bg-slate-50"
                                     >
                                         {getDynamicButtonLabel()}
@@ -1199,7 +1266,11 @@ const MyViewDashboard = () => {
                                                     )}
                                                 </h1>
                                                 <p className="text-slate-500 font-medium mt-1">
-                                                    {dayScheduleData.length === 0 ? "No classes scheduled" : `${dayScheduleData.length} session${dayScheduleData.length > 1 ? 's' : ''}`}
+                                                    {selectedDateHolidayInfo.isHoliday 
+                                                        ? selectedDateHolidayInfo.holidayName
+                                                        : dayScheduleData.length === 0 
+                                                            ? "No classes scheduled" 
+                                                            : `${dayScheduleData.length} session${dayScheduleData.length > 1 ? 's' : ''}`}
                                                 </p>
                                             </div>
                                         </div>
@@ -1207,7 +1278,9 @@ const MyViewDashboard = () => {
 
                                     {/* Schedule List */}
                                     <div className="space-y-4">
-                                        {dayScheduleData.length > 0 ? (
+                                        {selectedDateHolidayInfo.isHoliday ? (
+                                            <HolidayCard holidayName={selectedDateHolidayInfo.holidayName} date={selectedDate} />
+                                        ) : dayScheduleData.length > 0 ? (
                                             dayScheduleData.map((slot, index) => (
                                                 <SlotDetailCard key={slot.id || `${slot.date}_${slot.start_time}_${index}`} slot={slot} />
                                             ))
@@ -1227,7 +1300,7 @@ const MyViewDashboard = () => {
                                             const isToday = isSameDay(day.date, new Date());
                                             const isSelected = isSameDay(day.date, selectedDate);
                                             return (
-                                                <div key={idx} className={`p-3 text-center border-r border-slate-100 last:border-r-0 ${isSelected ? 'bg-primary-50' : ''}`}>
+                                                <div key={idx} className={`p-3 text-center border-r border-slate-100 last:border-r-0 ${isSelected ? 'bg-primary-50' : ''} ${day.isHoliday ? 'bg-amber-50' : ''}`}>
                                                     <div className="text-xs font-bold text-slate-400 mb-1">
                                                         {calendarDays[day.date.getDay() === 0 ? 6 : day.date.getDay() - 1]}
                                                         {isToday && (
@@ -1236,11 +1309,15 @@ const MyViewDashboard = () => {
                                                     </div>
                                                     <button
                                                         onClick={() => handleWeekDayClick(day.date)}
-                                                        className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ${isToday ? 'bg-blue-600 text-white' : isSelected ? 'bg-primary-100 text-primary-700' : 'text-slate-700 hover:bg-slate-100'}`}
+                                                        className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ${isToday ? 'bg-blue-600 text-white' : isSelected ? 'bg-primary-100 text-primary-700' : day.isHoliday ? 'bg-amber-100 text-orange-700' : 'text-slate-700 hover:bg-slate-100'}`}
                                                     >
                                                         {day.date.getDate()}
                                                     </button>
-                                                    {day.schedule.length > 0 && (
+                                                    {day.isHoliday ? (
+                                                        <div className="text-[10px] text-orange-700 font-bold mt-1 truncate px-1">
+                                                            {day.holidayName}
+                                                        </div>
+                                                    ) : day.schedule.length > 0 && (
                                                         <div className="text-[10px] text-primary-500 mt-1">
                                                             {day.schedule.length} class{day.schedule.length > 1 ? 'es' : ''}
                                                         </div>
@@ -1251,7 +1328,7 @@ const MyViewDashboard = () => {
                                     </div>
 
                                     {/* Week Grid */}
-                                    {weekData.some(day => day.schedule.length > 0) ? (
+                                    {weekData.some(day => day.schedule.length > 0 || day.isHoliday) ? (
                                         <div className="overflow-x-auto">
                                             <div className="min-w-full">
                                                 {uniqueTimeSlots.map((time, timeIndex) => (
@@ -1265,7 +1342,14 @@ const MyViewDashboard = () => {
                                                             const slot = day.schedule.find(s => s && s.start_time === time);
                                                             return (
                                                                 <div key={dayIndex} className="p-2 border-r border-slate-100 last:border-r-0 min-h-[60px]">
-                                                                    {slot ? (
+                                                                    {day.isHoliday && timeIndex === 0 ? (
+                                                                        <div className="h-full p-2 rounded-md bg-gradient-to-r from-amber-50 to-yellow-50 border border-amber-200">
+                                                                            <div className="text-xs font-bold text-amber-700">Holiday</div>
+                                                                            <div className="text-[10px] text-amber-600 truncate">
+                                                                                {day.holidayName}
+                                                                            </div>
+                                                                        </div>
+                                                                    ) : slot ? (
                                                                         <div
                                                                             className="h-full p-2 rounded-md bg-primary-50 border border-primary-100 hover:bg-primary-100 transition-colors cursor-pointer"
                                                                             onClick={(e) => {
@@ -1310,39 +1394,51 @@ const MyViewDashboard = () => {
                                             return (
                                                 <div
                                                     key={index}
-                                                    className={`min-h-[120px] border-r border-b border-slate-100 p-2 ${!dayData.isCurrentMonth ? 'bg-slate-50/50' : ''} ${isToday ? 'bg-blue-50' : ''} ${isSameDay(dayData.date, selectedDate) ? 'bg-primary-100' : ''}`}
+                                                    className={`min-h-[120px] border-r border-b border-slate-100 p-2 ${!dayData.isCurrentMonth ? 'bg-slate-50/50' : ''} ${isToday ? 'bg-blue-50' : ''} ${isSameDay(dayData.date, selectedDate) ? 'bg-primary-100' : ''} ${dayData.isHoliday ? 'bg-gradient-to-br from-amber-50/30 to-yellow-50/30' : ''}`}
                                                     onClick={() => handleMonthDateClick(dayData.date, dayData.schedule)}
                                                 >
                                                     <div className="flex flex-col h-full">
                                                         <div className="flex justify-between items-center mb-1">
-                                                            <span className={`text-sm font-bold ${dayData.isCurrentMonth ? 'text-slate-700' : 'text-slate-400'} ${isSameDay(dayData.date, selectedDate) ? 'bg-primary-600 text-white rounded-full w-6 h-6 flex items-center justify-center' : ''} ${isToday && !isSameDay(dayData.date, selectedDate) ? 'text-blue-600' : ''}`}>
+                                                            <span className={`text-sm font-bold ${dayData.isCurrentMonth ? 'text-slate-700' : 'text-slate-400'} ${isSameDay(dayData.date, selectedDate) ? 'bg-primary-600 text-white rounded-full w-6 h-6 flex items-center justify-center' : ''} ${isToday && !isSameDay(dayData.date, selectedDate) ? 'text-blue-600' : ''} ${dayData.isHoliday ? 'text-amber-700' : ''}`}>
                                                                 {dayData.dayNumber}
                                                                 {isToday && (
                                                                     <span className="absolute top-0 right-0 w-2 h-2 bg-blue-500 rounded-full"></span>
                                                                 )}
                                                             </span>
-                                                            {dayData.schedule.length > 0 && (
+                                                            {dayData.isHoliday ? (
+                                                                <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-600 font-bold">
+                                                                    <PartyPopper size={8} />
+                                                                </span>
+                                                            ) : dayData.schedule.length > 0 && (
                                                                 <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-primary-100 text-primary-600 font-bold">
                                                                     {dayData.schedule.length}
                                                                 </span>
                                                             )}
                                                         </div>
                                                         <div className="flex-1 space-y-1" onClick={(e) => e.stopPropagation()}>
-                                                            {dayData.visibleSlots.map((slot, slotIndex) => (
-                                                                <CompactSlotCard key={slotIndex} slot={slot} />
-                                                            ))}
-                                                            {dayData.hiddenSlotsCount > 0 && (
-                                                                <button
-                                                                    onClick={(e) => {
-                                                                        e.stopPropagation();
-                                                                        setPopupDate(dayData.date);
-                                                                        setPopupData(dayData.schedule);
-                                                                        setShowMonthPopup(true);
-                                                                    }}
-                                                                    className="text-[10px] text-slate-500 px-2 py-1 bg-slate-100 rounded-md w-full text-left"
-                                                                >
-                                                                    +{dayData.hiddenSlotsCount} more
-                                                                </button>
+                                                            {dayData.isHoliday ? (
+                                                                <div className="text-[10px] text-amber-600 font-bold px-2 py-1 bg-gradient-to-r from-amber-50 to-yellow-50 border border-amber-200 rounded-md">
+                                                                    {dayData.holidayName || "Holiday"}
+                                                                </div>
+                                                            ) : (
+                                                                <>
+                                                                    {dayData.visibleSlots.map((slot, slotIndex) => (
+                                                                        <CompactSlotCard key={slotIndex} slot={slot} />
+                                                                    ))}
+                                                                    {dayData.hiddenSlotsCount > 0 && (
+                                                                        <button
+                                                                            onClick={(e) => {
+                                                                                e.stopPropagation();
+                                                                                setPopupDate(dayData.date);
+                                                                                setPopupData(dayData.schedule);
+                                                                                setShowMonthPopup(true);
+                                                                            }}
+                                                                            className="text-[10px] text-slate-500 px-2 py-1 bg-slate-100 rounded-md w-full text-left"
+                                                                        >
+                                                                            +{dayData.hiddenSlotsCount} more
+                                                                        </button>
+                                                                    )}
+                                                                </>
                                                             )}
                                                         </div>
                                                     </div>
@@ -1361,7 +1457,6 @@ const MyViewDashboard = () => {
             {showWeekSlotPopup && selectedWeekSlot && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
                     <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md max-h-[90vh] overflow-hidden flex flex-col">
-                        {/* Popup Header */}
                         <div className="p-5 border-b border-slate-200 bg-gradient-to-r from-primary-50 to-blue-50">
                             <div className="flex items-center justify-between">
                                 <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2">
@@ -1386,12 +1481,10 @@ const MyViewDashboard = () => {
                             </div>
                         </div>
 
-                        {/* Popup Content */}
                         <div className="flex-1 overflow-y-auto p-5">
                             <SlotDetailCard slot={selectedWeekSlot} />
                         </div>
 
-                        {/* Popup Footer */}
                         <div className="p-5 border-t border-slate-200 bg-slate-50">
                             <div className="flex gap-3">
                                 <button
@@ -1422,7 +1515,6 @@ const MyViewDashboard = () => {
             {showMonthPopup && popupDate && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
                     <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md max-h-[90vh] overflow-hidden flex flex-col">
-                        {/* Popup Header */}
                         <div className="p-5 border-b border-slate-200 bg-gradient-to-r from-primary-50 to-blue-50">
                             <div className="flex items-center justify-between">
                                 <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2">
@@ -1443,7 +1535,6 @@ const MyViewDashboard = () => {
                             </div>
                         </div>
 
-                        {/* Popup Content */}
                         <div className="flex-1 overflow-y-auto p-5">
                             {popupData.length > 0 ? (
                                 <div className="space-y-4">
@@ -1456,7 +1547,6 @@ const MyViewDashboard = () => {
                             )}
                         </div>
 
-                        {/* Popup Footer */}
                         <div className="p-5 border-t border-slate-200 bg-slate-50">
                             <div className="flex gap-3">
                                 <button
@@ -1482,7 +1572,7 @@ const MyViewDashboard = () => {
             )}
 
             {/* Mobile FAB */}
-            {isMobile && mobileViewMode === "calendar" && dayScheduleData.length > 0 && (
+            {isMobile && mobileViewMode === "calendar" && dayScheduleData.length > 0 && !selectedDateHolidayInfo.isHoliday && (
                 <button
                     onClick={() => {
                         setMobileViewMode("schedule");
