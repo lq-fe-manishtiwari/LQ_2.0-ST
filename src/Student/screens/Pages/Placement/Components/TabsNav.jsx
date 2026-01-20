@@ -1,13 +1,15 @@
 import React from "react";
 import { NavLink, useLocation } from "react-router-dom";
-import { LayoutDashboard, Briefcase, FileText, Calendar, Award } from "lucide-react";
 
 const tabs = [
-  { label: "Dashboard", to: "/student-placement", icon: <LayoutDashboard size={16} /> },
-  { label: "Job Openings", to: "/student-placement/job-openings", icon: <Briefcase size={16} /> },
-  { label: "My Applications", to: "/student-placement/my-registrations", icon: <FileText size={16} /> },
-  { label: "My Interviews", to: "/student-placement/my-interviews", icon: <Calendar size={16} /> },
-  { label: "My Offers", to: "/student-placement/my-offers", icon: <Award size={16} /> },
+  { label: "Dashboard", to: "/student-placement" },
+  { label: "Job Openings", to: "/student-placement/job-openings" },
+  { label: "My Applications", to: "/student-placement/my-registrations" },
+  { label: "My Interviews", to: "/student-placement/my-interviews" },
+  { label: "My Offers", to: "/student-placement/my-offers" },
+  { label: "Profile", to: "/student-placement/profile" },
+  { label: "Consent", to: "/student-placement/consent" },
+  { label: "Eligibility", to: "/student-placement/eligibility" },
 ];
 
 export default function TabsNav() {
@@ -28,9 +30,8 @@ export default function TabsNav() {
                 isActive ? "tab-active" : "tab-inactive"
               }`}
             >
-              {t.icon}
               <span className="hidden sm:inline">{t.label}</span>
-              <span className="sm:hidden">{t.label.split(' ')[0]}</span>
+              <span className="sm:hidden">{t.label.split(" ")[0]}</span>
             </NavLink>
           );
         })}

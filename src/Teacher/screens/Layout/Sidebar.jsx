@@ -172,6 +172,16 @@ const Sidebar = ({ isOpen, toggle }) => {
         iconInactive: classInactive,
         match: ["/teacher/committees", "/teacher/committee"],
       },
+       
+      {
+  to: "/teacher/placement",
+  label: "Placement",
+  iconActive: classActive,
+  iconInactive: classInactive,
+  match: ["/teacher/placement"], // remove the '*' — startsWith handles nested routes
+},
+
+     
       {
         to: "/teacher-analytics",
         label: "Insights",

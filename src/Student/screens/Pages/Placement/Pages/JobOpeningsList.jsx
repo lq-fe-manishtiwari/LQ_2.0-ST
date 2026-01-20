@@ -1,139 +1,108 @@
 'use client';
 
-import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { Search, Filter, ChevronDown, Eye, CheckCircle } from 'lucide-react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { Search, Filter, ChevronDown } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import SweetAlert from 'react-bootstrap-sweetalert';
 
-// Custom Select Component
-const CustomSelect = ({ label, value, onChange, options, placeholder }) => {
-  const [isOpen, setIsOpen] = useState(false);
-  const dropdownRef = useRef(null);
-
-  const handleSelect = (option) => {
-    onChange({ target: { value: option } });
-    setIsOpen(false);
-  };
-
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
-        setIsOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
-
-  return (
-    <div ref={dropdownRef}>
-      <label className="block text-sm font-semibold text-gray-700 mb-2">{label}</label>
-      <div className="relative">
-        <div
-          className="w-full px-3 py-2 border bg-white border-gray-300 cursor-pointer hover:border-blue-400 rounded-lg min-h-[44px] flex items-center justify-between transition-all duration-150"
-          onClick={() => setIsOpen(!isOpen)}
-        >
-          <span className={value ? 'text-gray-900' : 'text-gray-400'}>
-            {value || placeholder}
-          </span>
-          <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${isOpen ? 'rotate-180' : 'rotate-0'}`} />
-        </div>
-
-        {isOpen && (
-          <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
-            <div className="px-4 py-2 text-sm text-gray-700 cursor-pointer hover:bg-blue-50 transition-colors" onClick={() => handleSelect('')}>
-              {placeholder}
-            </div>
-            {options.map(option => (
-              <div key={option} className="px-4 py-2 text-sm text-gray-700 cursor-pointer hover:bg-blue-50 transition-colors" onClick={() => handleSelect(option)}>
-                {option}
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-    </div>
-  );
-};
-
-export default function JobOpeningsList() {
-  const [jobOpenings, setJobOpenings] = useState([]);
+export default function JobList() {
+  const [jobs, setJobs] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
+  const [alert, setAlert] = useState(null);
   const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
+
   const [filters, setFilters] = useState({
     filterOpen: false,
-    jobRole: '',
+    role: '',
     department: ''
   });
 
-  const navigate = useNavigate();
   const entriesPerPage = 10;
   const [currentPage, setCurrentPage] = useState(1);
 
   useEffect(() => {
-    loadJobOpenings();
+    loadJobs();
   }, []);
 
-  const loadJobOpenings = async () => {
+  const loadJobs = async () => {
     setLoading(true);
+    // Mock data
     const mockData = [
       {
-        placement_id: 452,
-        organisation: 'TCS',
-        opening_date: '15/12/2025',
-        job_role: 'Software Developer',
-        department: 'Computer Science',
-        ctc: '4.5 LPA',
-        job_description: 'Full stack development role',
-        position_open_till: '31/01/2026',
-        expected_joining_date: '01/03/2026',
-        isApplied: false
-      },
-      {
-        placement_id: 453,
+        placement_id: 'PL20260101',
         organisation: 'Infosys',
-        opening_date: '20/12/2025',
-        job_role: 'System Engineer',
-        department: 'Information Technology',
-        ctc: '5 LPA',
-        job_description: 'Backend development',
-        position_open_till: '15/02/2026',
-        expected_joining_date: '15/03/2026',
-        isApplied: true
+        opening_date: '15/01/2026',
+        job_role: 'Software Engineer',
+        selection_criteria: 'CGPA >= 7.0, No backlogs',
+        ctc: '8.5',
+        job_description: 'Full stack development with Java and React',
+        position_open_till: '28/02/2026',
+        expected_joining_date: '01/07/2026'
       },
       {
-        placement_id: 454,
+        placement_id: 'PL20260102',
+        organisation: 'TCS',
+        opening_date: '20/01/2026',
+        job_role: 'System Engineer',
+        selection_criteria: 'CGPA >= 6.5, All branches',
+        ctc: '7.2',
+        job_description: 'Software development and maintenance',
+        position_open_till: '15/03/2026',
+        expected_joining_date: '15/07/2026'
+      },
+      {
+        placement_id: 'PL20260103',
         organisation: 'Wipro',
-        opening_date: '10/01/2026',
-        job_role: 'Frontend Developer',
-        department: 'Computer Science',
-        ctc: '6 LPA',
-        job_description: 'React and Angular development',
-        position_open_till: '28/02/2026',
-        expected_joining_date: '01/04/2026',
-        isApplied: false
+        opening_date: '25/01/2026',
+        job_role: 'Project Engineer',
+        selection_criteria: 'CGPA >= 6.0, CSE/IT/ECE',
+        ctc: '6.8',
+        job_description: 'Client-facing project development',
+        position_open_till: '20/03/2026',
+        expected_joining_date: '01/08/2026'
+      },
+      {
+        placement_id: 'PL20260104',
+        organisation: 'Cognizant',
+        opening_date: '01/02/2026',
+        job_role: 'Programmer Analyst',
+        selection_criteria: 'CGPA >= 7.5, No active backlogs',
+        ctc: '9.0',
+        job_description: 'Application development and testing',
+        position_open_till: '25/03/2026',
+        expected_joining_date: '10/08/2026'
+      },
+      {
+        placement_id: 'PL20260105',
+        organisation: 'Accenture',
+        opening_date: '05/02/2026',
+        job_role: 'Associate Software Engineer',
+        selection_criteria: 'CGPA >= 7.0, All branches eligible',
+        ctc: '8.0',
+        job_description: 'Digital transformation projects',
+        position_open_till: '30/03/2026',
+        expected_joining_date: '20/08/2026'
       }
     ];
-    setJobOpenings(mockData);
+    setJobs(mockData);
     setLoading(false);
   };
 
   const paginatedData = useMemo(() => {
-    let list = jobOpenings;
+    let list = jobs;
 
     if (searchTerm) {
       const q = searchTerm.toLowerCase();
       list = list.filter(item =>
         item.organisation?.toLowerCase().includes(q) ||
         item.job_role?.toLowerCase().includes(q) ||
-        item.department?.toLowerCase().includes(q)
+        item.placement_id?.toLowerCase().includes(q)
       );
     }
 
-    if (filters.jobRole) {
-      list = list.filter(item => item.job_role === filters.jobRole);
-    }
-    if (filters.department) {
-      list = list.filter(item => item.department === filters.department);
+    if (filters.role) {
+      list = list.filter(item => item.job_role === filters.role);
     }
 
     const totalEntries = list.length;
@@ -143,13 +112,26 @@ export default function JobOpeningsList() {
     const currentEntries = list.slice(start, end);
 
     return { currentEntries, totalEntries, totalPages, start, end };
-  }, [jobOpenings, searchTerm, currentPage, filters]);
+  }, [jobs, searchTerm, currentPage, filters]);
 
   const { currentEntries, totalEntries, totalPages } = paginatedData;
 
   const handlePrev = () => currentPage > 1 && setCurrentPage(p => p - 1);
   const handleNext = () => currentPage < totalPages && setCurrentPage(p => p + 1);
   const resetPage = () => setCurrentPage(1);
+
+  const handleApply = (id, company) => {
+    setAlert(
+      <SweetAlert
+        success
+        title="Application Submitted!"
+        confirmBtnCssClass="btn-confirm"
+        onConfirm={() => setAlert(null)}
+      >
+        Your application to {company} has been submitted successfully!
+      </SweetAlert>
+    );
+  };
 
   if (loading) {
     return (
@@ -161,6 +143,9 @@ export default function JobOpeningsList() {
 
   return (
     <div className="p-0 md:p-0">
+      {alert}
+
+      {/* Header Section */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4 sm:gap-0">
         <div className="relative w-full sm:w-80">
           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -168,7 +153,7 @@ export default function JobOpeningsList() {
           </div>
           <input
             type="search"
-            placeholder="Search job openings"
+            placeholder="Search for jobs"
             value={searchTerm}
             onChange={(e) => {
               setSearchTerm(e.target.value);
@@ -178,33 +163,33 @@ export default function JobOpeningsList() {
           />
         </div>
 
-        <button
-          onClick={() => setFilters(prev => ({ ...prev, filterOpen: !prev.filterOpen }))}
-          className="flex items-center justify-center gap-2 bg-white border border-gray-300 hover:bg-gray-50 px-4 py-3 rounded-xl shadow-sm transition-all w-full sm:w-auto"
-        >
-          <Filter className="w-4 h-4 text-blue-600" />
-          <span className="text-blue-600 font-medium">Filter</span>
-          <ChevronDown className={`w-4 h-4 text-blue-600 transition-transform ${filters.filterOpen ? 'rotate-180' : 'rotate-0'}`} />
-        </button>
+        <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+          <button
+            onClick={() => setFilters(prev => ({ ...prev, filterOpen: !prev.filterOpen }))}
+            className="flex items-center justify-center gap-2 bg-white border border-gray-300 hover:bg-gray-50 px-4 py-3 rounded-xl shadow-sm transition-all flex-1 sm:flex-none sm:w-auto"
+          >
+            <Filter className="w-4 h-4 text-blue-600" />
+            <span className="text-blue-600 font-medium">Filter</span>
+            <ChevronDown className={`w-4 h-4 text-blue-600 transition-transform ${filters.filterOpen ? 'rotate-180' : 'rotate-0'}`} />
+          </button>
+        </div>
       </div>
 
+      {/* Filter Panel */}
       {filters.filterOpen && (
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-5 mb-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <CustomSelect
-              label="Job Role"
-              value={filters.jobRole}
-              onChange={(e) => setFilters(prev => ({ ...prev, jobRole: e.target.value }))}
-              options={['Software Developer', 'System Engineer', 'Frontend Developer']}
-              placeholder="Select Job Role"
-            />
-            <CustomSelect
-              label="Department"
-              value={filters.department}
-              onChange={(e) => setFilters(prev => ({ ...prev, department: e.target.value }))}
-              options={['Computer Science', 'Information Technology', 'Electronics']}
-              placeholder="Select Department"
-            />
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">Job Role</label>
+              <select
+                value={filters.role}
+                onChange={(e) => setFilters(prev => ({ ...prev, role: e.target.value }))}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent min-h-[44px]"
+              >
+                <option value="">All Roles</option>
+                <option value="Test">Test</option>
+              </select>
+            </div>
           </div>
         </div>
       )}
@@ -215,13 +200,15 @@ export default function JobOpeningsList() {
           <table className="w-full">
             <thead className="bg-primary-600">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-50 uppercase tracking-wider">ID</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-50 uppercase tracking-wider">Company</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-50 uppercase tracking-wider">Job Role</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-50 uppercase tracking-wider">Department</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-50 uppercase tracking-wider">CTC</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-50 uppercase tracking-wider">Apply By</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-50 uppercase tracking-wider">Joining Date</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-50 uppercase tracking-wider">Placement ID</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-50 uppercase tracking-wider">Organisation</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-50 uppercase tracking-wider">Opening Date</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-50 uppercase tracking-wider">Role</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-50 uppercase tracking-wider">Selection Criteria</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-50 uppercase tracking-wider">CTC (LPA)</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-50 uppercase tracking-wider">Description</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-50 uppercase tracking-wider">Position Open Till</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-50 uppercase tracking-wider">Expected Joining Date</th>
                 <th className="px-6 py-3 text-center text-xs font-medium text-gray-50 uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
@@ -231,40 +218,27 @@ export default function JobOpeningsList() {
                   <tr key={item.placement_id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 text-sm text-gray-900">{item.placement_id}</td>
                     <td className="px-6 py-4 text-sm text-gray-500">{item.organisation}</td>
+                    <td className="px-6 py-4 text-sm text-gray-500">{item.opening_date}</td>
                     <td className="px-6 py-4 text-sm text-gray-500">{item.job_role}</td>
-                    <td className="px-6 py-4 text-sm text-gray-500">{item.department}</td>
-                    <td className="px-6 py-4 text-sm text-green-600 font-semibold">{item.ctc}</td>
+                    <td className="px-6 py-4 text-sm text-gray-500">{item.selection_criteria}</td>
+                    <td className="px-6 py-4 text-sm text-gray-500">{item.ctc}</td>
+                    <td className="px-6 py-4 text-sm text-gray-500">{item.job_description}</td>
                     <td className="px-6 py-4 text-sm text-gray-500">{item.position_open_till}</td>
                     <td className="px-6 py-4 text-sm text-gray-500">{item.expected_joining_date}</td>
                     <td className="px-6 py-4 text-center">
-                      <div className="flex items-center justify-center gap-1">
-                        <button
-                          onClick={() => navigate(`/student-placement/job-details/${item.placement_id}`)}
-                          className="p-1.5 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition"
-                          title="View"
-                        >
-                          <Eye className="w-4 h-4" />
-                        </button>
-                        {item.isApplied ? (
-                          <span className="px-2 py-1 bg-green-100 text-green-700 text-xs font-semibold rounded">
-                            <CheckCircle className="w-4 h-4 inline" />
-                          </span>
-                        ) : (
-                          <button
-                            onClick={() => navigate(`/student-placement/apply/${item.placement_id}`)}
-                            className="px-3 py-1 rounded-lg bg-green-50 text-green-600 hover:bg-green-100 transition text-xs font-medium"
-                          >
-                            Apply
-                          </button>
-                        )}
-                      </div>
+                      <button
+                        onClick={() => handleApply(item.placement_id, item.organisation)}
+                        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition text-sm"
+                      >
+                        Apply
+                      </button>
                     </td>
                   </tr>
                 ))
               ) : (
                 <tr>
-                  <td colSpan="8" className="px-6 py-8 text-center text-gray-500">
-                    No job openings found
+                  <td colSpan="10" className="px-6 py-8 text-center text-gray-500">
+                    {searchTerm || filters.role ? 'No jobs found matching your search or filters' : 'No jobs found'}
                   </td>
                 </tr>
               )}
@@ -272,15 +246,24 @@ export default function JobOpeningsList() {
           </table>
         </div>
 
+        {/* Pagination */}
         {totalEntries > 0 && (
           <div className="flex justify-between items-center px-6 py-4 border-t border-gray-200 text-sm text-gray-600">
-            <button onClick={handlePrev} disabled={currentPage === 1} className={`px-4 py-2 rounded-md ${currentPage === 1 ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700 text-white'}`}>
+            <button
+              onClick={handlePrev}
+              disabled={currentPage === 1}
+              className={`px-4 py-2 rounded-md ${currentPage === 1 ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700 text-white'}`}
+            >
               Previous
             </button>
             <span className="text-gray-700 font-medium">
               Showing {paginatedData.start + 1}–{Math.min(paginatedData.end, totalEntries)} of {totalEntries} entries
             </span>
-            <button onClick={handleNext} disabled={currentPage === totalPages} className={`px-4 py-2 rounded-md ${currentPage === totalPages ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700 text-white'}`}>
+            <button
+              onClick={handleNext}
+              disabled={currentPage === totalPages}
+              className={`px-4 py-2 rounded-md ${currentPage === totalPages ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700 text-white'}`}
+            >
               Next
             </button>
           </div>
@@ -292,7 +275,7 @@ export default function JobOpeningsList() {
         {currentEntries.length === 0 ? (
           <div className="bg-white rounded-xl shadow-md p-8 text-center border border-gray-200">
             <div className="text-gray-500">
-              <p className="text-lg font-medium mb-2">No job openings found</p>
+              <p className="text-lg font-medium mb-2">No jobs found</p>
             </div>
           </div>
         ) : (
@@ -303,40 +286,24 @@ export default function JobOpeningsList() {
                   <p className="font-semibold text-gray-900">{item.organisation}</p>
                   <p className="text-sm text-gray-500">{item.job_role}</p>
                 </div>
-                {item.isApplied && (
-                  <span className="px-3 py-1 bg-green-100 text-green-700 text-xs font-semibold rounded-full">
-                    Applied
-                  </span>
-                )}
               </div>
 
               <div className="space-y-2 text-sm text-gray-700 mb-4">
                 <div className="grid grid-cols-2 gap-2">
                   <div><span className="font-medium">ID:</span> {item.placement_id}</div>
-                  <div><span className="font-medium">CTC:</span> <span className="text-green-600 font-semibold">{item.ctc}</span></div>
-                  <div><span className="font-medium">Department:</span> {item.department}</div>
-                  <div><span className="font-medium">Apply By:</span> {item.position_open_till}</div>
+                  <div><span className="font-medium">CTC:</span> {item.ctc} LPA</div>
+                  <div><span className="font-medium">Opening:</span> {item.opening_date}</div>
+                  <div><span className="font-medium">Deadline:</span> {item.position_open_till}</div>
                 </div>
               </div>
 
               <div className="flex justify-end items-center">
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => navigate(`/student-placement/job-details/${item.placement_id}`)}
-                    className="p-2.5 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition"
-                    title="View"
-                  >
-                    <Eye className="w-4 h-4" />
-                  </button>
-                  {!item.isApplied && (
-                    <button
-                      onClick={() => navigate(`/student-placement/apply/${item.placement_id}`)}
-                      className="px-4 py-2 rounded-lg bg-green-600 text-white hover:bg-green-700 transition text-sm font-medium"
-                    >
-                      Apply Now
-                    </button>
-                  )}
-                </div>
+                <button
+                  onClick={() => handleApply(item.placement_id, item.organisation)}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition text-sm"
+                >
+                  Apply
+                </button>
               </div>
             </div>
           ))
@@ -346,13 +313,21 @@ export default function JobOpeningsList() {
       {/* Mobile Pagination */}
       {totalEntries > 0 && (
         <div className="lg:hidden flex justify-between items-center px-4 py-4 bg-white rounded-lg shadow-sm border border-gray-200 mt-4 text-sm text-gray-600">
-          <button onClick={handlePrev} disabled={currentPage === 1} className={`px-4 py-2 rounded-md ${currentPage === 1 ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700 text-white'}`}>
+          <button
+            onClick={handlePrev}
+            disabled={currentPage === 1}
+            className={`px-4 py-2 rounded-md ${currentPage === 1 ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700 text-white'}`}
+          >
             Previous
           </button>
           <span className="text-gray-700 font-medium text-xs">
             {paginatedData.start + 1}–{Math.min(paginatedData.end, totalEntries)} of {totalEntries}
           </span>
-          <button onClick={handleNext} disabled={currentPage === totalPages} className={`px-4 py-2 rounded-md ${currentPage === totalPages ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700 text-white'}`}>
+          <button
+            onClick={handleNext}
+            disabled={currentPage === totalPages}
+            className={`px-4 py-2 rounded-md ${currentPage === totalPages ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700 text-white'}`}
+          >
             Next
           </button>
         </div>

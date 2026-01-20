@@ -278,7 +278,7 @@ export default function MyRegistrations() {
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-50 uppercase tracking-wider">Position Open Till</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-50 uppercase tracking-wider">Interview Status</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-50 uppercase tracking-wider">Registration Link</th>
-                <th className="px-6 py-3 text-center text-xs font-medium text-gray-50 uppercase tracking-wider">Actions</th>
+                <th className="px-6 py-3 text-center text-xs font-medium text-gray-50 uppercase tracking-wider">Status</th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
@@ -311,13 +311,7 @@ export default function MyRegistrations() {
                       </a>
                     </td>
                     <td className="px-6 py-4 text-center">
-                      <button
-                        onClick={() => navigate(`/student-placement/registration-details/${item.registration_id}`)}
-                        className="p-1.5 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition"
-                        title="View"
-                      >
-                        <Eye className="w-4 h-4" />
-                      </button>
+                      {getStatusBadge(item.status)}
                     </td>
                   </tr>
                 ))

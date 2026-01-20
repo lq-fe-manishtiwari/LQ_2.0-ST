@@ -32,7 +32,7 @@ import AcademicCalendarRoutes from "../Student/screens/Pages/AcademicCalendar/Ro
 import AttendanceRoutes from '../Teacher/screens/Pages/Attendance/Routes/AttendanceRoutes.jsx';
 import StudentAttendanceRoutes from '../Student/screens/Pages/Attendance/Routes/AttendanceRoutes.jsx';
 import StudentPlacementRoutes from '../Student/screens/Pages/Placement/Routes/StudentPlacementRoutes.jsx';
-
+import PlacementRoutes from '../Teacher/screens/Pages/Placement/Routes/PlacementRoutes.jsx';
 // ────── Route guards ──────
 const ProtectedRoute = ({ children }) => {
   const isLoggedIn = !!localStorage.getItem('refreshToken');
@@ -109,6 +109,17 @@ function App() {
             </ProtectedRoute>
           }
         />
+        <Route
+  path="/teacher/placement/*"
+  element={
+    <ProtectedRoute>
+      <TeacherHomepage>
+        <PlacementRoutes />
+      </TeacherHomepage>
+    </ProtectedRoute>
+  }
+/>
+
         <Route
           path="/teacher/attendance/*"
           element={
