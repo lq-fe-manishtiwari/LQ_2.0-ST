@@ -212,10 +212,7 @@ const MyTaskTable = ({
           <table className="w-full">
             <thead className="table-header">
               <tr>
-                <th className="table-th text-xs px-2 py-3">Program</th>
-                <th className="table-th text-xs px-2 py-3">Batch</th>
-                <th className="table-th text-xs px-2 py-3">Subject</th>
-                <th className="table-th text-xs px-2 py-3">Department</th>
+                <th className="table-th text-xs px-2 py-3">Name</th>
                 <th className="table-th text-xs px-2 py-3">Task Title</th>
                 <th className="table-th text-xs px-2 py-3">Type</th>
                 <th className="table-th text-xs px-2 py-3">Due on</th>
@@ -251,12 +248,18 @@ const MyTaskTable = ({
                   const statusLabel = isTaskDelayed(task) ? "Delayed" : task.status;
                   return (
                     <tr key={task.id} className="hover:bg-gray-50 transition-colors">
-                      <td className="px-2 py-3 text-xs text-gray-700 max-w-[90px] truncate" title={task.program}>{task.program}</td>
+                      {/* <td className="px-2 py-3 text-xs text-gray-700 max-w-[90px] truncate" title={task.program}>{task.program}</td>
                       <td className="px-2 py-3 text-xs text-gray-700 max-w-[80px] truncate" title={`${task.batch} ${task.classYear ? `(${task.classYear})` : ''}`}>
                         {task.batch} {task.classYear ? `(${task.classYear})` : ''}
                       </td>
                       <td className="px-2 py-3 text-xs text-gray-700 max-w-[90px] truncate" title={task.subject}>{task.subject}</td>
-                      <td className="px-2 py-3 text-xs text-gray-700 max-w-[90px] truncate" title={task.department}>{task.department}</td>
+                      <td className="px-2 py-3 text-xs text-gray-700 max-w-[90px] truncate" title={task.department}>{task.department}</td> */}
+                      <td
+                        className="px-2 py-3 text-xs text-gray-900 font-medium max-w-[140px] truncate"
+                        title={`${task.firstname} ${task.lastname}`}
+                      >
+                        {task.firstname} {task.lastname}
+                      </td>
                       <td className="px-2 py-3 text-xs text-gray-900 font-medium max-w-[120px] truncate" title={task.taskTitle}>{task.taskTitle}</td>
                       <td className="px-2 py-3 text-xs text-gray-700 max-w-[80px] truncate" title={task.taskType}>{task.taskType}</td>
                       <td className={`px-2 py-3 text-xs font-semibold whitespace-nowrap ${isTaskOverdue(task) ? 'text-red-600' : 'text-gray-700'
@@ -870,19 +873,19 @@ export default function PersonalTask() {
 
   // Delete functionality
   const handleDelete = (id) => {
-  // Validate ID before proceeding
-  if (!id || id === 'undefined' || isNaN(parseInt(id))) {
-    setAlert(
-      <SweetAlert
-        danger
-        title="Error!"
-        onConfirm={() => setAlert(null)}
-      >
-        Invalid task ID. Cannot delete task.
-      </SweetAlert>
-    );
-    return;
-  }
+    // Validate ID before proceeding
+    if (!id || id === 'undefined' || isNaN(parseInt(id))) {
+      setAlert(
+        <SweetAlert
+          danger
+          title="Error!"
+          onConfirm={() => setAlert(null)}
+        >
+          Invalid task ID. Cannot delete task.
+        </SweetAlert>
+      );
+      return;
+    }
     setAlert(
       <SweetAlert
         warning
@@ -1014,7 +1017,7 @@ export default function PersonalTask() {
         setLoading(true);
         const response = await TaskManagement.getUserTodoByUserId(userId);
 
-        const tasksData = Array.isArray(response) ? response: [];
+        const tasksData = Array.isArray(response) ? response : [];
 
         const mappedTasks = tasksData.map(task => ({
           id: task.user_to_do_id?.toString() || null,
@@ -1027,10 +1030,10 @@ export default function PersonalTask() {
 
           program: "-",
           batch: "-",
-          classYear:  "",
+          classYear: "",
           subject: "-",
 
-          assignedBy: task.created_by_nameb|| "System",
+          assignedBy: task.created_by_nameb || "System",
           assignedOn: formatDate(task.created_at),
           assigned_date_time: task.created_at, // Raw date for filtering
           dueOn: formatDate(task.due_date_time),
@@ -1082,16 +1085,17 @@ export default function PersonalTask() {
         </div>
         {/* Filter + Create Task */}
         <div className="flex gap-3 w-full sm:w-auto">
-          <button
-            onClick={() => setFilters(prev => ({ ...prev, filterOpen: !prev.filterOpen }))}
-            className="flex items-center justify-center gap-2 bg-white border border-gray-300 hover:bg-gray-50 px-4 py-3 rounded-xl shadow-sm transition-all flex-1 sm:flex-none sm:w-auto"
-          >
-            <Filter className="w-5 h-5 text-blue-600" />
-            <span className="text-blue-600 font-medium">Filter</span>
-            <ChevronDown
-              className={`w-4 h-4 text-blue-600 transition-transform ${filters.filterOpen ? 'rotate-180' : 'rotate-0'}`}
-            />
-          </button>
+          {false && (
+            <button
+              onClick={() => setFilters(prev => ({ ...prev, filterOpen: !prev.filterOpen }))}
+              className="flex items-center justify-center gap-2 bg-white border border-gray-300 hover:bg-gray-50 px-4 py-3 rounded-xl shadow-sm transition-all flex-1 sm:flex-none sm:w-auto"
+            >
+              <Filter className="w-5 h-5 text-blue-600" />
+              <span className="text-blue-600 font-medium">Filter</span>
+              <ChevronDown className="w-4 h-4 text-blue-600" />
+            </button>
+          )}
+
           {/* Create Task - All screens */}
           <button
             onClick={() => navigate("/teacher/hrm/tasks/personal-tasks/add")}
