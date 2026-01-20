@@ -31,8 +31,8 @@ import AcademicCalendarRoute from "../Teacher/screens/Pages/AcademicCalendar/Rou
 import AcademicCalendarRoutes from "../Student/screens/Pages/AcademicCalendar/Routes/AcademicCalendarRoutes.jsx"
 import AttendanceRoutes from '../Teacher/screens/Pages/Attendance/Routes/AttendanceRoutes.jsx';
 import StudentAttendanceRoutes from '../Student/screens/Pages/Attendance/Routes/AttendanceRoutes.jsx';
-
-
+import StudentPlacementRoutes from '../Student/screens/Pages/Placement/Routes/StudentPlacementRoutes.jsx';
+import PlacementRoutes from '../Teacher/screens/Pages/Placement/Routes/PlacementRoutes.jsx';
 // ────── Route guards ──────
 const ProtectedRoute = ({ children }) => {
   const isLoggedIn = !!localStorage.getItem('refreshToken');
@@ -96,7 +96,7 @@ function App() {
             </ProtectedRoute>
           }
         />
-    
+
 
 
         <Route
@@ -109,6 +109,17 @@ function App() {
             </ProtectedRoute>
           }
         />
+        <Route
+  path="/teacher/placement/*"
+  element={
+    <ProtectedRoute>
+      <TeacherHomepage>
+        <PlacementRoutes />
+      </TeacherHomepage>
+    </ProtectedRoute>
+  }
+/>
+
         <Route
           path="/teacher/attendance/*"
           element={
@@ -185,16 +196,27 @@ function App() {
             </ProtectedRoute>
           }
         />
-<Route
-  path="/my-assessment/*"
-  element={
-    <ProtectedRoute>
-      <StudentHomepage>
-        <AssessmentRoutes />
-      </StudentHomepage>
-    </ProtectedRoute>
-  }
-/>
+        <Route
+          path="/my-assessment/*"
+          element={
+            <ProtectedRoute>
+              <StudentHomepage>
+                <AssessmentRoutes />
+              </StudentHomepage>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/student-placement/*"
+          element={
+            <ProtectedRoute>
+              <StudentHomepage>
+                <StudentPlacementRoutes />
+              </StudentHomepage>
+            </ProtectedRoute>
+          }
+        />
+
 
         <Route
           path="/curriculum/*"
@@ -207,7 +229,7 @@ function App() {
           }
         />
 
-{/* <Route
+        {/* <Route
           path="/Exam/*"
           element={
             <ProtectedRoute>
