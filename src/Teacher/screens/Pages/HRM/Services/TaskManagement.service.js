@@ -33,6 +33,15 @@ export const TaskManagement = {
        getUserTimesheetToday,
        getUserTimesheetSummary,
        getUserTimesheetMonthlySummary,
+
+        // Personal Task (User To-Do)
+       postPersonalTasksBulk,
+       getUserTodoByUserId,
+       getUserTodoById,
+       getUserTodoStats,
+       updateUserTodo,
+       deleteUserTodo,
+       deleteAllUserTodos
 }; 
 
 function getAllStaff() {
@@ -266,4 +275,104 @@ function getEmployeeTaskView(userId, collegeId) {
     const requestOptions = { method: 'GET', headers: authHeader() };
     return fetch(`${PMSAPI}/task/employee-view?${queryParams.toString()}`, requestOptions)
         .then(handleResponse);
+}
+
+// ============================= User To-Do APIs =============================
+
+function postPersonalTasksBulk(values) {
+    // POST : /api/admin/user-todo/create/bulk
+    const requestOptions = {
+        method: 'POST',
+        headers: authHeaderToPost(),
+        body: JSON.stringify(values)
+    };
+
+    return fetch(`${PMSAPI}/admin/user-todo/create/bulk`, requestOptions)
+        .then(handleResponse)
+        .then(data => {
+            return data;
+        });
+}
+
+// GET : /api/admin/user-todo/user/{userId}
+function getUserTodoByUserId(userId) {
+    const requestOptions = {
+        method: 'GET',
+        headers: authHeader()
+    };
+
+    return fetch(
+        `${PMSAPI}/admin/user-todo/user/${userId}`,
+        requestOptions
+    ).then(handleResponse);
+}
+
+
+// GET : /api/admin/user-todo/{userToDoId}?userId={userId}
+function getUserTodoById(userToDoId, userId) {
+    const requestOptions = {
+        method: 'GET',
+        headers: authHeader()
+    };
+
+    return fetch(
+        `${PMSAPI}/admin/user-todo/${userToDoId}?userId=${userId}`,
+        requestOptions
+    ).then(handleResponse);
+}
+
+
+// GET : /api/admin/user-todo/user/{userId}/stats
+function getUserTodoStats(userId) {
+    const requestOptions = {
+        method: 'GET',
+        headers: authHeader()
+    };
+
+    return fetch(
+        `${PMSAPI}/admin/user-todo/user/${userId}/stats`,
+        requestOptions
+    ).then(handleResponse);
+}
+
+// PUT : /api/admin/user-todo/update/{toDoId}
+function updateUserTodo(toDoId, values) {
+    const requestOptions = {
+        method: 'PUT',
+        headers: authHeaderToPost(),
+        body: JSON.stringify(values)
+    };
+
+    return fetch(
+        `${PMSAPI}/admin/user-todo/update/${toDoId}`,
+        requestOptions
+    ).then(handleResponse);
+}
+
+
+// DELETE : /api/admin/user-todo/delete/{toDoId}?userId={userId}
+function deleteUserTodo(toDoId, userId) {
+    const requestOptions = {
+        method: 'DELETE',
+        headers: authHeader()
+    };
+
+    return fetch(
+        `${PMSAPI}/admin/user-todo/delete/${toDoId}?userId=${userId}`,
+        requestOptions
+    ).then(handleResponse);
+}
+
+
+// DELETE : /api/admin/user-todo/delete/user/{userId}
+function deleteAllUserTodos(userId) {
+    const requestOptions = {
+        method: 'DELETE',
+        headers: authHeader()
+    };
+
+    return fetch(
+        `${PMSAPI}/admin/user-todo/delete/user/${userId}`,
+        requestOptions
+    ).then(handleResponse);
 }

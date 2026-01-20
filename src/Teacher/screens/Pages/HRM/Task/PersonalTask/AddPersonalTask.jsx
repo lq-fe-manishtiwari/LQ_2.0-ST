@@ -397,7 +397,7 @@ export default function AddPersonalTask() {
         })
       }];
 
-      const response = await TaskManagement.postMyTask(taskData);
+      const response = await TaskManagement.postPersonalTasksBulk(taskData);
       setIsSubmitting(false);
       setAlertMessage('Task created successfully!');
       setShowSuccessAlert(true);
