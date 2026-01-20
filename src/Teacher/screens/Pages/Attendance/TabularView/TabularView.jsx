@@ -675,29 +675,47 @@ export default function TabularView() {
         };
     }, []);
 
+    // Robust status finding
+    const getStatusByCodes = (codes) => {
+        return attendanceStatuses.find(s =>
+            codes.includes(String(s.status_code || '').toUpperCase()) ||
+            codes.includes(String(s.status_name || '').toUpperCase())
+        );
+    };
+
+    const presentStatusCode = getStatusByCodes(['P', 'PR', 'PRESENT'])?.status_code || 'P';
+    const absentStatusCode = getStatusByCodes(['A', 'AB', 'ABSENT'])?.status_code || 'A';
+
     // Mark all students as present
     const markAllPresent = () => {
-        setStudents(students.map(s => ({ ...s, status: 'P' })));
+        setStudents(students.map(s => ({ ...s, status: presentStatusCode })));
     };
 
     // Mark all students as absent
     const markAllAbsent = () => {
-        setStudents(students.map(s => ({ ...s, status: 'A' })));
-    };
-
-    // Toggle individual student status between P and A
-    const toggleStudentStatus = (id) => {
-        setStudents(students.map(s =>
-            s.id === id ? { ...s, status: s.status === 'P' ? 'A' : 'P' } : s
-        ));
+        setStudents(students.map(s => ({ ...s, status: absentStatusCode })));
     };
 
     const handleStatusClick = (student, e) => {
         e.stopPropagation();
-        if (student.status !== 'A') {
-            updateStudentStatus(student.id, 'A');
+        // Toggle between dynamic present and absent codes
+        const currentStatus = String(student.status || '').toUpperCase();
+        const isPresent = currentStatus === 'P' || currentStatus === 'PR' || currentStatus === 'PRESENT';
+
+        if (isPresent) {
+            updateStudentStatus(student.id, absentStatusCode);
         } else {
-            setActivePopup(student.id);
+            updateStudentStatus(student.id, presentStatusCode);
+        }
+    };
+
+    // Toggle individual student status (Legacy wrapper)
+    const toggleStudentStatus = (id) => {
+        const student = students.find(s => s.id === id);
+        if (student) {
+            const currentStatus = String(student.status || '').toUpperCase();
+            const isPresent = currentStatus === 'P' || currentStatus === 'PR' || currentStatus === 'PRESENT';
+            updateStudentStatus(id, isPresent ? absentStatusCode : presentStatusCode);
         }
     };
 
@@ -806,7 +824,11 @@ export default function TabularView() {
 
             // Last resort: case-insensitive name matching
             if (!status) {
-                const searchLabel = statusCode === 'P' ? 'PRESENT' : statusCode === 'A' ? 'ABSENT' : statusCode;
+                const sCode = String(statusCode).toUpperCase().trim();
+                const searchLabel = (sCode === 'P' || sCode === 'PR' || sCode.includes('PRESENT')) ? 'PRESENT'
+                    : (sCode === 'A' || sCode === 'AB' || sCode.includes('ABSENT')) ? 'ABSENT'
+                        : sCode;
+
                 status = attendanceStatuses.find(s =>
                     s.status_name?.toUpperCase().includes(searchLabel) ||
                     s.status_code?.toUpperCase().includes(searchLabel)
@@ -853,51 +875,39 @@ export default function TabularView() {
 
     // Map API statuses to UI format with icons
     const getIconForStatus = (statusCode) => {
+        const s = String(statusCode || '').toUpperCase();
+        if (s === 'P' || s === 'PR' || s === 'PRESENT') return <Check size={16} />;
+        if (s === 'A' || s === 'AB' || s === 'ABSENT') return <X size={16} />;
+
         const iconMap = {
-            'P': <Check size={16} />,
-            'A': <X size={16} />,
             'OA': <Activity size={16} />,
             'SA': <Trophy size={16} />,
             'ML': <Stethoscope size={16} />,
             'SL': <AlertCircle size={16} />,
             'CM': <Coffee size={16} />,
         };
-        return iconMap[statusCode] || <MoreHorizontal size={16} />;
+        return iconMap[s] || <MoreHorizontal size={16} />;
     };
 
     // Get Present and Absent statuses from API
-    const presentStatus = attendanceStatuses.find(s => s.status_code === 'P');
-    const absentStatus = attendanceStatuses.find(s => s.status_code === 'A');
+    const presentStatus = getStatusByCodes(['P', 'PR', 'PRESENT']);
+    const absentStatus = getStatusByCodes(['A', 'AB', 'ABSENT']);
 
     // All other statuses (excluding P and A) for bulk actions dropdown
     const otherStatuses = attendanceStatuses
-        .filter(status => status.status_code !== 'P' && status.status_code !== 'A')
+        .filter(status => {
+            const sc = String(status.status_code || '').toUpperCase();
+            return sc !== 'P' && sc !== 'PR' && sc !== 'PRESENT' &&
+                sc !== 'A' && sc !== 'AB' && sc !== 'ABSENT';
+        })
         .map(status => ({
             id: status.status_code,
             label: status.status_name,
             icon: getIconForStatus(status.status_code),
-            color: status.color_code || '#6B7280' // Use API color or default gray
+            color: status.color_code || '#6B7280'
         }));
 
-    const getStatusColor = (status) => {
-        switch (status) {
-            case 'P': return 'bg-green-500';
-            case 'A': return 'bg-red-500';
-            case 'OA': return 'bg-orange-500';
-            case 'ML': return 'bg-blue-500';
-            default: return 'bg-gray-400';
-        }
-    };
-
-    const getStatusLabel = (status) => {
-        switch (status) {
-            case 'P': return 'P';
-            case 'A': return 'A';
-            case 'OA': return 'OA';
-            case 'ML': return 'ML';
-            default: return '?';
-        }
-    };
+    // Deprecated helpers removed in favor of dynamic logic
 
     const activeStudent = students.find(s => s.id === activePopup);
 
@@ -1012,13 +1022,13 @@ export default function TabularView() {
 
                     <div className="flex items-center gap-2">
                         <button
-                            onClick={() => handleBulkStatusUpdate('P')}
+                            onClick={() => handleBulkStatusUpdate(presentStatusCode)}
                             className="flex items-center gap-1.5 px-3 py-1.5 bg-green-50 text-green-700 rounded-lg border border-green-100 hover:bg-green-100 transition-colors text-sm font-medium"
                         >
                             <Check size={16} /> Mark Present
                         </button>
                         <button
-                            onClick={() => handleBulkStatusUpdate('A')}
+                            onClick={() => handleBulkStatusUpdate(absentStatusCode)}
                             className="flex items-center gap-1.5 px-3 py-1.5 bg-red-50 text-red-700 rounded-lg border border-red-100 hover:bg-red-100 transition-colors text-sm font-medium"
                         >
                             <X size={16} /> Mark Absent
@@ -1076,15 +1086,26 @@ export default function TabularView() {
                     <div className="attendance-content-wrapper">
                         <div className="bg-white px-6 py-4 border-b border-gray-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                             <div className="flex items-center gap-6">
+
                                 <div className="flex items-center gap-2">
                                     <div className="w-2.5 h-2.5 rounded-full bg-green-500"></div>
                                     <span className="text-sm font-semibold text-gray-700">Total Present: </span>
-                                    <span className="text-lg font-bold text-green-600">{filteredStudents.filter(s => s.status === 'P').length}</span>
+                                    <span className="text-lg font-bold text-green-600">
+                                        {filteredStudents.filter(s => {
+                                            const status = String(s.status || '').toUpperCase().trim();
+                                            return status === 'P' || status === 'PR' || status === 'PRESENT' || status.includes('PRESENT');
+                                        }).length}
+                                    </span>
                                 </div>
                                 <div className="flex items-center gap-2">
                                     <div className="w-2.5 h-2.5 rounded-full bg-red-500"></div>
                                     <span className="text-sm font-semibold text-gray-700">Total Absent: </span>
-                                    <span className="text-lg font-bold text-red-600">{filteredStudents.filter(s => s.status === 'A').length}</span>
+                                    <span className="text-lg font-bold text-red-600">
+                                        {filteredStudents.filter(s => {
+                                            const status = String(s.status || '').toUpperCase().trim();
+                                            return status === 'A' || status === 'AB' || status === 'ABSENT' || status.includes('ABSENT');
+                                        }).length}
+                                    </span>
                                 </div>
                             </div>
                             <div className="text-sm text-gray-500 font-medium">
@@ -1241,38 +1262,29 @@ export default function TabularView() {
                                                 </td>
                                                 <td className="py-3 px-3 sm:px-6">
                                                     <div className="flex justify-center">
-                                                        <button
-                                                            onClick={() => toggleStudentStatus(student.id)}
-                                                            className={`relative inline-flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition-all duration-300 transform hover:scale-105 active:scale-95 shadow-sm hover:shadow-md ${student.status === 'P' ? "bg-gradient-to-r from-green-100 to-emerald-100 text-green-700" :
-                                                                student.status === 'A' ? "bg-gradient-to-r from-red-100 to-rose-100 text-red-700" :
-                                                                    student.status === 'OA' ? "bg-gradient-to-r from-orange-100 to-orange-200 text-orange-700" :
-                                                                        student.status === 'SA' ? "bg-gradient-to-r from-yellow-100 to-yellow-200 text-yellow-700" :
-                                                                            student.status === 'ML' ? "bg-gradient-to-r from-blue-100 to-blue-200 text-blue-700" :
-                                                                                student.status === 'SL' ? "bg-gradient-to-r from-indigo-100 to-indigo-200 text-indigo-700" :
-                                                                                    "bg-gray-100 text-gray-700"
-                                                                }`}
-                                                            style={{
-                                                                animation: "statusChange 0.4s ease-out",
-                                                            }}
-                                                        >
-                                                            {student.status === 'P' ? <Check size={16} className="animate-bounce-in" /> :
-                                                                student.status === 'A' ? <X size={16} className="animate-bounce-in" /> :
-                                                                    student.status === 'OA' ? <Activity size={16} className="animate-bounce-in" /> :
-                                                                        student.status === 'SA' ? <Trophy size={16} className="animate-bounce-in" /> :
-                                                                            student.status === 'ML' ? <Stethoscope size={16} className="animate-bounce-in" /> :
-                                                                                student.status === 'SL' ? <AlertCircle size={16} className="animate-bounce-in" /> :
-                                                                                    <MoreHorizontal size={16} className="animate-bounce-in" />
-                                                            }
-                                                            <span className="font-semibold">
-                                                                {student.status === 'P' ? 'Present' :
-                                                                    student.status === 'A' ? 'Absent' :
-                                                                        student.status === 'OA' ? 'Other' :
-                                                                            student.status === 'SA' ? 'Sports' :
-                                                                                student.status === 'ML' ? 'Medical' :
-                                                                                    student.status === 'SL' ? 'Sick' :
-                                                                                        student.status}
-                                                            </span>
-                                                        </button>
+                                                        {(() => {
+                                                            const statusObj = attendanceStatuses.find(st => st.status_code === student.status);
+                                                            const color = statusObj?.color_code || (student.status === presentStatusCode ? '#16a34a' : student.status === absentStatusCode ? '#dc2626' : '#6B7280');
+                                                            const Icon = getIconForStatus(student.status);
+
+                                                            return (
+                                                                <button
+                                                                    onClick={(e) => handleStatusClick(student, e)}
+                                                                    className="relative inline-flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition-all duration-300 transform hover:scale-105 active:scale-95 shadow-sm hover:shadow-md min-w-[120px] justify-center"
+                                                                    style={{
+                                                                        backgroundColor: `${color}15`,
+                                                                        color: color,
+                                                                        border: `1px solid ${color}30`,
+                                                                        animation: "statusChange 0.4s ease-out",
+                                                                    }}
+                                                                >
+                                                                    {Icon}
+                                                                    <span className="font-semibold">
+                                                                        {(statusObj?.status_name || student.status).toUpperCase()}
+                                                                    </span>
+                                                                </button>
+                                                            );
+                                                        })()}
                                                     </div>
                                                 </td>
                                             </tr>

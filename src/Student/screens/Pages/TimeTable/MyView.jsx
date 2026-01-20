@@ -38,15 +38,15 @@ const MyView = () => {
                 console.error('No currentUser found in localStorage');
                 return null;
             }
-            
+
             const currentUser = JSON.parse(currentUserStr);
             console.log('Current user from localStorage:', currentUser);
-            
+
             // Check if currentUser has jti (student ID)
             if (currentUser && currentUser.jti) {
                 return currentUser.jti;
             }
-            
+
             return null;
         } catch (error) {
             console.error('Error parsing currentUser from localStorage:', error);
@@ -59,7 +59,7 @@ const MyView = () => {
     const [selectedDate, setSelectedDate] = useState(new Date());
     const [loading, setLoading] = useState(true);
     const [timetableData, setTimetableData] = useState(null);
-    
+
     // Student ID State
     const [studentId, setStudentId] = useState(null);
 
@@ -129,17 +129,17 @@ const MyView = () => {
 
         // Extract unique statuses from API data
         const statusMap = new Map();
-        
+
         apiData.forEach(record => {
             if (record.status && !record.is_holiday) {
                 const statusName = record.status.status_name;
                 const statusId = record.status.status_id;
                 const statusCode = record.status.status_code;
-                
+
                 if (!statusMap.has(statusId)) {
                     const IconComponent = getStatusIcon(statusName);
                     const colors = getStatusColors(statusName);
-                    
+
                     statusMap.set(statusId, {
                         id: `STATUS_${statusId}`,
                         label: statusName,
@@ -164,8 +164,8 @@ const MyView = () => {
         if (!apiData || !Array.isArray(apiData)) {
             return {
                 period_info: {
-                    start_date: new Date().toISOString().split('T')[0],
-                    end_date: new Date().toISOString().split('T')[0],
+                    start_date: formatDateToYYYYMMDD(new Date()),
+                    end_date: formatDateToYYYYMMDD(new Date()),
                     working_days: 0,
                     template_used: {
                         template_id: "NO-DATA",
@@ -184,10 +184,10 @@ const MyView = () => {
 
         // Group by date
         const groupedByDate = {};
-        
+
         apiData.forEach((record, index) => {
             const date = record.date;
-            
+
             if (!groupedByDate[date]) {
                 groupedByDate[date] = {
                     date: date,
@@ -198,7 +198,7 @@ const MyView = () => {
                     slots: []
                 };
             }
-            
+
             // Check if this day is a holiday
             if (record.is_holiday) {
                 // Only create one holiday slot per day
@@ -236,8 +236,8 @@ const MyView = () => {
                     start_time: record.start_time,
                     end_time: record.end_time,
                     subject_name: record.subject_name,
-                    teacher_name: record.firstname && record.lastname 
-                        ? `${record.firstname} ${record.lastname}` 
+                    teacher_name: record.firstname && record.lastname
+                        ? `${record.firstname} ${record.lastname}`
                         : `Teacher ${record.teacher_id}`,
                     classroom_name: record.classroom_name,
                     entry_type: record.entry_type,
@@ -262,14 +262,14 @@ const MyView = () => {
         });
 
         // Convert to array and sort by date
-        const daily_timetable = Object.values(groupedByDate).sort((a, b) => 
+        const daily_timetable = Object.values(groupedByDate).sort((a, b) =>
             new Date(a.date) - new Date(b.date)
         );
 
         // Calculate summary
         const total_slots = apiData.filter(record => !record.is_holiday).length;
         const holiday_slots = apiData.filter(record => record.is_holiday).length;
-        const exception_slots = apiData.filter(record => 
+        const exception_slots = apiData.filter(record =>
             !record.is_holiday && (record.is_exception || record.is_cancelled)
         ).length;
         const active_slots = total_slots - exception_slots;
@@ -277,12 +277,12 @@ const MyView = () => {
 
         // Get date range from data
         const dates = daily_timetable.map(day => new Date(day.date));
-        const start_date = dates.length > 0 
-            ? new Date(Math.min(...dates)).toISOString().split('T')[0]
-            : new Date().toISOString().split('T')[0];
+        const start_date = dates.length > 0
+            ? formatDateToYYYYMMDD(new Date(Math.min(...dates)))
+            : formatDateToYYYYMMDD(new Date());
         const end_date = dates.length > 0
-            ? new Date(Math.max(...dates)).toISOString().split('T')[0]
-            : new Date().toISOString().split('T')[0];
+            ? formatDateToYYYYMMDD(new Date(Math.max(...dates)))
+            : formatDateToYYYYMMDD(new Date());
 
         // Count working days (excluding holidays)
         const working_days = daily_timetable.filter(day => !day.is_holiday).length;
@@ -295,7 +295,7 @@ const MyView = () => {
                 holiday_days,
                 template_used: {
                     template_id: "TEMP-API-GENERATED",
-                    template_name: "API Generated Timetable"
+                    template_name: "Generated Timetable"
                 }
             },
             summary: {
@@ -327,11 +327,11 @@ const MyView = () => {
     const initializeAttendanceData = (apiData) => {
         const attendance = {};
         const stats = {};
-        
+
         // First, transform API statuses to options (excluding holidays)
         const options = transformApiStatusesToOptions(apiData.filter(record => !record.is_holiday));
         setAttendanceOptions(options);
-        
+
         // Initialize stats for each status
         options.forEach(option => {
             stats[option.id] = 0;
@@ -344,21 +344,21 @@ const MyView = () => {
                 stats.holiday++;
                 return;
             }
-            
+
             const slotId = record.attendance_id || `SLOT-${record.date}-${record.timeslot_id}`;
             let statusId = null;
-            
+
             if (record.status) {
                 // Find the matching option
-                const matchingOption = options.find(opt => 
-                    opt.status_id === record.status.status_id || 
+                const matchingOption = options.find(opt =>
+                    opt.status_id === record.status.status_id ||
                     opt.status_name === record.status.status_name
                 );
-                
+
                 if (matchingOption) {
                     statusId = matchingOption.id;
                     attendance[slotId] = statusId;
-                    
+
                     // Update stats
                     if (stats[statusId] !== undefined) {
                         stats[statusId]++;
@@ -376,44 +376,48 @@ const MyView = () => {
     // Get date range based on view mode
     const getDateRangeForViewMode = (date, mode) => {
         let startDate, endDate;
-        
-        switch(mode) {
+
+        switch (mode) {
             case 'Day':
                 // For Day view, get only the selected date
                 startDate = new Date(date);
                 endDate = new Date(date);
                 break;
-                
+
             case 'Week':
                 // For Week view, get the week range
                 const { start: weekStart, end: weekEnd } = getWeekRange(date);
                 startDate = weekStart;
                 endDate = weekEnd;
                 break;
-                
+
             case 'Month':
                 // For Month view, get the month range
                 const { start: monthStart, end: monthEnd } = getMonthRange(date);
                 startDate = monthStart;
                 endDate = monthEnd;
                 break;
-                
+
             default:
                 // Default to Day view
                 startDate = new Date(date);
                 endDate = new Date(date);
         }
-        
-        // Format dates to YYYY-MM-DD
-        const formatDate = (dateObj) => {
-            return dateObj.toISOString().split('T')[0];
-        };
-        
+
         return {
-            startDate: formatDate(startDate),
-            endDate: formatDate(endDate)
+            startDate: formatDateToYYYYMMDD(startDate),
+            endDate: formatDateToYYYYMMDD(endDate)
         };
     };
+
+    // Format date as YYYY-MM-DD avoiding timezone shifts
+    function formatDateToYYYYMMDD(date) {
+        if (!date || isNaN(date.getTime())) return null;
+        const y = date.getFullYear();
+        const m = String(date.getMonth() + 1).padStart(2, '0');
+        const d = String(date.getDate()).padStart(2, '0');
+        return `${y}-${m}-${d}`;
+    }
 
     // Fetch attendance data from API
     const fetchAttendanceData = async (studentId, selectedDate, viewMode) => {
@@ -421,25 +425,25 @@ const MyView = () => {
             if (!studentId) {
                 return;
             }
-            
+
             // Get date range based on view mode
             const { startDate, endDate } = getDateRangeForViewMode(selectedDate, viewMode);
-            
+
             setLoading(true);
-            
+
             const params = {
                 studentId,
                 startDate,
                 endDate
             };
-            
+
             const result = await TeacherAttendanceManagement.getStudentAttendanceTimetable(params);
-            
+
             if (result.success) {
                 // Transform API data to our format
                 const transformedData = transformApiDataToTimetable(result.data || []);
                 setTimetableData(transformedData);
-                
+
                 // Initialize attendance data and options
                 if (result.data && result.data.length > 0) {
                     initializeAttendanceData(result.data);
@@ -476,7 +480,7 @@ const MyView = () => {
         if (option) {
             return option;
         }
-        
+
         // Return default if not found
         return {
             id: "UNKNOWN",
@@ -644,7 +648,7 @@ const MyView = () => {
             return [];
         }
 
-        const dateStr = selectedDate.toISOString().split('T')[0];
+        const dateStr = formatDateToYYYYMMDD(selectedDate);
 
         // Find the day's schedule
         const daySchedule = timetableData.daily_timetable.find(day => day.date === dateStr);
@@ -944,10 +948,10 @@ const MyView = () => {
 
                             <div className="grid grid-cols-7 gap-1">
                                 {calendarData.map((item, idx) => {
-                                    const dateStr = item.fullDate ? item.fullDate.toISOString().split('T')[0] : null;
+                                    const dateStr = item.fullDate ? formatDateToYYYYMMDD(item.fullDate) : null;
                                     const dayData = timetableData?.daily_timetable?.find(day => day.date === dateStr);
                                     const isHoliday = dayData?.is_holiday;
-                                    
+
                                     return (
                                         <div key={idx} className="aspect-square flex items-center justify-center p-0.5">
                                             {item.day ? (
@@ -964,7 +968,7 @@ const MyView = () => {
                                                             : isDateInWeekRange(item.fullDate)
                                                                 ? "bg-primary-100 text-primary-700 font-semibold ring-2 ring-primary-200"
                                                                 : isDateInMonthRange(item.fullDate)
-                                                                    ? isHoliday 
+                                                                    ? isHoliday
                                                                         ? "bg-amber-50 text-amber-600 font-medium border-2 border-amber-200"
                                                                         : "bg-primary-50 text-primary-600 font-medium"
                                                                     : "bg-slate-50 text-slate-600 hover:bg-primary-50 hover:text-primary-600"
@@ -1018,12 +1022,12 @@ const MyView = () => {
                             <div className="mt-4 md:mt-0 md:ml-6 border-t md:border-t-0 md:border-l border-slate-100 pt-4 md:pt-0 md:pl-6">
                                 <div className="flex flex-col gap-3">
                                     <span className="text-xs font-bold text-slate-500">Attendance Overview</span>
-                                    
+
                                     <div className="grid grid-cols-2 gap-2">
                                         {attendanceOptions.map((option) => {
                                             const count = attendanceStats[option.id] || 0;
                                             const OptionIcon = option.icon;
-                                            
+
                                             return (
                                                 <div key={option.id} className="flex items-center gap-2 p-2 rounded-lg bg-slate-50">
                                                     <OptionIcon size={12} className={option.color} />
@@ -1035,7 +1039,7 @@ const MyView = () => {
                                             );
                                         })}
                                     </div>
-                                    
+
                                     <div className="mt-2 p-2 rounded-lg bg-primary-50 border border-primary-200">
                                         <div className="flex items-center justify-between">
                                             <div>
@@ -1187,9 +1191,9 @@ const MyView = () => {
                                                 {["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"][selectedDate.getDay()]}
                                             </h1>
                                             <p className="text-slate-500 font-medium text-sm md:text-base mt-1">
-                                                {scheduleData.length === 0 ? "No classes scheduled" : 
-                                                 scheduleData[0]?.is_holiday ? scheduleData[0]?.notes || "Public Holiday" :
-                                                 `${scheduleData.length} session${scheduleData.length !== 1 ? 's' : ''} scheduled`}
+                                                {scheduleData.length === 0 ? "No classes scheduled" :
+                                                    scheduleData[0]?.is_holiday ? scheduleData[0]?.notes || "Public Holiday" :
+                                                        `${scheduleData.length} session${scheduleData.length !== 1 ? 's' : ''} scheduled`}
                                             </p>
                                         </div>
                                     </div>
@@ -1288,7 +1292,7 @@ const MyView = () => {
                                             // Regular class slot
                                             const attendanceInfo = getAttendanceInfo(attendanceData[slot.id]);
                                             const AttendanceIcon = attendanceInfo.icon;
-                                            
+
                                             return (
                                                 <div key={slot.id} className="group relative">
                                                     <div className={`bg-white rounded-xl md:rounded-2xl lg:rounded-3xl p-4 md:p-6 border transition-all duration-300 flex flex-col md:flex-row items-stretch gap-4 md:gap-6 relative z-10
@@ -1423,7 +1427,7 @@ const MyView = () => {
                                             const { start } = getWeekRange(selectedDate);
                                             const dayDate = new Date(start);
                                             dayDate.setDate(start.getDate() + idx);
-                                            const dateStr = dayDate.toISOString().split('T')[0];
+                                            const dateStr = formatDateToYYYYMMDD(dayDate);
                                             const dayData = timetableData?.daily_timetable?.find(d => d.date === dateStr);
                                             const isHoliday = dayData?.is_holiday;
                                             const isToday = isSameDay(dayDate, new Date());
@@ -1469,7 +1473,7 @@ const MyView = () => {
                                             {Array.from({ length: 14 }, (_, i) => i + 8).map(hour => {
                                                 const displayHour = hour > 12 ? hour - 12 : hour;
                                                 const period = hour >= 12 ? 'PM' : 'AM';
-                                                
+
                                                 return (
                                                     <div key={hour} className="h-20 border-b border-slate-100 px-3 py-2 relative group">
                                                         <div className="absolute top-0 left-0 right-0 h-[1px] bg-slate-100"></div>
@@ -1491,7 +1495,7 @@ const MyView = () => {
                                             const { start } = getWeekRange(selectedDate);
                                             const dayDate = new Date(start);
                                             dayDate.setDate(start.getDate() + idx);
-                                            const dateStr = dayDate.toISOString().split('T')[0];
+                                            const dateStr = formatDateToYYYYMMDD(dayDate);
                                             const dayData = timetableData?.daily_timetable?.find(d => d.date === dateStr);
                                             const slots = dayData?.slots || [];
                                             const isHoliday = dayData?.is_holiday;
@@ -1501,7 +1505,7 @@ const MyView = () => {
                                                 <div key={idx} className={`border-r border-slate-100 last:border-r-0 relative min-h-[560px]
                                                     ${isToday ? 'bg-blue-50/10' : ''}
                                                     ${isHoliday ? 'bg-amber-50/20' : ''}`}>
-                                                    
+
                                                     {/* Hourly grid lines */}
                                                     {Array.from({ length: 14 }, (_, i) => i + 8).map(hour => (
                                                         <div key={hour} className="h-20 border-b border-slate-100 relative">
@@ -1528,20 +1532,20 @@ const MyView = () => {
                                                     {/* Class Slots */}
                                                     {!isHoliday && slots.map((slot) => {
                                                         if (!slot.start_time || !slot.end_time) return null;
-                                                        
+
                                                         const startMinutes = timeToMinutes(slot.start_time);
                                                         const endMinutes = timeToMinutes(slot.end_time);
-                                                        
+
                                                         // Calculate position (8:00 AM is hour 0)
                                                         const top = ((startMinutes - (8 * 60)) / 60) * 80; // 80px per hour
                                                         const height = ((endMinutes - startMinutes) / 60) * 80;
-                                                        
+
                                                         // Skip if outside visible hours (8 AM - 10 PM)
                                                         if (startMinutes < 8 * 60 || startMinutes > 22 * 60) return null;
                                                         if (height < 20) return null; // Skip very short slots
-                                                        
+
                                                         const attendanceInfo = getAttendanceInfo(attendanceData[slot.time_slot_id]);
-                                                        
+
                                                         return (
                                                             <div
                                                                 key={slot.time_slot_id}
@@ -1558,30 +1562,30 @@ const MyView = () => {
                                                                     }
                                                                 }}
                                                             >
-                                                                <div className={`absolute left-0 top-0 bottom-0 w-1.5 
+                                                                <div className={`absolute left-0 top-0 bottom-0 w-1.5
                                                                     ${slot.entry_type === 'Practical' ? 'bg-emerald-500' :
                                                                         slot.entry_type === 'Tutorial' ? 'bg-purple-500' : 'bg-primary-500'
                                                                     }`}></div>
-                                                                
+
                                                                 <div className="p-2 pl-3 h-full overflow-hidden bg-white/95 backdrop-blur-sm">
                                                                     <div className="flex flex-col h-full">
                                                                         {/* Time */}
                                                                         <div className="text-[9px] font-bold text-slate-400 mb-0.5 leading-none">
                                                                             {formatTimeForDisplay(slot.start_time)} - {formatTimeForDisplay(slot.end_time)}
                                                                         </div>
-                                                                        
+
                                                                         {/* Subject */}
                                                                         <div className="text-xs font-bold text-slate-800 line-clamp-1 leading-tight mb-1">
                                                                             {slot.subject_name}
                                                                         </div>
-                                                                        
+
                                                                         {/* Division */}
                                                                         {slot.division_name && slot.division_name !== "Default" && (
                                                                             <div className="text-[10px] text-blue-600 font-medium truncate mb-1">
                                                                                 Div: {slot.division_name}
                                                                             </div>
                                                                         )}
-                                                                        
+
                                                                         {/* Module */}
                                                                         {slot.module_name && (
                                                                             <div className="text-[10px] text-blue-600 font-medium truncate flex items-center gap-1 mb-1">
@@ -1589,7 +1593,7 @@ const MyView = () => {
                                                                                 {slot.module_name}
                                                                             </div>
                                                                         )}
-                                                                        
+
                                                                         {/* Attendance Status */}
                                                                         {attendanceInfo && (
                                                                             <div className="mt-auto flex items-center gap-1">
@@ -1601,7 +1605,7 @@ const MyView = () => {
                                                                         )}
                                                                     </div>
                                                                 </div>
-                                                                
+
                                                                 {/* Hover overlay */}
                                                                 <div className="absolute inset-0 bg-white/0 group-hover:bg-white/20 transition-colors pointer-events-none"></div>
                                                             </div>
@@ -1614,7 +1618,7 @@ const MyView = () => {
                                                             const now = new Date();
                                                             const currentMinutes = now.getHours() * 60 + now.getMinutes();
                                                             const top = ((currentMinutes - (8 * 60)) / 60) * 80;
-                                                            
+
                                                             if (currentMinutes >= 8 * 60 && currentMinutes <= 22 * 60) {
                                                                 return (
                                                                     <div
@@ -1702,83 +1706,84 @@ const MyView = () => {
                                             }
 
                                             return [...prevMonthDays, ...currentDays, ...nextMonthDays].map((dayDate, idx) => {
-                                                const dayStr = dayDate.toISOString().split('T')[0];
-                                                const dayData = timetableData?.daily_timetable?.find(d => d.date === dayStr);
-                                                const slots = dayData?.slots || [];
-                                                const isToday = isSameDay(dayDate, new Date());
-                                                const isSelected = isSameDay(dayDate, selectedDate);
-                                                const isCurrentMonth = dayDate.getMonth() === selectedDate.getMonth();
-                                                const isHoliday = dayData?.is_holiday;
+                                                const dayStr = formatDateToYYYYMMDD(dayDate);                                                const dayData = timetableData?.daily_timetable?.find(d => d.date === dayStr);
+                                    const slots = dayData?.slots || [];
+                                    const isToday = isSameDay(dayDate, new Date());
+                                    const isSelected = isSameDay(dayDate, selectedDate);
+                                    const isCurrentMonth = dayDate.getMonth() === selectedDate.getMonth();
+                                    const isHoliday = dayData?.is_holiday;
 
-                                                return (
-                                                    <div
-                                                        key={idx}
-                                                        onClick={() => setSelectedDate(dayDate)}
-                                                        className={`px-0.5 md:px-1 py-1 mt-0 first:mt-0 relative group cursor-pointer transition-all hover:bg-slate-50/50
+                                    return (
+                                    <div
+                                        key={idx}
+                                        onClick={() => setSelectedDate(dayDate)}
+                                        className={`px-0.5 md:px-1 py-1 mt-0 first:mt-0 relative group cursor-pointer transition-all hover:bg-slate-50/50
                                                         ${!isCurrentMonth ? 'bg-slate-50/10' : ''}
                                                         ${isSelected ? 'bg-primary-50/30' : isHoliday ? 'bg-amber-50/20' : ''}`}
-                                                    >
-                                                        <div className="flex justify-between items-center p-0.5 md:p-1">
-                                                            <span className={`text-[10px] md:text-[11px] font-bold w-5 h-5 md:w-6 md:h-6 flex items-center justify-center rounded-full relative
+                                    >
+                                        <div className="flex justify-between items-center p-0.5 md:p-1">
+                                            <span className={`text-[10px] md:text-[11px] font-bold w-5 h-5 md:w-6 md:h-6 flex items-center justify-center rounded-full relative
                                                             ${isToday ? 'bg-primary-600 text-white shadow-sm' :
-                                                                    isSelected ? 'bg-primary-100 text-primary-700' :
-                                                                    isHoliday ? 'bg-amber-100 text-amber-700 border-2 border-amber-200' :
-                                                                        isCurrentMonth ? 'text-slate-700' : 'text-slate-400'}`}>
-                                                                {dayDate.getDate()}
-                                                                {isHoliday && (
-                                                                    <div className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 bg-amber-500 rounded-full"></div>
-                                                                )}
-                                                            </span>
-                                                        </div>
-                                                        <div className="px-0.5 md:px-1 space-y-0.5 overflow-hidden">
-                                                            {isHoliday ? (
-                                                                <div className={`px-1 py-0.5 rounded-md bg-amber-50 border border-amber-200 text-amber-700 text-[8px] font-semibold leading-tight flex items-center gap-1`}>
-                                                                    <div className={`w-1 h-1 rounded-full shrink-0 bg-amber-500`}></div>
-                                                                    <span className="truncate">{dayData.holiday_name || "Holiday"}</span>
-                                                                </div>
-                                                            ) : (
-                                                                slots.slice(0, 3).map(slot => {
-                                                                    const attendanceInfo = getAttendanceInfo(attendanceData[slot.time_slot_id]);
-                                                                    return (
-                                                                        <div key={slot.time_slot_id} className={`px-1 py-0.5 rounded-md ${attendanceInfo.bgColor} border ${attendanceInfo.borderColor} text-primary-700 text-[8px] font-semibold leading-tight flex items-center gap-1`}>
-                                                                            <div className={`w-1 h-1 rounded-full shrink-0 ${attendanceInfo.color.replace('text-', 'bg-')}`}></div>
-                                                                            <span className="truncate">{slot.subject_name}</span>
-                                                                            {slot.division_name && slot.division_name !== "Default" && (
-                                                                                <span className="text-[7px] text-blue-600 font-bold">(Div: {slot.division_name})</span>
-                                                                            )}
-                                                                        </div>
-                                                                    );
-                                                                })
-                                                            )}
-                                                            {!isHoliday && slots.length > 3 && (
-                                                                <div className="text-[7px] md:text-[8px] font-black text-slate-400 pl-1 tracking-tighter">
-                                                                    +{slots.length - 3} More
-                                                                </div>
+                                                    isSelected ? 'bg-primary-100 text-primary-700' :
+                                                        isHoliday ? 'bg-amber-100 text-amber-700 border-2 border-amber-200' :
+                                                            isCurrentMonth ? 'text-slate-700' : 'text-slate-400'}`}>
+                                                {dayDate.getDate()}
+                                                {isHoliday && (
+                                                    <div className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 bg-amber-500 rounded-full"></div>
+                                                )}
+                                            </span>
+                                        </div>
+                                        <div className="px-0.5 md:px-1 space-y-0.5 overflow-hidden">
+                                            {isHoliday ? (
+                                                <div className={`px-1 py-0.5 rounded-md bg-amber-50 border border-amber-200 text-amber-700 text-[8px] font-semibold leading-tight flex items-center gap-1`}>
+                                                    <div className={`w-1 h-1 rounded-full shrink-0 bg-amber-500`}></div>
+                                                    <span className="truncate">{dayData.holiday_name || "Holiday"}</span>
+                                                </div>
+                                            ) : (
+                                                slots.slice(0, 3).map(slot => {
+                                                    const attendanceInfo = getAttendanceInfo(attendanceData[slot.time_slot_id]);
+                                                    return (
+                                                        <div key={slot.time_slot_id} className={`px-1 py-0.5 rounded-md ${attendanceInfo.bgColor} border ${attendanceInfo.borderColor} text-primary-700 text-[8px] font-semibold leading-tight flex items-center gap-1`}>
+                                                            <div className={`w-1 h-1 rounded-full shrink-0 ${attendanceInfo.color.replace('text-', 'bg-')}`}></div>
+                                                            <span className="truncate">{slot.subject_name}</span>
+                                                            {slot.division_name && slot.division_name !== "Default" && (
+                                                                <span className="text-[7px] text-blue-600 font-bold">(Div: {slot.division_name})</span>
                                                             )}
                                                         </div>
-                                                    </div>
-                                                );
+                                                    );
+                                                })
+                                            )}
+                                            {!isHoliday && slots.length > 3 && (
+                                                <div className="text-[7px] md:text-[8px] font-black text-slate-400 pl-1 tracking-tighter">
+                                                    +{slots.length - 3} More
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                    );
                                             });
                                         })()}
-                                    </div>
                                 </div>
                             </div>
+                            </div>
                         )}
-                    </div>
                 </div>
-            </main>
+        </div>
+            </main >
 
-            {/* Mobile Floating Action Button */}
-            {isMobile && mobileViewMode === "calendar" && scheduleData.length > 0 && (
-                <button
-                    onClick={() => setMobileViewMode("schedule")}
-                    className="fixed bottom-6 right-6 w-14 h-14 bg-primary-600 text-white rounded-full shadow-xl flex items-center justify-center z-50 animate-bounce"
-                >
-                    <span className="text-lg font-bold">{scheduleData.length}</span>
-                </button>
-            )}
+    {/* Mobile Floating Action Button */ }
+{
+    isMobile && mobileViewMode === "calendar" && scheduleData.length > 0 && (
+        <button
+            onClick={() => setMobileViewMode("schedule")}
+            className="fixed bottom-6 right-6 w-14 h-14 bg-primary-600 text-white rounded-full shadow-xl flex items-center justify-center z-50 animate-bounce"
+        >
+            <span className="text-lg font-bold">{scheduleData.length}</span>
+        </button>
+    )
+}
 
-            <style>{`
+<style>{`
                 @keyframes fade-in {
                     from { opacity: 0; transform: translateY(10px); }
                     to { opacity: 1; transform: translateY(0); }
@@ -1800,8 +1805,9 @@ const MyView = () => {
                     background: #cbd5e1;
                 }
             `}</style>
-        </div>
+        </div >
     );
 };
 
 export default MyView;
+
