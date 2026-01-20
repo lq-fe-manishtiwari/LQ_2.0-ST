@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
-import { Eye, X } from "lucide-react";
+import { Eye, X, FileText, ExternalLink } from "lucide-react";
 import { TaskManagement } from '../../Services/TaskManagement.service';
 
 export default function ViewPersonalTask() {
@@ -22,7 +22,7 @@ export default function ViewPersonalTask() {
     if (passedTaskData) {
       // Use passed data from MyTasks.jsx
       setTask(passedTaskData.originalData || passedTaskData);
-      setLoading(false);
+        setLoading(false);
     } else if (id) {
       // Fallback to API call if no data passed
       TaskManagement.getMyTaskbyID(id)
@@ -61,21 +61,22 @@ export default function ViewPersonalTask() {
   const data = task ? {
     title: task.title || "No Title",
     description: task.description || "No Description",
-    assignedDate: formatDate(task.assigned_date_time),
+    assignedDate: formatDate(task.created_at),
     dueDate: formatDate(task.due_date_time),
-    assignedBy: "Self",
+    assignedBy: task.created_by_name || "Self",
     taskType: task.task_type?.task_type_name || "General",
     priority: task.priority?.priority_name || "Medium",
     status: task.status?.name || "Pending",
     overdue: task.overdue ? `${task.days_until_due} Days` : null,
-    taskCategory: task.task_category || "",
+    supportingDocuments: task.supporting_document || [],
+    taskCategory: "",
     // Academic Details
-    program: task.academic_year?.program_name || task.program?.program_name || "-",
-    batch: task.academic_year?.batch_name || task.batch?.batch_name || "-",
-    classYear: task.academic_year?.name || task.class_year_name || "-",
-    subject: task.subject?.name || "-",
-    semester: task.semester?.name || "-",
-    division: task.division?.division_name || task.division?.name || "-",
+    program: "-",
+    batch: "-",
+    classYear: "-",
+    subject:  "-",
+    semester: "-",
+    division: "-",
   } : null;
 
   // Helper function to check if task is overdue

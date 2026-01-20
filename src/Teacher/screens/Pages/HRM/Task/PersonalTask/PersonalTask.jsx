@@ -870,6 +870,19 @@ export default function PersonalTask() {
 
   // Delete functionality
   const handleDelete = (id) => {
+  // Validate ID before proceeding
+  if (!id || id === 'undefined' || isNaN(parseInt(id))) {
+    setAlert(
+      <SweetAlert
+        danger
+        title="Error!"
+        onConfirm={() => setAlert(null)}
+      >
+        Invalid task ID. Cannot delete task.
+      </SweetAlert>
+    );
+    return;
+  }
     setAlert(
       <SweetAlert
         warning
@@ -889,7 +902,7 @@ export default function PersonalTask() {
 
   const confirmDelete = async (id) => {
     try {
-      await TaskManagement.deleteMyTask(parseInt(id), userId);
+      await TaskManagement.deleteUserTodo(parseInt(id), userId);
       setTasks(prev => prev.filter(t => t.id !== id));
       setAlert(
         <SweetAlert
@@ -999,34 +1012,32 @@ export default function PersonalTask() {
     const fetchTasks = async () => {
       try {
         setLoading(true);
-        const response = await TaskManagement.getAllMyTasks(userId);
+        const response = await TaskManagement.getUserTodoByUserId(userId);
 
-        const tasksData = Array.isArray(response?.tasks) ? response.tasks : [];
+        const tasksData = Array.isArray(response) ? response: [];
 
         const mappedTasks = tasksData.map(task => ({
-          id: task.self_task_id?.toString(),
-          firstname: response.user?.teacher_info?.firstname || "N/A",
-          lastname: response.user?.teacher_info?.lastname || "N/A",
-          name: response.user?.username || "",
-          email: response.user?.username || "",
+          id: task.user_to_do_id?.toString() || null,
+          firstname: task.user?.other_staff_info?.firstname || task.user?.teacher_info?.firstname || "N/A",
+          lastname: task.user?.other_staff_info?.lastname || task.user?.teacher_info?.lastname || "N/A",
+          name: task.user?.username || "",
+          email: task.user?.username || "",
           taskTitle: task.title || "No Title",
           taskType: task.task_type?.task_type_name || "General",
 
-          program: task.academic_year?.program_name || task.program?.program_name || "-",
-          batch: task.academic_year?.batch_name || task.batch?.batch_name || "-",
-          classYear: task.academic_year?.name || "",
-          subject: task.subject?.name || "-",
+          program: "-",
+          batch: "-",
+          classYear:  "",
+          subject: "-",
 
-          assignedBy: task.assigned_by?.other_staff_info
-            ? `${task.assigned_by.other_staff_info.firstname} ${task.assigned_by.other_staff_info.lastname}`
-            : "System",
-          assignedOn: formatDate(task.assigned_date_time),
-          assigned_date_time: task.assigned_date_time, // Raw date for filtering
+          assignedBy: task.created_by_nameb|| "System",
+          assignedOn: formatDate(task.created_at),
+          assigned_date_time: task.created_at, // Raw date for filtering
           dueOn: formatDate(task.due_date_time),
           dueDate: task.due_date_time,
           priority: task.priority?.priority_name || "Medium",
           status: task.status?.name || "Pending",
-          department: response.user?.other_staff_info?.department?.department_name || "",
+          department: task.user?.other_staff_info?.department?.department_name || task.user?.teacher_info?.department?.department_name || "",
           originalData: task // Store original API data
         }));
 
