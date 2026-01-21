@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
-import { Edit, X, ChevronDown } from "lucide-react";
+import { Edit, X, ChevronDown, Plus, Minus, ExternalLink } from "lucide-react";
 import SweetAlert from 'react-bootstrap-sweetalert';
 import { TaskManagement } from '../../Services/TaskManagement.service';
 import { Settings } from '../../Settings/Settings.service';
-import { api } from '../../../../../../_services/api';
+import { HRMManagement } from '../../Services/hrm.service';
 
 // Custom Select Component inside EditTask.js
 // Custom Select Component (Updated to match CreateNewTasks)
@@ -71,6 +71,10 @@ export default function EditPersonalTask() {
   const formatDateForInput = (dateStr) => {
     if (!dateStr) return "";
     try {
+      // If string contains space (e.g. "2024-01-01 10:00:00"), replace with T for datetime-local
+      if (typeof dateStr === 'string' && dateStr.includes(' ')) {
+        return dateStr.replace(' ', 'T').slice(0, 16);
+      }
       const date = new Date(dateStr);
       if (isNaN(date.getTime())) return "";
       return date.toISOString().slice(0, 16);
@@ -85,7 +89,7 @@ export default function EditPersonalTask() {
     description: taskData?.description || "",
     taskType: taskData?.task_type?.task_type_name || "",
     taskTypeId: taskData?.task_type?.task_type_id || "",
-    assignedDate: formatDateForInput(taskData?.assigned_date_time),
+    assignedDate: formatDateForInput(taskData?.assigned_date_time || taskData?.created_at),
     dueDate: formatDateForInput(taskData?.due_date_time),
     priority: taskData?.priority?.priority_name || "",
     priorityId: taskData?.priority?.priority_id || "",
@@ -93,25 +97,27 @@ export default function EditPersonalTask() {
     statusId: taskData?.status?.task_status_id || "",
   });
 
-  // New State for Task Category and Academic Filters
-  const [taskCategory, setTaskCategory] = useState("NON_ACADEMIC");
-  const [allocations, setAllocations] = useState([]);
-  const [currentTeacherId, setCurrentTeacherId] = useState(null);
-
-  const [academicFilters, setAcademicFilters] = useState({
-    program: '',
-    batch: '',
-    academicYear: '',
-    semester: '',
-    division: '',
-    subject: ''
+  // Documents state - array of document objects
+  const [documentRows, setDocumentRows] = useState(() => {
+    if (taskData) {
+      const supportingDocs = taskData.supporting_document || taskData.task?.supporting_document;
+      if (supportingDocs && supportingDocs.length > 0) {
+        return supportingDocs.map((doc, index) => ({
+          id: `supporting-${Date.now()}-${index}`,
+          name: doc.name || "",
+          uploadedUrl: doc.url || doc.link || doc.file_path || doc.document_url || "",
+          file: null,
+          uploading: false
+        }));
+      }
+    }
+    return [{ id: Date.now(), name: '', file: null, uploadedUrl: '', uploading: false }];
   });
 
   const [priorities, setPriorities] = useState([]);
   const [taskTypes, setTaskTypes] = useState([]);
   const [statuses, setStatuses] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [loadingAllocations, setLoadingAllocations] = useState(false);
 
   // Fetch dropdown data
   useEffect(() => {
@@ -139,7 +145,16 @@ export default function EditPersonalTask() {
   // Only fetch from API if no data was passed
   useEffect(() => {
     if (id && !loading && !taskData) {
-      TaskManagement.getMyTaskbyID(id)
+      const currentUser = JSON.parse(localStorage.getItem("userProfile"));
+      const userId = currentUser?.user?.user_id;
+      
+      if (!userId) {
+        setAlertMessage('User not found. Please login again.');
+        setShowErrorAlert(true);
+        return;
+      }
+
+      TaskManagement.getUserTodoById(id, userId)
         .then(response => {
           if (response) {
             setForm({
@@ -147,26 +162,27 @@ export default function EditPersonalTask() {
               description: response.description || "",
               taskType: response.task_type?.task_type_name || "",
               taskTypeId: response.task_type?.task_type_id || "",
-              assignedDate: response.assigned_date_time ? response.assigned_date_time.slice(0, 16) : "",
-              dueDate: response.due_date_time ? response.due_date_time.slice(0, 16) : "",
+              assignedDate: formatDateForInput(response.assigned_date_time || response.created_at),
+              dueDate: formatDateForInput(response.due_date_time),
               priority: response.priority?.priority_name || "",
               priorityId: response.priority?.priority_id || "",
               status: response.status?.name || "",
               statusId: response.status?.task_status_id || "",
             });
-            // Initialize Academic Filters if applicable
-            if (response.task_category === "ACADEMIC" || response.task_category === "Academic") {
-              setTaskCategory("ACADEMIC");
-              setAcademicFilters({
-                program: response.program_id || response.academic_year?.program?.program_id || response.academic_year?.program_id,
-                batch: response.batch_id || response.academic_year?.batch?.batch_id || response.academic_year?.batch_id,
-                academicYear: response.academic_year_id,
-                semester: response.semester_id,
-                division: response.division_id,
-                subject: response.subject_id
-              });
+
+            // Load Supporting Documents
+            const supportingDocs = response.supporting_document || response.task?.supporting_document;
+            if (supportingDocs && supportingDocs.length > 0) {
+              const rows = supportingDocs.map((doc, index) => ({
+                id: `supporting-${Date.now()}-${index}`,
+                name: doc.name || "",
+                uploadedUrl: doc.url || doc.link || doc.file_path || doc.document_url || "",
+                file: null,
+                uploading: false
+              }));
+              setDocumentRows(rows);
             } else {
-              setTaskCategory("NON_ACADEMIC");
+              setDocumentRows([{ id: Date.now(), name: '', file: null, uploadedUrl: '', uploading: false }]);
             }
           }
         })
@@ -177,136 +193,6 @@ export default function EditPersonalTask() {
         });
     }
   }, [id, loading, taskData]);
-
-  useEffect(() => {
-    // Initial Data Load (from passed state or fallback API)
-    const initialData = taskData; // If passed from navigation
-    if (initialData) {
-      if (initialData.task_category === "ACADEMIC" || initialData.task_category === "Academic") {
-        setTaskCategory("ACADEMIC");
-        setAcademicFilters({
-          program: initialData.program_id || initialData.academic_year?.program?.program_id || initialData.academic_year?.program_id,
-          batch: initialData.batch_id || initialData.academic_year?.batch?.batch_id || initialData.academic_year?.batch_id,
-          academicYear: initialData.academic_year_id,
-          semester: initialData.semester_id,
-          division: initialData.division_id,
-          subject: initialData.subject_id
-        });
-      }
-    }
-
-    // Get Teacher ID
-    const userProfileStr = localStorage.getItem("userProfile");
-    if (userProfileStr) {
-      const userProfile = JSON.parse(userProfileStr);
-      if (userProfile?.teacher_id) {
-        setCurrentTeacherId(userProfile.teacher_id);
-      }
-    }
-  }, [taskData]);
-
-  // Fetch Allocations
-  useEffect(() => {
-    const fetchAllocations = async () => {
-      if (!currentTeacherId) return;
-      setLoadingAllocations(true);
-      try {
-        const response = await api.getTeacherAllocatedPrograms(currentTeacherId);
-        if (response.success) {
-          const data = response.data;
-          const allAllocations = [
-            ...(data.class_teacher_allocation || []),
-            ...(data.normal_allocation || [])
-          ];
-          setAllocations(allAllocations);
-        }
-      } catch (error) {
-        console.error("Error fetching allocations:", error);
-      } finally {
-        setLoadingAllocations(false);
-      }
-    };
-    if (currentTeacherId) {
-      fetchAllocations();
-    }
-  }, [currentTeacherId]);
-
-  // Derived Options Helper Functions
-  const getUniqueOptions = (filterFn, mapFn) => {
-    const map = new Map();
-    allocations.filter(filterFn).forEach(item => {
-      const { id, name } = mapFn(item);
-      if (id) map.set(id, name);
-    });
-    return Array.from(map.entries()).map(([value, name]) => ({ value, name }));
-  };
-
-  const programOptions = getUniqueOptions(
-    () => true,
-    (item) => ({ id: item.program?.program_id, name: item.program?.program_name })
-  );
-
-  const batchOptions = getUniqueOptions(
-    (item) => !academicFilters.program || item.program?.program_id == academicFilters.program,
-    (item) => ({ id: item.batch?.batch_id, name: item.batch?.batch_name })
-  );
-
-  const academicYearOptions = getUniqueOptions(
-    (item) => (!academicFilters.program || item.program?.program_id == academicFilters.program) &&
-      (!academicFilters.batch || item.batch?.batch_id == academicFilters.batch),
-    (item) => ({ id: item.academic_year_id, name: item.academic_year?.name })
-  );
-
-  const semesterOptions = getUniqueOptions(
-    (item) => (!academicFilters.program || item.program?.program_id == academicFilters.program) &&
-      (!academicFilters.batch || item.batch?.batch_id == academicFilters.batch) &&
-      (!academicFilters.academicYear || item.academic_year_id == academicFilters.academicYear),
-    (item) => ({ id: item.semester_id, name: item.semester?.name })
-  );
-
-  const divisionOptions = getUniqueOptions(
-    (item) => (!academicFilters.program || item.program?.program_id == academicFilters.program) &&
-      (!academicFilters.batch || item.batch?.batch_id == academicFilters.batch) &&
-      (!academicFilters.academicYear || item.academic_year_id == academicFilters.academicYear) &&
-      (!academicFilters.semester || item.semester_id == academicFilters.semester),
-    (item) => ({ id: item.division_id, name: item.division?.division_name })
-  );
-
-  const subjectOptions = () => {
-    const subjectsMap = new Map();
-    allocations.filter(item =>
-      (!academicFilters.program || item.program?.program_id == academicFilters.program) &&
-      (!academicFilters.batch || item.batch?.batch_id == academicFilters.batch) &&
-      (!academicFilters.academicYear || item.academic_year_id == academicFilters.academicYear) &&
-      (!academicFilters.semester || item.semester_id == academicFilters.semester) &&
-      (!academicFilters.division || item.division_id == academicFilters.division)
-    ).forEach(alloc => {
-      if (alloc.subjects && Array.isArray(alloc.subjects)) {
-        alloc.subjects.forEach(sub => {
-          subjectsMap.set(sub.subject_id, sub.name);
-        });
-      }
-    });
-    return Array.from(subjectsMap.entries()).map(([value, name]) => ({ value, name }));
-  };
-
-  const handleAcademicFilterChange = (field, value) => {
-    setAcademicFilters(prev => {
-      const newFilters = { ...prev, [field]: value };
-      if (field === 'program') {
-        newFilters.batch = ''; newFilters.academicYear = ''; newFilters.semester = ''; newFilters.division = ''; newFilters.subject = '';
-      } else if (field === 'batch') {
-        newFilters.academicYear = ''; newFilters.semester = ''; newFilters.division = ''; newFilters.subject = '';
-      } else if (field === 'academicYear') {
-        newFilters.semester = ''; newFilters.division = ''; newFilters.subject = '';
-      } else if (field === 'semester') {
-        newFilters.division = ''; newFilters.subject = '';
-      } else if (field === 'division') {
-        newFilters.subject = '';
-      }
-      return newFilters;
-    });
-  };
 
   const [showSuccessAlert, setShowSuccessAlert] = useState(false);
   const [showErrorAlert, setShowErrorAlert] = useState(false);
@@ -328,28 +214,27 @@ export default function EditPersonalTask() {
     const currentUser = JSON.parse(localStorage.getItem("userProfile"));
     const userId = currentUser?.user?.user_id || null;
 
+    // Prepare supporting documents array
+    const supportingDocuments = documentRows
+      .filter(row => row.uploadedUrl && row.name) // Only include uploaded documents with names
+      .map(row => ({
+        name: row.name,
+        url: row.uploadedUrl
+      }));
+
     const payload = {
       user_id: userId,
       title: form.title,
       description: form.description,
       priority_id: parseInt(form.priorityId),
-      assigned_date_time: form.assignedDate ? (form.assignedDate.length === 16 ? form.assignedDate + ":00" : form.assignedDate) : null,
       due_date_time: form.dueDate ? (form.dueDate.length === 16 ? form.dueDate + ":00" : form.dueDate) : null,
       task_type_id: parseInt(form.taskTypeId),
       status_id: parseInt(form.statusId),
-      ...(taskCategory === "ACADEMIC" ? {
-        task_category: "ACADEMIC",
-        academic_year_id: parseInt(academicFilters.academicYear),
-        semester_id: parseInt(academicFilters.semester),
-        division_id: parseInt(academicFilters.division),
-        program_id: parseInt(academicFilters.program),
-        subject_id: parseInt(academicFilters.subject)
-      } : {
-        task_category: ""
-      })
+      remarks: form.description,
+      supporting_document: supportingDocuments
     };
 
-    TaskManagement.updateMyTask(payload, id)
+    TaskManagement.updateUserTodo(id, payload)
       .then(response => {
         setIsSubmitting(false);
         setAlertMessage('Task updated successfully!');
@@ -361,6 +246,48 @@ export default function EditPersonalTask() {
         setAlertMessage('Failed to update task. Please try again.');
         setShowErrorAlert(true);
       });
+  };
+
+  // Document handlers
+  const handleAddDocumentRow = () => {
+    setDocumentRows([
+      ...documentRows,
+      { id: Date.now(), name: '', file: null, uploadedUrl: '', uploading: false }
+    ]);
+  };
+
+  const handleRemoveDocumentRow = (id) => {
+    if (documentRows.length > 1) {
+      setDocumentRows(documentRows.filter(row => row.id !== id));
+    }
+  };
+
+  const handleDocumentNameChange = (id, value) => {
+    setDocumentRows(documentRows.map(row =>
+      row.id === id ? { ...row, name: value } : row
+    ));
+  };
+
+  const handleDocumentFileChange = async (id, file) => {
+    if (!file) return;
+
+    setDocumentRows(documentRows.map(row =>
+      row.id === id ? { ...row, file, uploading: true } : row
+    ));
+
+    try {
+      const uploadedUrl = await HRMManagement.uploadFileToS3(file);
+      setDocumentRows(documentRows.map(row =>
+        row.id === id ? { ...row, uploadedUrl, uploading: false } : row
+      ));
+    } catch (error) {
+      console.error('Upload error:', error);
+      setAlertMessage('Failed to upload file. Please try again.');
+      setShowErrorAlert(true);
+      setDocumentRows(documentRows.map(row =>
+        row.id === id ? { ...row, uploading: false } : row
+      ));
+    }
   };
 
   const handleCancel = () => {
@@ -389,84 +316,6 @@ export default function EditPersonalTask() {
         <h2 className="text-lg sm:text-xl font-semibold mb-4 sm:mb-6">
           Task Information
         </h2>
-
-        {/* Task Category Selection */}
-        <div className="mb-6">
-          <label className="block text-sm font-semibold text-blue-700 mb-2">Category</label>
-          <div className="flex gap-6">
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={taskCategory === "NON_ACADEMIC"}
-                onChange={() => setTaskCategory("NON_ACADEMIC")}
-                className="w-5 h-5 text-blue-600 rounded focus:ring-blue-500"
-              />
-              <span className="text-gray-700 font-medium">NON_ACADEMIC</span>
-            </label>
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={taskCategory === "ACADEMIC"}
-                onChange={() => setTaskCategory("ACADEMIC")}
-                className="w-5 h-5 text-blue-600 rounded focus:ring-blue-500"
-              />
-              <span className="text-gray-700 font-medium">ACADEMIC</span>
-            </label>
-          </div>
-        </div>
-
-        {/* Academic Filters */}
-        {taskCategory === "ACADEMIC" && (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 mb-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
-            <CustomSelect
-              label="Program"
-              value={academicFilters.program}
-              onChange={(e) => handleAcademicFilterChange('program', e.target.value)}
-              options={programOptions}
-              placeholder="Select Program"
-            />
-            <CustomSelect
-              label="Batch"
-              value={academicFilters.batch}
-              onChange={(e) => handleAcademicFilterChange('batch', e.target.value)}
-              options={batchOptions}
-              placeholder="Select Batch"
-              disabled={!academicFilters.program}
-            />
-            <CustomSelect
-              label="Academic Year"
-              value={academicFilters.academicYear}
-              onChange={(e) => handleAcademicFilterChange('academicYear', e.target.value)}
-              options={academicYearOptions}
-              placeholder="Select Academic Year"
-              disabled={!academicFilters.batch}
-            />
-            <CustomSelect
-              label="Semester"
-              value={academicFilters.semester}
-              onChange={(e) => handleAcademicFilterChange('semester', e.target.value)}
-              options={semesterOptions}
-              placeholder="Select Semester"
-              disabled={!academicFilters.academicYear}
-            />
-            <CustomSelect
-              label="Division"
-              value={academicFilters.division}
-              onChange={(e) => handleAcademicFilterChange('division', e.target.value)}
-              options={divisionOptions}
-              placeholder="Select Division"
-              disabled={!academicFilters.semester}
-            />
-            <CustomSelect
-              label="Subject"
-              value={academicFilters.subject}
-              onChange={(e) => handleAcademicFilterChange('subject', e.target.value)}
-              options={subjectOptions()}
-              placeholder="Select Subject"
-              disabled={!academicFilters.division}
-            />
-          </div>
-        )}
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
           <div className="w-full">
@@ -559,6 +408,107 @@ export default function EditPersonalTask() {
           </div>
         </div>
 
+        {/* DOCUMENTS SECTION */}
+        <div className="mt-10 bg-white rounded-xl p-4 sm:p-6 shadow-sm border">
+          <div className="flex items-center justify-between mb-4 sm:mb-6">
+            <h2 className="text-lg sm:text-xl font-semibold">
+              Documents
+            </h2>
+            <button
+              onClick={handleAddDocumentRow}
+              className="flex items-center gap-2 px-4 py-2 rounded-lg shadow-md text-white bg-blue-600 hover:bg-blue-700 transition-all"
+            >
+              <Plus className="w-4 h-4" />
+              <span className="hidden sm:inline">Add Row</span>
+            </button>
+          </div>
+
+          <div className="space-y-4">
+            {documentRows.map((row, index) => (
+              <div key={row.id} className="flex flex-col sm:flex-row gap-3 items-start sm:items-end p-4 bg-gray-50 rounded-lg border border-gray-200">
+                {/* Document Name */}
+                <div className="flex-1 w-full">
+                  <label className={labelClass}>
+                    Document Name {index + 1}
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Enter document name"
+                    className={inputClass}
+                    value={row.name}
+                    onChange={(e) => handleDocumentNameChange(row.id, e.target.value)}
+                  />
+                </div>
+
+                {/* File Upload */}
+                <div className="flex-1 w-full">
+                  <label className={labelClass}>
+                    Select File
+                  </label>
+                  <input
+                    type="file"
+                    className={`${inputClass} cursor-pointer`}
+                    onChange={(e) => handleDocumentFileChange(row.id, e.target.files[0])}
+                    accept="*/*"
+                    disabled={row.uploading}
+                  />
+                </div>
+
+                {/* View Document */}
+                <div className="flex-1 w-full">
+                  <label className={labelClass}>
+                    View Document
+                  </label>
+                  <div className="w-full px-3 py-2 border rounded-lg min-h-[44px] flex items-center justify-between bg-white border-gray-300">
+                    {row.uploading ? (
+                      <div className="flex items-center gap-2 text-blue-600">
+                        <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                        <span className="text-sm">Uploading...</span>
+                      </div>
+                    ) : row.uploadedUrl && row.name ? (
+                      <a
+                        href={row.uploadedUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-2 text-green-600 hover:text-green-700 transition-colors"
+                      >
+                        <span className="text-sm font-medium truncate">{row.name}</span>
+                        <ExternalLink className="w-4 h-4 flex-shrink-0" />
+                      </a>
+                    ) : (
+                      <span className="text-sm text-gray-400">No file uploaded</span>
+                    )}
+                  </div>
+                </div>
+
+                {/* Remove Row */}
+                <div className="flex items-end">
+                  <button
+                    onClick={() => handleRemoveDocumentRow(row.id)}
+                    disabled={documentRows.length === 1}
+                    className={`p-2 rounded-lg transition-all ${
+                      documentRows.length === 1
+                        ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                        : 'bg-red-50 text-red-600 hover:bg-red-100'
+                    }`}
+                  >
+                    <Minus className="w-5 h-5" />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Success summary */}
+          {documentRows.some(row => row.uploadedUrl) && (
+            <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg">
+              <p className="text-sm text-green-700">
+                ✓ {documentRows.filter(row => row.uploadedUrl).length} document(s) uploaded successfully
+              </p>
+            </div>
+          )}
+        </div>
+
         <div className="flex justify-center gap-4 mt-8">
           <button
             onClick={handleSubmit}
@@ -613,4 +563,3 @@ export default function EditPersonalTask() {
     </div>
   );
 }
-

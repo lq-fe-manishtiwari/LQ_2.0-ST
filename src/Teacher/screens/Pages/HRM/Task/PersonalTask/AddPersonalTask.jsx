@@ -1,9 +1,10 @@
 import React, { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Plus, X, ChevronDown } from "lucide-react";
+import { Plus, X, ChevronDown, Minus, ExternalLink } from "lucide-react";
 import SweetAlert from 'react-bootstrap-sweetalert';
 import { Settings } from '../../Settings/Settings.service';
 import { TaskManagement } from '../../Services/TaskManagement.service';
+import { HRMManagement } from '../../Services/hrm.service';
 import { api } from '../../../../../../_services/api';
 
 // Custom Select Component (unchanged)
@@ -93,6 +94,10 @@ export default function AddPersonalTask() {
     subject: ''
   });
   const [loadingAllocations, setLoadingAllocations] = useState(false);
+
+  const [documentRows, setDocumentRows] = useState([
+    { id: Date.now(), name: '', file: null, uploadedUrl: '', uploading: false }
+  ]);
 
   const inputClass = "w-full border rounded px-3 py-2 focus:outline-none transition-colors border-gray-300 focus:border-blue-500";
   const labelClass = "block text-sm font-semibold text-blue-700 mb-2";
@@ -354,6 +359,50 @@ export default function AddPersonalTask() {
     return datetimeLocal.length === 16 ? `${datetimeLocal}:00` : datetimeLocal;
   };
 
+  // Document handlers
+  const handleAddDocumentRow = () => {
+    setDocumentRows([
+      ...documentRows,
+      { id: Date.now(), name: '', file: null, uploadedUrl: '', uploading: false }
+    ]);
+  };
+
+  const handleRemoveDocumentRow = (id) => {
+    if (documentRows.length > 1) {
+      setDocumentRows(documentRows.filter(row => row.id !== id));
+    }
+  };
+
+  const handleDocumentNameChange = (id, value) => {
+    setDocumentRows(documentRows.map(row =>
+      row.id === id ? { ...row, name: value } : row
+    ));
+  };
+
+  const handleDocumentFileChange = async (id, file) => {
+    if (!file) return;
+
+    setDocumentRows(documentRows.map(row =>
+      row.id === id ? { ...row, file, uploading: true } : row
+    ));
+
+    try {
+      const uploadedUrl = await HRMManagement.uploadFileToS3(file);
+
+      setDocumentRows(documentRows.map(row =>
+        row.id === id ? { ...row, uploadedUrl, uploading: false } : row
+      ));
+    } catch (error) {
+      console.error('Upload error:', error);
+      setAlertMessage('Failed to upload file. Please try again.');
+      setShowErrorAlert(true);
+
+      setDocumentRows(documentRows.map(row =>
+        row.id === id ? { ...row, uploading: false } : row
+      ));
+    }
+  };
+
   const handleSubmit = async () => {
     if (!currentUserId) {
       setAlertMessage('User not authenticated. Please login again.');
@@ -376,28 +425,26 @@ export default function AddPersonalTask() {
 
     setIsSubmitting(true);
     try {
+      const supportingDocuments = documentRows
+        .filter(row => row.uploadedUrl && row.name.trim())
+        .map(row => ({
+          name: row.name.trim(),
+          url: row.uploadedUrl
+        }));
+
       const taskData = [{
         user_id: currentUserId,
         title: form.title.trim(),
         description: form.description.trim(),
         priority_id: parseInt(form.priority),
-        assigned_date_time: formatDateTimeForAPI(form.assignedDate),
-        due_date_time: formatDateTimeForAPI(form.dueDate),
         task_type_id: parseInt(form.taskType),
-        status: 3,
-        ...(taskCategory === "ACADEMIC" ? {
-          task_category: "ACADEMIC",
-          academic_year_id: parseInt(academicFilters.academicYear),
-          semester_id: parseInt(academicFilters.semester),
-          division_id: parseInt(academicFilters.division),
-          subject_id: parseInt(academicFilters.subject),
-          program_id: parseInt(academicFilters.program)
-        } : {
-          task_category: "NON_ACADEMIC"
-        })
+        status_id: 1,
+        due_date_time: formatDateTimeForAPI(form.dueDate),
+        remarks: form.description.trim(),
+        supporting_document: supportingDocuments
       }];
 
-      const response = await TaskManagement.postMyTask(taskData);
+      const response = await TaskManagement.postPersonalTasksBulk(taskData);
       setIsSubmitting(false);
       setAlertMessage('Task created successfully!');
       setShowSuccessAlert(true);
@@ -458,83 +505,6 @@ export default function AddPersonalTask() {
       {/* Form Card */}
       <div className="bg-white rounded-xl p-4 sm:p-6 shadow-sm border">
 
-        {/* Task Category Selection */}
-        <div className="mb-6">
-          <label className="block text-sm font-semibold text-blue-700 mb-2">Category</label>
-          <div className="flex gap-6">
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={taskCategory === "NON_ACADEMIC"}
-                onChange={() => setTaskCategory("NON_ACADEMIC")}
-                className="w-5 h-5 text-blue-600 rounded focus:ring-blue-500"
-              />
-              <span className="text-gray-700 font-medium">NON_ACADEMIC</span>
-            </label>
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={taskCategory === "ACADEMIC"}
-                onChange={() => setTaskCategory("ACADEMIC")}
-                className="w-5 h-5 text-blue-600 rounded focus:ring-blue-500"
-              />
-              <span className="text-gray-700 font-medium">ACADEMIC</span>
-            </label>
-          </div>
-        </div>
-
-        {/* Academic Filters */}
-        {taskCategory === "ACADEMIC" && (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 mb-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
-            <CustomSelect
-              label="Program"
-              value={academicFilters.program}
-              onChange={(e) => handleAcademicFilterChange('program', e.target.value)}
-              options={programOptions}
-              placeholder="Select Program"
-            />
-            <CustomSelect
-              label="Batch"
-              value={academicFilters.batch}
-              onChange={(e) => handleAcademicFilterChange('batch', e.target.value)}
-              options={batchOptions}
-              placeholder="Select Batch"
-              disabled={!academicFilters.program}
-            />
-            <CustomSelect
-              label="Academic Year"
-              value={academicFilters.academicYear}
-              onChange={(e) => handleAcademicFilterChange('academicYear', e.target.value)}
-              options={academicYearOptions}
-              placeholder="Select Academic Year"
-              disabled={!academicFilters.batch}
-            />
-            <CustomSelect
-              label="Semester"
-              value={academicFilters.semester}
-              onChange={(e) => handleAcademicFilterChange('semester', e.target.value)}
-              options={semesterOptions}
-              placeholder="Select Semester"
-              disabled={!academicFilters.academicYear}
-            />
-            <CustomSelect
-              label="Division"
-              value={academicFilters.division}
-              onChange={(e) => handleAcademicFilterChange('division', e.target.value)}
-              options={divisionOptions}
-              placeholder="Select Division"
-              disabled={!academicFilters.semester}
-            />
-            <CustomSelect
-              label="Subject"
-              value={academicFilters.subject}
-              onChange={(e) => handleAcademicFilterChange('subject', e.target.value)}
-              options={subjectOptions()}
-              placeholder="Select Subject"
-              disabled={!academicFilters.division}
-            />
-          </div>
-        )}
 
         <h2 className="text-lg sm:text-xl font-semibold mb-4 sm:mb-6">Task Information</h2>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
@@ -582,6 +552,107 @@ export default function AddPersonalTask() {
               loading={loadingTaskTypes}
             />
           </div>
+        </div>
+
+        {/* DOCUMENTS SECTION */}
+        <div className="mt-10 bg-white rounded-xl p-4 sm:p-6 shadow-sm border">
+          <div className="flex items-center justify-between mb-4 sm:mb-6">
+            <h2 className="text-lg sm:text-xl font-semibold">
+              Documents
+            </h2>
+            <button
+              onClick={() => handleAddDocumentRow()}
+              className="flex items-center gap-2 px-4 py-2 rounded-lg shadow-md text-white bg-blue-600 hover:bg-blue-700 transition-all"
+            >
+              <Plus className="w-4 h-4" />
+              <span className="hidden sm:inline">Add Row</span>
+            </button>
+          </div>
+
+          <div className="space-y-4">
+            {documentRows.map((row, index) => (
+              <div key={row.id} className="flex flex-col sm:flex-row gap-3 items-start sm:items-end p-4 bg-gray-50 rounded-lg border border-gray-200">
+                {/* Document Name */}
+                <div className="flex-1 w-full">
+                  <label className={labelClass}>
+                    Document Name {index + 1}
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Enter document name"
+                    className={inputClass}
+                    value={row.name}
+                    onChange={(e) => handleDocumentNameChange(row.id, e.target.value)}
+                  />
+                </div>
+
+                {/* File Upload */}
+                <div className="flex-1 w-full">
+                  <label className={labelClass}>
+                    Select File
+                  </label>
+                  <input
+                    type="file"
+                    className={`${inputClass} cursor-pointer`}
+                    onChange={(e) => handleDocumentFileChange(row.id, e.target.files[0])}
+                    accept="*/*"
+                    disabled={row.uploading}
+                  />
+                </div>
+
+                {/* View Document */}
+                <div className="flex-1 w-full">
+                  <label className={labelClass}>
+                    View Document
+                  </label>
+                  <div className="w-full px-3 py-2 border rounded-lg min-h-[44px] flex items-center justify-between bg-white border-gray-300">
+                    {row.uploading ? (
+                      <div className="flex items-center gap-2 text-blue-600">
+                        <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                        <span className="text-sm">Uploading...</span>
+                      </div>
+                    ) : row.uploadedUrl && row.name ? (
+                      <a
+                        href={row.uploadedUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-2 text-green-600 hover:text-green-700 transition-colors"
+                      >
+                        <span className="text-sm font-medium truncate">{row.name}</span>
+                        <ExternalLink className="w-4 h-4 flex-shrink-0" />
+                      </a>
+                    ) : (
+                      <span className="text-sm text-gray-400">No file uploaded</span>
+                    )}
+                  </div>
+                </div>
+
+                {/* Remove Row */}
+                <div className="flex items-end">
+                  <button
+                    onClick={() => handleRemoveDocumentRow(row.id)}
+                    disabled={documentRows.length === 1}
+                    className={`p-2 rounded-lg transition-all ${
+                      documentRows.length === 1
+                        ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                        : 'bg-red-50 text-red-600 hover:bg-red-100'
+                    }`}
+                  >
+                    <Minus className="w-5 h-5" />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Success summary */}
+          {documentRows.some(row => row.uploadedUrl) && (
+            <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg">
+              <p className="text-sm text-green-700">
+                ✓ {documentRows.filter(row => row.uploadedUrl).length} document(s) uploaded successfully
+              </p>
+            </div>
+          )}
         </div>
 
         {/* Preview */}
