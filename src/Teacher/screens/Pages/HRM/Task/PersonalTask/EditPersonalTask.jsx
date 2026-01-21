@@ -139,7 +139,15 @@ export default function EditPersonalTask() {
   // Only fetch from API if no data was passed
   useEffect(() => {
     if (id && !loading && !taskData) {
-      TaskManagement.getMyTaskbyID(id)
+       const currentUser = JSON.parse(localStorage.getItem("userProfile"));
+      const userId =currentUser?.user?.userId;
+
+      if (!userId) {
+        setAlertMessage('User not found. Please login again.');
+        setShowErrorAlert(true);
+        return;
+      }
+      TaskManagement.getUserTodoById(id, userId)
         .then(response => {
           if (response) {
             setForm({
@@ -147,7 +155,7 @@ export default function EditPersonalTask() {
               description: response.description || "",
               taskType: response.task_type?.task_type_name || "",
               taskTypeId: response.task_type?.task_type_id || "",
-              assignedDate: response.assigned_date_time ? response.assigned_date_time.slice(0, 16) : "",
+              assignedDate: response.created_at ? response.created_at.slice(0, 16) : "",
               dueDate: response.due_date_time ? response.due_date_time.slice(0, 16) : "",
               priority: response.priority?.priority_name || "",
               priorityId: response.priority?.priority_id || "",
@@ -155,19 +163,19 @@ export default function EditPersonalTask() {
               statusId: response.status?.task_status_id || "",
             });
             // Initialize Academic Filters if applicable
-            if (response.task_category === "ACADEMIC" || response.task_category === "Academic") {
-              setTaskCategory("ACADEMIC");
-              setAcademicFilters({
-                program: response.program_id || response.academic_year?.program?.program_id || response.academic_year?.program_id,
-                batch: response.batch_id || response.academic_year?.batch?.batch_id || response.academic_year?.batch_id,
-                academicYear: response.academic_year_id,
-                semester: response.semester_id,
-                division: response.division_id,
-                subject: response.subject_id
-              });
-            } else {
-              setTaskCategory("NON_ACADEMIC");
-            }
+            // if (response.task_category === "ACADEMIC" || response.task_category === "Academic") {
+            //   setTaskCategory("ACADEMIC");
+            //   setAcademicFilters({
+            //     program: response.program_id || response.academic_year?.program?.program_id || response.academic_year?.program_id,
+            //     batch: response.batch_id || response.academic_year?.batch?.batch_id || response.academic_year?.batch_id,
+            //     academicYear: response.academic_year_id,
+            //     semester: response.semester_id,
+            //     division: response.division_id,
+            //     subject: response.subject_id
+            //   });
+            // } else {
+            //   setTaskCategory("NON_ACADEMIC");
+            // }
           }
         })
         .catch(error => {
@@ -333,23 +341,25 @@ export default function EditPersonalTask() {
       title: form.title,
       description: form.description,
       priority_id: parseInt(form.priorityId),
-      assigned_date_time: form.assignedDate ? (form.assignedDate.length === 16 ? form.assignedDate + ":00" : form.assignedDate) : null,
+      // assigned_date_time: form.assignedDate ? (form.assignedDate.length === 16 ? form.assignedDate + ":00" : form.assignedDate) : null,
       due_date_time: form.dueDate ? (form.dueDate.length === 16 ? form.dueDate + ":00" : form.dueDate) : null,
       task_type_id: parseInt(form.taskTypeId),
       status_id: parseInt(form.statusId),
-      ...(taskCategory === "ACADEMIC" ? {
-        task_category: "ACADEMIC",
-        academic_year_id: parseInt(academicFilters.academicYear),
-        semester_id: parseInt(academicFilters.semester),
-        division_id: parseInt(academicFilters.division),
-        program_id: parseInt(academicFilters.program),
-        subject_id: parseInt(academicFilters.subject)
-      } : {
-        task_category: ""
-      })
+      remarks: form.description,
+      supporting_document: []
+      // ...(taskCategory === "ACADEMIC" ? {
+      //   task_category: "ACADEMIC",
+      //   academic_year_id: parseInt(academicFilters.academicYear),
+      //   semester_id: parseInt(academicFilters.semester),
+      //   division_id: parseInt(academicFilters.division),
+      //   program_id: parseInt(academicFilters.program),
+      //   subject_id: parseInt(academicFilters.subject)
+      // } : {
+      //   task_category: ""
+      // })
     };
 
-    TaskManagement.updateMyTask(payload, id)
+    TaskManagement.updateUserTodo(id, payload)
       .then(response => {
         setIsSubmitting(false);
         setAlertMessage('Task updated successfully!');
