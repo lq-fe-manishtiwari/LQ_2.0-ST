@@ -322,6 +322,8 @@ const MyViewDashboard = () => {
                             type: slot.entry_type || "REGULAR",
                             notes: slot.notes,
                             source: slot.source,
+                            template_slot_id: slot.template_slot_id,
+                            exception_id: slot.exception_id,
                             is_exception: slot.is_exception || false,
                             exception_type: slot.exception_type,
                             original_teacher_id: slot.original_teacher_id,
@@ -785,14 +787,20 @@ const MyViewDashboard = () => {
                             </div>
 
                             <div className="flex flex-wrap gap-2 md:gap-3">
-                                <button
-                                    type="button"
-                                    onClick={() => navigate('/teacher/timetable/View-Upadate-Timetable', { state: { slot } })}
-                                    className="text-xs px-3 py-1 bg-orange-500 hover:bg-orange-600 text-white rounded-full transition"
-                                >
-                                    Update
-                                </button>
-
+            <button
+    type="button"
+    onClick={() => navigate('/teacher/timetable/View-Upadate-Timetable', { 
+        state: { 
+            slot,
+            template_slot_id: slot.template_slot_id,
+            exception_id: slot.exception_id,
+            is_exception: slot.is_exception
+        } 
+    })}
+    className="text-xs px-3 py-1 bg-orange-500 hover:bg-orange-600 text-white rounded-full transition"
+>
+    Update
+</button>
                                 <button
                                     type="button"
                                     onClick={() => navigate('/teacher/attendance/tabular-view', {
