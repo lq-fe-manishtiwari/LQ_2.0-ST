@@ -71,6 +71,10 @@ export default function EditPersonalTask() {
   const formatDateForInput = (dateStr) => {
     if (!dateStr) return "";
     try {
+      // If string contains space (e.g. "2024-01-01 10:00:00"), replace with T for datetime-local
+      if (typeof dateStr === 'string' && dateStr.includes(' ')) {
+        return dateStr.replace(' ', 'T').slice(0, 16);
+      }
       const date = new Date(dateStr);
       if (isNaN(date.getTime())) return "";
       return date.toISOString().slice(0, 16);
@@ -85,7 +89,7 @@ export default function EditPersonalTask() {
     description: taskData?.description || "",
     taskType: taskData?.task_type?.task_type_name || "",
     taskTypeId: taskData?.task_type?.task_type_id || "",
-    assignedDate: formatDateForInput(taskData?.assigned_date_time),
+    assignedDate: formatDateForInput(taskData?.assigned_date_time || taskData?.created_at),
     dueDate: formatDateForInput(taskData?.due_date_time),
     priority: taskData?.priority?.priority_name || "",
     priorityId: taskData?.priority?.priority_id || "",
@@ -158,8 +162,8 @@ export default function EditPersonalTask() {
               description: response.description || "",
               taskType: response.task_type?.task_type_name || "",
               taskTypeId: response.task_type?.task_type_id || "",
-              assignedDate: response.created_at ? response.created_at.slice(0, 16) : "",
-              dueDate: response.due_date_time ? response.due_date_time.slice(0, 16) : "",
+              assignedDate: formatDateForInput(response.assigned_date_time || response.created_at),
+              dueDate: formatDateForInput(response.due_date_time),
               priority: response.priority?.priority_name || "",
               priorityId: response.priority?.priority_id || "",
               status: response.status?.name || "",
