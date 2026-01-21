@@ -19,12 +19,14 @@ import {
   X,
   Plus,
   Calendar,
+  Upload,
 } from 'lucide-react';
 import SweetAlert from 'react-bootstrap-sweetalert';
 // import Loader from '../../Components/Loader';
 import { TaskManagement } from '../../Services/TaskManagement.service';
 // import { DepartmentService } from '../../../Academics/Services/Department.service';
 import { Settings } from '../../Settings/Settings.service';
+import BulkUploadPersonalTask from './BulkUploadPersonalTask';
 
 // Custom Select Components
 const CustomSelect = ({ label, value, onChange, options, placeholder, disabled = false }) => {
@@ -212,10 +214,7 @@ const MyTaskTable = ({
           <table className="w-full">
             <thead className="table-header">
               <tr>
-                <th className="table-th text-xs px-2 py-3">Program</th>
-                <th className="table-th text-xs px-2 py-3">Batch</th>
-                <th className="table-th text-xs px-2 py-3">Subject</th>
-                <th className="table-th text-xs px-2 py-3">Department</th>
+                <th className="table-th text-xs px-2 py-3">Name</th>
                 <th className="table-th text-xs px-2 py-3">Task Title</th>
                 <th className="table-th text-xs px-2 py-3">Type</th>
                 <th className="table-th text-xs px-2 py-3">Due on</th>
@@ -251,12 +250,18 @@ const MyTaskTable = ({
                   const statusLabel = isTaskDelayed(task) ? "Delayed" : task.status;
                   return (
                     <tr key={task.id} className="hover:bg-gray-50 transition-colors">
-                      <td className="px-2 py-3 text-xs text-gray-700 max-w-[90px] truncate" title={task.program}>{task.program}</td>
+                      {/* <td className="px-2 py-3 text-xs text-gray-700 max-w-[90px] truncate" title={task.program}>{task.program}</td>
                       <td className="px-2 py-3 text-xs text-gray-700 max-w-[80px] truncate" title={`${task.batch} ${task.classYear ? `(${task.classYear})` : ''}`}>
                         {task.batch} {task.classYear ? `(${task.classYear})` : ''}
                       </td>
                       <td className="px-2 py-3 text-xs text-gray-700 max-w-[90px] truncate" title={task.subject}>{task.subject}</td>
-                      <td className="px-2 py-3 text-xs text-gray-700 max-w-[90px] truncate" title={task.department}>{task.department}</td>
+                      <td className="px-2 py-3 text-xs text-gray-700 max-w-[90px] truncate" title={task.department}>{task.department}</td> */}
+                      <td
+                        className="px-2 py-3 text-xs text-gray-900 font-medium max-w-[140px] truncate"
+                        title={`${task.firstname} ${task.lastname}`}
+                      >
+                        {task.firstname} {task.lastname}
+                      </td>
                       <td className="px-2 py-3 text-xs text-gray-900 font-medium max-w-[120px] truncate" title={task.taskTitle}>{task.taskTitle}</td>
                       <td className="px-2 py-3 text-xs text-gray-700 max-w-[80px] truncate" title={task.taskType}>{task.taskType}</td>
                       <td className={`px-2 py-3 text-xs font-semibold whitespace-nowrap ${isTaskOverdue(task) ? 'text-red-600' : 'text-gray-700'
@@ -541,6 +546,8 @@ export default function PersonalTask() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedTask, setSelectedTask] = useState(null);
   const [statusChanging, setStatusChanging] = useState({});
+  const [showBulkUpload, setShowBulkUpload] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   // Get current year and month for default initialization
   const currentYear = new Date().getFullYear();
@@ -870,6 +877,19 @@ export default function PersonalTask() {
 
   // Delete functionality
   const handleDelete = (id) => {
+    // Validate ID before proceeding
+    if (!id || id === 'undefined' || isNaN(parseInt(id))) {
+      setAlert(
+        <SweetAlert
+          danger
+          title="Error!"
+          onConfirm={() => setAlert(null)}
+        >
+          Invalid task ID. Cannot delete task.
+        </SweetAlert>
+      );
+      return;
+    }
     setAlert(
       <SweetAlert
         warning
@@ -889,7 +909,7 @@ export default function PersonalTask() {
 
   const confirmDelete = async (id) => {
     try {
-      await TaskManagement.deleteMyTask(parseInt(id), userId);
+      await TaskManagement.deleteUserTodo(parseInt(id), userId);
       setTasks(prev => prev.filter(t => t.id !== id));
       setAlert(
         <SweetAlert
@@ -999,34 +1019,32 @@ export default function PersonalTask() {
     const fetchTasks = async () => {
       try {
         setLoading(true);
-        const response = await TaskManagement.getAllMyTasks(userId);
+        const response = await TaskManagement.getUserTodoByUserId(userId);
 
-        const tasksData = Array.isArray(response?.tasks) ? response.tasks : [];
+        const tasksData = Array.isArray(response) ? response : [];
 
         const mappedTasks = tasksData.map(task => ({
-          id: task.self_task_id?.toString(),
-          firstname: response.user?.teacher_info?.firstname || "N/A",
-          lastname: response.user?.teacher_info?.lastname || "N/A",
-          name: response.user?.username || "",
-          email: response.user?.username || "",
+          id: task.user_to_do_id?.toString() || null,
+          firstname: task.user?.other_staff_info?.firstname || task.user?.teacher_info?.firstname || "N/A",
+          lastname: task.user?.other_staff_info?.lastname || task.user?.teacher_info?.lastname || "N/A",
+          name: task.user?.username || "",
+          email: task.user?.username || "",
           taskTitle: task.title || "No Title",
           taskType: task.task_type?.task_type_name || "General",
 
-          program: task.academic_year?.program_name || task.program?.program_name || "-",
-          batch: task.academic_year?.batch_name || task.batch?.batch_name || "-",
-          classYear: task.academic_year?.name || "",
-          subject: task.subject?.name || "-",
+          program: "-",
+          batch: "-",
+          classYear: "",
+          subject: "-",
 
-          assignedBy: task.assigned_by?.other_staff_info
-            ? `${task.assigned_by.other_staff_info.firstname} ${task.assigned_by.other_staff_info.lastname}`
-            : "System",
-          assignedOn: formatDate(task.assigned_date_time),
-          assigned_date_time: task.assigned_date_time, // Raw date for filtering
+          assignedBy: task.created_by_nameb || "System",
+          assignedOn: formatDate(task.created_at),
+          assigned_date_time: task.created_at, // Raw date for filtering
           dueOn: formatDate(task.due_date_time),
           dueDate: task.due_date_time,
           priority: task.priority?.priority_name || "Medium",
           status: task.status?.name || "Pending",
-          department: response.user?.other_staff_info?.department?.department_name || "",
+          department: task.user?.other_staff_info?.department?.department_name || task.user?.teacher_info?.department?.department_name || "",
           originalData: task // Store original API data
         }));
 
@@ -1049,7 +1067,7 @@ export default function PersonalTask() {
     };
 
     fetchTasks();
-  }, [userId]);
+  }, [userId, refreshKey]);
 
   return (
     <div className="p-0 md:p-0">
@@ -1057,6 +1075,16 @@ export default function PersonalTask() {
       {/* Search + Filter + Create Task */}
       <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-4 mb-4">
         {/* SEARCH */}
+        {showBulkUpload ? (
+          <BulkUploadPersonalTask 
+            setShowBulkUpload={setShowBulkUpload} 
+            onSuccess={() => {
+              setShowBulkUpload(false);
+              setRefreshKey(prev => prev + 1);
+            }}
+          />
+        ) : (
+          <>
         <div className="relative w-full sm:w-80">
           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
             <Search className="w-5 h-5 text-gray-400" />
@@ -1071,16 +1099,25 @@ export default function PersonalTask() {
         </div>
         {/* Filter + Create Task */}
         <div className="flex gap-3 w-full sm:w-auto">
+          {false && (
+            <button
+              onClick={() => setFilters(prev => ({ ...prev, filterOpen: !prev.filterOpen }))}
+              className="flex items-center justify-center gap-2 bg-white border border-gray-300 hover:bg-gray-50 px-4 py-3 rounded-xl shadow-sm transition-all flex-1 sm:flex-none sm:w-auto"
+            >
+              <Filter className="w-5 h-5 text-blue-600" />
+              <span className="text-blue-600 font-medium">Filter</span>
+              <ChevronDown className="w-4 h-4 text-blue-600" />
+            </button>
+          )}
+
           <button
-            onClick={() => setFilters(prev => ({ ...prev, filterOpen: !prev.filterOpen }))}
-            className="flex items-center justify-center gap-2 bg-white border border-gray-300 hover:bg-gray-50 px-4 py-3 rounded-xl shadow-sm transition-all flex-1 sm:flex-none sm:w-auto"
+            onClick={() => setShowBulkUpload(true)}
+            className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white font-medium px-4 py-2 rounded-md shadow-md transition-all hover:shadow-lg flex-1 sm:flex-none justify-center"
           >
-            <Filter className="w-5 h-5 text-blue-600" />
-            <span className="text-blue-600 font-medium">Filter</span>
-            <ChevronDown
-              className={`w-4 h-4 text-blue-600 transition-transform ${filters.filterOpen ? 'rotate-180' : 'rotate-0'}`}
-            />
+            <Upload className="w-4 h-4" aria-hidden="true" />
+            <span className="sm:inline">Bulk Upload</span>
           </button>
+
           {/* Create Task - All screens */}
           <button
             onClick={() => navigate("/teacher/hrm/tasks/personal-tasks/add")}
@@ -1090,9 +1127,11 @@ export default function PersonalTask() {
             <span className="sm:inline">Create Task</span>
           </button>
         </div>
+          </>
+        )}
       </div>
       {/* Filter Panel */}
-      {filters.filterOpen && (
+      {!showBulkUpload && filters.filterOpen && (
         <div className="bg-white rounded-xl shadow-md p-5 mb-6 border border-gray-200">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
 
@@ -1282,6 +1321,7 @@ export default function PersonalTask() {
         </div>
       )}
 
+      {!showBulkUpload && (
       <MyTaskTable
         tasks={loading ? [] : paginatedTasks}
         selectedTask={selectedTask}
@@ -1301,6 +1341,7 @@ export default function PersonalTask() {
         searchQuery={searchQuery}
         filters={filters}
       />
+      )}
 
     </div>
   );
