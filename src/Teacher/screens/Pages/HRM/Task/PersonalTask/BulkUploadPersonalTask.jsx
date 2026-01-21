@@ -87,11 +87,11 @@ export default function BulkUploadPersonalTask({ setShowBulkUpload, onSuccess })
       }
 
       if (!userId) {
-        const userStr = localStorage.getItem("user") || sessionStorage.getItem("user");
+        const userStr = localStorage.getItem("userProfile") || sessionStorage.getItem("user");
         if (userStr) {
           try {
             const user = JSON.parse(userStr);
-            userId = user.id || user.userId || user.user_id || user.UserID || user.uid;
+            userId = user?.user?.user_id || user.id || user.userId || user.user_id || user.UserID || user.uid;
           } catch (e) {
             console.error("Error parsing user object:", e);
           }
