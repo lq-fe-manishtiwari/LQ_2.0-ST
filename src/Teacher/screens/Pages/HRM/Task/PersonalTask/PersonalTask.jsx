@@ -19,12 +19,14 @@ import {
   X,
   Plus,
   Calendar,
+  Upload,
 } from 'lucide-react';
 import SweetAlert from 'react-bootstrap-sweetalert';
 // import Loader from '../../Components/Loader';
 import { TaskManagement } from '../../Services/TaskManagement.service';
 // import { DepartmentService } from '../../../Academics/Services/Department.service';
 import { Settings } from '../../Settings/Settings.service';
+import BulkUploadPersonalTask from './BulkUploadPersonalTask';
 
 // Custom Select Components
 const CustomSelect = ({ label, value, onChange, options, placeholder, disabled = false }) => {
@@ -544,6 +546,8 @@ export default function PersonalTask() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedTask, setSelectedTask] = useState(null);
   const [statusChanging, setStatusChanging] = useState({});
+  const [showBulkUpload, setShowBulkUpload] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   // Get current year and month for default initialization
   const currentYear = new Date().getFullYear();
@@ -1063,7 +1067,7 @@ export default function PersonalTask() {
     };
 
     fetchTasks();
-  }, [userId]);
+  }, [userId, refreshKey]);
 
   return (
     <div className="p-0 md:p-0">
@@ -1071,6 +1075,16 @@ export default function PersonalTask() {
       {/* Search + Filter + Create Task */}
       <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-4 mb-4">
         {/* SEARCH */}
+        {showBulkUpload ? (
+          <BulkUploadPersonalTask 
+            setShowBulkUpload={setShowBulkUpload} 
+            onSuccess={() => {
+              setShowBulkUpload(false);
+              setRefreshKey(prev => prev + 1);
+            }}
+          />
+        ) : (
+          <>
         <div className="relative w-full sm:w-80">
           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
             <Search className="w-5 h-5 text-gray-400" />
@@ -1096,6 +1110,14 @@ export default function PersonalTask() {
             </button>
           )}
 
+          <button
+            onClick={() => setShowBulkUpload(true)}
+            className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white font-medium px-4 py-2 rounded-md shadow-md transition-all hover:shadow-lg flex-1 sm:flex-none justify-center"
+          >
+            <Upload className="w-4 h-4" aria-hidden="true" />
+            <span className="sm:inline">Bulk Upload</span>
+          </button>
+
           {/* Create Task - All screens */}
           <button
             onClick={() => navigate("/teacher/hrm/tasks/personal-tasks/add")}
@@ -1105,9 +1127,11 @@ export default function PersonalTask() {
             <span className="sm:inline">Create Task</span>
           </button>
         </div>
+          </>
+        )}
       </div>
       {/* Filter Panel */}
-      {filters.filterOpen && (
+      {!showBulkUpload && filters.filterOpen && (
         <div className="bg-white rounded-xl shadow-md p-5 mb-6 border border-gray-200">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
 
@@ -1297,6 +1321,7 @@ export default function PersonalTask() {
         </div>
       )}
 
+      {!showBulkUpload && (
       <MyTaskTable
         tasks={loading ? [] : paginatedTasks}
         selectedTask={selectedTask}
@@ -1316,6 +1341,7 @@ export default function PersonalTask() {
         searchQuery={searchQuery}
         filters={filters}
       />
+      )}
 
     </div>
   );

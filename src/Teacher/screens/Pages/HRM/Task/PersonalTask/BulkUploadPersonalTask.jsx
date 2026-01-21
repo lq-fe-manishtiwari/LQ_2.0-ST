@@ -11,7 +11,7 @@ import { Settings } from '../../Settings/Settings.service';
 import { TaskManagement } from '../../Services/TaskManagement.service';
 import { HRMManagement } from '../../Services/hrm.service';
 
-export default function BulkUploadPersonalTask() {
+export default function BulkUploadPersonalTask({ setShowBulkUpload, onSuccess }) {
   const navigate = useNavigate();
   const fileInputRef = useRef(null);
   const dropzoneRef = useRef(null);
@@ -581,7 +581,11 @@ export default function BulkUploadPersonalTask() {
   };
 
   const handleCancel = () => {
-    navigate("/hrm/tasks/personal-tasks");
+    if (setShowBulkUpload) {
+      setShowBulkUpload(false);
+    } else {
+      navigate("/hrm/tasks/personal-tasks");
+    }
   };
 
   const exportFilteredTasks = () => {
@@ -616,7 +620,7 @@ export default function BulkUploadPersonalTask() {
           <h2 className="text-xl font-bold">Personal Bulk Task Upload</h2>
         </div>
         <button
-          onClick={() => setShowBulkUpload(false)}
+          onClick={handleCancel}
           className="p-2 rounded-lg hover:bg-blue-700 transition-colors"
           title="Close"
         >
@@ -908,7 +912,7 @@ export default function BulkUploadPersonalTask() {
           {/* Buttons positioned at bottom right */}
           <div className="flex flex-row-reverse gap-3">
             <button
-              onClick={() => navigate("/hrm/tasks/personal-tasks")}
+              onClick={handleCancel}
               className="px-6 py-3 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-lg shadow transition-all font-medium min-w-[100px]"
             >
               Cancel
@@ -943,7 +947,13 @@ export default function BulkUploadPersonalTask() {
           confirmBtnCssClass="btn-confirm"
           onConfirm={() => {
             setShowSuccessAlert(false);
-            navigate("/hrm/tasks/personal-tasks");
+            if (onSuccess) {
+              onSuccess();
+            } else if (setShowBulkUpload) {
+              setShowBulkUpload(false);
+            } else {
+              navigate("/hrm/tasks/personal-tasks");
+            }
           }}
           confirmBtnText="Go to Tasks"
           showCancel={true}
