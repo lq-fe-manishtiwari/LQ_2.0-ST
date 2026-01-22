@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 // Updated data with books in every category
 const categories = [
   {
-    name: "Computer Science",
+    name: "Computer",
     count: 124,
     color: "indigo",
     books: [
@@ -26,7 +26,7 @@ const categories = [
   {
     name: "Management",
     count: 76,
-    color: "pink",
+    color: "amber",
     books: [
       { title: "The Lean Startup", author: "Eric Ries", image: "https://m.media-amazon.com/images/I/81jgCiNJPUL._AC_UF1000,1000_QL80_.jpg" },
       { title: "Good to Great", author: "Jim Collins", image: "https://m.media-amazon.com/images/I/81g4w5rL4DL._AC_UF1000,1000_QL80_.jpg" },
@@ -36,7 +36,7 @@ const categories = [
   {
     name: "Design Reference",
     count: 62,
-    color: "rose",
+    color: "red",
     books: [
       { title: "The Design of Everyday Things", author: "Don Norman", image: "https://m.media-amazon.com/images/I/81g4w5rL4DL._AC_UF1000,1000_QL80_.jpg" },
       { title: "Don't Make Me Think", author: "Steve Krug", image: "https://m.media-amazon.com/images/I/81g4w5rL4DL._AC_UF1000,1000_QL80_.jpg" },
@@ -46,7 +46,7 @@ const categories = [
   {
     name: "Mathematics",
     count: 58,
-    color: "teal",
+    color: "emerald",
     books: [
       { title: "Calculus", author: "James Stewart", image: "https://m.media-amazon.com/images/I/81wgcld4wxL._AC_UF1000,1000_QL80_.jpg" },
       { title: "Linear Algebra and Its Applications", author: "David C. Lay", image: "https://m.media-amazon.com/images/I/91l3y7Y0WIL._AC_UF1000,1000_QL80_.jpg" },
