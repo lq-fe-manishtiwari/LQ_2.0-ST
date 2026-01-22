@@ -54,10 +54,8 @@ export default function CheckOut() {
       <div className="max-w-6xl mx-auto">
         {/* Header */}
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Checkout</h1>
-          <p className="mt-2 text-gray-600">Review and confirm your selected books</p>
+          <h1 className="text-4xl font-bold text-[#2162C1]">Checkout</h1>
         </div>
-
         {/* Filter Dropdowns - Exactly like your screenshot */}
         <div className="bg-white shadow-md rounded-lg border border-gray-200 p-4 mb-6">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">

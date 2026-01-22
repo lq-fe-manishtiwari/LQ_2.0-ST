@@ -31,8 +31,7 @@ export default function CheckIn() {
     <div className="min-h-screen bg-gray-50 py-8 px-4 sm:px-6 lg:px-8">
       <div className="max-w-6xl mx-auto">
         <div className="text-center mb-10">
-          <h1 className="text-3xl font-bold text-gray-900">Check-In / Book Return</h1>
-          <p className="mt-2 text-gray-600">Process returned books and calculate fines if any</p>
+          <h1 className="text-3xl font-bold text-[#2162C1]">Check-In</h1>
         </div>
 
         <div className="bg-white shadow-lg rounded-xl border border-gray-200 overflow-hidden">
