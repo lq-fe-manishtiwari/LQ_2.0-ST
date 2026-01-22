@@ -292,21 +292,21 @@ const ViewUpadateTimetable = () => {
                 </div>
                 
                 {/* Debug info - remove in production */}
-                <div className="mt-6 p-3 bg-gray-50 rounded-lg border border-gray-200">
+                {/* <div className="mt-6 p-3 bg-gray-50 rounded-lg border border-gray-200">
                     <p className="text-xs text-gray-500">
                         <strong>Debug Info:</strong> Type: {slotIdentifier.type} | ID: {slotIdentifier.id} | 
                         Template ID: {template_slot_id || slotData.template_slot_id} | 
                         Exception ID: {exception_id || slotData.exception_id}
                     </p>
-                </div>
+                </div> */}
             </div>
 
             {/* Previous Record Section */}
             <div className="flex justify-between items-center">
                 <h2 className="text-lg font-bold text-gray-800">Previous Updates</h2>
-                <span className="text-sm text-gray-500">
+                {/* <span className="text-sm text-gray-500">
                     {slotIdentifier.type === 'exception' ? 'Exception' : 'Template Slot'}: {slotIdentifier.id}
-                </span>
+                </span> */}
             </div>
 
             {/* Loading State */}
@@ -500,7 +500,7 @@ const AddUpdatePopup = ({ slotData, slotIdentifier, onClose, onSubmit }) => {
                 {/* Popup Content */}
                 <form onSubmit={handleSubmit} className="p-6 space-y-6">
                     <div className="space-y-4">
-                        <div>
+                        {/* <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">
                                 Slot Information
                             </label>
@@ -514,7 +514,7 @@ const AddUpdatePopup = ({ slotData, slotIdentifier, onClose, onSubmit }) => {
                                     {slotIdentifier.type === 'exception' ? 'Exception' : 'Template Slot'}: {slotIdentifier.id}
                                 </p>
                             </div>
-                        </div>
+                        </div> */}
 
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -556,137 +556,103 @@ const AddUpdatePopup = ({ slotData, slotIdentifier, onClose, onSubmit }) => {
                             <label className="block text-sm font-medium text-gray-700 mb-1">
                                 <span className="flex items-center gap-2">
                                     <FileText size={16} />
-                                    Additional Notes (Optional)
-                                </span>
-                            </label>
-                            <input
-                                type="text"
-                                name="note"
-                                value={formData.note}
-                                onChange={handleInputChange}
-                                placeholder="Brief summary or other information..."
-                                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                disabled={uploading}
-                            />
-                        </div>
-
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                                <span className="flex items-center gap-2">
-                                    <FileText size={16} />
                                     Upload Document (Optional)
                                 </span>
                             </label>
                             <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
-                                {formData.related_document_url ? (
-                                    <div className="mb-4">
-                                        <div className="bg-green-50 p-4 rounded-lg">
-                                            <div className="flex items-start justify-between">
-                                                <div className="flex items-start gap-3">
-                                                    <FileText size={24} className="text-green-600 mt-1" />
-                                                    <div className="flex-1">
-                                                        <div className="flex items-center gap-2 mb-2">
-                                                            <p className="text-green-600 font-medium text-sm">
-                                                                ✓ Document uploaded successfully
-                                                            </p>
-                                                            <ExternalLink size={14} className="text-green-600" />
-                                                        </div>
-                                                        <p className="text-xs text-gray-500 mb-1">
-                                                            {formData.fileName || 'Document'}
-                                                        </p>
-                                                        {/* Document Link Display */}
-                                                        <div className="mt-2 p-2 bg-white border border-gray-200 rounded">
-                                                            <p className="text-xs font-medium text-gray-700 mb-1">
-                                                                Uploaded Document URL (will be saved in "documents" array):
-                                                            </p>
-                                                            <a 
-                                                                href={formData.related_document_url}
-                                                                target="_blank"
-                                                                rel="noopener noreferrer"
-                                                                className="text-xs text-blue-600 hover:text-blue-800 break-all underline"
-                                                                onClick={(e) => e.stopPropagation()}
-                                                            >
-                                                                {formData.related_document_url}
-                                                            </a>
-                                                        </div>
-                                                        <p className="text-xs text-blue-500 mt-2">
-                                                            Ready to save with update
-                                                        </p>
-                                                    </div>
-                                                </div>
-                                                <button
-                                                    type="button"
-                                                    onClick={removeFile}
-                                                    className="text-gray-400 hover:text-red-500 ml-2"
-                                                    disabled={uploading}
-                                                >
-                                                    <X size={18} />
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                ) : uploading && file ? (
-                                    <div className="mb-4">
-                                        <div className="bg-blue-50 p-4 rounded-lg">
-                                            <div className="flex items-center gap-3">
-                                                <Loader className="animate-spin text-blue-600" size={24} />
-                                                <div>
-                                                    <p className="text-blue-600 font-medium text-sm">
-                                                        Uploading document...
-                                                    </p>
-                                                    <p className="text-xs text-gray-500">
-                                                        {file.name}
-                                                    </p>
-                                                    <p className="text-xs text-gray-400 mt-1">
-                                                        Please wait
-                                                    </p>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                ) : (
-                                    <p className="text-gray-500 mb-4">
-                                        Upload supporting documents (PDF, DOC, images)
-                                    </p>
-                                )}
-                                
-                                {/* Error message display */}
-                                {uploadError && (
-                                    <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
-                                        <p className="text-red-600 text-sm font-medium">
-                                            {uploadError}
-                                        </p>
-                                    </div>
-                                )}
-                                
-                                <label className={`cursor-pointer ${uploading ? 'pointer-events-none opacity-50' : ''}`}>
-                                    <input
-                                        type="file"
-                                        className="hidden"
-                                        onChange={handleFileChange}
-                                        accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
-                                        disabled={uploading}
-                                    />
-                                    <div className={`px-6 py-3 rounded-lg font-medium transition-colors ${
-                                        uploading 
-                                            ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                                            : 'bg-blue-50 hover:bg-blue-100 text-blue-700'
-                                    }`}>
-                                        {uploading ? (
-                                            <div className="flex items-center justify-center gap-2">
-                                                <Loader className="animate-spin" size={16} />
-                                                Uploading...
-                                            </div>
-                                        ) : 'Select Document'}
-                                    </div>
-                                </label>
-                                <p className="text-xs text-gray-400 mt-3">
-                                    Max file size: 10MB • Supported formats: PDF, DOC, JPG, PNG
-                                </p>
-                                <p className="text-xs text-green-600 mt-2">
-                                    Document uploads automatically when selected
-                                </p>
+    {formData.related_document_url ? (
+        <div className="mb-4">
+            <div className="bg-green-50 p-4 rounded-lg">
+                <div className="flex items-start justify-between">
+                    <div className="flex items-start gap-3">
+                        <div className="flex-1">
+                            <p className="text-xs text-gray-500 mb-1">
+                                {formData.fileName || 'Document'}
+                            </p>
+
+                            <div className="mt-2 p-2 bg-white border border-gray-200 rounded">
+                                <a
+                                    href={formData.related_document_url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-xs text-blue-600 hover:text-blue-800 break-all underline"
+                                    onClick={(e) => e.stopPropagation()}
+                                >
+                                    {formData.related_document_url}
+                                </a>
                             </div>
+                        </div>
+                    </div>
+
+                    <button
+                        type="button"
+                        onClick={removeFile}
+                        className="text-gray-400 hover:text-red-500 ml-2"
+                        disabled={uploading}
+                    >
+                        <X size={18} />
+                    </button>
+                </div>
+            </div>
+        </div>
+    ) : uploading && file ? (
+        <div className="mb-4">
+            <div className="bg-blue-50 p-4 rounded-lg">
+                <div className="flex items-center gap-3">
+                    <Loader className="animate-spin text-blue-600" size={24} />
+                    <div>
+                        <p className="text-blue-600 font-medium text-sm">
+                            Uploading document...
+                        </p>
+                        <p className="text-xs text-gray-500">
+                            {file.name}
+                        </p>
+                        <p className="text-xs text-gray-400 mt-1">
+                            Please wait
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    ) : null}
+
+    {uploadError && (
+        <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+            <p className="text-red-600 text-sm font-medium">
+                {uploadError}
+            </p>
+        </div>
+    )}
+
+    <label className={`cursor-pointer ${uploading ? 'pointer-events-none opacity-50' : ''}`}>
+        <input
+            type="file"
+            className="hidden"
+            onChange={handleFileChange}
+            accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+            disabled={uploading}
+        />
+        <div
+            className={`px-6 py-3 rounded-lg font-medium transition-colors ${
+                uploading
+                    ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                    : 'bg-blue-50 hover:bg-blue-100 text-blue-700'
+            }`}
+        >
+            {uploading ? (
+                <div className="flex items-center justify-center gap-2">
+                    <Loader className="animate-spin" size={16} />
+                    Uploading...
+                </div>
+            ) : 'Select Document'}
+        </div>
+    </label>
+
+    <p className="text-xs text-gray-400 mt-3">
+        Supported formats: PDF, DOC, JPG, PNG
+    </p>
+</div>
+
                         </div>
                     </div>
 
