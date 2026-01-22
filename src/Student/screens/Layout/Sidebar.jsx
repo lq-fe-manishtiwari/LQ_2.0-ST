@@ -173,7 +173,7 @@ const StudentSidebar = ({ isOpen, toggle }) => {
       },
 
       {
-        to: "/my-library",
+        to: "/student/my-library",
         label: "My Library",
         iconActive: classActive,
         iconInactive: classInactive,
