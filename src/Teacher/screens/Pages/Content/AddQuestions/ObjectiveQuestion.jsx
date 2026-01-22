@@ -448,6 +448,7 @@ const ObjectiveQuestion = ({
       return;
     }
     const userId = getUserId();
+    const collegeId = getCollegeId();
     console.log("getUserId", userId);
 
     setSaving(true);
@@ -470,6 +471,7 @@ const ObjectiveQuestion = ({
         default_weightage: parseFloat(formData.defaultMarks) || 1.0,
         admin: false,
         user_id: userId,
+        college_id: collegeId
       };
 
       console.log('Saving Question Payload:', payload);
