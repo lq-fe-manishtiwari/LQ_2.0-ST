@@ -1,7 +1,11 @@
 import { Routes, Route, Navigate } from "react-router-dom";
-// import AssignedTasks from "../Dashboard/AssignedTasks";
+
 import LibraryManagementLayout from "../LibraryManagementLayout";
 import LibraryDashboard from "../Dashboard/LibraryDashboard";
+import CheckOut from "../Dashboard/CheckOut";
+import CheckIn from "../Dashboard/CheckIn";
+import BookCategory from "../Dashboard/BookCategory";
+import Penalty from "../Dashboard/Penalty";
 
 
 export default function LibraryRoutes() {
@@ -14,7 +18,10 @@ export default function LibraryRoutes() {
        <Route  element={<LibraryManagementLayout />} >
 
        <Route path="dashboard" element={<LibraryDashboard />} />
-       {/* <Route path="tasks" element={<AssignedTasks />} /> */}
+       <Route path="check-out" element={<CheckOut />} />
+       <Route path="check-in" element={<CheckIn />} />
+       <Route path="book-category" element={<BookCategory />} />
+       <Route path="penalty" element={<Penalty />} />
        
 
      </Route>
