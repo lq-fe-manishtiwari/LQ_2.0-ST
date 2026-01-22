@@ -982,6 +982,59 @@ export default function TimeSheetDashboard() {
                   </span>
                 </div>
 
+                {/* Biometric Attendance Data */}
+                {!day.isWeekendHoliday && (
+                  <div className="mb-4 p-3 sm:p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-blue-200">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 sm:gap-3">
+                      {/* ST - Start Time */}
+                      <div className="bg-white p-2 sm:p-3 rounded-lg shadow-sm border border-blue-100">
+                        <div className="text-[10px] sm:text-xs text-gray-600 font-medium mb-1">Start Time</div>
+                        <div className="text-xs sm:text-sm font-bold text-blue-700">09:00 AM</div>
+                      </div>
+
+                      {/* ET - End Time */}
+                      <div className="bg-white p-2 sm:p-3 rounded-lg shadow-sm border border-blue-100">
+                        <div className="text-[10px] sm:text-xs text-gray-600 font-medium mb-1">End Time</div>
+                        <div className="text-xs sm:text-sm font-bold text-blue-700">
+                          {day.dayName === 'Thursday' ? '01:00 PM' : day.dayName === 'Friday' ? '03:00 PM' : '05:00 PM'}
+                        </div>
+                      </div>
+
+                      {/* No. of Hours */}
+                      <div className="bg-white p-2 sm:p-3 rounded-lg shadow-sm border border-green-100">
+                        <div className="text-[10px] sm:text-xs text-gray-600 font-medium mb-1">No. of Hours</div>
+                        <div className="text-xs sm:text-sm font-bold text-green-700">
+                          {day.dayName === 'Thursday' ? '4h' : day.dayName === 'Friday' ? '6h' : '8h'}
+                        </div>
+                      </div>
+
+                      {/* Approved Time */}
+                      <div className="bg-white p-2 sm:p-3 rounded-lg shadow-sm border border-purple-100">
+                        <div className="text-[10px] sm:text-xs text-gray-600 font-medium mb-1">Approved Time</div>
+                        <div className="text-xs sm:text-sm font-bold text-purple-700">
+                          {day.dayName === 'Thursday' ? '4h' : day.dayName === 'Friday' ? '6h' : '8h'}
+                        </div>
+                      </div>
+
+                      {/* As per Biometric */}
+                      <div className="bg-white p-2 sm:p-3 rounded-lg shadow-sm border border-orange-100">
+                        <div className="text-[10px] sm:text-xs text-gray-600 font-medium mb-1">As per Biometric</div>
+                        <div className="text-xs sm:text-sm font-bold text-orange-700">
+                          {day.dayName === 'Thursday' ? '4h' : day.dayName === 'Friday' ? '6h' : '8h'}
+                        </div>
+                      </div>
+
+                      {/* Principal Approval */}
+                      <div className="bg-white p-2 sm:p-3 rounded-lg shadow-sm border border-teal-100">
+                        <div className="text-[10px] sm:text-xs text-gray-600 font-medium mb-1">Principal Approval</div>
+                        <div className="text-xs sm:text-sm font-bold text-teal-700">
+                          {day.dayName === 'Thursday' ? '3h 45m' : day.dayName === 'Friday' ? '5h 30m' : '7h 45m'}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 {day.isWeekendHoliday ? (
                   <div className="text-center py-8 text-gray-500 font-medium text-lg">
                     {day.isSunday ? 'Sunday - Holiday' : 'Saturday - Holiday'}
@@ -1085,7 +1138,7 @@ export default function TimeSheetDashboard() {
                                 )}
                                 {task.subject && (
                                   <div className="flex items-start gap-1">
-                                    <span className="font-semibold text-indigo-700 whitespace-nowrap">Subject:</span>
+                                    <span className="font-semibold text-indigo-700 whitespace-nowrap">Paper:</span>
                                     <span className="text-gray-700">{task.subject}</span>
                                   </div>
                                 )}

@@ -562,12 +562,12 @@ export default function CreateTask() {
             />
           </div>
           <div>
-            <label className={labelClass}>Assigned Date & Time *</label>
+            <label className={labelClass}>Start Date & Time *</label>
             <input type="datetime-local" className={inputClass} value={form.assignedDate}
               onChange={(e) => setForm({ ...form, assignedDate: e.target.value })} />
           </div>
           <div>
-            <label className={labelClass}>Due Date & Time *</label>
+            <label className={labelClass}>End Date & Time *</label>
             <input type="datetime-local" className={inputClass} value={form.dueDate}
               onChange={(e) => setForm({ ...form, dueDate: e.target.value })} min={form.assignedDate || getCurrentDateTime()} />
           </div>
@@ -591,8 +591,8 @@ export default function CreateTask() {
             <div><span className="font-medium">Title:</span> {form.title || "Not set"}</div>
             <div><span className="font-medium">Priority:</span> {getSelectedPriorityName() || "Not set"}</div>
             <div><span className="font-medium">Task Type:</span> {getSelectedTaskTypeName() || "Not set"}</div>
-            <div><span className="font-medium">Assigned:</span> {form.assignedDate || "Not set"}</div>
-            <div><span className="font-medium">Due:</span> {form.dueDate || "Not set"}</div>
+            <div><span className="font-medium">Start Date & Time:</span> {form.assignedDate || "Not set"}</div>
+            <div><span className="font-medium">End Date & Time:</span> {form.dueDate || "Not set"}</div>
             <div className="md:col-span-2"><span className="font-medium">Description:</span> {form.description || "Not set"}</div>
           </div>
         </div>
