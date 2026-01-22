@@ -177,25 +177,6 @@ const LibraryDashboard = () => {
             ))}
           </div>
         </div>
-
-        {/* Quick Actions */}
-        <div className="mt-12 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
-          {[
-            "Add New Book",
-            "Bulk Upload",
-            "Check-Out Book",
-            "Check-In Book",
-            "View Overdue",
-            "Generate Report",
-          ].map((action) => (
-            <button
-              key={action}
-              className="py-4 px-6 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-medium rounded-lg transition-colors border border-indigo-200 shadow-sm"
-            >
-              {action}
-            </button>
-          ))}
-        </div>
       </div>
     </div>
   );
