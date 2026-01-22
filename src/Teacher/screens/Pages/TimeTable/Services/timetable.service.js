@@ -15,7 +15,13 @@ export const timetableService = {
     getPeriodTimetable,
     getClassroomAvailability,
     createSlotException,
-    getTeacherTimetable
+    getTeacherTimetable,
+
+    getClassUpdates,
+    createClassUpdate,
+    updateClassUpdate,
+    deleteClassUpdates,
+    uploadFileToS3
 };
 
 function getTeacherTimetable({ teacher_id, college_id, start_date, end_date }) {
@@ -225,4 +231,155 @@ function createSlotException(exceptionData) {
     };
     return fetch(`${TimetableAPI}/admin/academic/slot-exceptions`, requestOptions)
         .then(handleResponse);
+}
+
+//=================================Class update================
+
+function getClassUpdates(exceptionId, templateSlotId) {
+
+    // exactly one value required
+    if (
+        (exceptionId && templateSlotId) ||
+        (!exceptionId && !templateSlotId)
+    ) {
+        return Promise.reject(
+            "exceptionId OR templateSlotId (only one) is required"
+        );
+    }
+
+    const requestOptions = {
+        method: "GET",
+        headers: authHeader(),
+    };
+
+    const queryParam = exceptionId
+        ? `exceptionId=${exceptionId}`
+        : `templateSlotId=${templateSlotId}`;
+
+    return fetch(
+        `${TimetableAPI}/admin/class-updates?${queryParam}`,
+        requestOptions
+    ).then(handleResponse);
+}
+
+function createClassUpdate(payload) {
+    const {
+        exception_id,
+        template_slot_id,
+        user_id,
+        college_id,
+    } = payload;
+
+    // exactly one validation
+    if (
+        (exception_id && template_slot_id) ||
+        (!exception_id && !template_slot_id)
+    ) {
+        return Promise.reject(
+            "Exactly one of exception_id or template_slot_id is required"
+        );
+    }
+
+    if (!user_id || !college_id) {
+        return Promise.reject("user_id and college_id are required");
+    }
+
+    const requestOptions = {
+        method: "POST",
+        headers: {
+            ...authHeader(),
+            "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+    };
+
+    return fetch(
+        `${TimetableAPI}/admin/class-updates`,
+        requestOptions
+    ).then(handleResponse);
+}
+
+function updateClassUpdate(classUpdateId, payload) {
+
+    const requestOptions = {
+        method: "PUT",
+        headers: {
+            ...authHeader(),
+            "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload), 
+    };
+
+    return fetch(
+        `${TimetableAPI}/admin/class-updates/${classUpdateId}`,
+        requestOptions
+    ).then(handleResponse);
+}
+
+
+function deleteClassUpdates(classUpdateIds) {
+
+    const requestOptions = {
+        method: "DELETE",
+        headers: {
+            ...authHeader(),
+            "Content-Type": "application/json",
+        },
+        body: JSON.stringify(classUpdateIds),
+    };
+
+    return fetch(
+        `${TimetableAPI}/admin/class-updates`,
+        requestOptions
+    ).then(handleResponse);
+}
+
+
+
+function uploadFileToS3(file) {
+    return new Promise(async (resolve, reject) => {
+        try {
+            console.log('Uploading file to S3:', file.name, 'Size:', file.size, 'Type:', file.type);
+            
+            const formData = new FormData();
+            formData.append("file", file);
+            
+            // Get auth headers - NO Content-Type for FormData
+            const headers = authHeader();
+            // Remove Content-Type - browser will set it with boundary
+            if (headers['Content-Type']) {
+                delete headers['Content-Type'];
+            }
+            
+            const requestOptions = {
+                method: "POST",
+                headers: headers,
+                body: formData,
+            };
+            
+            console.log('Sending request to:', `${AcademicAPI}/s3/upload`);
+            
+            const response = await fetch(`${AcademicAPI}/s3/upload`, requestOptions);
+            
+            // Get response as text first
+            const responseText = await response.text();
+            console.log('Raw response text:', responseText);
+            
+            if (!response.ok) {
+                console.error('Upload failed with status:', response.status);
+                throw new Error(`Upload failed: ${response.status} - ${responseText}`);
+            }
+            
+            // IMPORTANT: Since API returns plain text URL, just return it
+            // Don't try to parse as JSON
+            const fileUrl = responseText.trim();
+            
+            console.log('File upload successful, URL:', fileUrl);
+            resolve(fileUrl);
+            
+        } catch (error) {
+            console.error('Error in uploadFileToS3:', error);
+            reject(error);
+        }
+    });
 }

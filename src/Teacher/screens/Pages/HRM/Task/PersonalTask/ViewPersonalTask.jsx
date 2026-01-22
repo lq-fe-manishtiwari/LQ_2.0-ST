@@ -68,7 +68,7 @@ export default function ViewPersonalTask() {
     priority: task.priority?.priority_name || "Medium",
     status: task.status?.name || "Pending",
     overdue: task.overdue ? `${task.days_until_due} Days` : null,
-    supportingDocuments: task.supporting_document || [],
+    supportingDocuments: task.supporting_document || task.task?.supporting_document || [],
     taskCategory: "",
     // Academic Details
     program: "-",
@@ -207,6 +207,48 @@ export default function ViewPersonalTask() {
                 {data.priority}
               </span>
             </div>
+
+            {/* Supporting Documents Section */}
+            {data.supportingDocuments && data.supportingDocuments.length > 0 && (
+              <div className="mt-6 pt-6 border-t border-gray-100">
+                <span className="font-semibold text-gray-700 block mb-4">Supporting Documents:</span>
+                <div className="grid grid-cols-1 gap-3">
+                  {data.supportingDocuments.map((doc, index) => {
+                    const documentUrl = doc.url || doc.link || doc.file_path || doc.document_url;
+                    return (
+                    <div
+                      key={index}
+                      onClick={() => {
+                        if (documentUrl) {
+                          window.open(documentUrl, '_blank');
+                        } else {
+                          alert('Document URL not available');
+                        }
+                      }}
+                      className={`flex items-center gap-3 p-3 rounded-xl border border-gray-200 bg-gray-50 transition-all group ${
+                        documentUrl ? 'hover:bg-blue-50 hover:border-blue-200 cursor-pointer' : 'cursor-not-allowed opacity-60'
+                      }`}
+                    >
+                      <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-colors">
+                        <FileText className="w-5 h-5" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold text-gray-900 truncate">
+                          {doc.name || `Document ${index + 1}`}
+                        </p>
+                        <p className="text-xs text-gray-500 uppercase tracking-wider">Click to view</p>
+                      </div>
+                      {documentUrl ? (
+                        <ExternalLink className="w-4 h-4 text-gray-400 group-hover:text-blue-600 transition-colors" />
+                      ) : (
+                        <span className="text-xs text-red-500">No URL</span>
+                      )}
+                    </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
 
           </div>
 

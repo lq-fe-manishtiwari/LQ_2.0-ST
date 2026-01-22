@@ -397,13 +397,7 @@ const MyTaskTable = ({
                     <span className="font-semibold text-gray-900 line-clamp-1">{task.taskTitle}</span>
                   </div>
                   <div className="text-sm text-gray-600 line-clamp-1">
-                    <span className="font-medium text-gray-800">Program:</span> {task.program}
-                  </div>
-                  <div className="text-sm text-gray-600 line-clamp-1">
-                    <span className="font-medium text-gray-800">Batch:</span> {task.batch} {task.classYear ? `(${task.classYear})` : ''}
-                  </div>
-                  <div className="text-sm text-gray-600 line-clamp-1">
-                    <span className="font-medium text-gray-800">Subject:</span> {task.subject}
+                    <span className="font-medium text-gray-800">Name:</span> {task.firstname} {task.lastname}
                   </div>
                   <div className="text-sm text-gray-500 line-clamp-1">
                     {task.department}
