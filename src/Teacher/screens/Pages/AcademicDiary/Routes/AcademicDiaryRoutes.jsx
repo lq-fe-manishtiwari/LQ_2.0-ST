@@ -6,6 +6,7 @@ import ProfessionalEthics from "../Dashboard/ProfessionalEthics";
 import Committee from "../Dashboard/Committee";
 import AdvLearner from "../Dashboard/AdvLearner";
 import SlowLearner from "../Dashboard/SlowLearner";
+import Contributions from "../Contributions/Contributions";
 
 export default function AcademicDiaryRoutes() {
   return (
@@ -20,6 +21,7 @@ export default function AcademicDiaryRoutes() {
         <Route path="committee" element={<Committee />} />
         <Route path="advanced-learner" element={<AdvLearner />} />
         <Route path="slow-learner" element={<SlowLearner />} />
+        <Route path="contributions" element={<Contributions />} />
         {/* TODO: Add Teaching Plan and Timetable components when ready */}
         {/* <Route path="teaching-plan" element={<TeachingPlan />} /> */}
         {/* <Route path="time-table" element={<TimeTable />} /> */}
