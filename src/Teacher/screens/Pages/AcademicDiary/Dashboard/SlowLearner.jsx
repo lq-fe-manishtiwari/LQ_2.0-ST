@@ -11,8 +11,8 @@ import {
   FileText,
   UserX,
 } from "lucide-react";
-import ExcelUploadModal from "../Components/ExcelUploadModal";
-import { HRMManagement } from "../Services/hrm.service";
+import ExcelUploadModal from "../Component/ExcelUploadModal";
+import { HRMManagement } from "../../HRM/Services/hrm.service";
 
 /* ================= DEFAULT STATIC CONFIG ================= */
 
@@ -34,7 +34,7 @@ const DEFAULT_ROWS = [
   },
 ];
 
-export default function AdvLearner() {
+export default function SlowLearner() {
     const { filters } = useOutletContext();
   /* ================= TABLE ================= */
   const [columns, setColumns] = useState(DEFAULT_COLUMNS);

@@ -13,12 +13,6 @@ import EditSalaryType from "../SalaryManagement/EditSalaryType"
 import SalaryTeacher from "../SalaryManagement/SalaryTeacher"
 import ViewLeaveStatus from "../SalaryManagement/ViewLeaveStatus";
 
-//================================AcademicDiary============================
-import AcademicDiaryLayout from "../Layout/AcademicDiaryLayout";
-import UserProfile from "../AcademicDiary/UserProfile";
-import ProfessionalEthics from "../AcademicDiary/ProfessionalEthics";
-import Committee from "../AcademicDiary/Committee";
-import AdvLearner from "../AcademicDiary/AdvLearner";
 
 import SettingsLayout from "../Layout/SettingsLayout";
 import RolePage from "../Settings/RolePage";
@@ -49,7 +43,7 @@ export default function HRMRoutes() {
   return (
     <Routes>
       {/* ✅ Redirect to list when visiting /hrm */}
-      <Route path="/" element={<Navigate to="tasks" replace />} />
+      <Route path="/" element={<Navigate to="dashboard" replace />} />
 
       {/* ✅ Student list route */}
       <Route element={<TaskManagementLayout />}>
@@ -63,16 +57,7 @@ export default function HRMRoutes() {
 
 
 
-      <Route path="academic-diary" element={<AcademicDiaryLayout />}>
-        <Route index element={<Navigate to="profile" replace />} />
-        <Route path="profile" element={<UserProfile />} />
-        <Route path="professional-ethics" element={<ProfessionalEthics />} />
-        <Route path="committee" element={<Committee />} />
-        <Route path="advanced-learner" element={<AdvLearner />} />
-        <Route path="slow-learner" element={<Committee />} />
-        <Route path="teaching-plan" element={<SalaryAttendance />} />
-        <Route path="time-table" element={<SalaryAttendance />} />
-      </Route>
+
 
       <Route path="tasks" element={<TaskLayout />}>
         <Route index element={<Navigate to="task-assignment" replace />} />

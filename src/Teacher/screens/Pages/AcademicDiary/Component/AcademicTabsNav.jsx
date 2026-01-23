@@ -4,13 +4,12 @@ import { Plus, Upload } from "lucide-react";
 // import BulkUploadModal from "../Components/BulkUploadModal";
 
 const tabs = [
-  { label: "Profile", to: "/hrm/academic-diary/profile" },
-  { label: "Professional Ethics", to: "/hrm/academic-diary/professional-ethics" },
-  { label: "Committee", to: "/hrm/academic-diary/committee" },
-  { label: "Advanced Learner", to: "/hrm/academic-diary/advanced-learner" },
-  { label: "Slow Learner", to: "/hrm/academic-diary/slow-learner" },
-  { label: "Teaching Plan", to: "/hrm/academic-diary/teaching-plan" },
-  { label: "Timetable", to: "/hrm/academic-diary/time-table" },
+  { label: "Professional Ethics", to: "/teacher/academic-diary/professional-ethics" },
+  { label: "Committee", to: "/teacher/academic-diary/committee" },
+  { label: "Advanced Learner", to: "/teacher/academic-diary/advanced-learner" },
+  { label: "Slow Learner", to: "/teacher/academic-diary/slow-learner" },
+  { label: "Teaching Plan", to: "/teacher/academic-diary/teaching-plan" },
+  { label: "Timetable", to: "/teacher/academic-diary/time-table" },
 ];
 
 export default function AcademicTabsNav() {
@@ -42,7 +41,7 @@ export default function AcademicTabsNav() {
 
           {/* Close Button */}
           <button
-            onClick={() => navigate("/hrm/dashboard")}
+            onClick={() => navigate("/dashboard")}
             className="bg-blue-600 hover:bg-blue-700 text-white w-10 h-10 flex items-center justify-center rounded-full shadow-md transition-all ml-4"
           >
             ×

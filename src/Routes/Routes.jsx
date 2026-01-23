@@ -23,6 +23,7 @@ import PMSRoutes from '../Teacher/screens/Pages/PerformanceManagementSystem/Rout
 import ContentRoutes from '../Student/screens/Pages/Content/Routes/ContentRoutes.jsx';
 // import ExamRoutes from '../Student/screens/Pages/Exam/Routes/ExamRoutes.jsx';
 import HRMRoutes from '../Teacher/screens/Pages/HRM/Routes/HRMRoute.jsx';
+import AcademicDiaryRoutes from '../Teacher/screens/Pages/AcademicDiary/Routes/AcademicDiaryRoutes.jsx';
 import SubjectSelectionRoutes from '../Teacher/screens/Pages/SubjectSelection/Routes/SubjectSelectionRoutes.jsx';
 import TimeTableRoutes from '../Student/screens/Pages/TimeTable/Routes/TimeTableRoutes.jsx';
 import AssessmentRoutes from "../Student/screens/Pages/Assessment/Routes/AssessmentRoutes.jsx";
@@ -99,6 +100,16 @@ function App() {
 
 
 
+        <Route
+          path="/teacher/academic-diary/*"
+          element={
+            <ProtectedRoute>
+              <TeacherHomepage>
+                <AcademicDiaryRoutes />
+              </TeacherHomepage>
+            </ProtectedRoute>
+          }
+        />
         <Route
           path="/teacher/hrm/*"
           element={

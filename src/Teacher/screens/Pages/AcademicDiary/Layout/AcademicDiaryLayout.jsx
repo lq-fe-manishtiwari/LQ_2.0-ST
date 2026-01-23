@@ -1,11 +1,10 @@
 import React, { useState } from "react";
 import { Outlet } from "react-router-dom";
-import TabsNav from "../Components/TabsNav";
-import AcademicTabsNav from "../Components/AcademicTabsNav";
-//import CommonProgramTeacherFilter from "../AcademicDiary/ProgramTeacherFilter";
+import AcademicTabsNav from "../Component/AcademicTabsNav";
+//import CommonProgramTeacherFilter from "../Dashboard/ProgramTeacherFilter";
 
 export default function AcademicDiaryLayout() {
-    const [filters, setFilters] = useState({
+  const [filters, setFilters] = useState({
     programId: "",
     teacherId: "",
   });
@@ -13,7 +12,7 @@ export default function AcademicDiaryLayout() {
   return (
     <div className="p-0 sm:p-6">
       <h2 className="pageheading mb-2 sm:mb-4">Academic Diary</h2>
-      <AcademicTabsNav/>
+      <AcademicTabsNav />
 
       {/* <CommonProgramTeacherFilter filters={filters} onChange={setFilters} /> */}
 

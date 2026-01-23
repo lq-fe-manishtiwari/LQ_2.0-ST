@@ -271,7 +271,7 @@ const ViewUpadateTimetable = () => {
                     </div>
                     <div className="flex items-center gap-3 text-gray-700">
                         <BookOpen className="text-blue-600" size={24} />
-                        <span className="font-bold">Subject :</span>
+                        <span className="font-bold">Paper :</span>
                         <span className="text-gray-600">{slotData.subject_name || 'N/A'}</span>
                     </div>
                 </div>
@@ -291,14 +291,6 @@ const ViewUpadateTimetable = () => {
                     </div>
                 </div>
                 
-                {/* Debug info - remove in production */}
-                <div className="mt-6 p-3 bg-gray-50 rounded-lg border border-gray-200">
-                    <p className="text-xs text-gray-500">
-                        <strong>Debug Info:</strong> Type: {slotIdentifier.type} | ID: {slotIdentifier.id} | 
-                        Template ID: {template_slot_id || slotData.template_slot_id} | 
-                        Exception ID: {exception_id || slotData.exception_id}
-                    </p>
-                </div>
             </div>
 
             {/* Previous Record Section */}
@@ -500,21 +492,6 @@ const AddUpdatePopup = ({ slotData, slotIdentifier, onClose, onSubmit }) => {
                 {/* Popup Content */}
                 <form onSubmit={handleSubmit} className="p-6 space-y-6">
                     <div className="space-y-4">
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                                Slot Information
-                            </label>
-                            <div className="bg-gray-50 p-3 rounded-lg">
-                                <p className="text-sm text-gray-600">
-                                    <strong>Subject:</strong> {slotData.subject_name} • 
-                                    <strong> Date:</strong> {slotData.date} • 
-                                    <strong> Time:</strong> {slotData.start_time} - {slotData.end_time}
-                                </p>
-                                <p className="text-xs text-gray-500 mt-1">
-                                    {slotIdentifier.type === 'exception' ? 'Exception' : 'Template Slot'}: {slotIdentifier.id}
-                                </p>
-                            </div>
-                        </div>
 
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">
