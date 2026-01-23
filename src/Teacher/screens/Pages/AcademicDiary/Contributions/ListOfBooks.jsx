@@ -153,23 +153,28 @@ const ListOfBooks = () => {
   const departmentId = userProfile.getDepartmentId();
 
   const fetchBooks = async () => {
-    const idToUse = teacherId || userId;
-    
-    if (!idToUse) {
-      console.log("No user/teacher ID available");
+    if (!userId) {
+      console.log("No user ID available");
       setLoading(false);
       return;
     }
 
     setLoading(true);
     try {
-      const data = await listOfBooksService.getListOfBooksByTeacherId(teacherId);
+      console.log("Fetching books for userId:", userId);
+      const response = await listOfBooksService.getListOfBooksByUserId(userId);
       
-      // API से मिले डेटा को सही format में सेट करें
-      const formattedBooks = Array.isArray(data) ? data : data.content || [];
-      setBooks(formattedBooks);
+      console.log("API Response:", response);
+      if (response && response.content && Array.isArray(response.content)) {
+        setBooks(response.content);
+      } else if (Array.isArray(response)) {
+        setBooks(response);
+      } else {
+        console.error("Unexpected API response format:", response);
+        setBooks([]);
+      }
     } catch (err) {
-      console.error(err);
+      console.error("Error fetching books:", err);
       setBooks([]);
     } finally {
       setLoading(false);
@@ -177,25 +182,23 @@ const ListOfBooks = () => {
   };
 
   useEffect(() => {
-    if (userProfile.isLoaded && (userId || teacherId)) {
+    if (userProfile.isLoaded && userId) {
       fetchBooks();
     }
-  }, [userProfile.isLoaded, userId, teacherId]);
+  }, [userProfile.isLoaded, userId]);
 
   const handleSave = async (formData) => {
     try {
-      const idToUse = teacherId || userId;
-      
-      if (!idToUse) {
+      if (!userId) {
         alert("User information not available");
         return;
       }
 
       if (editBook) {
-        // API में books_reffered_id का उपयोग करें
+        const bookId = editBook.books_reffered_id || editBook.list_of_books_id;
         await listOfBooksService.updateListOfBooks(
-          editBook.books_reffered_id || editBook.list_of_books_id,
-          idToUse, 
+          bookId,
+          userId, 
           formData
         );
       } else {
@@ -211,8 +214,10 @@ const ListOfBooks = () => {
       setShowForm(false);
       setEditBook(null);
       fetchBooks();
+      alert("Data saved successfully!");
     } catch (err) {
       console.error(err);
+      alert("Error saving data. Please try again.");
     }
   };
 
@@ -222,8 +227,10 @@ const ListOfBooks = () => {
     try {
       await listOfBooksService.hardDeleteListOfBooks(id);
       fetchBooks();
+      alert("Record deleted successfully!");
     } catch (err) {
       console.error(err);
+      alert("Error deleting record. Please try again.");
     }
   };
 
@@ -237,10 +244,6 @@ const ListOfBooks = () => {
         <h2 className="text-lg font-semibold">
           List of Books / Journals Referred
         </h2>
-        
-        <div className="text-xs text-gray-500">
-          User ID: {userId} | Teacher ID: {teacherId} | College ID: {collegeId}
-        </div>
       </div>
 
       {loading ? (
@@ -248,7 +251,7 @@ const ListOfBooks = () => {
       ) : books.length === 0 ? (
         <div>
           <p className="text-sm text-gray-500 italic mb-2">
-            No records available for {teacherId ? `Teacher ID: ${teacherId}` : `User ID: ${userId}`}
+            No records available for User ID: {userId}
           </p>
           <p className="text-xs text-gray-400">
             College: {collegeId} | Department: {departmentId}
@@ -268,33 +271,34 @@ const ListOfBooks = () => {
             </thead>
             <tbody>
               {books.map((book) => {
-                // API से books_reffered_id आता है, list_of_books_id नहीं
                 const bookId = book.books_reffered_id || book.list_of_books_id;
+              
+                const bookTable = book.list_of_books_table || [];
                 
-                return book.list_of_books_table.map((row, idx) => (
+                return bookTable.map((row, idx) => (
                   <tr
                     key={`${bookId}-${idx}`}
                     className="hover:bg-gray-50"
                   >
-                    <td className="border px-3 py-2">{row.date}</td>
+                    <td className="border px-3 py-2">{row.date || "N/A"}</td>
                     <td className="border px-3 py-2">
-                      {row.name_of_book}
+                      {row.name_of_book || "N/A"}
                     </td>
-                    <td className="border px-3 py-2">{row.article}</td>
-                    <td className="border px-3 py-2">{row.author}</td>
+                    <td className="border px-3 py-2">{row.article || "N/A"}</td>
+                    <td className="border px-3 py-2">{row.author || "N/A"}</td>
                     <td className="border px-3 py-2 flex gap-2">
                       <button
                         onClick={() => {
                           setEditBook(book);
                           setShowForm(true);
                         }}
-                        className="px-3 py-1 bg-yellow-500 text-white rounded-lg text-xs"
+                        className="px-3 py-1 bg-yellow-500 text-white rounded-lg text-xs hover:bg-yellow-600"
                       >
                         Edit
                       </button>
                       <button
                         onClick={() => handleDelete(bookId)}
-                        className="px-3 py-1 bg-red-600 text-white rounded-lg text-xs"
+                        className="px-3 py-1 bg-red-600 text-white rounded-lg text-xs hover:bg-red-700"
                       >
                         <Trash2 size={14} />
                       </button>
@@ -309,9 +313,9 @@ const ListOfBooks = () => {
 
       <button
         onClick={() => setShowForm(true)}
-        disabled={!userId && !teacherId}
-        className={`mt-4 inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm ${
-          (!userId && !teacherId) 
+        disabled={!userId}
+        className={`mt-4 inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm transition-colors ${
+          !userId 
             ? 'bg-gray-400 text-gray-700 cursor-not-allowed' 
             : 'bg-blue-600 text-white hover:bg-blue-700'
         }`}
@@ -319,7 +323,7 @@ const ListOfBooks = () => {
         <Plus size={16} /> Add Book
       </button>
 
-      {(!userId && !teacherId) && (
+      {!userId && (
         <p className="text-xs text-red-500 mt-2">
           Please log in to add books
         </p>
