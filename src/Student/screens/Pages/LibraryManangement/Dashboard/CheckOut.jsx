@@ -210,15 +210,6 @@ export default function CheckOut() {
                 <span className="mx-4">•</span>
                 <span className="font-medium">Total Pending Days:</span> {totalPendingDays}
               </div>
-
-              <div className="flex items-center gap-4">
-                <button className="px-6 py-2.5 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors font-medium">
-                  Cancel
-                </button>
-                <button className="px-8 py-2.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-medium shadow-sm">
-                  Confirm Checkout
-                </button>
-              </div>
             </div>
           </div>
         </div>

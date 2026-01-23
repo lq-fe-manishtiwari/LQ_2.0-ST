@@ -1,5 +1,5 @@
-// components/BookCategory.tsx
 import React, { useState } from 'react';
+import { BookOpenIcon } from '@heroicons/react/24/solid';
 
 // Updated data with books in every category
 const categories = [
@@ -105,25 +105,27 @@ export default function BookCategory() {
           {categories.map((cat, index) => (
             <div
               key={index}
-              className={`bg-gradient-to-br from-${cat.color}-50 to-${cat.color}-100 rounded-2xl shadow-lg p-6 hover:shadow-2xl transition-all duration-300 border border-${cat.color}-200 group`}
+              className={`bg-gradient-to-br from-${cat.color}-50 to-${cat.color}-100 rounded-2xl shadow-lg p-6 hover:shadow-2xl transition-all duration-300 border border-${cat.color}-200 group relative overflow-hidden`}
             >
-              <div className="flex items-center justify-between">
+              <div className="relative z-10 flex items-center justify-between">
                 <div>
                   <h3 className={`text-2xl font-bold text-${cat.color}-800 group-hover:text-${cat.color}-900 transition-colors`}>
                     {cat.name}
                   </h3>
                   <p className="text-gray-600 mt-2 font-medium">{cat.count} books</p>
                 </div>
-                <span className={`text-5xl font-extrabold text-${cat.color}-600/20 group-hover:text-${cat.color}-600/40 transition-colors`}>
-                  {cat.count}
-                </span>
+
+                {/* Book Icon instead of number */}
+                <BookOpenIcon
+                  className="h-12 w-12 text-[#2162C1]/80 group-hover:text-[#2162C1] group-hover:scale-110 transition-all duration-300"
+                />
               </div>
 
-              {/* View Books Button - Ab har card mein guaranteed dikhega */}
-              <div className="mt-6">
+              {/* View Books Button */}
+              <div className="mt-8">
                 <button
                   onClick={() => openCategory(cat)}
-                  className={`w-full px-6 py-3 bg-${cat.color}-600 hover:bg-${cat.color}-700 text-white rounded-xl transition-all duration-300 font-medium shadow-md hover:shadow-lg transform hover:-translate-y-1`}
+                  className={`w-full px-6 py-3 bg-${cat.color}-600 hover:bg-${cat.color}-700 text-white rounded-xl transition-all duration-300 font-medium shadow-md hover:shadow-lg transform hover:-translate-y-1 active:scale-95`}
                 >
                   View Books
                 </button>

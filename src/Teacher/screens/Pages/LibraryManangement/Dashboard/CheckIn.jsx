@@ -46,7 +46,6 @@ export default function CheckIn() {
                   <th className="px-6 py-4 text-left text-sm font-semibold text-white">Returned On</th>
                   <th className="px-6 py-4 text-left text-sm font-semibold text-white">Overdue Days</th>
                   <th className="px-6 py-4 text-left text-sm font-semibold text-white">Fine (₹)</th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-white">Action</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200 bg-white">
@@ -67,11 +66,6 @@ export default function CheckIn() {
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       {item.fine > 0 ? `₹${item.fine}` : '-'}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <button className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium">
-                        Confirm Return
-                      </button>
-                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -84,9 +78,6 @@ export default function CheckIn() {
               <span className="mx-4">•</span>
               <span className="font-medium">Total Fine Pending:</span> ₹{checkInItems.reduce((sum, i) => sum + i.fine, 0)}
             </div>
-            <button className="px-8 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-medium shadow-sm">
-              Process All Returns
-            </button>
           </div>
         </div>
       </div>
