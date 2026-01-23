@@ -10,7 +10,12 @@ export const teacherProfileService = {
     getAdvancedLearnersByUserId,
     updateAdvancedLearner,
     softDeleteAdvancedLearner,
-    uploadFileToS3
+    uploadFileToS3,
+    saveSlowLearner,
+    getSlowLearnersByUserId,
+    getSlowLearnerById,
+    updateSlowLearner,
+    softDeleteSlowLearner,
 
 };
 
@@ -93,12 +98,7 @@ function softDeleteAdvancedLearner(advanceLearnerId) {
         .then(handleResponse);
 }
 
-// 7. HARD-DELETE /api/advance-learner/hard/{advance_learner_id}
-function hardDeleteAdvancedLearner(advanceLearnerId) {
-    const requestOptions = { method: 'DELETE', headers: authHeader() };
-    return fetch(`${PMSAPI}/advance-learner/hard/${advanceLearnerId}`, requestOptions)
-        .then(handleResponse);
-}
+
 
 function uploadFileToS3(file) {
     return new Promise(async (resolve, reject) => {
@@ -146,4 +146,50 @@ function uploadFileToS3(file) {
             reject(error);
         }
     });
+}
+
+// ========================= SLOW LEARNER APIs =========================
+
+// 1. POST /api/slow-learner
+function saveSlowLearner(values) {
+    const requestOptions = {
+        method: 'POST',
+        headers: authHeaderToPost(),
+        body: JSON.stringify(values)
+    };
+    return fetch(`${PMSAPI}/slow-learner`, requestOptions)
+        .then(handleResponse);
+}
+
+
+// 3. GET-BY-USERID /api/slow-learner/user/{user_id}?page=0&size=10
+function getSlowLearnersByUserId(userId, page = 0, size = 10) {
+    const requestOptions = { method: 'GET', headers: authHeader() };
+    return fetch(`${PMSAPI}/slow-learner/user/${userId}?page=${page}&size=${size}`, requestOptions)
+        .then(handleResponse);
+}
+
+// 4. GET-BY-SLOW-LEARNER-ID /api/slow-learner/{slow_learner_id}
+function getSlowLearnerById(slowLearnerId) {
+    const requestOptions = { method: 'GET', headers: authHeader() };
+    return fetch(`${PMSAPI}/slow-learner/${slowLearnerId}`, requestOptions)
+        .then(handleResponse);
+}
+
+// 5. PUT /api/slow-learner/{slow_learner_id}/user/{user_id}
+function updateSlowLearner(slowLearnerId, userId, values) {
+    const requestOptions = {
+        method: 'PUT',
+        headers: authHeaderToPost(),
+        body: JSON.stringify(values)
+    };
+    return fetch(`${PMSAPI}/slow-learner/${slowLearnerId}/user/${userId}`, requestOptions)
+        .then(handleResponse);
+}
+
+// 6. SOFT-DELETE /api/slow-learner/soft/{slow_learner_id}
+function softDeleteSlowLearner(slowLearnerId) {
+    const requestOptions = { method: 'DELETE', headers: authHeader() };
+    return fetch(`${PMSAPI}/slow-learner/soft/${slowLearnerId}`, requestOptions)
+        .then(handleResponse);
 }
