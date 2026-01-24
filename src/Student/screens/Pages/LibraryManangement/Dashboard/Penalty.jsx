@@ -51,7 +51,7 @@ export default function Penalty() {
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-[#2162C1]">Penalty</h1>
+          <h1 className="text-3xl font-bold text-[#2162C1]">Penalty</h1>
           <p className="mt-2 text-gray-600">
             Track overdue books, penalties, and payment status
           </p>

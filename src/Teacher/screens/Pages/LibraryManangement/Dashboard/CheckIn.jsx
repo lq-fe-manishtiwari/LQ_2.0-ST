@@ -61,10 +61,7 @@ export default function CheckIn() {
     <div className="min-h-screen bg-gray-50 py-8 px-4 sm:px-6 lg:px-8">
       <div className="max-w-7xl mx-auto">
         <div className="text-center mb-10">
-          <h1 className="text-4xl font-bold text-[#2162C1]">Check-In Records</h1>
-          <p className="text-gray-600 mt-2">
-            View returned books with overdue fines (₹{FINE_PER_DAY} per day)
-          </p>
+          <h1 className="text-3xl font-bold text-[#2162C1]">Issue Book</h1>
         </div>
 
         <div className="bg-white shadow-xl rounded-2xl border border-gray-200 overflow-hidden">
