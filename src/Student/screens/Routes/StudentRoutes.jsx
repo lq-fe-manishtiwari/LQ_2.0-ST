@@ -15,6 +15,7 @@ import MyCommittees from '../Pages/Committee/MyCommittees.jsx';
 import CommitteeDetails from '../Pages/Committee/CommitteeDetails.jsx';
 import MeetingDetails from '../Pages/Committee/MeetingDetails.jsx';
 import AttendanceRoutes from '../Pages/Attendance/Routes/AttendanceRoutes.jsx';
+import StudentLibraryRoutes from '../Pages/LibraryManangement/Routes/LibraryRoutes.jsx';
 
 const StudentRoutes = () => {
   return (
@@ -33,6 +34,7 @@ const StudentRoutes = () => {
       <Route path="committee/:committeeId" element={<CommitteeDetails />} />
       <Route path="committee/meeting/:meetingId" element={<MeetingDetails />} />
       <Route path="exam/*" element={<ExamRoutes />} />
+      <Route path="my-library/*" element={<StudentLibraryRoutes />} />
       {/* Add more student pages */}
       
       

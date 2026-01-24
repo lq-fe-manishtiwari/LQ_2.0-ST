@@ -233,7 +233,7 @@ const Sidebar = ({ isOpen, toggle }) => {
 
 
       {
-        to: "/teacher-library",
+        to: "/teacher/library",
         label: "My Library",
         iconActive: classActive,
         iconInactive: classInactive,

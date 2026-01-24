@@ -8,11 +8,11 @@ export function initializeAuth() {
   // BehaviorSubject setup (RxJS ya simple object)
   currentUserSubject = { value: null };
   currentUserToken = { value: null };
-  
+
   // Load from localStorage on init
   const storedUser = localStorage.getItem('currentUser');
   const storedToken = localStorage.getItem('refreshToken');
-  
+
   if (storedUser) currentUserSubject.value = JSON.parse(storedUser);
   if (storedToken) currentUserToken.value = JSON.parse(storedToken);
 }
@@ -42,10 +42,10 @@ export function login(data) {
       localStorage.setItem("currentUser", JSON.stringify(decoded));
       localStorage.setItem("refreshToken", JSON.stringify(user));
       localStorage.setItem("show_payment_popup", "1");
-      
+
       currentUserSubject.value = decoded;
       currentUserToken.value = user;
-      
+
       // Initialize user profile after successful login
       try {
         const { default: userProfileService } = await import('./userProfile.service.js');
@@ -55,7 +55,7 @@ export function login(data) {
         console.error('Failed to initialize user profile after login:', error);
         // Don't throw error as login was successful, profile can be fetched later
       }
-      
+
       return decoded;
     });
 }
@@ -67,10 +67,10 @@ export function logout() {
   localStorage.removeItem("show_payment_popup");
   localStorage.removeItem("userProfile"); // Clear profile data
   localStorage.removeItem("userProfileFetched"); // Clear profile fetch status
-  
+
   currentUserSubject.value = null;
   currentUserToken.value = null;
-  
+
   // Only redirect if not already on login page to prevent loops
   if (!window.location.pathname.includes('/login')) {
     window.location.href = '/login';
@@ -80,7 +80,7 @@ export function logout() {
 export function forgotPassword(data) {
   const requestOptions = {
     method: "POST",
-    headers:  authHeaderToPost(),
+    headers: authHeaderToPost(),
     body: JSON.stringify(data),
   };
 
@@ -133,9 +133,9 @@ export function handleLoginResponse(response) {
     if (!response.ok) {
       const error = {
         message: data?.message || response.statusText,
-        status: data?.status || response.status 
+        status: data?.status || response.status
       };
-      return Promise.reject(error); 
+      return Promise.reject(error);
     }
     return data;
   });
@@ -184,7 +184,7 @@ export function handlePostResponse(response) {
 export function authHeader() {
   const token = currentUserToken?.value?.token;
   if (token) {
-    return { 
+    return {
       'Authorization': `Bearer ${token}`,
       'Content-Type': 'application/json',
       'view': 'web'
@@ -231,6 +231,7 @@ export const TimetableAPI = import.meta.env.VITE_API_URL_Timetable;
 export const COREAPI = import.meta.env.VITE_API_CORE;
 export const ContentAPI = import.meta.env.VITE_API_URL_Content;
 export const ExamMGMAPI = import.meta.env.VITE_API_URL_ExamMGM;
+export const FinanceAPI = import.meta.env.VITE_API_URL_Finance;
 
 // Legacy support - defaults to TeacherLoginAPI for backward compatibility
 export const DevAPI = TeacherLoginAPI;
@@ -275,7 +276,7 @@ export function getUserProfile(userType = null) {
   // Determine the endpoint based on user type
   const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
   const type = userType || currentUser?.iss;
-  
+
   let endpoint = '/profile/me';
   if (type === 'TEACHER') {
     endpoint = '/profile/me';
@@ -303,7 +304,7 @@ export function getUserProfile(userType = null) {
 export function updateUserProfile(profileData, userType = null) {
   const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
   const type = userType || currentUser?.iss;
-  
+
   let endpoint = '/user/profile';
   if (type === 'TEACHER') {
     endpoint = '/teacher/profile';
@@ -367,9 +368,9 @@ export function getTeacherAllocatedMentoringClasses(teacherId) {
 }
 
 function getMentoringAllocationsbyCollectionId(collection_id) {
-	const requestOptions = { method: 'GET', headers: authHeader() };
-	return fetch(`${TeacherAcademicAPI}/subjects/mentoring-allocations/students/collection/${collection_id}`, requestOptions)
-	  .then(handleResponse)
+  const requestOptions = { method: 'GET', headers: authHeader() };
+  return fetch(`${TeacherAcademicAPI}/subjects/mentoring-allocations/students/collection/${collection_id}`, requestOptions)
+    .then(handleResponse)
     .then(data => ({
       success: true,
       data: data
@@ -464,7 +465,7 @@ export function uploadFileToS3(file) {
 export function getTeacherDashboard() {
   const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
   const teacherId = currentUser?.jti;
-  
+
   if (!teacherId) {
     return Promise.reject({
       success: false,

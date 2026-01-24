@@ -25,15 +25,15 @@ const StudentPersonalDetails = ({ studentData, studentName, profileImage, onProf
     { label: "Middle Name", value: studentData?.middlename || "Not provided", icon: <User className="w-5 h-5 text-blue-600" /> },
     { label: "Last Name", value: studentData?.lastname || "Not provided", icon: <User className="w-5 h-5 text-blue-600" /> },
     { label: "Gender", value: studentData?.gender || "Not provided", icon: <User className="w-5 h-5 text-blue-600" /> },
-    { 
-      label: "Date of Birth", 
-      value: studentData?.date_of_birth ? new Date(studentData.date_of_birth).toLocaleDateString() : "Not provided", 
-      icon: <Calendar className="w-5 h-5 text-pink-500" /> 
+    {
+      label: "Date of Birth",
+      value: studentData?.date_of_birth ? new Date(studentData.date_of_birth).toLocaleDateString() : "Not provided",
+      icon: <Calendar className="w-5 h-5 text-pink-500" />
     },
-    { 
-      label: "Date of Admission", 
-      value: studentData?.date_of_admission ? new Date(studentData.date_of_admission).toLocaleDateString() : "Not provided", 
-      icon: <Calendar className="w-5 h-5 text-pink-500" /> 
+    {
+      label: "Date of Admission",
+      value: studentData?.date_of_admission ? new Date(studentData.date_of_admission).toLocaleDateString() : "Not provided",
+      icon: <Calendar className="w-5 h-5 text-pink-500" />
     },
     { label: "Blood Group", value: studentData?.blood_group || "Not provided", icon: <User className="w-5 h-5 text-red-500" /> },
     { label: "Mother Tongue", value: studentData?.mother_tongue || "Not provided", icon: <User className="w-5 h-5 text-blue-600" /> },
@@ -68,7 +68,7 @@ const StudentPersonalDetails = ({ studentData, studentName, profileImage, onProf
         {title}
       </h3>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {items.map((info, index) => (
           <div key={index} className="bg-gray-50 p-4 rounded-lg border">
             <div className="flex items-center mb-2">

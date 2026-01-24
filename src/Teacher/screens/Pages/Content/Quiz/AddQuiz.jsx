@@ -81,6 +81,7 @@ export default function AddQuiz() {
   // Get user profile data
   const { getUserId, getCollegeId, getTeacherId, isLoaded: isProfileLoaded, loading: profileLoading } = useUserProfile();
   const userId = getUserId();
+  const collegeId = getCollegeId();
 
   const [formData, setFormData] = useState({
     program: passedFilters.program || "",
@@ -420,7 +421,8 @@ export default function AddQuiz() {
       unit_id: formData.unit ? parseInt(formData.unit) : null,
       module_id: parseInt(formData.module),
       admin: false,
-      user_id: userId
+      user_id: userId,
+      college_id: collegeId
     };
 
     try {

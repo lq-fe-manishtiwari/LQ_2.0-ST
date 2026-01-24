@@ -84,17 +84,19 @@ function getSubjectbyProgramId(programId) {
 }
 
 function getModulesAndUnitsBySubjectId(subjectId) {
-    // api/admin/academic/api/subjects/141/modules-units  
     const requestOptions = {
         method: 'GET',
         headers: authHeader()
     };
-    return fetch(`${AcademicAPI}/admin/academic/api/subjects/${subjectId}/modules-units/can-view?role=teacher`, requestOptions)
+
+    return fetch(
+        `${AcademicAPI}/api/subjects/${subjectId}/modules-units/can-view?role=teacher`,
+        requestOptions
+    )
         .then(handleResponse)
-        .then(data => {
-            return data;
-        });
+        .then(data => data);
 }
+
 function getContentTypes() {
     const requestOptions = {
         method: 'GET',

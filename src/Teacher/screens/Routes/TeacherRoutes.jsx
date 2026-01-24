@@ -28,6 +28,7 @@ import TimeTableRoutes from "../Pages/TimeTable/Routes/TimeTableRoutes.jsx";
 import MyCommittees from "../Pages/Committee/MyCommittees.jsx";
 import CommitteeDetails from "../Pages/Committee/CommitteeDetails.jsx";
 import MeetingDetails from "../Pages/Committee/MeetingDetails.jsx";
+import LibraryRoutes from "../Pages/LibraryManangement/Routes/LibraryRoutes.jsx";
 
 export default function TeacherRoutes() {
   return (
@@ -58,6 +59,7 @@ export default function TeacherRoutes() {
       <Route path="teacher-hrm/*" element={<HRMRoutes />} />
       <Route path="pms/*" element={<PMSRoutes />} />
       <Route path="exam/*" element={<ExamManagementRoutes />} />
+      <Route path="library/*" element={<LibraryRoutes />} />
       <Route path="leaves/*" element={<LeavesRoutes />} />
       <Route path="committees" element={<MyCommittees />} />
       <Route path="committee/:committeeId" element={<CommitteeDetails />} />
