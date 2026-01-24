@@ -8,6 +8,7 @@ const tabs = [
   { label: "Committee", to: "/teacher/academic-diary/committee" },
   { label: "Advanced Learner", to: "/teacher/academic-diary/advanced-learner" },
   { label: "Slow Learner", to: "/teacher/academic-diary/slow-learner" },
+  { label: "Contributions", to: "/teacher/academic-diary/contributions" },
   { label: "Teaching Plan", to: "/teacher/academic-diary/teaching-plan" },
   { label: "Timetable", to: "/teacher/academic-diary/time-table" },
 ];
