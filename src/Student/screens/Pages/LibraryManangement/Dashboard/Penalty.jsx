@@ -51,7 +51,7 @@ export default function Penalty() {
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-[#2162C1]">Penalty</h1>
+          <h1 className="text-3xl font-bold text-[#2162C1]">Penalty</h1>
           <p className="mt-2 text-gray-600">
             Track overdue books, penalties, and payment status
           </p>
@@ -61,7 +61,7 @@ export default function Penalty() {
         <div className="bg-white shadow-xl rounded-2xl border border-gray-200 overflow-hidden">
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-[#2162C1]">
+              <thead className=" table-header">
                 <tr>
                   <th className="px-6 py-4 text-left text-sm font-semibold text-white">Book Name</th>
                   <th className="px-6 py-4 text-left text-sm font-semibold text-white">Category</th>

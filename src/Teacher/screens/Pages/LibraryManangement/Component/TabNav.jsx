@@ -6,8 +6,8 @@ import { Plus, Upload } from "lucide-react";
 const tabs = [
   { label: "Dashboard", to: "/teacher/library/dashboard" },
   { label: "Book Category", to: "/teacher/library/book-category" },
-  { label: "Check In", to: "/teacher/library/check-in" },
-  { label: "Check Out", to: "/teacher/library/check-out" },
+  { label: "Issue Book", to: "/teacher/library/check-in" },
+  { label: "Return Book", to: "/teacher/library/check-out" },
   { label: "Penalty", to: "/teacher/library/penalty" },
 
 ];
