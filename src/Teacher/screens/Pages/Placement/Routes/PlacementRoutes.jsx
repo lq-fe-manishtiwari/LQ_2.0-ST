@@ -15,7 +15,6 @@ import ViewInterview from "../Pages/ViewInterview";
 import ViewOfferLetter from "../Pages/ViewOfferLetter";
 import Companies from "../Pages/Companies";
 import Reports from "../Pages/Reports";
-import Settings from "../Pages/Settings";
 import DriveScheduling from "../Pages/DriveScheduling";
 import DriveAttendance from "../Pages/DriveAttendance";
 import AddDrive from "../Pages/AddDrive";
@@ -24,6 +23,7 @@ import StudentListBatch from "../Pages/StudentListBatch"
 import ViewDrive from "../Pages/ViewDrive";
 import EditDrive from "../Pages/EditDrive"
 import StudentPlacementData from "../Pages/StudentPlacementData";
+import Settings from "../Pages/Settings/Settings";
 
 const PlacementRoutes = () => (
   <Routes>
@@ -53,7 +53,7 @@ const PlacementRoutes = () => (
       <Route path="student-list" element={<StudentListBatch/>}/>
       <Route path="placements" element={<StudentPlacementData/>}/>
     </Route>
-    <Route path="settings" element={<Settings />} />
+    <Route path="settings" element={< Settings/>} />
   </Routes>
 );
 
