@@ -20,8 +20,10 @@ import DriveScheduling from "../Pages/DriveScheduling";
 import DriveAttendance from "../Pages/DriveAttendance";
 import AddDrive from "../Pages/AddDrive";
 import StudentConsents from "../Pages/StudentConsents";
+import StudentListBatch from "../Pages/StudentListBatch"
 import ViewDrive from "../Pages/ViewDrive";
 import EditDrive from "../Pages/EditDrive"
+import StudentPlacementData from "../Pages/StudentPlacementData";
 
 const PlacementRoutes = () => (
   <Routes>
@@ -48,6 +50,8 @@ const PlacementRoutes = () => (
       <Route path="view-drive/:driveId" element={<ViewDrive/>}/>
       <Route path="edit-drive/:driveId" element={<EditDrive/>}/>
       <Route path="student-consents" element={<StudentConsents/>}/>
+      <Route path="student-list" element={<StudentListBatch/>}/>
+      <Route path="placements" element={<StudentPlacementData/>}/>
     </Route>
     <Route path="settings" element={<Settings />} />
   </Routes>
