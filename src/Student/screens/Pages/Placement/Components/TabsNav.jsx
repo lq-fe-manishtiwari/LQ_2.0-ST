@@ -3,13 +3,13 @@ import { NavLink, useLocation } from "react-router-dom";
 
 const tabs = [
   { label: "Dashboard", to: "/student-placement" },
+  { label: "Profile", to: "/student-placement/profile" },
   { label: "Job Openings", to: "/student-placement/job-openings" },
   { label: "My Applications", to: "/student-placement/my-registrations" },
   { label: "My Interviews", to: "/student-placement/my-interviews" },
   { label: "My Offers", to: "/student-placement/my-offers" },
-  { label: "Profile", to: "/student-placement/profile" },
   { label: "Consent", to: "/student-placement/consent" },
-  { label: "Eligibility", to: "/student-placement/eligibility" },
+  // { label: "Eligibility", to: "/student-placement/eligibility" },
 ];
 
 export default function TabsNav() {
