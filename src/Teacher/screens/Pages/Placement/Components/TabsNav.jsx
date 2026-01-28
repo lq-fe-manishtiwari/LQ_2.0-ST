@@ -4,13 +4,15 @@ import { Settings } from "lucide-react";
 
 const tabs = [
   { label: "Dashboard", to: "/teacher/placement" },
+  { label: "Compus Drive", to: "/teacher/placement/drive-scheduling" },
   { label: "Job Openings", to: "/teacher/placement/jobs" },
   { label: "Registration", to: "/teacher/placement/registration" },
   { label: "Interviews", to: "/teacher/placement/interviews" },
   { label: "Offer", to: "/teacher/placement/offer" },
-  { label: "Companies", to: "/teacher/placement/companies" },
-  { label: "Drive Scheduling", to: "/teacher/placement/drive-scheduling" },
+  // { label: "Companies", to: "/teacher/placement/companies" },
   { label: "Student Consents", to: "/teacher/placement/student-consents" },
+  { label: "Students List", to: "/teacher/placement/student-list" },
+  { label: "Placemnets", to: "/teacher/placement/placements" },
   { label: "Reports", to: "/teacher/placement/reports" },
 ];
 
