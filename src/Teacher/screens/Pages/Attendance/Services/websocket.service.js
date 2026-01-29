@@ -153,12 +153,6 @@ class AttendanceWebSocketService {
             this.subscriptions.set(subscriptionId, subscription);
             console.log('✅ Subscription stored with ID:', subscriptionId);
 
-            // Request initial count
-            console.log('📤 Sending initial count request to /app/attendance/subscribe');
-            console.log('📤 Request payload:', sessionKey);
-            this.stompClient.send('/app/attendance/subscribe', {}, JSON.stringify(sessionKey));
-            console.log('✅ Initial count request sent');
-
             return subscriptionId;
         } catch (error) {
             console.error('❌ Subscription error:', error);

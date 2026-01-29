@@ -157,6 +157,15 @@ const Sidebar = ({ isOpen, toggle }) => {
         ],
       },
       {
+        to: "/teacher/academic-diary",
+        label: "Academic Diary",
+        iconActive: assessmentActive,
+        iconInactive: assessmentInactive,
+        match: [
+          "/teacher/academic-diary",
+        ],
+      },
+      {
         to: "/teacher/us-feedback",
         label: "Feedback",
         iconActive: assessmentActive,
@@ -172,6 +181,16 @@ const Sidebar = ({ isOpen, toggle }) => {
         iconInactive: classInactive,
         match: ["/teacher/committees", "/teacher/committee"],
       },
+       
+      {
+  to: "/teacher/placement",
+  label: "Placement",
+  iconActive: classActive,
+  iconInactive: classInactive,
+  match: ["/teacher/placement"], // remove the '*' — startsWith handles nested routes
+},
+
+     
       {
         to: "/teacher-analytics",
         label: "Insights",
@@ -214,7 +233,7 @@ const Sidebar = ({ isOpen, toggle }) => {
 
 
       {
-        to: "/teacher-library",
+        to: "/teacher/library",
         label: "My Library",
         iconActive: classActive,
         iconInactive: classInactive,

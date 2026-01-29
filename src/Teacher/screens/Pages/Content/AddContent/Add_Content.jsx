@@ -21,8 +21,9 @@ export default function AddContent() {
     const [showPreviewModal, setShowPreviewModal] = useState(false);
     const [showAlert, setShowAlert] = useState(false);
     const [alertConfig, setAlertConfig] = useState({});
-    const { getUserId } = useUserProfile();
+    const { getUserId, getCollegeId } = useUserProfile();
     const userId = getUserId();
+    const collegeId = getCollegeId();
     // Custom hooks
     const { options, loading, setLoading, updateUnitsForModule, loadProgramRelatedData, loadBatchesForAcademicSemester } = useContentData(formData);
     const { addQuizSelection, updateQuizSelection, removeQuizSelection } = useQuizManagement(formData, setFormData);
@@ -213,6 +214,7 @@ export default function AddContent() {
                 quiz_attachments: quizAttachments.length > 0 ? quizAttachments : null,
                 admin: false,
                 user_id: userId,
+                college_id: collegeId
             };
 
             console.log("Submitting data:", submitData);

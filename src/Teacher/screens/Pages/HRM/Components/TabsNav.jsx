@@ -5,7 +5,6 @@ import { Plus, Settings, Upload } from "lucide-react";
 
 const tabs = [
   // { label: "Dashboard", to: "/teacher/hrm/dashboard" },
-  // { label: "Academic Diary", to: "/teacher/hrm/academic-diary" },
   { label: "Tasks", to: "/teacher/hrm/tasks" },
   { label: "Salary", to: "/teacher/hrm/salary" },
 ];

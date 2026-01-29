@@ -122,7 +122,7 @@ export default function ViewMyTasks() {
 
         {/* RIGHT: BACK BUTTON */}
         <button
-          onClick={() => navigate("/hrm/tasks/my-tasks")}
+          onClick={() => navigate("/hrm/tasks/professional-tasks")}
           className="bg-blue-600 hover:bg-blue-700 text-white w-9 h-9 sm:w-10 sm:h-10 
                      flex items-center justify-center rounded-full shadow-md transition-all"
         >

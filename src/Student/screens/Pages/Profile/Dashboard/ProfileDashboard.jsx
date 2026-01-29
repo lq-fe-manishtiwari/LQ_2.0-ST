@@ -8,6 +8,8 @@ import StudentEducationalDetails from "./Components/StudentEducationalDetails";
 import StudentCommunicationDetails from "./Components/StudentCommunicationDetails";
 import StudentTransportDetails from "./Components/StudentTransportDetails";
 import StudentAcademicJourney from "./Components/StudentAcademicJourney";
+import StudentFeesDetails from "./Components/StudentFeesDetails";
+import { CreditCard } from "lucide-react";
 
 export default function ProfileDashboard() {
   const [activeTab, setActiveTab] = useState("personal");
@@ -28,7 +30,8 @@ export default function ProfileDashboard() {
     { id: 'educational', name: 'Educational', icon: <GraduationCap className="w-5 h-5" /> },
     { id: 'communication', name: 'Communication', icon: <MessageCircle className="w-5 h-5" /> },
     { id: 'transport', name: 'Transport', icon: <Bus className="w-5 h-5" /> },
-    { id: 'academic', name: 'Academic Journey', icon: <FileText className="w-5 h-5" /> }
+    { id: 'academic', name: 'Academic Journey', icon: <FileText className="w-5 h-5" /> },
+    { id: 'fees', name: 'Fees', icon: <CreditCard className="w-5 h-5" /> }
   ];
 
   // Use actual API data instead of dummy data
@@ -51,7 +54,7 @@ export default function ProfileDashboard() {
     switch (activeTab) {
       case 'personal':
         return (
-          <StudentPersonalDetails 
+          <StudentPersonalDetails
             studentData={studentData}
             studentName={studentName}
             profileImage={profileImage}
@@ -69,13 +72,16 @@ export default function ProfileDashboard() {
         return <StudentTransportDetails studentData={studentData} />;
 
       case 'academic':
-        
+
         return (
-          <StudentAcademicJourney 
-            studentData={studentData} 
+          <StudentAcademicJourney
+            studentData={studentData}
             historyLoading={historyLoading}
           />
         );
+
+      case 'fees':
+        return <StudentFeesDetails studentId={studentData.student_id} />;
 
       default:
         return null;
@@ -130,51 +136,52 @@ export default function ProfileDashboard() {
         </div>
 
         {/* Profile Header */}
-        <div className="bg-white rounded-xl shadow-sm border p-6 mb-6">
-          <div className="flex flex-col md:flex-row md:items-center md:space-x-6 text-center md:text-left">
+        <div className="bg-white rounded-xl shadow-sm border p-4 sm:p-6 mb-6">
+          <div className="flex flex-col sm:flex-row items-center sm:items-start space-y-4 sm:space-y-0 sm:space-x-6 text-center sm:text-left">
             {/* Profile Image */}
-            <div className="flex justify-center md:block mb-4 md:mb-0">
+            <div className="flex-shrink-0">
               {profileImage ? (
                 <img
                   src={profileImage}
                   alt="Profile"
-                  className="w-24 h-24 rounded-full object-cover border-4 border-gray-200"
+                  className="w-20 h-20 sm:w-24 sm:h-24 rounded-full object-cover border-4 border-gray-100 shadow-sm"
                 />
               ) : (
-                <div className="w-24 h-24 rounded-full bg-blue-600 flex items-center justify-center text-white text-3xl font-bold border-4 border-blue-300">
+                <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-blue-600 flex items-center justify-center text-white text-2xl sm:text-3xl font-bold border-4 border-blue-300 shadow-sm">
                   {studentName ? studentName.charAt(0).toUpperCase() : 'S'}
                 </div>
               )}
             </div>
 
             {/* Profile Info */}
-            <div className="flex-1">
-              <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">
+            <div className="flex-1 w-full">
+              <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900 mb-1">
                 {studentName}
               </h1>
-              {profile?.admission_number && (
-                <p className="text-lg text-gray-600 mb-2">
-                  Admission No: {profile.admission_number}
-                </p>
-              )}
-              {profile?.roll_number && (
-                <p className="text-lg text-gray-600 mb-2">
-                  Roll No: {profile.roll_number}
-                </p>
-              )}
+              <div className="space-y-1 sm:space-y-0 sm:flex sm:flex-wrap sm:gap-x-4 text-gray-600 mb-3">
+                {profile?.admission_number && (
+                  <p className="text-sm sm:text-base">
+                    Admission No: <span className="font-semibold text-gray-800">{profile.admission_number}</span>
+                  </p>
+                )}
+                {profile?.roll_number && (
+                  <p className="text-sm sm:text-base">
+                    Roll No: <span className="font-semibold text-gray-800">{profile.roll_number}</span>
+                  </p>
+                )}
+              </div>
 
               {/* Tags */}
-              <div className="flex flex-wrap justify-center md:justify-start gap-2 mt-2">
-                <span className="bg-blue-50 text-blue-700 px-4 py-2 rounded-full text-sm font-medium">
+              <div className="flex flex-wrap justify-center sm:justify-start gap-2">
+                <span className="bg-blue-50 text-blue-700 px-3 py-1 sm:px-4 sm:py-1.5 rounded-full text-xs sm:text-sm font-medium border border-blue-100">
                   Student
                 </span>
-                <span className={`px-4 py-2 rounded-full text-sm font-medium ${
-                  profile?.is_active ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'
-                }`}>
+                <span className={`px-3 py-1 sm:px-4 sm:py-1.5 rounded-full text-xs sm:text-sm font-medium border ${profile?.is_active ? 'bg-green-50 text-green-700 border-green-100' : 'bg-red-50 text-red-700 border-red-100'
+                  }`}>
                   {profile?.is_active ? 'Active' : 'Inactive'}
                 </span>
                 {profile?.user?.user_type && (
-                  <span className="bg-purple-50 text-purple-700 px-4 py-2 rounded-full text-sm font-medium">
+                  <span className="bg-purple-50 text-purple-700 px-3 py-1 sm:px-4 sm:py-1.5 rounded-full text-xs sm:text-sm font-medium border border-purple-100">
                     {profile.user.user_type}
                   </span>
                 )}
@@ -192,11 +199,10 @@ export default function ProfileDashboard() {
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`${
-                    activeTab === tab.id
-                      ? "text-blue-600 border-b-2 border-blue-500"
-                      : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
-                  } flex-1 py-4 px-2 flex flex-row items-center justify-center gap-2 text-sm font-medium`}
+                  className={`${activeTab === tab.id
+                    ? "text-blue-600 border-b-2 border-blue-500"
+                    : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
+                    } flex-1 py-4 px-2 flex flex-row items-center justify-center gap-2 text-sm font-medium`}
                 >
                   {tab.icon}
                   <span>{tab.name}</span>
@@ -211,11 +217,10 @@ export default function ProfileDashboard() {
                   <button
                     key={tab.id}
                     onClick={() => setActiveTab(tab.id)}
-                    className={`${
-                      activeTab === tab.id
-                        ? "text-blue-600 border-b-2 border-blue-500"
-                        : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
-                    } flex-1 py-4 px-2 flex flex-row items-center justify-center gap-2 text-sm font-medium`}
+                    className={`${activeTab === tab.id
+                      ? "text-blue-600 border-b-2 border-blue-500"
+                      : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
+                      } flex-1 py-4 px-2 flex flex-row items-center justify-center gap-2 text-sm font-medium`}
                   >
                     {tab.icon}
                     <span>{tab.name}</span>
@@ -234,11 +239,10 @@ export default function ProfileDashboard() {
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`${
-                    activeTab === tab.id
-                      ? "border-blue-500 text-blue-600"
-                      : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-                  } py-4 px-1 border-b-2 font-medium text-sm flex items-center space-x-2 transition`}
+                  className={`${activeTab === tab.id
+                    ? "border-blue-500 text-blue-600"
+                    : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                    } py-4 px-1 border-b-2 font-medium text-sm flex items-center space-x-2 transition`}
                 >
                   {tab.icon}
                   <span>{tab.name}</span>
@@ -249,7 +253,7 @@ export default function ProfileDashboard() {
         </div>
 
         {/* Tab Content */}
-        <div className="bg-white rounded-xl shadow-sm border p-6">
+        <div className="bg-white rounded-xl shadow-sm border p-4 sm:p-6">
           {renderTabContent()}
         </div>
 

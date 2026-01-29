@@ -149,7 +149,25 @@ export default function TabularView() {
         };
 
         handleTimetableNavigation();
-    }, [fromTimetable, passedSlot, filtersSetFromTimetable]);
+    }, [fromTimetable, passedSlot]);
+
+    // Auto-select first available filter values
+    useEffect(() => {
+        if (allocations.length > 0 && !filters.paper && !fromTimetable) {
+            const firstAlloc = allocations[0];
+            const newFilters = {
+                program: firstAlloc.program?.program_id?.toString() || '',
+                batch: firstAlloc.batch?.batch_id?.toString() || '',
+                academicYear: firstAlloc.academic_year_id?.toString() || '',
+                semester: firstAlloc.semester_id?.toString() || '',
+                division: firstAlloc.division_id?.toString() || '',
+                paper: firstAlloc.subjects?.[0]?.subject_id?.toString() || '',
+                timeSlot: ''
+            };
+            console.log("DEBUG: Auto-selecting first allocation for TabularView", newFilters);
+            setFilters(newFilters);
+        }
+    }, [allocations, fromTimetable]);
 
     // Restore saved state on component mount (only if not from timetable)
     useEffect(() => {
@@ -299,122 +317,91 @@ export default function TabularView() {
                         collegeId: collegeId
                     };
                     const response = await TeacherAttendanceManagement.getTimeSlots(params);
+                    console.log("DEBUG: getTimeSlots response:", response);
 
                     if (response && response.data && response.data.length > 0) {
                         // Filter out holidays - only show non-holiday time slots
                         const validTimeSlots = response.data.filter(slot => !slot.is_holiday);
 
                         if (validTimeSlots.length > 0) {
+                            console.log("DEBUG: Setting validTimeSlots:", validTimeSlots);
                             setTimeSlots(validTimeSlots);
-                            // Auto-select first time slot only if not already set from timetable
-                            if (!filters.timeSlot || !filtersSetFromTimetable) {
-                                const firstSlotId = validTimeSlots[0].timetable_id?.toString() || validTimeSlots[0].time_slot_id?.toString();
+                            // Auto-select first time slot only if none currently selected
+                            if (!filters.timeSlot) {
+                                const firstSlotId = validTimeSlots[0].time_slot_id?.toString();
+                                console.log("DEBUG: Auto-selecting first time slot:", firstSlotId);
                                 setFilters(prev => ({ ...prev, timeSlot: firstSlotId }));
                             }
                         } else {
                             // All slots are holidays, clear everything
                             setTimeSlots([]);
-                            if (!filtersSetFromTimetable) {
-                                setFilters(prev => ({ ...prev, timeSlot: '' }));
-                            }
+                            setFilters(prev => ({ ...prev, timeSlot: '' }));
                         }
                     } else {
                         // No time slots available
                         setTimeSlots([]);
-                        if (!filtersSetFromTimetable) {
-                            setFilters(prev => ({ ...prev, timeSlot: '' }));
-                        }
+                        setFilters(prev => ({ ...prev, timeSlot: '' }));
                     }
                 } catch (error) {
                     console.error("Error fetching time slots:", error);
                     setTimeSlots([]);
-                    if (!filtersSetFromTimetable) {
-                        setFilters(prev => ({ ...prev, timeSlot: '' }));
-                    }
+                    setFilters(prev => ({ ...prev, timeSlot: '' }));
                 } finally {
                     setLoadingTimeSlots(false);
                 }
             } else {
                 setTimeSlots([]);
-                if (!filtersSetFromTimetable) {
-                    setFilters(prev => ({ ...prev, timeSlot: '' }));
-                }
+                setFilters(prev => ({ ...prev, timeSlot: '' }));
             }
         };
 
         fetchTimeSlots();
-    }, [filters.paper, filters.academicYear, filters.semester, filters.division, currentTeacherId, selectedDate, collegeId, fromTimetable, filtersSetFromTimetable, timeSlots.length]);
+    }, [filters.paper, filters.academicYear, filters.semester, filters.division, currentTeacherId, selectedDate, collegeId, fromTimetable, filtersSetFromTimetable]);
 
     // Fetch students based on filters
     useEffect(() => {
         const fetchStudents = async () => {
-            // If coming from timetable, prioritize using slot data
-            if (fromTimetable && passedSlot && !studentsFetched) {
-                console.log("DEBUG: Fetching students with timetable slot data");
+            // Determine params based on source
+            let params = null;
+            let isFromTimetable = false;
 
-                const params = {
+            if (fromTimetable && passedSlot && !studentsFetched) {
+                params = {
                     academicYearId: passedSlot.academic_year_id,
                     semesterId: passedSlot.semester_id,
                     divisionId: passedSlot.division_id,
                     subjectId: passedSlot.subject_id
                 };
-
-                console.log("DEBUG: Fetch params from timetable:", params);
-
-                setLoadingStudents(true);
-                try {
-                    const response = await AttendanceManagement.getAttendanceStudents(params);
-
-                    if (response && response.data && response.data.length > 0) {
-                        const formattedStudents = response.data.map(s => {
-                            const fullName = [s.firstname, s.middlename, s.lastname].filter(Boolean).join(' ');
-                            return {
-                                ...s,
-                                id: s.student_id,
-                                name: fullName,
-                                roll_number: s.roll_number,
-                                email: s.email,
-                                avatar: s.avatar,
-                                status: 'P', // Default to present
-                                selected: false,
-                                program_id: s.program_id || parseInt(filters.program || passedSlot.program_id),
-                                batch_id: s.batch_id || parseInt(filters.batch || passedSlot.batch_id),
-                                academic_year_id: s.academic_year_id || parseInt(filters.academicYear || passedSlot.academic_year_id),
-                                semester_id: s.semester_id || parseInt(filters.semester || passedSlot.semester_id),
-                                division_id: s.division_id || parseInt(filters.division || passedSlot.division_id),
-                                subject_id: s.subject_id || parseInt(filters.paper || passedSlot.subject_id)
-                            };
-                        });
-                        console.log("DEBUG: Students fetched from timetable slot:", formattedStudents.length);
-                        setStudents(formattedStudents);
-                        setStudentsFetched(true);
-                    } else {
-                        console.log("DEBUG: No students found via timetable slot");
-                        setStudents([]);
-                        setStudentsFetched(true);
-                    }
-                } catch (error) {
-                    console.error("DEBUG: Error fetching students from timetable:", error);
-                    setStudents([]);
-                    setStudentsFetched(true);
-                } finally {
-                    setLoadingStudents(false);
-                }
+                isFromTimetable = true;
+            } else if (filters.academicYear && filters.semester && filters.division && filters.paper) {
+                params = {
+                    academicYearId: filters.academicYear,
+                    semesterId: filters.semester,
+                    divisionId: filters.division,
+                    subjectId: filters.paper
+                };
             }
-            // Normal fetch based on filters
-            else if (filters.academicYear && filters.semester && filters.division && filters.paper) {
-                setLoadingStudents(true);
-                try {
-                    const params = {
-                        academicYearId: filters.academicYear,
-                        semesterId: filters.semester,
-                        divisionId: filters.division,
-                        subjectId: filters.paper
-                    };
-                    const response = await TeacherAttendanceManagement.getAttendanceStudents(params);
 
-                    if (response && response.data && response.data.length > 0) {
-                        const formattedStudents = response.data.map(s => {
+            if (!params) {
+                // Clear students if filters are incomplete and not from timetable
+                if (students.length > 0) {
+                    setStudents([]);
+                    setStudentsFetched(false);
+                }
+                return;
+            }
+
+            setLoadingStudents(true);
+            try {
+                const response = await TeacherAttendanceManagement.getAttendanceStudents(params);
+
+                if (response && response.success && response.data) {
+                    // Handle both response formats: { students: [] } or just []
+                    const studentList = Array.isArray(response.data) ? response.data :
+                        (response.data.students || []);
+
+                    if (studentList.length > 0) {
+                        const formattedStudents = studentList.map(s => {
                             const fullName = [s.firstname, s.middlename, s.lastname].filter(Boolean).join(' ');
                             return {
                                 ...s,
@@ -425,54 +412,62 @@ export default function TabularView() {
                                 avatar: s.avatar,
                                 status: 'P', // Default to present
                                 selected: false,
-                                program_id: s.program_id || parseInt(filters.program),
-                                batch_id: s.batch_id || parseInt(filters.batch),
-                                academic_year_id: s.academic_year_id || parseInt(filters.academicYear),
-                                semester_id: s.semester_id || parseInt(filters.semester),
-                                division_id: s.division_id || parseInt(filters.division),
-                                subject_id: s.subject_id || parseInt(filters.paper)
+                                program_id: s.program_id || parseInt(filters.program || (isFromTimetable ? passedSlot.program_id : 0)),
+                                batch_id: s.batch_id || parseInt(filters.batch || (isFromTimetable ? passedSlot.batch_id : 0)),
+                                academic_year_id: s.academic_year_id || parseInt(params.academicYearId),
+                                semester_id: s.semester_id || parseInt(params.semesterId),
+                                division_id: s.division_id || parseInt(params.divisionId),
+                                subject_id: s.subject_id || parseInt(params.subjectId)
                             };
                         });
-                        console.log("DEBUG: Students fetched normally:", formattedStudents.length);
+                        console.log(`DEBUG: Students fetched successful, count: ${formattedStudents.length}`);
                         setStudents(formattedStudents);
                         setStudentsFetched(true);
                     } else {
-                        console.log("DEBUG: No students found normally");
+                        console.log("DEBUG: No students found in division");
                         setStudents([]);
                         setStudentsFetched(true);
                     }
-                } catch (error) {
-                    console.error("DEBUG: Error fetching students normally:", error);
-                    setStudents([]);
-                    setStudentsFetched(true);
-                } finally {
-                    setLoadingStudents(false);
                 }
-            } else {
-                // Clear students if filters are reset
+            } catch (error) {
+                console.error("DEBUG: Error fetching students:", error);
                 setStudents([]);
-                setStudentsFetched(false);
+            } finally {
+                setLoadingStudents(false);
             }
         };
 
         fetchStudents();
-    }, [filters.academicYear, filters.semester, filters.division, filters.paper, fromTimetable, passedSlot, filtersSetFromTimetable, studentsFetched]);
+    }, [filters.academicYear, filters.semester, filters.division, filters.paper, fromTimetable, passedSlot, filtersSetFromTimetable]);
 
     // Fetch existing attendance when time slot is selected
     useEffect(() => {
         const fetchExistingAttendance = async () => {
+            console.log("DEBUG: fetchExistingAttendance triggered", {
+                timeSlot: filters.timeSlot,
+                studentsCount: students.length,
+                filters: filters
+            });
             if (filters.timeSlot && students.length > 0 && filters.academicYear && filters.semester && filters.division && filters.paper) {
                 try {
                     let selectedTimeSlot;
 
-                    // If coming from timetable with manual time slot
-                    if (fromTimetable && timeSlots.length > 0 && timeSlots[0]?.fromTimetable) {
+                    // If coming from timetable with manual time slot and it hasn't been changed
+                    if (fromTimetable && filtersSetFromTimetable && timeSlots.length > 0 && timeSlots[0]?.fromTimetable) {
                         selectedTimeSlot = timeSlots[0];
                     } else {
-                        // Find in fetched time slots
+                        // Find in fetched time slots or manual slots based on current filter
+                        // Prefer time_slot_id for matching as it's more specific
                         selectedTimeSlot = timeSlots.find(slot =>
-                            (slot.timetable_id?.toString() || slot.time_slot_id?.toString()) === filters.timeSlot
+                            slot.time_slot_id?.toString() === filters.timeSlot
                         );
+
+                        // Fallback to timetable_id only if no match found with time_slot_id
+                        if (!selectedTimeSlot) {
+                            selectedTimeSlot = timeSlots.find(slot =>
+                                slot.timetable_id?.toString() === filters.timeSlot
+                            );
+                        }
                     }
 
                     if (!selectedTimeSlot) return;
@@ -488,7 +483,11 @@ export default function TabularView() {
                         date: selectedDate
                     };
 
+                    console.log("DEBUG: Fetching existing attendance with payload:", payload);
+                    setLoadingStudents(true);
+
                     const response = await TeacherAttendanceManagement.getAttendanceList(payload);
+                    console.log("DEBUG: Attendance List Response:", response);
 
                     if (response && response.success && response.data && response.data.length > 0) {
                         // Attendance exists, update student statuses
@@ -507,11 +506,20 @@ export default function TabularView() {
                                 return student;
                             })
                         );
+                    } else {
+                        // No attendance data for this slot, reset all to 'P'
+                        setStudents(prevStudents =>
+                            prevStudents.map(student => ({
+                                ...student,
+                                status: 'P'
+                            }))
+                        );
                     }
-                    // If no attendance data, keep default 'P' status
                 } catch (error) {
                     console.error("Error fetching existing attendance:", error);
                     // Keep default statuses on error
+                } finally {
+                    setLoadingStudents(false);
                 }
             }
         };
@@ -534,9 +542,11 @@ export default function TabularView() {
 
     // Filter handlers
     const handleFilterChange = (newFilters) => {
+        console.log("DEBUG: handleFilterChange called with:", newFilters);
         setFilters(newFilters);
         // If user manually changes filters, reset the timetable flag
         if (filtersSetFromTimetable) {
+            console.log("DEBUG: Resetting filtersSetFromTimetable to false");
             setFiltersSetFromTimetable(false);
         }
     };
@@ -665,29 +675,47 @@ export default function TabularView() {
         };
     }, []);
 
+    // Robust status finding
+    const getStatusByCodes = (codes) => {
+        return attendanceStatuses.find(s =>
+            codes.includes(String(s.status_code || '').toUpperCase()) ||
+            codes.includes(String(s.status_name || '').toUpperCase())
+        );
+    };
+
+    const presentStatusCode = getStatusByCodes(['P', 'PR', 'PRESENT'])?.status_code || 'P';
+    const absentStatusCode = getStatusByCodes(['A', 'AB', 'ABSENT'])?.status_code || 'A';
+
     // Mark all students as present
     const markAllPresent = () => {
-        setStudents(students.map(s => ({ ...s, status: 'P' })));
+        setStudents(students.map(s => ({ ...s, status: presentStatusCode })));
     };
 
     // Mark all students as absent
     const markAllAbsent = () => {
-        setStudents(students.map(s => ({ ...s, status: 'A' })));
-    };
-
-    // Toggle individual student status between P and A
-    const toggleStudentStatus = (id) => {
-        setStudents(students.map(s =>
-            s.id === id ? { ...s, status: s.status === 'P' ? 'A' : 'P' } : s
-        ));
+        setStudents(students.map(s => ({ ...s, status: absentStatusCode })));
     };
 
     const handleStatusClick = (student, e) => {
         e.stopPropagation();
-        if (student.status !== 'A') {
-            updateStudentStatus(student.id, 'A');
+        // Toggle between dynamic present and absent codes
+        const currentStatus = String(student.status || '').toUpperCase();
+        const isPresent = currentStatus === 'P' || currentStatus === 'PR' || currentStatus === 'PRESENT';
+
+        if (isPresent) {
+            updateStudentStatus(student.id, absentStatusCode);
         } else {
-            setActivePopup(student.id);
+            updateStudentStatus(student.id, presentStatusCode);
+        }
+    };
+
+    // Toggle individual student status (Legacy wrapper)
+    const toggleStudentStatus = (id) => {
+        const student = students.find(s => s.id === id);
+        if (student) {
+            const currentStatus = String(student.status || '').toUpperCase();
+            const isPresent = currentStatus === 'P' || currentStatus === 'PR' || currentStatus === 'PRESENT';
+            updateStudentStatus(id, isPresent ? absentStatusCode : presentStatusCode);
         }
     };
 
@@ -751,10 +779,18 @@ export default function TabularView() {
         if (fromTimetable && timeSlots.length > 0 && timeSlots[0]?.fromTimetable) {
             selectedTimeSlot = timeSlots[0];
         } else {
-            // Find in fetched time slots
+            // Find in fetched time slots or manual slots based on current filter
+            // Prefer time_slot_id for matching as it's more specific
             selectedTimeSlot = timeSlots.find(slot =>
-                (slot.timetable_id?.toString() || slot.time_slot_id?.toString()) === filters.timeSlot
+                slot.time_slot_id?.toString() === filters.timeSlot
             );
+
+            // Fallback to timetable_id only if no match found with time_slot_id
+            if (!selectedTimeSlot) {
+                selectedTimeSlot = timeSlots.find(slot =>
+                    slot.timetable_id?.toString() === filters.timeSlot
+                );
+            }
         }
 
         if (!selectedTimeSlot) {
@@ -765,7 +801,41 @@ export default function TabularView() {
 
         // Map status codes to status IDs from API
         const getStatusId = (statusCode) => {
-            const status = attendanceStatuses.find(s => s.status_code === statusCode);
+            // First try direct match
+            let status = attendanceStatuses.find(s => s.status_code === statusCode);
+
+            // If not found and it's 'P', try common alternatives
+            if (!status && statusCode === 'P') {
+                status = attendanceStatuses.find(s =>
+                    s.status_code === 'PR' ||
+                    s.status_code?.toUpperCase() === 'PRESENT' ||
+                    s.status_name?.toUpperCase() === 'PRESENT'
+                );
+            }
+
+            // If not found and it's 'A', try common alternatives
+            if (!status && statusCode === 'A') {
+                status = attendanceStatuses.find(s =>
+                    s.status_code === 'AB' ||
+                    s.status_code?.toUpperCase() === 'ABSENT' ||
+                    s.status_name?.toUpperCase() === 'ABSENT'
+                );
+            }
+
+            // Last resort: case-insensitive name matching
+            if (!status) {
+                const sCode = String(statusCode).toUpperCase().trim();
+                const searchLabel = (sCode === 'P' || sCode === 'PR' || sCode.includes('PRESENT')) ? 'PRESENT'
+                    : (sCode === 'A' || sCode === 'AB' || sCode.includes('ABSENT')) ? 'ABSENT'
+                        : sCode;
+
+                status = attendanceStatuses.find(s =>
+                    s.status_name?.toUpperCase().includes(searchLabel) ||
+                    s.status_code?.toUpperCase().includes(searchLabel)
+                );
+            }
+
+            console.log(`DEBUG: Mapping status code ${statusCode} to ID:`, status?.status_id);
             return status?.status_id || null;
         };
 
@@ -774,6 +844,7 @@ export default function TabularView() {
             semester_id: parseInt(filters.semester),
             division_id: parseInt(filters.division),
             subject_id: parseInt(filters.paper),
+            college_id: collegeId,
             timetable_id: selectedTimeSlot.timetable_id,
             timetable_allocation_id: selectedTimeSlot.timetable_allocation_id || null,
             time_slot_id: selectedTimeSlot.time_slot_id,
@@ -805,53 +876,44 @@ export default function TabularView() {
 
     // Map API statuses to UI format with icons
     const getIconForStatus = (statusCode) => {
+        const s = String(statusCode || '').toUpperCase();
+        if (s === 'P' || s === 'PR' || s === 'PRESENT') return <Check size={16} />;
+        if (s === 'A' || s === 'AB' || s === 'ABSENT') return <X size={16} />;
+
         const iconMap = {
-            'P': <Check size={16} />,
-            'A': <X size={16} />,
             'OA': <Activity size={16} />,
             'SA': <Trophy size={16} />,
             'ML': <Stethoscope size={16} />,
             'SL': <AlertCircle size={16} />,
             'CM': <Coffee size={16} />,
         };
-        return iconMap[statusCode] || <MoreHorizontal size={16} />;
+        return iconMap[s] || <MoreHorizontal size={16} />;
     };
 
     // Get Present and Absent statuses from API
-    const presentStatus = attendanceStatuses.find(s => s.status_code === 'P');
-    const absentStatus = attendanceStatuses.find(s => s.status_code === 'A');
+    const presentStatus = getStatusByCodes(['P', 'PR', 'PRESENT']);
+    const absentStatus = getStatusByCodes(['A', 'AB', 'ABSENT']);
 
     // All other statuses (excluding P and A) for bulk actions dropdown
     const otherStatuses = attendanceStatuses
-        .filter(status => status.status_code !== 'P' && status.status_code !== 'A')
+        .filter(status => {
+            const sc = String(status.status_code || '').toUpperCase();
+            return sc !== 'P' && sc !== 'PR' && sc !== 'PRESENT' &&
+                sc !== 'A' && sc !== 'AB' && sc !== 'ABSENT';
+        })
         .map(status => ({
             id: status.status_code,
             label: status.status_name,
             icon: getIconForStatus(status.status_code),
-            color: status.color_code || '#6B7280' // Use API color or default gray
+            color: status.color_code || '#6B7280'
         }));
 
-    const getStatusColor = (status) => {
-        switch (status) {
-            case 'P': return 'bg-green-500';
-            case 'A': return 'bg-red-500';
-            case 'OA': return 'bg-orange-500';
-            case 'ML': return 'bg-blue-500';
-            default: return 'bg-gray-400';
-        }
-    };
-
-    const getStatusLabel = (status) => {
-        switch (status) {
-            case 'P': return 'P';
-            case 'A': return 'A';
-            case 'OA': return 'OA';
-            case 'ML': return 'ML';
-            default: return '?';
-        }
-    };
+    // Deprecated helpers removed in favor of dynamic logic
 
     const activeStudent = students.find(s => s.id === activePopup);
+
+    console.log("DEBUG: TabularView Rendering - Current Filters:", filters);
+    console.log("DEBUG: TabularView Rendering - Available TimeSlots:", timeSlots);
 
     return (
         <div className="bg-white rounded-lg shadow-sm overflow-hidden border border-gray-200 relative min-h-[400px]">
@@ -961,13 +1023,13 @@ export default function TabularView() {
 
                     <div className="flex items-center gap-2">
                         <button
-                            onClick={() => handleBulkStatusUpdate('P')}
+                            onClick={() => handleBulkStatusUpdate(presentStatusCode)}
                             className="flex items-center gap-1.5 px-3 py-1.5 bg-green-50 text-green-700 rounded-lg border border-green-100 hover:bg-green-100 transition-colors text-sm font-medium"
                         >
                             <Check size={16} /> Mark Present
                         </button>
                         <button
-                            onClick={() => handleBulkStatusUpdate('A')}
+                            onClick={() => handleBulkStatusUpdate(absentStatusCode)}
                             className="flex items-center gap-1.5 px-3 py-1.5 bg-red-50 text-red-700 rounded-lg border border-red-100 hover:bg-red-100 transition-colors text-sm font-medium"
                         >
                             <X size={16} /> Mark Absent
@@ -1022,195 +1084,216 @@ export default function TabularView() {
                         </p>
                     </div>
                 ) : filteredStudents.length > 0 ? (
-                    <div className="overflow-x-auto">
-                        <table className="w-full">
-                            <thead className="table-header">
-                                <tr>
-                                    <th className="table-th text-center">
-                                        <div className="flex items-center">
-                                            <input
-                                                type="checkbox"
-                                                checked={selectAll}
-                                                onChange={handleSelectAll}
-                                                className="w-3 h-3 sm:w-4 sm:h-4 text-blue-600 bg-white border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
-                                            />
-                                        </div>
-                                    </th>
-                                    <th className="table-th text-center">
-                                        Profile
-                                    </th>
-                                    <th className="table-th text-center">Name</th>
-                                    <th className="table-th text-center">Roll No.</th>
-                                    {/* <th className="table-th text-center">
+                    <div className="attendance-content-wrapper">
+                        <div className="bg-white px-6 py-4 border-b border-gray-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                            <div className="flex items-center gap-6">
+
+                                <div className="flex items-center gap-2">
+                                    <div className="w-2.5 h-2.5 rounded-full bg-green-500"></div>
+                                    <span className="text-sm font-semibold text-gray-700">Total Present: </span>
+                                    <span className="text-lg font-bold text-green-600">
+                                        {filteredStudents.filter(s => {
+                                            const status = String(s.status || '').toUpperCase().trim();
+                                            return status === 'P' || status === 'PR' || status === 'PRESENT' || status.includes('PRESENT');
+                                        }).length}
+                                    </span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <div className="w-2.5 h-2.5 rounded-full bg-red-500"></div>
+                                    <span className="text-sm font-semibold text-gray-700">Total Absent: </span>
+                                    <span className="text-lg font-bold text-red-600">
+                                        {filteredStudents.filter(s => {
+                                            const status = String(s.status || '').toUpperCase().trim();
+                                            return status === 'A' || status === 'AB' || status === 'ABSENT' || status.includes('ABSENT');
+                                        }).length}
+                                    </span>
+                                </div>
+                            </div>
+                            <div className="text-sm text-gray-500 font-medium">
+                                Showing {filteredStudents.length} Students
+                            </div>
+                        </div>
+                        <div className="overflow-x-auto">
+                            <table className="w-full">
+                                <thead className="table-header">
+                                    <tr>
+                                        <th className="table-th text-center">
+                                            <div className="flex items-center">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={selectAll}
+                                                    onChange={handleSelectAll}
+                                                    className="w-3 h-3 sm:w-4 sm:h-4 text-blue-600 bg-white border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
+                                                />
+                                            </div>
+                                        </th>
+                                        <th className="table-th text-center">
+                                            Profile
+                                        </th>
+                                        <th className="table-th text-center">Name</th>
+                                        <th className="table-th text-center">Roll No.</th>
+                                        {/* <th className="table-th text-center">
                                         Program
                                     </th> */}
-                                    <th className="table-th text-center">
-                                        Batch
-                                    </th>
-                                    <th className="table-th text-center">
-                                        Division
-                                    </th>
-                                    {/* <th className="table-th text-center">
+                                        <th className="table-th text-center">
+                                            Batch
+                                        </th>
+                                        <th className="table-th text-center">
+                                            Division
+                                        </th>
+                                        {/* <th className="table-th text-center">
                                         Paper
                                     </th> */}
-                                    <th className="table-th text-center">
-                                        Semester
-                                    </th>
-                                    {/* <th className="table-th text-center">
+                                        <th className="table-th text-center">
+                                            Semester
+                                        </th>
+                                        {/* <th className="table-th text-center">
                                         Acadmic Year
                                     </th> */}
-                                    <th className="table-th text-center">Attendance</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-gray-100">
-                                {filteredStudents.map((student) => {
-                                    // Get filter options for display
-                                    const getUniqueOptions = (filterFn, mapFn) => {
-                                        const map = new Map();
-                                        allocations.filter(filterFn).forEach(item => {
-                                            const { id, name } = mapFn(item);
-                                            if (id) map.set(id, name);
-                                        });
-                                        return Array.from(map.entries()).map(([value, name]) => ({ value: value.toString(), name }));
-                                    };
+                                        <th className="table-th text-center">Attendance</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-gray-100">
+                                    {filteredStudents.map((student) => {
+                                        // Get filter options for display
+                                        const getUniqueOptions = (filterFn, mapFn) => {
+                                            const map = new Map();
+                                            allocations.filter(filterFn).forEach(item => {
+                                                const { id, name } = mapFn(item);
+                                                if (id) map.set(id, name);
+                                            });
+                                            return Array.from(map.entries()).map(([value, name]) => ({ value: value.toString(), name }));
+                                        };
 
-                                    const programOptions = getUniqueOptions(
-                                        () => true,
-                                        (item) => ({ id: item.program?.program_id, name: item.program?.program_name })
-                                    );
+                                        const programOptions = getUniqueOptions(
+                                            () => true,
+                                            (item) => ({ id: item.program?.program_id, name: item.program?.program_name })
+                                        );
 
-                                    const batchOptions = getUniqueOptions(
-                                        (item) => !filters.program || item.program?.program_id == filters.program,
-                                        (item) => ({ id: item.batch?.batch_id, name: item.batch?.batch_name })
-                                    );
+                                        const batchOptions = getUniqueOptions(
+                                            (item) => !filters.program || item.program?.program_id == filters.program,
+                                            (item) => ({ id: item.batch?.batch_id, name: item.batch?.batch_name })
+                                        );
 
-                                    const academicYearOptions = getUniqueOptions(
-                                        (item) => (!filters.program || item.program?.program_id == filters.program) &&
-                                            (!filters.batch || item.batch?.batch_id == filters.batch),
-                                        (item) => ({ id: item.academic_year_id, name: item.academic_year?.name })
-                                    );
+                                        const academicYearOptions = getUniqueOptions(
+                                            (item) => (!filters.program || item.program?.program_id == filters.program) &&
+                                                (!filters.batch || item.batch?.batch_id == filters.batch),
+                                            (item) => ({ id: item.academic_year_id, name: item.academic_year?.name })
+                                        );
 
-                                    const semesterOptions = getUniqueOptions(
-                                        (item) => (!filters.program || item.program?.program_id == filters.program) &&
-                                            (!filters.batch || item.batch?.batch_id == filters.batch) &&
-                                            (!filters.academicYear || item.academic_year_id == filters.academicYear),
-                                        (item) => ({ id: item.semester_id, name: item.semester?.name })
-                                    );
+                                        const semesterOptions = getUniqueOptions(
+                                            (item) => (!filters.program || item.program?.program_id == filters.program) &&
+                                                (!filters.batch || item.batch?.batch_id == filters.batch) &&
+                                                (!filters.academicYear || item.academic_year_id == filters.academicYear),
+                                            (item) => ({ id: item.semester_id, name: item.semester?.name })
+                                        );
 
-                                    const divisionOptions = getUniqueOptions(
-                                        (item) => (!filters.program || item.program?.program_id == filters.program) &&
-                                            (!filters.batch || item.batch?.batch_id == filters.batch) &&
-                                            (!filters.academicYear || item.academic_year_id == filters.academicYear) &&
-                                            (!filters.semester || item.semester_id == filters.semester),
-                                        (item) => ({ id: item.division_id, name: item.division?.division_name })
-                                    );
+                                        const divisionOptions = getUniqueOptions(
+                                            (item) => (!filters.program || item.program?.program_id == filters.program) &&
+                                                (!filters.batch || item.batch?.batch_id == filters.batch) &&
+                                                (!filters.academicYear || item.academic_year_id == filters.academicYear) &&
+                                                (!filters.semester || item.semester_id == filters.semester),
+                                            (item) => ({ id: item.division_id, name: item.division?.division_name })
+                                        );
 
-                                    const paperOptions = () => {
-                                        const map = new Map();
-                                        allocations.filter(item =>
-                                            (!filters.program || item.program?.program_id == filters.program) &&
-                                            (!filters.batch || item.batch?.batch_id == filters.batch) &&
-                                            (!filters.academicYear || item.academic_year_id == filters.academicYear) &&
-                                            (!filters.semester || item.semester_id == filters.semester) &&
-                                            (!filters.division || item.division_id == filters.division)
-                                        ).forEach(alloc => {
-                                            if (alloc.subjects && Array.isArray(alloc.subjects)) {
-                                                alloc.subjects.forEach(sub => {
-                                                    map.set(sub.subject_id.toString(), sub.name);
-                                                });
-                                            }
-                                        });
-                                        return Array.from(map.entries()).map(([value, name]) => ({ value, name }));
-                                    };
+                                        const paperOptions = () => {
+                                            const map = new Map();
+                                            allocations.filter(item =>
+                                                (!filters.program || item.program?.program_id == filters.program) &&
+                                                (!filters.batch || item.batch?.batch_id == filters.batch) &&
+                                                (!filters.academicYear || item.academic_year_id == filters.academicYear) &&
+                                                (!filters.semester || item.semester_id == filters.semester) &&
+                                                (!filters.division || item.division_id == filters.division)
+                                            ).forEach(alloc => {
+                                                if (alloc.subjects && Array.isArray(alloc.subjects)) {
+                                                    alloc.subjects.forEach(sub => {
+                                                        map.set(sub.subject_id.toString(), sub.name);
+                                                    });
+                                                }
+                                            });
+                                            return Array.from(map.entries()).map(([value, name]) => ({ value, name }));
+                                        };
 
-                                    const programName = programOptions.find(p => p.value === student.program_id?.toString())?.name || student.program;
-                                    const batchName = batchOptions.find(b => b.value === student.batch_id?.toString())?.name || student.batch;
-                                    const divisionName = divisionOptions.find(d => d.value === student.division_id?.toString())?.name || student.division;
-                                    const paperName = paperOptions().find(p => p.value === student.subject_id?.toString())?.name || student.paper;
-                                    const academicYearName = academicYearOptions.find(y => y.value === student.academic_year_id?.toString())?.name || student.academicYear;
-                                    const semesterName = semesterOptions.find(s => s.value === student.semester_id?.toString())?.name || student.semester;
+                                        const programName = programOptions.find(p => p.value === student.program_id?.toString())?.name || student.program;
+                                        const batchName = batchOptions.find(b => b.value === student.batch_id?.toString())?.name || student.batch;
+                                        const divisionName = divisionOptions.find(d => d.value === student.division_id?.toString())?.name || student.division;
+                                        const paperName = paperOptions().find(p => p.value === student.subject_id?.toString())?.name || student.paper;
+                                        const academicYearName = academicYearOptions.find(y => y.value === student.academic_year_id?.toString())?.name || student.academicYear;
+                                        const semesterName = semesterOptions.find(s => s.value === student.semester_id?.toString())?.name || student.semester;
 
-                                    return (
-                                        <tr
-                                            key={student.id}
-                                            className={`hover:bg-gray-50 transition-colors relative z-0 ${student.selected ? 'bg-blue-50' : ''}`}
-                                        >
-                                            <td className="py-3 px-3 sm:px-6">
-                                                <div className="flex items-center">
-                                                    <input
-                                                        type="checkbox"
-                                                        checked={student.selected}
-                                                        onChange={() => handleCheckboxChange(student.id)}
-                                                        className="w-3 h-3 sm:w-4 sm:h-4 text-blue-600 bg-white border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
-                                                    />
-                                                </div>
-                                            </td>
-                                            <td className="py-3 px-3 sm:px-6 hidden sm:table-cell">
-                                                <div className="bg-blue-100 rounded-lg p-2 w-10 h-10 flex items-center justify-center text-blue-600 shrink-0 border border-blue-200">
-                                                    <User size={18} />
-                                                </div>
-                                            </td>
-                                            <td className="py-3 px-3 sm:px-6">
-                                                <div className="flex flex-col">
-                                                    <span className="text-gray-800 font-medium text-xs sm:text-sm whitespace-nowrap">{student.name}</span>
-                                                    <span className="text-gray-500 text-xs sm:hidden">
-                                                        {programName} • {batchName}
-                                                    </span>
-                                                </div>
-                                            </td>
-                                            <td className="py-3 px-3 sm:px-6 text-gray-800 text-xs sm:text-sm font-medium whitespace-nowrap">
-                                                {student.roll_number || 'N/A'}
-                                            </td>
-                                            <td className="py-3 px-3 sm:px-6 text-gray-600 text-xs sm:text-sm whitespace-nowrap hidden lg:table-cell">
-                                                {batchName}
-                                            </td>
-                                            <td className="py-3 px-3 sm:px-6 text-gray-600 text-xs sm:text-sm whitespace-nowrap hidden md:table-cell">
-                                                {divisionName}
-                                            </td>
-                                            <td className="py-3 px-3 sm:px-6 text-gray-600 text-xs sm:text-sm whitespace-nowrap hidden xl:table-cell">
-                                                {semesterName}
-                                            </td>
-                                            <td className="py-3 px-3 sm:px-6">
-                                                <div className="flex justify-center">
-                                                    <button
-                                                        onClick={() => toggleStudentStatus(student.id)}
-                                                        className={`relative inline-flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition-all duration-300 transform hover:scale-105 active:scale-95 shadow-sm hover:shadow-md ${student.status === 'P' ? "bg-gradient-to-r from-green-100 to-emerald-100 text-green-700" :
-                                                            student.status === 'A' ? "bg-gradient-to-r from-red-100 to-rose-100 text-red-700" :
-                                                                student.status === 'OA' ? "bg-gradient-to-r from-orange-100 to-orange-200 text-orange-700" :
-                                                                    student.status === 'SA' ? "bg-gradient-to-r from-yellow-100 to-yellow-200 text-yellow-700" :
-                                                                        student.status === 'ML' ? "bg-gradient-to-r from-blue-100 to-blue-200 text-blue-700" :
-                                                                            student.status === 'SL' ? "bg-gradient-to-r from-indigo-100 to-indigo-200 text-indigo-700" :
-                                                                                "bg-gray-100 text-gray-700"
-                                                            }`}
-                                                        style={{
-                                                            animation: "statusChange 0.4s ease-out",
-                                                        }}
-                                                    >
-                                                        {student.status === 'P' ? <Check size={16} className="animate-bounce-in" /> :
-                                                            student.status === 'A' ? <X size={16} className="animate-bounce-in" /> :
-                                                                student.status === 'OA' ? <Activity size={16} className="animate-bounce-in" /> :
-                                                                    student.status === 'SA' ? <Trophy size={16} className="animate-bounce-in" /> :
-                                                                        student.status === 'ML' ? <Stethoscope size={16} className="animate-bounce-in" /> :
-                                                                            student.status === 'SL' ? <AlertCircle size={16} className="animate-bounce-in" /> :
-                                                                                <MoreHorizontal size={16} className="animate-bounce-in" />
-                                                        }
-                                                        <span className="font-semibold">
-                                                            {student.status === 'P' ? 'Present' :
-                                                                student.status === 'A' ? 'Absent' :
-                                                                    student.status === 'OA' ? 'Other' :
-                                                                        student.status === 'SA' ? 'Sports' :
-                                                                            student.status === 'ML' ? 'Medical' :
-                                                                                student.status === 'SL' ? 'Sick' :
-                                                                                    student.status}
+                                        return (
+                                            <tr
+                                                key={student.id}
+                                                className={`hover:bg-gray-50 transition-colors relative z-0 ${student.selected ? 'bg-blue-50' : ''}`}
+                                            >
+                                                <td className="py-3 px-3 sm:px-6">
+                                                    <div className="flex items-center">
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={student.selected}
+                                                            onChange={() => handleCheckboxChange(student.id)}
+                                                            className="w-3 h-3 sm:w-4 sm:h-4 text-blue-600 bg-white border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
+                                                        />
+                                                    </div>
+                                                </td>
+                                                <td className="py-3 px-3 sm:px-6 hidden sm:table-cell">
+                                                    <div className="bg-blue-100 rounded-lg p-2 w-10 h-10 flex items-center justify-center text-blue-600 shrink-0 border border-blue-200">
+                                                        <User size={18} />
+                                                    </div>
+                                                </td>
+                                                <td className="py-3 px-3 sm:px-6">
+                                                    <div className="flex flex-col">
+                                                        <span className="text-gray-800 font-medium text-xs sm:text-sm whitespace-nowrap">{student.name}</span>
+                                                        <span className="text-gray-500 text-xs sm:hidden">
+                                                            {programName} • {batchName}
                                                         </span>
-                                                    </button>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    );
-                                })}
-                            </tbody>
-                        </table>
+                                                    </div>
+                                                </td>
+                                                <td className="py-3 px-3 sm:px-6 text-gray-800 text-xs sm:text-sm font-medium whitespace-nowrap">
+                                                    {student.roll_number || 'N/A'}
+                                                </td>
+                                                <td className="py-3 px-3 sm:px-6 text-gray-600 text-xs sm:text-sm whitespace-nowrap hidden lg:table-cell">
+                                                    {batchName}
+                                                </td>
+                                                <td className="py-3 px-3 sm:px-6 text-gray-600 text-xs sm:text-sm whitespace-nowrap hidden md:table-cell">
+                                                    {divisionName}
+                                                </td>
+                                                <td className="py-3 px-3 sm:px-6 text-gray-600 text-xs sm:text-sm whitespace-nowrap hidden xl:table-cell">
+                                                    {semesterName}
+                                                </td>
+                                                <td className="py-3 px-3 sm:px-6">
+                                                    <div className="flex justify-center">
+                                                        {(() => {
+                                                            const statusObj = attendanceStatuses.find(st => st.status_code === student.status);
+                                                            const color = statusObj?.color_code || (student.status === presentStatusCode ? '#16a34a' : student.status === absentStatusCode ? '#dc2626' : '#6B7280');
+                                                            const Icon = getIconForStatus(student.status);
+
+                                                            return (
+                                                                <button
+                                                                    onClick={(e) => handleStatusClick(student, e)}
+                                                                    className="relative inline-flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition-all duration-300 transform hover:scale-105 active:scale-95 shadow-sm hover:shadow-md min-w-[120px] justify-center"
+                                                                    style={{
+                                                                        backgroundColor: `${color}15`,
+                                                                        color: color,
+                                                                        border: `1px solid ${color}30`,
+                                                                        animation: "statusChange 0.4s ease-out",
+                                                                    }}
+                                                                >
+                                                                    {Icon}
+                                                                    <span className="font-semibold">
+                                                                        {(statusObj?.status_name || student.status).toUpperCase()}
+                                                                    </span>
+                                                                </button>
+                                                            );
+                                                        })()}
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        );
+                                    })}
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 ) : null}
             </div>

@@ -87,16 +87,16 @@ const StudentSidebar = ({ isOpen, toggle }) => {
           "/timetable",
         ],
       },
-      {
-        to: "/attendance",
-        label: "Attendance",
-        iconActive: contentActive,
-        iconInactive: contentInactive,
-        match: [
-          "/attendance",
-          "/attendance/my-attendance",
-        ],
-      },
+      // {
+      //   to: "/attendance",
+      //   label: "Attendance",
+      //   iconActive: contentActive,
+      //   iconInactive: contentInactive,
+      //   match: [
+      //     "/attendance",
+      //     "/attendance/my-attendance",
+      //   ],
+      // },
       {
         to: "/curriculum",
         label: "Content",
@@ -173,7 +173,7 @@ const StudentSidebar = ({ isOpen, toggle }) => {
       },
 
       {
-        to: "/my-library",
+        to: "/student/my-library",
         label: "My Library",
         iconActive: classActive,
         iconInactive: classInactive,

@@ -118,11 +118,11 @@ const StudentAcademicJourney = ({ studentData, historyLoading, enrichedHistory =
           <div className="relative">
             {/* Timeline line */}
             <div className="absolute left-3 sm:left-6 top-0 bottom-0 w-0.5 bg-gradient-to-b from-blue-400 to-blue-200"></div>
-            <div className="space-y-6 sm:space-y-8">
+            <div className="space-y-6 sm:space-y-8 relative">
               {enrichedHistoryEffective.map((record, index) => (
                 <div key={index} className="relative pl-10 sm:pl-16">
                   {/* Timeline circle */}
-                  <div className="absolute left-0 sm:left-3 top-2 sm:top-3 w-6 h-6 rounded-full bg-blue-500 border-4 border-white shadow-md flex items-center justify-center">
+                  <div className="absolute left-0 sm:left-3 top-2 sm:top-3 w-6 h-6 rounded-full bg-blue-500 border-4 border-white shadow-md flex items-center justify-center z-10">
                     <span className="text-white text-xs font-bold">{enrichedHistory.length - index}</span>
                   </div>
 

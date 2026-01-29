@@ -23,6 +23,7 @@ import PMSRoutes from '../Teacher/screens/Pages/PerformanceManagementSystem/Rout
 import ContentRoutes from '../Student/screens/Pages/Content/Routes/ContentRoutes.jsx';
 // import ExamRoutes from '../Student/screens/Pages/Exam/Routes/ExamRoutes.jsx';
 import HRMRoutes from '../Teacher/screens/Pages/HRM/Routes/HRMRoute.jsx';
+import AcademicDiaryRoutes from '../Teacher/screens/Pages/AcademicDiary/Routes/AcademicDiaryRoutes.jsx';
 import SubjectSelectionRoutes from '../Teacher/screens/Pages/SubjectSelection/Routes/SubjectSelectionRoutes.jsx';
 import TimeTableRoutes from '../Student/screens/Pages/TimeTable/Routes/TimeTableRoutes.jsx';
 import AssessmentRoutes from "../Student/screens/Pages/Assessment/Routes/AssessmentRoutes.jsx";
@@ -31,8 +32,8 @@ import AcademicCalendarRoute from "../Teacher/screens/Pages/AcademicCalendar/Rou
 import AcademicCalendarRoutes from "../Student/screens/Pages/AcademicCalendar/Routes/AcademicCalendarRoutes.jsx"
 import AttendanceRoutes from '../Teacher/screens/Pages/Attendance/Routes/AttendanceRoutes.jsx';
 import StudentAttendanceRoutes from '../Student/screens/Pages/Attendance/Routes/AttendanceRoutes.jsx';
-
-
+import StudentPlacementRoutes from '../Student/screens/Pages/Placement/Routes/StudentPlacementRoutes.jsx';
+import PlacementRoutes from '../Teacher/screens/Pages/Placement/Routes/PlacementRoutes.jsx';
 // ────── Route guards ──────
 const ProtectedRoute = ({ children }) => {
   const isLoggedIn = !!localStorage.getItem('refreshToken');
@@ -96,9 +97,19 @@ function App() {
             </ProtectedRoute>
           }
         />
-    
 
 
+
+        <Route
+          path="/teacher/academic-diary/*"
+          element={
+            <ProtectedRoute>
+              <TeacherHomepage>
+                <AcademicDiaryRoutes />
+              </TeacherHomepage>
+            </ProtectedRoute>
+          }
+        />
         <Route
           path="/teacher/hrm/*"
           element={
@@ -109,6 +120,17 @@ function App() {
             </ProtectedRoute>
           }
         />
+        <Route
+  path="/teacher/placement/*"
+  element={
+    <ProtectedRoute>
+      <TeacherHomepage>
+        <PlacementRoutes />
+      </TeacherHomepage>
+    </ProtectedRoute>
+  }
+/>
+
         <Route
           path="/teacher/attendance/*"
           element={
@@ -185,16 +207,27 @@ function App() {
             </ProtectedRoute>
           }
         />
-<Route
-  path="/my-assessment/*"
-  element={
-    <ProtectedRoute>
-      <StudentHomepage>
-        <AssessmentRoutes />
-      </StudentHomepage>
-    </ProtectedRoute>
-  }
-/>
+        <Route
+          path="/my-assessment/*"
+          element={
+            <ProtectedRoute>
+              <StudentHomepage>
+                <AssessmentRoutes />
+              </StudentHomepage>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/student-placement/*"
+          element={
+            <ProtectedRoute>
+              <StudentHomepage>
+                <StudentPlacementRoutes />
+              </StudentHomepage>
+            </ProtectedRoute>
+          }
+        />
+
 
         <Route
           path="/curriculum/*"
@@ -207,7 +240,7 @@ function App() {
           }
         />
 
-{/* <Route
+        {/* <Route
           path="/Exam/*"
           element={
             <ProtectedRoute>

@@ -592,6 +592,7 @@ export default function ClassLeave() {
                 {/* Desktop Table */}
                 <div className="hidden lg:block">
                   <div className="overflow-x-auto">
+                      <div className="h-[500px] overflow-y-auto blue-scrollbar">
                     <table className="w-full text-sm">
                       <thead className="table-header">
                         <tr>
@@ -680,6 +681,7 @@ export default function ClassLeave() {
                         ))}
                       </tbody>
                     </table>
+                    </div>
                   </div>
                 </div>
 

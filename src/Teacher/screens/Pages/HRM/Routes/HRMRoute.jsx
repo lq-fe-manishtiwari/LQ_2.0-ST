@@ -13,12 +13,6 @@ import EditSalaryType from "../SalaryManagement/EditSalaryType"
 import SalaryTeacher from "../SalaryManagement/SalaryTeacher"
 import ViewLeaveStatus from "../SalaryManagement/ViewLeaveStatus";
 
-//================================AcademicDiary============================
-import AcademicDiaryLayout from "../Layout/AcademicDiaryLayout";
-import UserProfile from "../AcademicDiary/UserProfile";
-import ProfessionalEthics from "../AcademicDiary/ProfessionalEthics";
-import Committee from "../AcademicDiary/Committee";
-import AdvLearner from "../AcademicDiary/AdvLearner";
 
 import SettingsLayout from "../Layout/SettingsLayout";
 import RolePage from "../Settings/RolePage";
@@ -39,13 +33,17 @@ import MyTaskEdit from "../Task/MyTasks/MyEditTask";
 import TaskView from "../Task/TaskAssignment/TaskView";
 import CreateTask from "../Task/MyTasks/CreateNewTasks";
 import TimeSheetDashboard from "../Task/Timesheet/Timesheet";
+import PersonalTask from "../Task/PersonalTask/PersonalTask";
+import AddPersonalTask from "../Task/PersonalTask/AddPersonalTask";
+import ViewPersonalTask from "../Task/PersonalTask/ViewPersonalTask";
+import EditPersonalTask from "../Task/PersonalTask/EditPersonalTask";
 
 
 export default function HRMRoutes() {
   return (
     <Routes>
       {/* ✅ Redirect to list when visiting /hrm */}
-      <Route path="/" element={<Navigate to="tasks" replace />} />
+      <Route path="/" element={<Navigate to="dashboard" replace />} />
 
       {/* ✅ Student list route */}
       <Route element={<TaskManagementLayout />}>
@@ -59,23 +57,18 @@ export default function HRMRoutes() {
 
 
 
-      <Route path="academic-diary" element={<AcademicDiaryLayout />}>
-        <Route index element={<Navigate to="profile" replace />} />
-        <Route path="profile" element={<UserProfile />} />
-        <Route path="professional-ethics" element={<ProfessionalEthics />} />
-        <Route path="committee" element={<Committee />} />
-        <Route path="advanced-learner" element={<AdvLearner />} />
-        <Route path="slow-learner" element={<Committee />} />
-        <Route path="teaching-plan" element={<SalaryAttendance />} />
-        <Route path="time-table" element={<SalaryAttendance />} />
-      </Route>
+
 
       <Route path="tasks" element={<TaskLayout />}>
         <Route index element={<Navigate to="task-assignment" replace />} />
-        <Route path="my-tasks" element={<MyTasks />} />
-        <Route path="my-tasks/add" element={<CreateTask />} />
-        <Route path="my-tasks/view/:id" element={<ViewMyTasks />} />
-        <Route path="my-tasks/edit/:id" element={<MyTaskEdit />} />
+        <Route path="professional-tasks" element={<MyTasks />} />
+        <Route path="professional-tasks/add" element={<CreateTask />} />
+        <Route path="professional-tasks/view/:id" element={<ViewMyTasks />} />
+        <Route path="professional-tasks/edit/:id" element={<MyTaskEdit />} />
+        <Route path="personal-tasks" element={<PersonalTask />} />
+        <Route path="personal-tasks/add" element={<AddPersonalTask />} />
+        <Route path="personal-tasks/view/:id" element={<ViewPersonalTask />} />
+        <Route path="personal-tasks/edit/:id" element={<EditPersonalTask />} />
         <Route path="task-assignment" element={<TaskAssignment />} />
         <Route path="task-assignment/create-task" element={<TaskForm />} />
         <Route path="task-assignment/task-view/:id" element={<TaskView />} />

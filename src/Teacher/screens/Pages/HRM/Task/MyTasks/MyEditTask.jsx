@@ -364,7 +364,7 @@ export default function MyTaskEdit() {
   };
 
   const handleCancel = () => {
-    navigate("/hrm/tasks/my-tasks");
+    navigate("/hrm/tasks/professional-tasks");
   };
 
   return (
@@ -590,7 +590,7 @@ export default function MyTaskEdit() {
           title="Success!"
           onConfirm={() => {
             setShowSuccessAlert(false);
-            navigate("/hrm/tasks/my-tasks");
+            navigate("/hrm/tasks/professional-tasks");
           }}
           confirmBtnText="OK"
           confirmBtnCssClass="btn-confirm"
