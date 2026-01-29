@@ -23,14 +23,14 @@ import { teacherProfileService } from "../Services/academicDiary.service";
 export default function AdvLearner() {
   const { filters } = useOutletContext();
   const userProfile = useUserProfile();
-  
+
   /* ================= STATE FOR TEACHER ID ================= */
   const [teacherId, setTeacherId] = useState(null);
   const [userId, setUserId] = useState(null);
   const [isLoadingProfile, setIsLoadingProfile] = useState(true);
   const [isLoadingData, setIsLoadingData] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  
+
   /* ================= TABLE STATES ================= */
   const [columns, setColumns] = useState([
     { key: "date", label: "Date" },
@@ -41,29 +41,29 @@ export default function AdvLearner() {
   ]);
   const [rows, setRows] = useState([]);
   const [backupRows, setBackupRows] = useState([]);
-  
+
   /* ================= ADVANCE LEARNER DATA ================= */
   const [advanceLearnerId, setAdvanceLearnerId] = useState(null);
   const [existingData, setExistingData] = useState(null);
-  
+
   /* ================= UI STATES ================= */
   const [editMode, setEditMode] = useState(false);
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [isExcelMode, setIsExcelMode] = useState(false);
-  
+
   /* ================= SUPPORTING DOCS ================= */
   const [supportDocs, setSupportDocs] = useState([]);
   const [docTitle, setDocTitle] = useState("");
   const [uploading, setUploading] = useState(false);
-  
+
   /* ================= MOBILE STATES ================= */
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
-  
+
   /* ================= ALERT STATE ================= */
   const [alertConfig, setAlertConfig] = useState(null);
-  
+
   /* ================= HELPER FUNCTIONS ================= */
   const showAlert = (title, message, type = "success", onConfirm = null, showCancel = false, confirmBtnText = "OK", cancelBtnText = "Cancel") => {
     setAlertConfig({
@@ -76,17 +76,17 @@ export default function AdvLearner() {
       cancelBtnText
     });
   };
-  
+
   /* ================= FETCH TEACHER ID FROM PROFILE ================= */
   useEffect(() => {
     const fetchTeacherIdFromProfile = async () => {
       try {
         setIsLoadingProfile(true);
-        
+
         if (userProfile && userProfile.getTeacherId) {
           const profileTeacherId = userProfile.getTeacherId();
           const profileUserId = userProfile.getUserId ? userProfile.getUserId() : null;
-          
+
           setTeacherId(profileTeacherId);
           setUserId(profileUserId);
         } else {
@@ -98,27 +98,27 @@ export default function AdvLearner() {
         setIsLoadingProfile(false);
       }
     };
-    
+
     fetchTeacherIdFromProfile();
   }, [userProfile]);
-  
+
   /* ================= LOAD INITIAL DATA ================= */
   useEffect(() => {
     if (teacherId && userId) {
       loadTeacherData();
     }
   }, [teacherId, userId]);
-  
+
   /* ================= DATA MAPPING FUNCTIONS ================= */
-  
+
   const mapAdvanceLearnerTableToRows = (advanceLearnerTable) => {
     if (!advanceLearnerTable || !Array.isArray(advanceLearnerTable) || advanceLearnerTable.length === 0) {
       return [];
     }
-    
+
     const firstRow = advanceLearnerTable[0];
     const columnKeys = Object.keys(firstRow);
-    
+
     // If we have custom columns from existing data, use those
     if (columnKeys.length > 0) {
       const mappedColumns = columnKeys.map(key => ({
@@ -127,15 +127,15 @@ export default function AdvLearner() {
       }));
       setColumns(mappedColumns);
     }
-    
+
     return advanceLearnerTable;
   };
-  
+
   const mapAdvanceLearnerDocumentToSupportDocs = (advanceLearnerDocument, teacherId, userId) => {
     if (!advanceLearnerDocument || !Array.isArray(advanceLearnerDocument)) {
       return [];
     }
-    
+
     return advanceLearnerDocument.map(doc => ({
       title: doc["Document Title"] || doc.title || "",
       fileName: doc["Document Name"] || doc.fileName || "",
@@ -150,7 +150,7 @@ export default function AdvLearner() {
       mimeType: doc.mimeType || ""
     }));
   };
-  
+
   const mapRowsToAdvanceLearnerTable = (rows) => {
     return rows.map(row => {
       const mappedRow = {};
@@ -160,7 +160,7 @@ export default function AdvLearner() {
       return mappedRow;
     });
   };
-  
+
   const mapSupportDocsToAdvanceLearnerDocument = (supportDocs) => {
     return supportDocs.map(doc => ({
       "Document Title": doc.title || "",
@@ -172,30 +172,30 @@ export default function AdvLearner() {
       "User ID": doc.userId || ""
     }));
   };
-  
+
   /* ================= LOAD TEACHER DATA ================= */
   const loadTeacherData = async () => {
     try {
       setIsLoadingData(true);
-      
+
       if (userId) {
         const response = await teacherProfileService.getAdvancedLearnersByUserId(userId, 0, 10);
-        
+
         if (response && response.content && response.content.length > 0) {
-          const recordsWithData = response.content.filter(record => 
-            record.advance_learner_table && 
-            Array.isArray(record.advance_learner_table) && 
+          const recordsWithData = response.content.filter(record =>
+            record.advance_learner_table &&
+            Array.isArray(record.advance_learner_table) &&
             record.advance_learner_table.length > 0
           );
-          
+
           if (recordsWithData.length > 0) {
             const latestData = recordsWithData[0];
             setExistingData(latestData);
             setAdvanceLearnerId(latestData.advance_learner_id);
-            
+
             const mappedRows = mapAdvanceLearnerTableToRows(latestData.advance_learner_table);
             setRows(mappedRows);
-            
+
             const mappedDocs = mapAdvanceLearnerDocumentToSupportDocs(
               latestData.advance_learner_document,
               teacherId,
@@ -212,7 +212,7 @@ export default function AdvLearner() {
           setSupportDocs([]);
         }
       }
-      
+
     } catch (error) {
       console.error("Error loading teacher data:", error);
       setRows([]);
@@ -222,57 +222,57 @@ export default function AdvLearner() {
       setIsLoadingData(false);
     }
   };
-  
+
   /* ================= TABLE HANDLERS ================= */
-  
+
   const handleExcelConfirm = (excelData) => {
     if (!excelData.length) {
       showAlert("Warning", "No data found in the Excel file.", "warning");
       return;
     }
-    
+
     const dynamicColumns = Object.keys(excelData[0]).map((key) => ({
       key,
       label: key,
     }));
-    
+
     setColumns(dynamicColumns);
     setRows(excelData);
     setIsExcelMode(true);
     setShowUploadModal(false);
     showAlert("Success", "Excel data loaded successfully!", "success");
   };
-  
+
   const handleAddRow = () => {
     // Create an empty row with all column keys
     const emptyRow = {};
     columns.forEach((c) => (emptyRow[c.key] = ""));
     setRows((prev) => [...prev, emptyRow]);
   };
-  
+
   const handleDeleteRow = (index) => {
     setRows((prev) => prev.filter((_, i) => i !== index));
   };
-  
+
   const handleCellChange = (rowIndex, key, value) => {
     const updated = [...rows];
     updated[rowIndex][key] = value;
     setRows(updated);
   };
-  
+
   /* ================= SUPPORTING DOC UPLOAD ================= */
-  
+
   const handleSupportUpload = async (e) => {
     const file = e.target.files[0];
     if (!file || !docTitle) {
       showAlert("Warning", "Please enter a document title and select a file", "warning");
       return;
     }
-    
+
     try {
       setUploading(true);
-      
-   
+
+
       const metadata = {
         teacherId: teacherId,
         userId: userId,
@@ -281,11 +281,11 @@ export default function AdvLearner() {
         userType: userProfile?.getUserType ? userProfile.getUserType() : null,
         title: docTitle
       };
-      
-     
+
+
       const fileUrl = await teacherProfileService.uploadFileToS3(file, metadata);
-      
-    
+
+
       const newDoc = {
         title: docTitle,
         fileName: file.name,
@@ -297,13 +297,13 @@ export default function AdvLearner() {
         fileSize: file.size,
         mimeType: file.type
       };
-      
+
       // supportDocs
       setSupportDocs((prev) => [...prev, newDoc]);
-      
+
       setDocTitle("");
       showAlert("Success", "Document uploaded successfully!", "success");
-      
+
     } catch (err) {
       console.error("Upload failed:", err);
       showAlert("Error", `Upload failed: ${err.message}`, "danger");
@@ -312,23 +312,23 @@ export default function AdvLearner() {
       e.target.value = "";
     }
   };
-  
+
   /* ================= SAVE TABLE DATA ================= */
-  
+
   const handleSaveData = async () => {
     if (!teacherId || !userId) {
       showAlert("Error", "Teacher ID or User ID not available. Please refresh the page.", "danger");
       return;
     }
-    
+
     if (rows.length === 0) {
       showAlert("Warning", "Please add at least one row to save", "warning");
       return;
     }
-    
+
     try {
       setIsSaving(true);
-      
+
       const payload = {
         user_id: parseInt(userId),
         advance_learner_table: mapRowsToAdvanceLearnerTable(rows),
@@ -344,9 +344,9 @@ export default function AdvLearner() {
           column_structure: columns.map(c => ({ key: c.key, label: c.label }))
         }
       };
-      
+
       let response;
-      
+
       if (advanceLearnerId) {
         response = await teacherProfileService.updateAdvancedLearner(
           advanceLearnerId,
@@ -356,19 +356,19 @@ export default function AdvLearner() {
         showAlert("Success", "Data updated successfully!", "success");
       } else {
         response = await teacherProfileService.saveAdvancedLearner(payload);
-        
+
         if (response && response.advance_learner_id) {
           setAdvanceLearnerId(response.advance_learner_id);
         }
         if (response) {
           setExistingData(response);
         }
-        
+
         showAlert("Success", "Data saved successfully!", "success");
       }
-      
+
       setEditMode(false);
-      
+
     } catch (error) {
       console.error("Error saving data:", error);
       showAlert("Error", `Failed to save data: ${error.message}`, "danger");
@@ -376,9 +376,9 @@ export default function AdvLearner() {
       setIsSaving(false);
     }
   };
-  
+
   /* ================= DELETE SUPPORT DOC ================= */
-  
+
   const handleDeleteDoc = (index) => {
     setAlertConfig({
       title: "Confirm Delete",
@@ -399,12 +399,12 @@ export default function AdvLearner() {
       onCancel: () => setAlertConfig(null)
     });
   };
-  
+
   /* ================= DELETE ADVANCE LEARNER RECORD ================= */
-  
+
   const handleDeleteRecord = () => {
     if (!advanceLearnerId) return;
-    
+
     setAlertConfig({
       title: "Confirm Delete",
       message: "Are you sure you want to delete this advance learner record?",
@@ -415,13 +415,13 @@ export default function AdvLearner() {
       onConfirm: async () => {
         try {
           await teacherProfileService.softDeleteAdvancedLearner(advanceLearnerId);
-          
+
           setRows([]);
           setSupportDocs([]);
           setAdvanceLearnerId(null);
           setExistingData(null);
           setIsExcelMode(false);
-          
+
           // Reset to default columns
           setColumns([
             { key: "date", label: "Date" },
@@ -430,7 +430,7 @@ export default function AdvLearner() {
             { key: "no_of_students_present", label: "No. of Students Present" },
             { key: "hod_signature_with_date", label: "Sign of HOD with Date" }
           ]);
-          
+
           showAlert("Success", "Record deleted successfully!", "success");
           setEditMode(false);
         } catch (error) {
@@ -441,28 +441,28 @@ export default function AdvLearner() {
       onCancel: () => setAlertConfig(null)
     });
   };
-  
+
   /* ================= PAGINATION ================= */
-  
+
   const totalPages = Math.ceil(rows.length / rowsPerPage);
   const startRow = currentPage * rowsPerPage;
   const endRow = startRow + rowsPerPage;
   const currentRows = rows.slice(startRow, endRow);
-  
+
   const handleNextPage = () => {
     if (currentPage < totalPages - 1) {
       setCurrentPage(currentPage + 1);
     }
   };
-  
+
   const handlePrevPage = () => {
     if (currentPage > 0) {
       setCurrentPage(currentPage - 1);
     }
   };
-  
+
   /* ================= RENDER FUNCTIONS ================= */
-  
+
   const renderTableHeader = () => (
     <thead className="table-header bg-gray-50">
       <tr>
@@ -482,13 +482,13 @@ export default function AdvLearner() {
       </tr>
     </thead>
   );
-  
+
   const renderTableRow = (row, index) => (
     <tr key={index} className="border-t hover:bg-gray-50">
       <td className="p-2 md:p-3 text-xs md:text-sm">
         {startRow + index + 1}
       </td>
-      
+
       {columns.map((c) => (
         <td key={c.key} className="p-2 md:p-3">
           {editMode ? (
@@ -505,7 +505,7 @@ export default function AdvLearner() {
           )}
         </td>
       ))}
-      
+
       {editMode && (
         <td className="p-2 md:p-3">
           <button
@@ -519,7 +519,7 @@ export default function AdvLearner() {
       )}
     </tr>
   );
-  
+
   const renderMobileTableRow = (row, index) => (
     <div key={index} className="border rounded-lg mb-3 p-3 bg-white shadow-sm">
       <div className="flex justify-between items-start mb-2">
@@ -534,7 +534,7 @@ export default function AdvLearner() {
           </button>
         )}
       </div>
-      
+
       <div className="space-y-2">
         {columns.map((c) => (
           <div key={c.key} className="border-b pb-2 last:border-0">
@@ -556,7 +556,7 @@ export default function AdvLearner() {
       </div>
     </div>
   );
-  
+
   const renderPagination = () => (
     <div className="flex flex-col sm:flex-row items-center justify-between mt-4 gap-3">
       <div className="flex items-center gap-2">
@@ -576,45 +576,43 @@ export default function AdvLearner() {
         </select>
         <span className="text-xs md:text-sm text-gray-600">entries</span>
       </div>
-      
+
       <div className="flex items-center gap-2">
         <span className="text-xs md:text-sm text-gray-600">
           Showing {startRow + 1} to {Math.min(endRow, rows.length)} of {rows.length} entries
         </span>
       </div>
-      
+
       <div className="flex items-center gap-1">
         <button
           onClick={handlePrevPage}
           disabled={currentPage === 0}
-          className={`p-1 md:p-2 rounded ${
-            currentPage === 0 
-              ? 'text-gray-400 cursor-not-allowed' 
+          className={`p-1 md:p-2 rounded ${currentPage === 0
+              ? 'text-gray-400 cursor-not-allowed'
               : 'text-gray-700 hover:bg-gray-100'
-          }`}
+            }`}
         >
           <ChevronLeft className="w-4 h-4 md:w-5 md:h-5" />
         </button>
-        
+
         <span className="px-2 text-xs md:text-sm text-gray-700">
           Page {currentPage + 1} of {totalPages}
         </span>
-        
+
         <button
           onClick={handleNextPage}
           disabled={currentPage >= totalPages - 1}
-          className={`p-1 md:p-2 rounded ${
-            currentPage >= totalPages - 1
+          className={`p-1 md:p-2 rounded ${currentPage >= totalPages - 1
               ? 'text-gray-400 cursor-not-allowed'
               : 'text-gray-700 hover:bg-gray-100'
-          }`}
+            }`}
         >
           <ChevronRight className="w-4 h-4 md:w-5 md:h-5" />
         </button>
       </div>
     </div>
   );
-  
+
   // Loading state
   if (isLoadingProfile) {
     return (
@@ -624,7 +622,7 @@ export default function AdvLearner() {
       </div>
     );
   }
-  
+
   // Loading data state
   if (isLoadingData) {
     return (
@@ -634,7 +632,7 @@ export default function AdvLearner() {
       </div>
     );
   }
-  
+
   /* ================= MAIN RENDER ================= */
   return (
     <>
@@ -647,8 +645,8 @@ export default function AdvLearner() {
           info={alertConfig.type === "info"}
           title={alertConfig.title}
           showCancel={alertConfig.showCancel}
-           confirmBtnCssClass="btn-confirm"
-           cancelBtnCssClass="btn-cancel"
+          confirmBtnCssClass="btn-confirm"
+          cancelBtnCssClass="btn-cancel"
           confirmBtnText={alertConfig.confirmBtnText}
           cancelBtnText={alertConfig.cancelBtnText}
           onConfirm={alertConfig.onConfirm}
@@ -657,11 +655,11 @@ export default function AdvLearner() {
           {alertConfig.message}
         </SweetAlert>
       )}
-      
+
       {/* ================= CASE 1: TEACHER ================= */}
       {teacherId && userId ? (
         <div className="space-y-4 md:space-y-6 p-3 md:p-4">
-          
+
           {/* ================= MOBILE HEADER ================= */}
           <div className="lg:hidden">
             <div className="flex justify-between items-center mb-4">
@@ -676,7 +674,7 @@ export default function AdvLearner() {
                 {isMobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
               </button>
             </div>
-            
+
             {isMobileMenuOpen && (
               <div className="bg-white border rounded-lg p-4 mb-4 shadow-sm">
                 <div className="space-y-3">
@@ -689,22 +687,21 @@ export default function AdvLearner() {
                     <Upload className="w-4 h-4" />
                     Upload Excel
                   </button>
-                  
+
                   {!editMode && (
                     <button
                       onClick={() => {
                         setBackupRows(JSON.parse(JSON.stringify(rows)));
                         setEditMode(true);
                       }}
-                      className={`w-full px-4 py-2 rounded-md flex items-center justify-center gap-2 ${
-                        "bg-yellow-100 text-yellow-700 hover:bg-yellow-200"
-                      }`}
+                      className={`w-full px-4 py-2 rounded-md flex items-center justify-center gap-2 ${"bg-yellow-100 text-yellow-700 hover:bg-yellow-200"
+                        }`}
                     >
                       <Edit className="w-4 h-4" />
                       {existingData ? 'Edit Record' : 'Create Record'}
                     </button>
                   )}
-                  
+
                   {existingData && !editMode && (
                     <button
                       onClick={handleDeleteRecord}
@@ -717,7 +714,7 @@ export default function AdvLearner() {
                 </div>
               </div>
             )}
-            
+
             <div className="text-sm text-gray-600 mb-4">
               {/* <div className="flex flex-wrap gap-2">
                 <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs">
@@ -729,7 +726,7 @@ export default function AdvLearner() {
               </div> */}
             </div>
           </div>
-          
+
           {/* ================= DESKTOP HEADER ================= */}
           <div className="hidden lg:flex justify-between items-center">
             <div>
@@ -753,7 +750,7 @@ export default function AdvLearner() {
                 )}
               </div> */}
             </div>
-            
+
             <div className="flex gap-3">
               <button
                 disabled={editMode}
@@ -764,7 +761,7 @@ export default function AdvLearner() {
                 <Upload className="w-4 h-4" />
                 <span className="hidden sm:inline">Upload Excel</span>
               </button>
-              
+
               {!editMode ? (
                 <div className="flex gap-2">
                   <button
@@ -772,16 +769,15 @@ export default function AdvLearner() {
                       setBackupRows(JSON.parse(JSON.stringify(rows)));
                       setEditMode(true);
                     }}
-                    className={`px-4 py-2 rounded-md flex items-center gap-2 text-sm ${
-                      "bg-yellow-100 text-yellow-700 hover:bg-yellow-200"
-                    }`}
+                    className={`px-4 py-2 rounded-md flex items-center gap-2 text-sm ${"bg-yellow-100 text-yellow-700 hover:bg-yellow-200"
+                      }`}
                   >
                     <Edit className="w-4 h-4" />
                     <span className="hidden sm:inline">
                       {existingData ? 'Edit Record' : 'Create Record'}
                     </span>
                   </button>
-                  
+
                   {existingData && (
                     <button
                       onClick={handleDeleteRecord}
@@ -795,7 +791,7 @@ export default function AdvLearner() {
               ) : null}
             </div>
           </div>
-          
+
           {/* ================= EXISTING DATA INDICATOR ================= */}
           {existingData && !editMode && (
             <div className="bg-green-50 border border-green-200 rounded-lg p-3 md:p-4">
@@ -815,7 +811,7 @@ export default function AdvLearner() {
               </div>
             </div>
           )}
-          
+
           {/* ================= TABLE SECTION ================= */}
           <div className="border rounded-lg overflow-hidden">
             <div className="overflow-x-auto">
@@ -842,7 +838,7 @@ export default function AdvLearner() {
                   </tbody>
                 </table>
               </div>
-              
+
               {/* Mobile Table Cards */}
               <div className="md:hidden p-3">
                 {currentRows.length === 0 && !editMode ? (
@@ -859,10 +855,10 @@ export default function AdvLearner() {
               </div>
             </div>
           </div>
-          
+
           {/* ================= PAGINATION ================= */}
           {rows.length > 0 && renderPagination()}
-          
+
           {/* ================= ADD ROW BUTTON ================= */}
           {editMode && (
             <button
@@ -873,21 +869,22 @@ export default function AdvLearner() {
               Add Row
             </button>
           )}
-          
+
           {/* ================= SUPPORTING DOCS SECTION ================= */}
           <div className="border rounded-lg p-3 md:p-4 space-y-3 md:space-y-4">
             <div className="flex items-center justify-between">
               <h4 className="flex items-center gap-2 font-semibold text-base md:text-lg">
-                <FileText className="w-4 h-4 md:w-5 md:h-5" /> 
+                <FileText className="w-4 h-4 md:w-5 md:h-5" />
                 <span className="text-sm md:text-base">Supporting Documents</span>
               </h4>
               <span className="text-xs md:text-sm text-gray-500">
                 {supportDocs.length} document(s)
               </span>
             </div>
-            
+
             {editMode && (
-              <div className="flex flex-col gap-3 p-3 bg-gray-50 rounded-lg">
+              <div className="flex flex-col gap-4 p-3 md:p-4 bg-gray-50 rounded-lg">
+                {/* Document Title */}
                 <div>
                   <label className="block text-xs md:text-sm font-medium text-gray-700 mb-1">
                     Document Title
@@ -899,34 +896,44 @@ export default function AdvLearner() {
                     className="border px-3 py-2 rounded w-full focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                   />
                 </div>
+
+                {/* File + Upload button – stack on mobile */}
                 <div>
                   <label className="block text-xs md:text-sm font-medium text-gray-700 mb-1">
                     Choose File
                   </label>
-                  <div className="flex gap-2">
+
+                  <div className="flex flex-col sm:flex-row gap-3">
                     <input
                       type="file"
                       id="support-doc-upload"
                       onChange={handleSupportUpload}
                       disabled={uploading}
-                      className="flex-1 border px-3 py-2 rounded cursor-pointer text-sm"
+                      className="block w-full text-sm text-gray-500
+            file:mr-4 file:py-2 file:px-4
+            file:rounded file:border-0
+            file:text-sm file:font-semibold
+            file:bg-blue-50 file:text-blue-700
+            hover:file:bg-blue-100
+            cursor-pointer"
                     />
+
                     <button
                       onClick={() => document.getElementById('support-doc-upload').click()}
                       disabled={uploading || !docTitle}
-                      className={`px-4 py-2 rounded text-sm ${
-                        uploading || !docTitle 
-                          ? 'bg-gray-400 cursor-not-allowed' 
+                      className={`px-5 py-2 rounded text-sm font-medium min-w-[100px] text-center
+            ${uploading || !docTitle
+                          ? 'bg-gray-400 cursor-not-allowed text-white'
                           : 'bg-blue-600 hover:bg-blue-700 text-white'
-                      }`}
+                        }`}
                     >
-                      {uploading ? '...' : 'Upload'}
+                      {uploading ? 'Uploading...' : 'Upload'}
                     </button>
                   </div>
                 </div>
               </div>
             )}
-            
+
             {supportDocs.length > 0 ? (
               <div className="space-y-2">
                 {supportDocs.map((d, i) => (
@@ -966,7 +973,7 @@ export default function AdvLearner() {
               </div>
             )}
           </div>
-          
+
           {/* ================= SAVE / CANCEL BUTTONS ================= */}
           {editMode && (
             <div className="flex flex-col sm:flex-row justify-center gap-3 pt-4 border-t">
@@ -979,15 +986,14 @@ export default function AdvLearner() {
               >
                 <XCircle className="w-4 h-4" /> Cancel
               </button>
-              
+
               <button
                 onClick={handleSaveData}
                 disabled={isSaving || rows.length === 0}
-                className={`px-6 py-2 rounded-lg flex items-center justify-center gap-2 text-sm ${
-                  isSaving || rows.length === 0
-                    ? 'bg-gray-400 cursor-not-allowed' 
+                className={`px-6 py-2 rounded-lg flex items-center justify-center gap-2 text-sm ${isSaving || rows.length === 0
+                    ? 'bg-gray-400 cursor-not-allowed'
                     : 'bg-green-600 hover:bg-green-700 text-white'
-                }`}
+                  }`}
               >
                 {isSaving ? (
                   <>
@@ -1002,7 +1008,7 @@ export default function AdvLearner() {
               </button>
             </div>
           )}
-          
+
           {/* ================= EXCEL UPLOAD MODAL ================= */}
           {showUploadModal && (
             <ExcelUploadModal
