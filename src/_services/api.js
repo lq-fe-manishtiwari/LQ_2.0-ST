@@ -231,6 +231,7 @@ export const TimetableAPI = import.meta.env.VITE_API_URL_Timetable;
 export const COREAPI = import.meta.env.VITE_API_CORE;
 export const ContentAPI = import.meta.env.VITE_API_URL_Content;
 export const ExamMGMAPI = import.meta.env.VITE_API_URL_ExamMGM;
+export const FinanceAPI = import.meta.env.VITE_API_URL_finance;
 
 // Legacy support - defaults to TeacherLoginAPI for backward compatibility
 export const DevAPI = TeacherLoginAPI;
