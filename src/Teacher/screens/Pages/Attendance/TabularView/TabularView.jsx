@@ -844,6 +844,7 @@ export default function TabularView() {
             semester_id: parseInt(filters.semester),
             division_id: parseInt(filters.division),
             subject_id: parseInt(filters.paper),
+            college_id: collegeId,
             timetable_id: selectedTimeSlot.timetable_id,
             timetable_allocation_id: selectedTimeSlot.timetable_allocation_id || null,
             time_slot_id: selectedTimeSlot.time_slot_id,

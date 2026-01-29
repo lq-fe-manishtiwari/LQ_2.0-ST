@@ -237,6 +237,23 @@ const QRAttendanceDashboard = () => {
         }
     }, [currentTeacherId]);
 
+    // Auto-select first values when allocations load (only if not from slotData)
+    useEffect(() => {
+        if (allocations.length > 0 && !slotData && !filters.paper) {
+            const firstAlloc = allocations[0];
+            const newFilters = {
+                program: firstAlloc.program?.program_id?.toString() || '',
+                batch: firstAlloc.batch?.batch_id?.toString() || '',
+                academicYear: firstAlloc.academic_year_id?.toString() || '',
+                semester: firstAlloc.semester_id?.toString() || '',
+                division: firstAlloc.division_id?.toString() || '',
+                paper: firstAlloc.subjects?.[0]?.subject_id?.toString() || ''
+            };
+            console.log("QR Attendance - Auto-selecting first allocation:", newFilters);
+            setFilters(newFilters);
+        }
+    }, [allocations, slotData]);
+
     // Extract IDs from filters
     useEffect(() => {
         setApiIds(prev => ({

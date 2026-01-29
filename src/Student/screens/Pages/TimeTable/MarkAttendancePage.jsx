@@ -9,6 +9,7 @@ const MarkAttendancePage = () => {
     const [sessionData, setSessionData] = useState(null);
     const [sessionCode, setSessionCode] = useState('');
     const [studentId, setStudentId] = useState(null);
+    const [collegeId, setCollegeId] = useState(null);
     const [rollNo, setRollNo] = useState('');
     const [studentName, setStudentName] = useState('');
     const [loading, setLoading] = useState(false);
@@ -150,6 +151,7 @@ const MarkAttendancePage = () => {
                 console.log("Parsed Profile:", profile);
 
                 const extractedStudentId = profile.student_id || profile.id;
+                const extractedCollegeId = profile.college_id;
 
                 // Construct full name from firstname, middlename, lastname
                 const firstName = profile.firstname || '';
@@ -160,6 +162,7 @@ const MarkAttendancePage = () => {
                 const extractedRollNo = profile.roll_number || profile.roll_no || profile.employeeId || '';
 
                 console.log("Extracted Student ID:", extractedStudentId);
+                console.log("Extracted College ID:", extractedCollegeId);
                 console.log("Extracted First Name:", firstName);
                 console.log("Extracted Middle Name:", middleName);
                 console.log("Extracted Last Name:", lastName);
@@ -167,6 +170,7 @@ const MarkAttendancePage = () => {
                 console.log("Extracted Roll No:", extractedRollNo);
 
                 setStudentId(extractedStudentId);
+                setCollegeId(extractedCollegeId);
                 setStudentName(fullName);
 
 
@@ -286,6 +290,7 @@ const MarkAttendancePage = () => {
                 semester_id: sessionData.semester_id,
                 division_id: sessionData.division_id,
                 subject_id: sessionData.subject_id,
+                college_id: collegeId,
                 timetable_id: sessionData.timetable_id,
                 timetable_allocation_id: sessionData.timetable_allocation_id || null,
                 time_slot_id: sessionData.time_slot_id,

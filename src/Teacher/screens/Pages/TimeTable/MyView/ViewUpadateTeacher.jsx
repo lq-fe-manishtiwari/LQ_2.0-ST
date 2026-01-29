@@ -488,14 +488,9 @@ document_name:
                                                 <div className="bg-green-50 p-4 rounded-lg">
                                                     <div className="flex items-start justify-between">
                                                         <div className="flex items-start gap-3">
-                                                            <FileText size={24} className="text-green-600 mt-1" />
+                                                          
                                                             <div className="flex-1">
-                                                                <div className="flex items-center gap-2 mb-2">
-                                                                    <p className="text-green-600 font-medium text-sm">
-                                                                        ✓ Document uploaded
-                                                                    </p>
-                                                                    <ExternalLink size={14} className="text-green-600" />
-                                                                </div>
+                                                                
                                                                 <p className="text-xs text-gray-500 mb-1">
                                                                     {currentItem.document_name || currentItem.fileName || 'Document'}
                                                                 </p>
@@ -510,9 +505,7 @@ document_name:
                                                                         {currentItem.related_document_url}
                                                                     </a>
                                                                 </div>
-                                                                <p className="text-xs text-blue-500 mt-2">
-                                                                    Ready to save
-                                                                </p>
+                                                               
                                                             </div>
                                                         </div>
                                                         {!currentItem.isViewOnly && (
@@ -568,10 +561,7 @@ document_name:
                                                         {uploading ? 'Uploading...' : 'Upload New Document'}
                                                     </div>
                                                 </label>
-                                                <p className="text-xs text-gray-400 mt-2 text-center">
-                                                    Document uploads automatically when selected
-                                                </p>
-                                            </div>
+                                               </div>
                                         )}
                                     </div>
                                 </div>

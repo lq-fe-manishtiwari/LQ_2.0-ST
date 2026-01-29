@@ -157,6 +157,15 @@ const Sidebar = ({ isOpen, toggle }) => {
         ],
       },
       {
+        to: "/teacher/academic-diary",
+        label: "Academic Diary",
+        iconActive: assessmentActive,
+        iconInactive: assessmentInactive,
+        match: [
+          "/teacher/academic-diary",
+        ],
+      },
+      {
         to: "/teacher/us-feedback",
         label: "Feedback",
         iconActive: assessmentActive,
