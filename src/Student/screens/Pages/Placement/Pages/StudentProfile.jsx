@@ -215,8 +215,7 @@ export default function StudentProfile() {
   const tabs = [
     { id: 'personal', label: 'Personal Details', icon: User },
     { id: 'academic', label: 'Academic Details', icon: BookOpen },
-    { id: 'contact', label: 'Contact Info', icon: Mail },
-    { id: 'documents', label: 'Documents', icon: FileText }
+    { id: 'contact', label: 'Contact Info', icon: Mail }
   ];
 
   if (loading) {
@@ -596,46 +595,6 @@ return (
                 />
               </div>
             </div>
-          </div>
-        )}
-        {activeTab === 'documents' && (
-          <div className="space-y-4">
-            <div className="border-2 border-dashed border-blue-200 rounded-2xl p-8 text-center bg-blue-50">
-              <Upload className="w-10 h-10 text-blue-500 mx-auto mb-3" />
-              <h3 className="font-semibold text-gray-900">Upload Resume</h3>
-              <p className="text-xs text-gray-600 mt-1">
-                PDF only · Max 2MB
-              </p>
-
-              <input
-                type="file"
-                accept=".pdf"
-                onChange={handleResumeUpload}
-                id="resume-upload"
-                className="hidden"
-              />
-
-              <label
-                htmlFor="resume-upload"
-                className="inline-block mt-4 px-5 py-2.5 bg-blue-600 text-white rounded-xl cursor-pointer hover:bg-blue-700 transition"
-              >
-                Choose File
-              </label>
-            </div>
-
-            {profile.resumeUrl && (
-              <div className="flex items-start gap-3 bg-green-50 border border-green-200 p-4 rounded-xl">
-                <CheckCircle className="text-green-600 mt-1" />
-                <div>
-                  <p className="font-medium text-green-900">
-                    {profile.resumeName}
-                  </p>
-                  <p className="text-xs text-green-700">
-                    Uploaded successfully
-                  </p>
-                </div>
-              </div>
-            )}
           </div>
         )}
       </div>
