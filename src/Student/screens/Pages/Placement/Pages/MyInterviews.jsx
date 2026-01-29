@@ -206,16 +206,16 @@ export default function MyInterviews() {
           <table className="w-full">
             <thead className="bg-primary-600">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-50 uppercase tracking-wider">Placement ID</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-50 uppercase tracking-wider">Organisation</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-50 uppercase tracking-wider">Job Opening Date</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-50 uppercase tracking-wider">Job Role</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-50 uppercase tracking-wider">Date</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-50 uppercase tracking-wider">Time</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-50 uppercase tracking-wider">Round</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-50 uppercase tracking-wider">Outcome</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-50 uppercase tracking-wider">TPO Remark</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-50 uppercase tracking-wider">Student Registration</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-50  tracking-wider">Placement ID</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-50  tracking-wider">Organisation</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-50  tracking-wider">Job Opening Date</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-50  tracking-wider">Job Role</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-50  tracking-wider">Date</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-50  tracking-wider">Time</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-50  tracking-wider">Round</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-50  tracking-wider">Outcome</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-50  tracking-wider">TPO Remark</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-50  tracking-wider">Student Registration</th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
