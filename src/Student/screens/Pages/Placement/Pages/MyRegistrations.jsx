@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Search, Eye, Filter, ChevronDown, Clock, CheckCircle, XCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { studentPlacementService } from '../Services/studentPlacement.service';
 
 // Custom Select Component
 const CustomSelect = ({ label, value, onChange, options, placeholder }) => {
@@ -74,52 +75,16 @@ export default function MyRegistrations() {
 
   const loadRegistrations = async () => {
     setLoading(true);
-    const mockData = [
-      {
-        registration_id: 101,
-        placement_id: 'PL20260453',
-        organisation: 'Test',
-        job_role: 'Test',
-        applied_date: '20/01/2026',
-        opening_date: '19/01/2026',
-        position_open_till: '31/01/2026',
-        interview_status: 'Approved',
-        registration_link: 'ves-erp.learnqoch',
-        status: 'shortlisted',
-        ctc: '4.5 LPA',
-        remarks: 'Application under review'
-      },
-      {
-        registration_id: 102,
-        placement_id: 'PL20260454',
-        organisation: 'Test',
-        job_role: 'Test',
-        applied_date: '22/01/2026',
-        opening_date: '19/01/2026',
-        position_open_till: '31/01/2026',
-        interview_status: '-',
-        registration_link: 'ves-erp.learnqoch',
-        status: 'pending',
-        ctc: '5 LPA',
-        remarks: 'Shortlisted for interview'
-      },
-      {
-        registration_id: 103,
-        placement_id: 'PL20260455',
-        organisation: 'Wipro',
-        job_role: 'Frontend Developer',
-        applied_date: '15/01/2026',
-        opening_date: '10/01/2026',
-        position_open_till: '28/02/2026',
-        interview_status: 'Rejected',
-        registration_link: 'wipro.com/careers',
-        status: 'rejected',
-        ctc: '6 LPA',
-        remarks: 'Not selected for this position'
-      }
-    ];
-    setRegistrations(mockData);
-    setLoading(false);
+    try {
+      // Use hardcoded PRN ID directly
+      const data = await studentPlacementService.getStudentDriveApplications();
+      setRegistrations(data || []);
+    } catch (error) {
+      console.error('Failed to load registrations:', error);
+      setRegistrations([]);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const getStatusBadge = (status) => {
