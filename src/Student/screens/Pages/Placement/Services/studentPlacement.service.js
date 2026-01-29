@@ -117,13 +117,13 @@ export const getApplicationCountByDrive = async (driveId) => {
 
 export const studentPlacementService = {
   // Get student drive applications by PRN ID
-  getStudentDriveApplications: async (prnId = '2141354124') => {
+  getStudentDriveApplications: async (prnId) => {
     try {
       const requestOptions = {
         method: 'GET',
         headers: authHeader()
       };
-      const response = await fetch(`${AcademicAPI}/student-drive-applications/student/${prnId}`, requestOptions);
+      const response = await fetch(`${API_BASE_URL}/student-drive-applications/student/${prnId}`, requestOptions);
       return handleResponse(response);
     } catch (error) {
       console.error('Error fetching student drive applications:', error);

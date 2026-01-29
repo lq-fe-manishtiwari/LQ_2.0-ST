@@ -6,6 +6,7 @@ import { useNavigate } from 'react-router-dom';
 import SweetAlert from 'react-bootstrap-sweetalert';
 import { getJobOpeningsForStudent } from '../Services/studentPlacement.service';
 import { useUserProfile } from '../../../../../contexts/UserProfileContext';
+import { api } from '../../../../../_services/api';
 
 export default function JobList() {
   const [jobs, setJobs] = useState([]);
@@ -32,8 +33,9 @@ export default function JobList() {
     setLoading(true);
     try {
       // Get student ID using useUserProfile hook like AddStudentProject
-      const userId = getUserId();
-      const studentId = userId; // Assuming userId is the student ID
+      const res = await api.getUserProfile();
+      const studentId = res.data?.student_id; // Assuming userId is the student ID
+      // console.log(res);
       
       if (!studentId) {
         console.error('Student ID not found');
