@@ -129,5 +129,18 @@ export const studentPlacementService = {
       console.error('Error fetching student drive applications:', error);
       throw error;
     }
-  }
+  },
+    getRegistrationFormsByCollege: async (collegeId) => {
+        try {
+          const requestOptions = {
+            method: 'GET',
+            headers: authHeader()
+          };
+          const response = await fetch(`${API_BASE_URL}/registration-forms/college/${collegeId}`, requestOptions);
+          return handleResponse(response);
+        } catch (error) {
+          console.error('Error fetching student drive applications:', error);
+          throw error;
+        }
+      }
 };

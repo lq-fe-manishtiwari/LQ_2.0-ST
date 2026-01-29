@@ -7,6 +7,7 @@ import SweetAlert from 'react-bootstrap-sweetalert';
 import { getJobOpeningsForStudent } from '../Services/studentPlacement.service';
 import { useUserProfile } from '../../../../../contexts/UserProfileContext';
 import { api } from '../../../../../_services/api';
+import RegistrationForm from './RegistrationForm';
 
 export default function JobList() {
   const [jobs, setJobs] = useState([]);
@@ -21,6 +22,10 @@ export default function JobList() {
     role: '',
     department: ''
   });
+
+  const [showRegistration, setShowRegistration] = useState(false);
+const [selectedJob, setSelectedJob] = useState(null);
+
 
   const entriesPerPage = 10;
   const [currentPage, setCurrentPage] = useState(1);
@@ -84,18 +89,17 @@ export default function JobList() {
   const handleNext = () => currentPage < totalPages && setCurrentPage(p => p + 1);
   const resetPage = () => setCurrentPage(1);
 
-  const handleApply = (id, company) => {
-    setAlert(
-      <SweetAlert
-        success
-        title="Application Submitted!"
-        confirmBtnCssClass="btn-confirm"
-        onConfirm={() => setAlert(null)}
-      >
-        Your application to {company} has been submitted successfully!
-      </SweetAlert>
-    );
-  };
+ const handleApply = (job) => {
+  console.log(job);
+  setSelectedJob({
+    jobdata:job,
+    jobOpeningId: job.job_opening_id,
+    companyName: job.company?.company_name,
+    collegeId: job.college_id
+  });
+  setShowRegistration(true);
+};
+
 
   if (loading) {
     return (
@@ -202,13 +206,14 @@ export default function JobList() {
                       </span>
                     </td>
                     <td className="px-6 py-4 text-center">
-                      <button
-                        onClick={() => handleApply(item.job_opening_id, item.company?.company_name)}
-                        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition text-sm"
-                        disabled={item.status !== 'OPEN'}
-                      >
-                        Apply
-                      </button>
+                     <button
+  onClick={() => handleApply(item)}
+  className="px-4 py-2 bg-blue-600 text-white rounded-lg"
+  disabled={item.status !== 'OPEN'}
+>
+  Apply
+</button>
+
                     </td>
                   </tr>
                 ))
@@ -287,7 +292,7 @@ export default function JobList() {
 
               <div className="flex justify-end items-center">
                 <button
-                  onClick={() => handleApply(item.job_opening_id, item.company?.company_name)}
+                  onClick={() => handleApply(item)}
                   className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition text-sm"
                   disabled={item.status !== 'OPEN'}
                 >
@@ -321,6 +326,16 @@ export default function JobList() {
           </button>
         </div>
       )}
+      {showRegistration && selectedJob && (
+  <RegistrationForm
+    job={selectedJob.jobdata}  
+    jobOpeningId={selectedJob.jobOpeningId}
+    collegeId={selectedJob.collegeId}
+    companyName={selectedJob.companyName}
+    onClose={() => setShowRegistration(false)}
+  />
+)}
+
     </div>
   );
 }
