@@ -211,49 +211,140 @@ export default function MyRegistrations() {
       )}
 
       {/* Table */}
-      <div className="overflow-x-auto bg-white rounded-lg shadow">
-        <table className="w-full">
-          <thead className="bg-blue-600 text-white">
+      <div className="hidden lg:block bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full">
+          <thead className="bg-primary-600">
             <tr>
-              <th className="p-3 text-left">Application ID</th>
-              <th className="p-3 text-left">Placement ID</th>
-              <th className="p-3 text-left">College ID</th>
-              <th className="p-3 text-left">Drive ID</th>
-              <th className="p-3 text-left">Job Role IDs</th>
-              <th className="p-3 text-left">Full Name</th>
-              <th className="p-3 text-center">Status</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-50 uppercase tracking-wider">Application ID</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-50 uppercase tracking-wider">Placement ID</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-50 uppercase tracking-wider">Drive ID</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-50 uppercase tracking-wider">Job Role IDs</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-50 uppercase tracking-wider">Email</th>
+              <th className="px-6 py-3 text-center text-xs font-medium text-gray-50 uppercase tracking-wider">Status</th>
             </tr>
           </thead>
-          <tbody>
+          <tbody className="bg-white divide-y divide-gray-200">
             {currentEntries.length ? currentEntries.map(item => (
-              <tr key={item.application_id} className="border-t">
-                <td className="p-3">{item.application_id}</td>
-                <td className="p-3">{item.placement_id || 'N/A'}</td>
-                <td className="p-3">{item.college_id}</td>
-                <td className="p-3">{item.drive_id}</td>
-                <td className="p-3">{item.job_role_ids?.join(', ') || 'N/A'}</td>
-                <td className="p-3">{item.application_data?.['Full Name'] || 'N/A'}</td>
-                <td className="p-3 text-center">{getStatusBadge(item.application_status)}</td>
+              <tr key={item.application_id} className="hover:bg-gray-50">
+                <td className="px-6 py-4 text-sm text-gray-900">{item.application_id}</td>
+                <td className="px-6 py-4 text-sm text-gray-500">{item.placement_id || 'N/A'}</td>
+                <td className="px-6 py-4 text-sm text-gray-500">{item.drive_id}</td>
+                <td className="px-6 py-4 text-sm text-gray-500">{item.job_role_ids?.join(', ') || 'N/A'}</td>
+                <td className="px-6 py-4 text-sm text-gray-500">{item.application_data?.email || 'N/A'}</td>
+                <td className="px-6 py-4 text-center">{getStatusBadge(item.application_status)}</td>
               </tr>
             )) : (
               <tr>
-                <td colSpan="7" className="text-center p-6 text-gray-500">
+                <td colSpan="6" className="px-6 py-8 text-center text-gray-500">
                   No applications found
                 </td>
               </tr>
             )}
           </tbody>
         </table>
+        
+        {/* Pagination */}
+        {totalEntries > 0 && (
+          <div className="flex justify-between items-center px-6 py-4 border-t border-gray-200 text-sm text-gray-600">
+            <button
+              onClick={() => setCurrentPage(p => p - 1)}
+              disabled={currentPage === 1}
+              className={`px-4 py-2 rounded-md ${
+                currentPage === 1
+                  ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                  : 'bg-blue-600 hover:bg-blue-700 text-white'
+              }`}
+            >
+              Previous
+            </button>
+            <span className="text-gray-700 font-medium">
+              Showing {paginatedData.start + 1}–{Math.min(paginatedData.end, totalEntries)} of {totalEntries} entries
+            </span>
+            <button
+              onClick={() => setCurrentPage(p => p + 1)}
+              disabled={currentPage === totalPages}
+              className={`px-4 py-2 rounded-md ${
+                currentPage === totalPages
+                  ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                  : 'bg-blue-600 hover:bg-blue-700 text-white'
+              }`}
+            >
+              Next
+            </button>
+          </div>
+        )}
+        </div>
       </div>
 
-      {/* Pagination */}
+      {/* ────────────────────── Mobile Cards ────────────────────── */}
+      <div className="lg:hidden space-y-4">
+        {currentEntries.length === 0 ? (
+          <div className="bg-white rounded-xl shadow-md p-8 text-center border border-gray-200">
+            <div className="text-gray-500">
+              <p className="text-lg font-medium mb-2">No applications found</p>
+              <p className="text-sm">
+                {searchTerm || filters.status
+                  ? `No applications found matching your search or filters`
+                  : "No applications found. Try adjusting the search or contact support if the issue persists."}
+              </p>
+            </div>
+          </div>
+        ) : (
+          currentEntries.map((item) => (
+            <div
+              key={item.application_id}
+              className="bg-white rounded-xl shadow-md border border-gray-200 p-5 hover:shadow-lg transition-all"
+            >
+              <div className="flex justify-between items-start mb-3">
+                <div>
+                  <p className="font-semibold text-gray-900">{item.application_data?.['Full Name'] || 'N/A'}</p>
+                  <p className="text-sm text-gray-500">Application #{item.application_id}</p>
+                </div>
+                <div>{getStatusBadge(item.application_status)}</div>
+              </div>
+
+              <div className="space-y-2 text-sm text-gray-700 mb-4">
+                <div className="grid grid-cols-2 gap-2">
+                  <div><span className="font-medium">Placement ID:</span> {item.placement_id || 'N/A'}</div>
+                  <div><span className="font-medium">Drive ID:</span> {item.drive_id}</div>
+                  <div><span className="font-medium">Job Role IDs:</span> {item.job_role_ids?.join(', ') || 'N/A'}</div>
+                  <div><span className="font-medium">Email:</span> {item.application_data?.email || 'N/A'}</div>
+                  <div><span className="font-medium">Marks:</span> {item.application_data?.marks || 'N/A'}</div>
+                  <div><span className="font-medium">Mobile:</span> {item.application_data?.mobile || 'N/A'}</div>
+                </div>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+
+      {/* Mobile Pagination */}
       {totalEntries > 0 && (
-        <div className="flex justify-between mt-4">
-          <button disabled={currentPage === 1} onClick={() => setCurrentPage(p => p - 1)}>
+        <div className="lg:hidden flex justify-between items-center px-4 py-4 bg-white rounded-lg shadow-sm border border-gray-200 mt-4 text-sm text-gray-600">
+          <button
+            onClick={() => setCurrentPage(p => p - 1)}
+            disabled={currentPage === 1}
+            className={`px-4 py-2 rounded-md ${
+              currentPage === 1
+                ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                : 'bg-blue-600 hover:bg-blue-700 text-white'
+            }`}
+          >
             Previous
           </button>
-          <span>{currentPage} / {totalPages}</span>
-          <button disabled={currentPage === totalPages} onClick={() => setCurrentPage(p => p + 1)}>
+          <span className="text-gray-700 font-medium text-xs">
+            {paginatedData.start + 1}–{Math.min(paginatedData.end, totalEntries)} of {totalEntries}
+          </span>
+          <button
+            onClick={() => setCurrentPage(p => p + 1)}
+            disabled={currentPage === totalPages}
+            className={`px-4 py-2 rounded-md ${
+              currentPage === totalPages
+                ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                : 'bg-blue-600 hover:bg-blue-700 text-white'
+            }`}
+          >
             Next
           </button>
         </div>
