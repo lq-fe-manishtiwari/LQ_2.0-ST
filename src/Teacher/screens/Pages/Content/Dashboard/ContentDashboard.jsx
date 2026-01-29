@@ -81,6 +81,7 @@ export default function ContentDashboard() {
   const [selectedProgram, setSelectedProgram] = useState(savedFilters.program || '');
   const [selectedBatch, setSelectedBatch] = useState(savedFilters.batch || '');
   const [selectedSemester, setSelectedSemester] = useState(savedFilters.semester || '');
+  const [selectedDivision, setSelectedDivision] = useState(savedFilters.division || '');
 
   const [selectedSubTab, setSelectedSubTab] = useState(null); // For sub-tabs (verticals/specializations)
 
@@ -308,7 +309,8 @@ export default function ContentDashboard() {
           code: allocation.program.program_code,
           academicYearId: allocation.academic_year_id, // Add academic year ID
           batches: new Map(),
-          semesters: new Map()
+          semesters: new Map(),
+          divisions: new Map()
         });
       }
 
@@ -332,13 +334,22 @@ export default function ContentDashboard() {
           academic_year_name: allocation.academic_year?.name
         });
       }
+
+      // Add division if not exists
+      if (allocation.division) {
+        program.divisions.set(allocation.division.division_id, {
+          id: allocation.division.division_id,
+          name: allocation.division.division_name
+        });
+      }
     });
 
     // Convert Maps to Arrays
     return Array.from(programsMap.values()).map(program => ({
       ...program,
       batches: Array.from(program.batches.values()),
-      semesters: Array.from(program.semesters.values())
+      semesters: Array.from(program.semesters.values()),
+      divisions: Array.from(program.divisions.values())
     }));
   };
 
@@ -422,7 +433,8 @@ export default function ContentDashboard() {
       paperType: selectedPaperType,
       program: selectedProgram,
       batch: selectedBatch,
-      semester: selectedSemester
+      semester: selectedSemester,
+      division: selectedDivision
     };
     localStorage.setItem('contentDashboardFilters', JSON.stringify(filters));
   }, [selectedPaperType, selectedProgram, selectedBatch, selectedSemester]);
@@ -495,11 +507,24 @@ export default function ContentDashboard() {
               setSelectedProgram(program ? program.id.toString() : '');
               setSelectedBatch('');
               setSelectedSemester('');
+              setSelectedDivision('');
             }}
             options={allocatedPrograms.map(p => ({ value: p.name, label: p.name }))}
             placeholder="Select Program"
             disabled={loading}
           />
+          <CustomSelect
+            label="Batch"
+            value={selectedProgramData?.batches?.find(b => b.id.toString() === selectedBatch)?.name || ''}
+            onChange={(e) => {
+              const batch = selectedProgramData?.batches?.find(b => b.name === e.target.value);
+              setSelectedBatch(batch ? batch.id.toString() : '');
+            }}
+            options={selectedProgramData?.batches?.map(b => ({ value: b.name, label: b.name })) || []}
+            placeholder="Select Batch"
+            disabled={!selectedProgram || loading}
+          />
+
           <CustomSelect
             label="Academic Year / Semester"
             value={(() => {
@@ -517,17 +542,19 @@ export default function ContentDashboard() {
             placeholder="Select Academic Year / Semester"
             disabled={!selectedProgram || loading}
           />
-          <CustomSelect
-            label="Batch"
-            value={selectedProgramData?.batches?.find(b => b.id.toString() === selectedBatch)?.name || ''}
-            onChange={(e) => {
-              const batch = selectedProgramData?.batches?.find(b => b.name === e.target.value);
-              setSelectedBatch(batch ? batch.id.toString() : '');
-            }}
-            options={selectedProgramData?.batches?.map(b => ({ value: b.name, label: b.name })) || []}
-            placeholder="Select Batch"
-            disabled={!selectedProgram || loading}
-          />
+          {selectedProgramData?.divisions?.length > 0 && (
+            <CustomSelect
+              label="Division"
+              value={selectedProgramData?.divisions?.find(d => d.id.toString() === selectedDivision)?.name || ''}
+              onChange={(e) => {
+                const division = selectedProgramData?.divisions?.find(d => d.name === e.target.value);
+                setSelectedDivision(division ? division.id.toString() : '');
+              }}
+              options={selectedProgramData?.divisions?.map(d => ({ value: d.name, label: d.name })) || []}
+              placeholder="Select Division"
+              disabled={!selectedProgram || loading}
+            />
+          )}
         </div>
       )}
 
@@ -538,8 +565,8 @@ export default function ContentDashboard() {
             key={type.id}
             onClick={() => setSelectedPaperType(type.label)}
             className={`px-4 py-2 rounded-xl font-medium transition-all duration-200 border ${selectedPaperType === type.label
-                ? 'bg-blue-600 text-white border-blue-600 shadow-lg shadow-blue-200/50'
-                : 'bg-white text-gray-700 border-gray-200 hover:border-blue-300 hover:bg-gray-50'
+              ? 'bg-blue-600 text-white border-blue-600 shadow-lg shadow-blue-200/50'
+              : 'bg-white text-gray-700 border-gray-200 hover:border-blue-300 hover:bg-gray-50'
               }`}
           >
             {type.label}
@@ -555,8 +582,8 @@ export default function ContentDashboard() {
               key={`${subTab.type || 'tab'}-${subTab.id ?? 'general'}-${index}`}
               onClick={() => setSelectedSubTab(subTab)}
               className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 ${selectedSubTab?.id === subTab.id && selectedSubTab?.type === subTab.type
-                  ? 'bg-blue-600 text-white shadow-md'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-200'
+                ? 'bg-blue-600 text-white shadow-md'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-200'
                 }`}
             >
               {subTab.name}
