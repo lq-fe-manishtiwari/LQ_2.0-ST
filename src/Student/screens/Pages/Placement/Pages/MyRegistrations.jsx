@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Search, Eye, Filter, ChevronDown, Clock, CheckCircle, XCircle } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
 import { studentPlacementService } from '../Services/studentPlacement.service.js';
 import { api } from '../../../../../_services/api';
 
@@ -68,8 +67,12 @@ export default function MyRegistrations() {
   const [filters, setFilters] = useState({ filterOpen: false, status: '' });
   const [currentPage, setCurrentPage] = useState(1);
 
-  const navigate = useNavigate();
   const entriesPerPage = 10;
+
+  const handleStatusChange = (value) => {
+    setFilters(f => ({ ...f, status: value }));
+    setCurrentPage(1);
+  };
 
   useEffect(() => {
     loadRegistrations();
@@ -86,16 +89,10 @@ export default function MyRegistrations() {
         return;
       }
 
-      const response =
-        await studentPlacementService.getStudentDriveApplications(prnNo);
-
-      // ✅ FORCE ARRAY
-      const applications = Array.isArray(response)
-        ? response
-        : Array.isArray(response?.data)
-        ? response.data
-        : [];
-
+      const response = await studentPlacementService.getStudentDriveApplications(prnNo);
+      
+      // Extract applications array from response
+      const applications = response?.applications || [];
       setRegistrations(applications);
     } catch (error) {
       console.error('Failed to load registrations:', error);
@@ -106,18 +103,19 @@ export default function MyRegistrations() {
   };
 
   const getStatusBadge = (status) => {
+    const normalizedStatus = status?.toLowerCase();
     const config = {
       pending: { bg: 'bg-yellow-100', text: 'text-yellow-700', icon: Clock },
-      shortlisted: { bg: 'bg-green-100', text: 'text-green-700', icon: CheckCircle },
+      approved: { bg: 'bg-green-100', text: 'text-green-700', icon: CheckCircle },
       rejected: { bg: 'bg-red-100', text: 'text-red-700', icon: XCircle }
-    }[status] || {};
+    }[normalizedStatus] || { bg: 'bg-gray-100', text: 'text-gray-700', icon: Clock };
 
-    const Icon = config.icon || Clock;
+    const Icon = config.icon;
 
     return (
       <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold ${config.bg} ${config.text}`}>
         <Icon className="w-3 h-3" />
-        {status || 'pending'}
+        {status || 'PENDING'}
       </span>
     );
   };
@@ -128,19 +126,19 @@ export default function MyRegistrations() {
     if (searchTerm) {
       const q = searchTerm.toLowerCase();
       list = list.filter(item =>
-        item.organisation?.toLowerCase().includes(q) ||
-        item.job_role?.toLowerCase().includes(q)
+        item.placement_id?.toLowerCase().includes(q) ||
+        item.application_data?.['Full Name']?.toLowerCase().includes(q)
       );
     }
 
     if (filters.status) {
       list = list.filter(item =>
-        item.status?.toLowerCase() === filters.status.toLowerCase()
+        item.application_status?.toLowerCase() === filters.status.toLowerCase()
       );
     }
 
     const totalEntries = list.length;
-    const totalPages = Math.ceil(totalEntries / entriesPerPage);
+    const totalPages = Math.max(1, Math.ceil(totalEntries / entriesPerPage));
     const start = (currentPage - 1) * entriesPerPage;
     const end = start + entriesPerPage;
 
@@ -156,9 +154,9 @@ export default function MyRegistrations() {
   const { currentEntries, totalEntries, totalPages } = paginatedData;
 
   const stats = {
-    pending: registrations.filter(r => r.status === 'pending').length,
-    shortlisted: registrations.filter(r => r.status === 'shortlisted').length,
-    rejected: registrations.filter(r => r.status === 'rejected').length
+    pending: registrations.filter(r => r.application_status?.toLowerCase() === 'pending').length,
+    approved: registrations.filter(r => r.application_status?.toLowerCase() === 'approved').length,
+    rejected: registrations.filter(r => r.application_status?.toLowerCase() === 'rejected').length
   };
 
   if (loading) {
@@ -206,8 +204,8 @@ export default function MyRegistrations() {
         <CustomSelect
           label="Status"
           value={filters.status}
-          onChange={e => setFilters(f => ({ ...f, status: e.target.value }))}
-          options={['pending', 'shortlisted', 'rejected']}
+          onChange={e => handleStatusChange(e.target.value)}
+          options={['pending', 'approved', 'rejected']}
           placeholder="Select Status"
         />
       )}
@@ -217,23 +215,29 @@ export default function MyRegistrations() {
         <table className="w-full">
           <thead className="bg-blue-600 text-white">
             <tr>
+              <th className="p-3 text-left">Application ID</th>
               <th className="p-3 text-left">Placement ID</th>
-              <th className="p-3 text-left">Organisation</th>
-              <th className="p-3 text-left">Role</th>
+              <th className="p-3 text-left">College ID</th>
+              <th className="p-3 text-left">Drive ID</th>
+              <th className="p-3 text-left">Job Role IDs</th>
+              <th className="p-3 text-left">Full Name</th>
               <th className="p-3 text-center">Status</th>
             </tr>
           </thead>
           <tbody>
             {currentEntries.length ? currentEntries.map(item => (
-              <tr key={item.registration_id} className="border-t">
-                <td className="p-3">{item.placement_id}</td>
-                <td className="p-3">{item.organisation}</td>
-                <td className="p-3">{item.job_role}</td>
-                <td className="p-3 text-center">{getStatusBadge(item.status)}</td>
+              <tr key={item.application_id} className="border-t">
+                <td className="p-3">{item.application_id}</td>
+                <td className="p-3">{item.placement_id || 'N/A'}</td>
+                <td className="p-3">{item.college_id}</td>
+                <td className="p-3">{item.drive_id}</td>
+                <td className="p-3">{item.job_role_ids?.join(', ') || 'N/A'}</td>
+                <td className="p-3">{item.application_data?.['Full Name'] || 'N/A'}</td>
+                <td className="p-3 text-center">{getStatusBadge(item.application_status)}</td>
               </tr>
             )) : (
               <tr>
-                <td colSpan="4" className="text-center p-6 text-gray-500">
+                <td colSpan="7" className="text-center p-6 text-gray-500">
                   No applications found
                 </td>
               </tr>

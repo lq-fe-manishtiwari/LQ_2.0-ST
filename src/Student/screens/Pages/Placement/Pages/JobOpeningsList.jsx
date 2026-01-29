@@ -32,10 +32,8 @@ export default function JobList() {
   const loadJobs = async () => {
     setLoading(true);
     try {
-      // Get student ID using useUserProfile hook like AddStudentProject
       const res = await api.getUserProfile();
-      const studentId = res.data?.student_id; // Assuming userId is the student ID
-      // console.log(res);
+      const studentId = res.data?.student_id;
       
       if (!studentId) {
         console.error('Student ID not found');
@@ -47,32 +45,7 @@ export default function JobList() {
       setJobs(jobOpenings || []);
     } catch (error) {
       console.error('Failed to load job openings:', error);
-      // Fallback to mock data
-      const mockData = [
-        {
-          placement_id: 'PL20260101',
-          organisation: 'Infosys',
-          opening_date: '15/01/2026',
-          job_role: 'Software Engineer',
-          selection_criteria: 'CGPA >= 7.0, No backlogs',
-          ctc: '8.5',
-          job_description: 'Full stack development with Java and React',
-          position_open_till: '28/02/2026',
-          expected_joining_date: '01/07/2026'
-        },
-        {
-          placement_id: 'PL20260102',
-          organisation: 'TCS',
-          opening_date: '20/01/2026',
-          job_role: 'System Engineer',
-          selection_criteria: 'CGPA >= 6.5, All branches',
-          ctc: '7.2',
-          job_description: 'Software development and maintenance',
-          position_open_till: '15/03/2026',
-          expected_joining_date: '15/07/2026'
-        }
-      ];
-      setJobs(mockData);
+      setJobs([]);
     } finally {
       setLoading(false);
     }
@@ -84,14 +57,16 @@ export default function JobList() {
     if (searchTerm) {
       const q = searchTerm.toLowerCase();
       list = list.filter(item =>
-        item.organisation?.toLowerCase().includes(q) ||
-        item.job_role?.toLowerCase().includes(q) ||
-        item.placement_id?.toLowerCase().includes(q)
+        item.company?.company_name?.toLowerCase().includes(q) ||
+        item.job_roles?.some(role => role.role_name?.toLowerCase().includes(q)) ||
+        item.job_opening_id?.toString().includes(q)
       );
     }
 
     if (filters.role) {
-      list = list.filter(item => item.job_role === filters.role);
+      list = list.filter(item => 
+        item.job_roles?.some(role => role.role_name === filters.role)
+      );
     }
 
     const totalEntries = list.length;
@@ -176,7 +151,9 @@ export default function JobList() {
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent min-h-[44px]"
               >
                 <option value="">All Roles</option>
-                <option value="Test">Test</option>
+                {jobs.flatMap(job => job.job_roles || []).map(role => (
+                  <option key={role.job_role_id} value={role.role_name}>{role.role_name}</option>
+                ))}
               </select>
             </div>
           </div>
@@ -189,35 +166,46 @@ export default function JobList() {
           <table className="w-full">
             <thead className="bg-primary-600">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-50 uppercase tracking-wider">Placement ID</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-50 uppercase tracking-wider">Organisation</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-50 uppercase tracking-wider">Job Opening ID</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-50 uppercase tracking-wider">Company</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-50 uppercase tracking-wider">Opening Date</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-50 uppercase tracking-wider">Role</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-50 uppercase tracking-wider">Selection Criteria</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-50 uppercase tracking-wider">CTC (LPA)</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-50 uppercase tracking-wider">Description</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-50 uppercase tracking-wider">Position Open Till</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-50 uppercase tracking-wider">Expected Joining Date</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-50 uppercase tracking-wider">Roles</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-50 uppercase tracking-wider">CTC Range</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-50 uppercase tracking-wider">Application Deadline</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-50 uppercase tracking-wider">Venue</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-50 uppercase tracking-wider">Status</th>
                 <th className="px-6 py-3 text-center text-xs font-medium text-gray-50 uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {currentEntries.length > 0 ? (
                 currentEntries.map((item) => (
-                  <tr key={item.placement_id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 text-sm text-gray-900">{item.placement_id}</td>
-                    <td className="px-6 py-4 text-sm text-gray-500">{item.organisation}</td>
-                    <td className="px-6 py-4 text-sm text-gray-500">{item.opening_date}</td>
-                    <td className="px-6 py-4 text-sm text-gray-500">{item.job_role}</td>
-                    <td className="px-6 py-4 text-sm text-gray-500">{item.selection_criteria}</td>
-                    <td className="px-6 py-4 text-sm text-gray-500">{item.ctc}</td>
-                    <td className="px-6 py-4 text-sm text-gray-500">{item.job_description}</td>
-                    <td className="px-6 py-4 text-sm text-gray-500">{item.position_open_till}</td>
-                    <td className="px-6 py-4 text-sm text-gray-500">{item.expected_joining_date}</td>
+                  <tr key={item.job_opening_id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 text-sm text-gray-900">{item.job_opening_id}</td>
+                    <td className="px-6 py-4 text-sm text-gray-500">{item.company?.company_name}</td>
+                    <td className="px-6 py-4 text-sm text-gray-500">{item.job_opening_date}</td>
+                    <td className="px-6 py-4 text-sm text-gray-500">
+                      {item.job_roles?.map(role => role.role_name).join(', ')}
+                    </td>
+                    <td className="px-6 py-4 text-sm text-gray-500">
+                      {item.vacancy_details?.length > 0 && 
+                        `₹${item.vacancy_details[0].min_ctc}L - ₹${item.vacancy_details[0].max_ctc}L`
+                      }
+                    </td>
+                    <td className="px-6 py-4 text-sm text-gray-500">{item.application_deadline}</td>
+                    <td className="px-6 py-4 text-sm text-gray-500">{item.venue}</td>
+                    <td className="px-6 py-4 text-sm text-gray-500">
+                      <span className={`px-2 py-1 rounded-full text-xs ${
+                        item.status === 'OPEN' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                      }`}>
+                        {item.status}
+                      </span>
+                    </td>
                     <td className="px-6 py-4 text-center">
                       <button
-                        onClick={() => handleApply(item.placement_id, item.organisation)}
+                        onClick={() => handleApply(item.job_opening_id, item.company?.company_name)}
                         className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition text-sm"
+                        disabled={item.status !== 'OPEN'}
                       >
                         Apply
                       </button>
@@ -226,7 +214,7 @@ export default function JobList() {
                 ))
               ) : (
                 <tr>
-                  <td colSpan="10" className="px-6 py-8 text-center text-gray-500">
+                  <td colSpan="9" className="px-6 py-8 text-center text-gray-500">
                     {searchTerm || filters.role ? 'No jobs found matching your search or filters' : 'No jobs found'}
                   </td>
                 </tr>
@@ -269,27 +257,39 @@ export default function JobList() {
           </div>
         ) : (
           currentEntries.map((item) => (
-            <div key={item.placement_id} className="bg-white rounded-xl shadow-md border border-gray-200 p-5 hover:shadow-lg transition-all">
+            <div key={item.job_opening_id} className="bg-white rounded-xl shadow-md border border-gray-200 p-5 hover:shadow-lg transition-all">
               <div className="flex justify-between items-start mb-3">
                 <div>
-                  <p className="font-semibold text-gray-900">{item.organisation}</p>
-                  <p className="text-sm text-gray-500">{item.job_role}</p>
+                  <p className="font-semibold text-gray-900">{item.company?.company_name}</p>
+                  <p className="text-sm text-gray-500">
+                    {item.job_roles?.map(role => role.role_name).join(', ')}
+                  </p>
                 </div>
+                <span className={`px-2 py-1 rounded-full text-xs ${
+                  item.status === 'OPEN' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                }`}>
+                  {item.status}
+                </span>
               </div>
 
               <div className="space-y-2 text-sm text-gray-700 mb-4">
                 <div className="grid grid-cols-2 gap-2">
-                  <div><span className="font-medium">ID:</span> {item.placement_id}</div>
-                  <div><span className="font-medium">CTC:</span> {item.ctc} LPA</div>
-                  <div><span className="font-medium">Opening:</span> {item.opening_date}</div>
-                  <div><span className="font-medium">Deadline:</span> {item.position_open_till}</div>
+                  <div><span className="font-medium">ID:</span> {item.job_opening_id}</div>
+                  <div><span className="font-medium">CTC:</span> 
+                    {item.vacancy_details?.length > 0 && 
+                      `₹${item.vacancy_details[0].min_ctc}L - ₹${item.vacancy_details[0].max_ctc}L`
+                    }
+                  </div>
+                  <div><span className="font-medium">Opening:</span> {item.job_opening_date}</div>
+                  <div><span className="font-medium">Deadline:</span> {item.application_deadline}</div>
                 </div>
               </div>
 
               <div className="flex justify-end items-center">
                 <button
-                  onClick={() => handleApply(item.placement_id, item.organisation)}
+                  onClick={() => handleApply(item.job_opening_id, item.company?.company_name)}
                   className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition text-sm"
+                  disabled={item.status !== 'OPEN'}
                 >
                   Apply
                 </button>
