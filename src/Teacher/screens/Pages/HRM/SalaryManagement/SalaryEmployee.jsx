@@ -461,6 +461,7 @@ export default function UserDashboard() {
 
         {/* Desktop Table */}
         <div className="hidden md:block bg-white rounded-xl shadow-lg border border-gray-200 overflow-x-auto">
+            <div className="h-[500px] overflow-y-auto blue-scrollbar">
           <table className="w-full min-w-[800px]">
             <thead className="table-header">
               <tr>
@@ -535,6 +536,7 @@ export default function UserDashboard() {
               ))}
             </tbody>
           </table>
+          </div>
 
           {/* Pagination */}
           {totalEntries > 0 && (

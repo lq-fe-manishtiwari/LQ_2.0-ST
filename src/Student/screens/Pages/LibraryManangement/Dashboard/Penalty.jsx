@@ -60,6 +60,7 @@ export default function Penalty() {
         {/* Table Card */}
         <div className="bg-white shadow-xl rounded-2xl border border-gray-200 overflow-hidden">
           <div className="overflow-x-auto">
+              <div className="h-[500px] overflow-y-auto blue-scrollbar">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className=" table-header">
                 <tr>
@@ -127,6 +128,7 @@ export default function Penalty() {
                 ))}
               </tbody>
             </table>
+            </div>
           </div>
 
           {/* Footer Summary */}

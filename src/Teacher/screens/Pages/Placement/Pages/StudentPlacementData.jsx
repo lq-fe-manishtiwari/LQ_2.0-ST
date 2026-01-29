@@ -615,6 +615,7 @@ export default function StudentPlacementData() {
 
         {/* Desktop Table */}
         <div className="hidden lg:block bg-white border rounded-lg overflow-hidden">
+            <div className="h-[500px] overflow-y-auto blue-scrollbar">
           <table className="w-full text-sm">
             <thead className="bg-primary-600">
               <tr>
@@ -652,6 +653,7 @@ export default function StudentPlacementData() {
               )))}
             </tbody>
           </table>
+          </div>
         </div>
 
         {/* Desktop Pagination */}
@@ -764,6 +766,7 @@ export default function StudentPlacementData() {
       {/* Desktop Table */}
       <div className="hidden lg:block bg-white border rounded-lg overflow-hidden">
         <div className="overflow-x-auto">
+            <div className="h-[500px] overflow-y-auto blue-scrollbar">
           <table className="w-full">
             <thead className="bg-primary-600">
               <tr>
@@ -826,6 +829,7 @@ export default function StudentPlacementData() {
               ))}
             </tbody>
           </table>
+          </div>
         </div>
 
         {/* Pagination */}

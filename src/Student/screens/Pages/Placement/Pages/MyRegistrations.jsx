@@ -211,10 +211,17 @@ export default function MyRegistrations() {
       )}
 
       {/* Table */}
+<<<<<<< HEAD
       <div className="hidden lg:block bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full">
           <thead className="bg-primary-600">
+=======
+      <div className="overflow-x-auto bg-white rounded-lg shadow">
+          <div className="h-[500px] overflow-y-auto blue-scrollbar">
+        <table className="w-full">
+          <thead className="bg-blue-600 text-white">
+>>>>>>> hrm_stage
             <tr>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-50 uppercase tracking-wider">Application ID</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-50 uppercase tracking-wider">Placement ID</th>
@@ -243,6 +250,7 @@ export default function MyRegistrations() {
             )}
           </tbody>
         </table>
+<<<<<<< HEAD
         
         {/* Pagination */}
         {totalEntries > 0 && (
@@ -274,6 +282,8 @@ export default function MyRegistrations() {
             </button>
           </div>
         )}
+=======
+>>>>>>> hrm_stage
         </div>
       </div>
 
