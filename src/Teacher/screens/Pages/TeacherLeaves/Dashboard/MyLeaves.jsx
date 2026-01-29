@@ -915,6 +915,7 @@ const getDaysValidationMessage = () => {
               {/* Desktop Table */}
               <div className="hidden lg:block">
                 <div className="overflow-x-auto">
+                    <div className="h-[500px] overflow-y-auto blue-scrollbar">
                   <table className="w-full text-sm">
                     <thead className="table-header">
                       <tr>
@@ -992,6 +993,7 @@ const getDaysValidationMessage = () => {
                       ))}
                     </tbody>
                   </table>
+                  </div>
                 </div>
               </div>
 

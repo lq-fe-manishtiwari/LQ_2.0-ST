@@ -122,6 +122,7 @@ export default function ViewOfferLetter() {
       {/* Desktop Table */}
       <div className="hidden lg:block bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
         <div className="overflow-x-auto">
+            <div className="h-[500px] overflow-y-auto blue-scrollbar">
           <table className="w-full">
             <thead className="bg-primary-600">
               <tr>
@@ -186,6 +187,7 @@ export default function ViewOfferLetter() {
               )}
             </tbody>
           </table>
+          </div>
         </div>
 
         {totalEntries > 0 && (
