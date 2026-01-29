@@ -216,12 +216,12 @@ export default function MyRegistrations() {
           <table className="w-full">
           <thead className="bg-primary-600">
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-50 uppercase tracking-wider">Application ID</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-50 uppercase tracking-wider">Placement ID</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-50 uppercase tracking-wider">Drive ID</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-50 uppercase tracking-wider">Job Role IDs</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-50 uppercase tracking-wider">Email</th>
-              <th className="px-6 py-3 text-center text-xs font-medium text-gray-50 uppercase tracking-wider">Status</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-50  tracking-wider">Application ID</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-50  tracking-wider">Placement ID</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-50  tracking-wider">Drive ID</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-50  tracking-wider">Job Role IDs</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-50  tracking-wider">Email</th>
+              <th className="px-6 py-3 text-center text-xs font-medium text-gray-50  tracking-wider">Status</th>
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">

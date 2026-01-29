@@ -170,15 +170,15 @@ const [selectedJob, setSelectedJob] = useState(null);
           <table className="w-full">
             <thead className="bg-primary-600">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-50 uppercase tracking-wider">Job Opening ID</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-50 uppercase tracking-wider">Company</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-50 uppercase tracking-wider">Opening Date</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-50 uppercase tracking-wider">Roles</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-50 uppercase tracking-wider">CTC Range</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-50 uppercase tracking-wider">Application Deadline</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-50 uppercase tracking-wider">Venue</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-50 uppercase tracking-wider">Status</th>
-                <th className="px-6 py-3 text-center text-xs font-medium text-gray-50 uppercase tracking-wider">Actions</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-50  tracking-wider">Job Opening ID</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-50  tracking-wider">Company</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-50  tracking-wider">Opening Date</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-50  tracking-wider">Roles</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-50  tracking-wider">CTC Range</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-50  tracking-wider">Application Deadline</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-50  tracking-wider">Venue</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-50  tracking-wider">Status</th>
+                <th className="px-6 py-3 text-center text-xs font-medium text-gray-50  tracking-wider">Actions</th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
