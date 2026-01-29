@@ -5,6 +5,7 @@ import {
   User, Mail, BookOpen, Upload, FileText,
   CheckCircle, Edit2, Save
 } from 'lucide-react';
+import SweetAlert from 'react-bootstrap-sweetalert';
 import { api } from '../../../../../_services/api';
 
 /* ========= HELPERS ========= */
@@ -44,6 +45,8 @@ export default function StudentProfile() {
     uploadDate: null
   });
 
+  const [alert, setAlert] = useState(null);
+
   /* ========= FETCH PROFILE ========= */
   useEffect(() => {
     fetchProfile();
@@ -57,12 +60,12 @@ export default function StudentProfile() {
 
       setProfile({
         fullName: `${d.firstname} ${d.middlename || ''} ${d.lastname}`.trim(),
-        rollNumber: d.roll_number,
+        rollNumber: d.roll_number || d.permanent_registration_number,
         dateOfBirth: toInputDate(d.date_of_birth),
         gender: d.gender === 'MALE' ? 'Male' : d.gender === 'FEMALE' ? 'Female' : 'Other',
         category: d.cast_category || '',
-        tenth_percentage: '',
-        twelfth_percentage: '',
+        tenth_percentage: d.education_details?.find(e => e.qualification === '10th')?.percentage || '',
+        twelfth_percentage: d.education_details?.find(e => e.qualification === '12th')?.percentage || '',
         graduation_cgpa: '',
         backlogs: '',
         year: d.class_year || '',
@@ -82,7 +85,16 @@ export default function StudentProfile() {
       });
     } catch (err) {
       console.error(err);
-      alert('Failed to load profile');
+      setAlert(
+        <SweetAlert
+          error
+          title="Error!"
+          onConfirm={() => setAlert(null)}
+          confirmBtnCssClass="btn-confirm"
+        >
+          Failed to load profile
+        </SweetAlert>
+      );
     } finally {
       setLoading(false);
     }
@@ -90,17 +102,19 @@ export default function StudentProfile() {
 
   /* ========= PROFILE COMPLETION ========= */
   useEffect(() => {
-    const requiredFields = [
-      'fullName', 'rollNumber', 'dateOfBirth', 'gender',
-      'email', 'phone', 'address', 'resumeUrl'
+    const allFields = [
+      'fullName', 'rollNumber', 'dateOfBirth', 'gender', 'category',
+      'tenth_percentage', 'twelfth_percentage', 'graduation_cgpa', 'backlogs',
+      'year', 'department', 'specialization', 'email', 'phone', 'alternatePhone',
+      'address', 'city', 'state', 'pincode', 'resumeUrl'
     ];
 
-    const filled = requiredFields.filter(
-      (field) => profile[field]
+    const filled = allFields.filter(
+      (field) => profile[field] && profile[field] !== ''
     ).length;
 
     setProfileCompletion(
-      Math.round((filled / requiredFields.length) * 100)
+      Math.round((filled / allFields.length) * 100)
     );
   }, [profile]);
 
@@ -114,12 +128,30 @@ export default function StudentProfile() {
     if (!file) return;
 
     if (file.type !== 'application/pdf') {
-      alert('Only PDF files allowed');
+      setAlert(
+        <SweetAlert
+          error
+          title="Invalid File!"
+          onConfirm={() => setAlert(null)}
+          confirmBtnCssClass="btn-confirm"
+        >
+          Only PDF files are allowed
+        </SweetAlert>
+      );
       return;
     }
 
     if (file.size > 2 * 1024 * 1024) {
-      alert('Max size 2MB');
+      setAlert(
+        <SweetAlert
+          error
+          title="File Too Large!"
+          onConfirm={() => setAlert(null)}
+          confirmBtnCssClass="btn-confirm"
+        >
+          Maximum file size is 2MB
+        </SweetAlert>
+      );
       return;
     }
 
@@ -152,10 +184,28 @@ export default function StudentProfile() {
       });
 
       setIsEditing(false);
-      alert('Profile updated successfully');
+      setAlert(
+        <SweetAlert
+          success
+          title="Success!"
+          onConfirm={() => setAlert(null)}
+          confirmBtnCssClass="btn-confirm"
+        >
+          Profile updated successfully!
+        </SweetAlert>
+      );
     } catch (err) {
       console.error(err);
-      alert('Failed to update profile');
+      setAlert(
+        <SweetAlert
+          error
+          title="Error!"
+          onConfirm={() => setAlert(null)}
+          confirmBtnCssClass="btn-confirm"
+        >
+          Failed to update profile
+        </SweetAlert>
+      );
     } finally {
       setSaving(false);
     }
@@ -174,20 +224,22 @@ export default function StudentProfile() {
   }
 
 return (
-  <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-4 md:p-8">
+  <div className="min-h-screen bg-gray-50 p-4 md:p-8">
+    {alert}
+    
     {/* Header */}
-    <div className="bg-white rounded-2xl shadow-sm p-6 mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <div className="bg-white rounded-2xl shadow-sm border p-6 mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
       <div>
         <h1 className="text-2xl font-bold text-gray-900">My Profile</h1>
         <p className="text-gray-500 text-sm mt-1">
-          Manage your placement profile
+          Complete your placement profile
         </p>
       </div>
 
       <button
         onClick={() => isEditing ? handleSave() : setIsEditing(true)}
         disabled={saving}
-        className={`inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-medium transition
+        className={`inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-medium transition-all duration-200
           ${isEditing
             ? 'bg-green-600 hover:bg-green-700 text-white'
             : 'bg-blue-600 hover:bg-blue-700 text-white'}
@@ -199,7 +251,7 @@ return (
     </div>
 
     {/* Profile Completion */}
-    <div className="bg-white rounded-2xl shadow-sm p-6 mb-6">
+    <div className="bg-white rounded-2xl shadow-sm border p-6 mb-6">
       <div className="flex items-center justify-between mb-3">
         <span className="text-sm font-medium text-gray-700">
           Profile Completion
@@ -211,25 +263,25 @@ return (
 
       <div className="w-full bg-gray-200 h-2.5 rounded-full overflow-hidden">
         <div
-          className="bg-gradient-to-r from-blue-500 to-blue-600 h-full rounded-full transition-all duration-500"
+          className="bg-blue-600 h-full rounded-full transition-all duration-500"
           style={{ width: `${profileCompletion}%` }}
         />
       </div>
     </div>
 
     {/* Tabs */}
-    <div className="bg-white rounded-2xl shadow-sm">
-      <div className="flex gap-2 p-2 border-b overflow-x-auto">
+    <div className="bg-white rounded-2xl shadow-sm border overflow-hidden">
+      <div className="flex gap-1 p-2 bg-gray-50 overflow-x-auto">
         {tabs.map(tab => {
           const Icon = tab.icon;
           return (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition whitespace-nowrap
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 whitespace-nowrap
                 ${activeTab === tab.id
-                  ? 'bg-blue-600 text-white shadow'
-                  : 'text-gray-600 hover:bg-gray-100'}
+                  ? 'bg-blue-600 text-white shadow-sm'
+                  : 'text-gray-600 hover:bg-white hover:text-gray-800'}
               `}
             >
               <Icon size={16} />
@@ -242,38 +294,44 @@ return (
       <div className="p-6">
         {/* PERSONAL */}
         {activeTab === 'personal' && (
-          <div className="bg-white rounded-xl">
+          <div className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
               <div>
-                <label className="text-sm text-gray-600 mb-1 block">
+                <label className="text-sm font-medium text-gray-700 mb-2 block">
                   Full Name
                 </label>
                 <input
-                  className="input"
+                  className={`w-full px-3 py-2.5 rounded-lg border transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                    !isEditing ? 'bg-gray-50 border-gray-200 text-gray-500' : 'bg-white border-gray-300'
+                  }`}
                   value={profile.fullName}
                   onChange={e => handleInputChange('fullName', e.target.value)}
                   disabled={!isEditing}
+                  placeholder="Enter your full name"
                 />
               </div>
 
               <div>
-                <label className="text-sm text-gray-600 mb-1 block">
+                <label className="text-sm font-medium text-gray-700 mb-2 block">
                   Roll Number
                 </label>
                 <input
-                  className="input bg-gray-100"
+                  className="w-full px-3 py-2.5 rounded-lg border bg-gray-50 border-gray-200 text-gray-500"
                   value={profile.rollNumber}
                   disabled
+                  placeholder="Auto-generated"
                 />
               </div>
 
               <div>
-                <label className="text-sm text-gray-600 mb-1 block">
+                <label className="text-sm font-medium text-gray-700 mb-2 block">
                   Date of Birth
                 </label>
                 <input
                   type="date"
-                  className="input"
+                  className={`w-full px-3 py-2.5 rounded-lg border transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                    !isEditing ? 'bg-gray-50 border-gray-200 text-gray-500' : 'bg-white border-gray-300'
+                  }`}
                   value={profile.dateOfBirth}
                   onChange={e => handleInputChange('dateOfBirth', e.target.value)}
                   disabled={!isEditing}
@@ -281,25 +339,265 @@ return (
               </div>
 
               <div>
-                <label className="text-sm text-gray-600 mb-1 block">
+                <label className="text-sm font-medium text-gray-700 mb-2 block">
                   Gender
                 </label>
                 <select
-                  className="input"
+                  className={`w-full px-3 py-2.5 rounded-lg border transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                    !isEditing ? 'bg-gray-50 border-gray-200 text-gray-500' : 'bg-white border-gray-300'
+                  }`}
                   value={profile.gender}
                   onChange={e => handleInputChange('gender', e.target.value)}
                   disabled={!isEditing}
                 >
-                  <option>Male</option>
-                  <option>Female</option>
-                  <option>Other</option>
+                  <option value="">Select Gender</option>
+                  <option value="Male">Male</option>
+                  <option value="Female">Female</option>
+                  <option value="Other">Other</option>
                 </select>
               </div>
             </div>
           </div>
         )}
 
-        {/* DOCUMENTS */}
+        {/* CONTACT */}
+        {activeTab === 'contact' && (
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              <div>
+                <label className="text-sm font-medium text-gray-700 mb-2 block">
+                  Email
+                </label>
+                <input
+                  className={`w-full px-3 py-2.5 rounded-lg border transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                    !isEditing ? 'bg-gray-50 border-gray-200 text-gray-500' : 'bg-white border-gray-300'
+                  }`}
+                  value={profile.email}
+                  onChange={e => handleInputChange('email', e.target.value)}
+                  disabled={!isEditing}
+                  placeholder="Enter your email"
+                />
+              </div>
+
+              <div>
+                <label className="text-sm font-medium text-gray-700 mb-2 block">
+                  Phone
+                </label>
+                <input
+                  className={`w-full px-3 py-2.5 rounded-lg border transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                    !isEditing ? 'bg-gray-50 border-gray-200 text-gray-500' : 'bg-white border-gray-300'
+                  }`}
+                  value={profile.phone}
+                  onChange={e => handleInputChange('phone', e.target.value)}
+                  disabled={!isEditing}
+                  placeholder="Enter your phone number"
+                />
+              </div>
+
+              <div>
+                <label className="text-sm font-medium text-gray-700 mb-2 block">
+                  Alternate Phone
+                </label>
+                <input
+                  className={`w-full px-3 py-2.5 rounded-lg border transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                    !isEditing ? 'bg-gray-50 border-gray-200 text-gray-500' : 'bg-white border-gray-300'
+                  }`}
+                  value={profile.alternatePhone}
+                  onChange={e => handleInputChange('alternatePhone', e.target.value)}
+                  disabled={!isEditing}
+                  placeholder="Enter alternate phone number"
+                />
+              </div>
+
+              <div>
+                <label className="text-sm font-medium text-gray-700 mb-2 block">
+                  Address
+                </label>
+                <input
+                  className={`w-full px-3 py-2.5 rounded-lg border transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                    !isEditing ? 'bg-gray-50 border-gray-200 text-gray-500' : 'bg-white border-gray-300'
+                  }`}
+                  value={profile.address}
+                  onChange={e => handleInputChange('address', e.target.value)}
+                  disabled={!isEditing}
+                  placeholder="Enter your address"
+                />
+              </div>
+
+              <div>
+                <label className="text-sm font-medium text-gray-700 mb-2 block">
+                  City
+                </label>
+                <input
+                  className={`w-full px-3 py-2.5 rounded-lg border transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                    !isEditing ? 'bg-gray-50 border-gray-200 text-gray-500' : 'bg-white border-gray-300'
+                  }`}
+                  value={profile.city}
+                  onChange={e => handleInputChange('city', e.target.value)}
+                  disabled={!isEditing}
+                  placeholder="Enter your city"
+                />
+              </div>
+
+              <div>
+                <label className="text-sm font-medium text-gray-700 mb-2 block">
+                  State
+                </label>
+                <input
+                  className={`w-full px-3 py-2.5 rounded-lg border transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                    !isEditing ? 'bg-gray-50 border-gray-200 text-gray-500' : 'bg-white border-gray-300'
+                  }`}
+                  value={profile.state}
+                  onChange={e => handleInputChange('state', e.target.value)}
+                  disabled={!isEditing}
+                  placeholder="Enter your state"
+                />
+              </div>
+
+              <div>
+                <label className="text-sm font-medium text-gray-700 mb-2 block">
+                  Pincode
+                </label>
+                <input
+                  className={`w-full px-3 py-2.5 rounded-lg border transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                    !isEditing ? 'bg-gray-50 border-gray-200 text-gray-500' : 'bg-white border-gray-300'
+                  }`}
+                  value={profile.pincode}
+                  onChange={e => handleInputChange('pincode', e.target.value)}
+                  disabled={!isEditing}
+                  placeholder="Enter your pincode"
+                />
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ACADEMIC */}
+        {activeTab === 'academic' && (
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              <div>
+                <label className="text-sm font-medium text-gray-700 mb-2 block">
+                  Category
+                </label>
+                <input
+                  className={`w-full px-3 py-2.5 rounded-lg border transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                    !isEditing ? 'bg-gray-50 border-gray-200 text-gray-500' : 'bg-white border-gray-300'
+                  }`}
+                  value={profile.category}
+                  onChange={e => handleInputChange('category', e.target.value)}
+                  disabled={!isEditing}
+                  placeholder="Enter your category"
+                />
+              </div>
+
+              <div>
+                <label className="text-sm font-medium text-gray-700 mb-2 block">
+                  10th Percentage
+                </label>
+                <input
+                  className={`w-full px-3 py-2.5 rounded-lg border transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                    !isEditing ? 'bg-gray-50 border-gray-200 text-gray-500' : 'bg-white border-gray-300'
+                  }`}
+                  value={profile.tenth_percentage}
+                  onChange={e => handleInputChange('tenth_percentage', e.target.value)}
+                  disabled={!isEditing}
+                  placeholder="Enter 10th percentage"
+                />
+              </div>
+
+              <div>
+                <label className="text-sm font-medium text-gray-700 mb-2 block">
+                  12th Percentage
+                </label>
+                <input
+                  className={`w-full px-3 py-2.5 rounded-lg border transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                    !isEditing ? 'bg-gray-50 border-gray-200 text-gray-500' : 'bg-white border-gray-300'
+                  }`}
+                  value={profile.twelfth_percentage}
+                  onChange={e => handleInputChange('twelfth_percentage', e.target.value)}
+                  disabled={!isEditing}
+                  placeholder="Enter 12th percentage"
+                />
+              </div>
+
+              <div>
+                <label className="text-sm font-medium text-gray-700 mb-2 block">
+                  Graduation CGPA
+                </label>
+                <input
+                  className={`w-full px-3 py-2.5 rounded-lg border transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                    !isEditing ? 'bg-gray-50 border-gray-200 text-gray-500' : 'bg-white border-gray-300'
+                  }`}
+                  value={profile.graduation_cgpa}
+                  onChange={e => handleInputChange('graduation_cgpa', e.target.value)}
+                  disabled={!isEditing}
+                  placeholder="Enter graduation CGPA"
+                />
+              </div>
+
+              <div>
+                <label className="text-sm font-medium text-gray-700 mb-2 block">
+                  Backlogs
+                </label>
+                <input
+                  className={`w-full px-3 py-2.5 rounded-lg border transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                    !isEditing ? 'bg-gray-50 border-gray-200 text-gray-500' : 'bg-white border-gray-300'
+                  }`}
+                  value={profile.backlogs}
+                  onChange={e => handleInputChange('backlogs', e.target.value)}
+                  disabled={!isEditing}
+                  placeholder="Enter number of backlogs"
+                />
+              </div>
+
+              <div>
+                <label className="text-sm font-medium text-gray-700 mb-2 block">
+                  Year
+                </label>
+                <input
+                  className={`w-full px-3 py-2.5 rounded-lg border transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                    !isEditing ? 'bg-gray-50 border-gray-200 text-gray-500' : 'bg-white border-gray-300'
+                  }`}
+                  value={profile.year}
+                  onChange={e => handleInputChange('year', e.target.value)}
+                  disabled={!isEditing}
+                  placeholder="Enter current year"
+                />
+              </div>
+
+              <div>
+                <label className="text-sm font-medium text-gray-700 mb-2 block">
+                  Department
+                </label>
+                <input
+                  className={`w-full px-3 py-2.5 rounded-lg border transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                    !isEditing ? 'bg-gray-50 border-gray-200 text-gray-500' : 'bg-white border-gray-300'
+                  }`}
+                  value={profile.department}
+                  onChange={e => handleInputChange('department', e.target.value)}
+                  disabled={!isEditing}
+                  placeholder="Enter your department"
+                />
+              </div>
+
+              <div>
+                <label className="text-sm font-medium text-gray-700 mb-2 block">
+                  Specialization
+                </label>
+                <input
+                  className={`w-full px-3 py-2.5 rounded-lg border transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                    !isEditing ? 'bg-gray-50 border-gray-200 text-gray-500' : 'bg-white border-gray-300'
+                  }`}
+                  value={profile.specialization}
+                  onChange={e => handleInputChange('specialization', e.target.value)}
+                  disabled={!isEditing}
+                  placeholder="Enter your specialization"
+                />
+              </div>
+            </div>
+          </div>
+        )}
         {activeTab === 'documents' && (
           <div className="space-y-4">
             <div className="border-2 border-dashed border-blue-200 rounded-2xl p-8 text-center bg-blue-50">
