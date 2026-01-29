@@ -9,8 +9,10 @@ import SweetAlert from 'react-bootstrap-sweetalert';
 
 export default function TabularView() {
     const location = useLocation();
-    const passedSlot = location.state?.slot;
-    const fromTimetable = location.state?.fromTimetable;
+    // Cache initial location state to prevent re-renders when history state is cleared
+    const navigationRef = useRef(location.state);
+    const passedSlot = navigationRef.current?.slot;
+    const fromTimetable = navigationRef.current?.fromTimetable;
 
     // State for filters
     const [filters, setFilters] = useState({
@@ -29,6 +31,7 @@ export default function TabularView() {
     const [showSuccessAlert, setShowSuccessAlert] = useState(false);
     const [showErrorAlert, setShowErrorAlert] = useState(false);
     const [alertMessage, setAlertMessage] = useState('');
+    const [refreshTrigger, setRefreshTrigger] = useState(0);
 
     // State for allocations
     const [allocations, setAllocations] = useState([]);
@@ -85,10 +88,8 @@ export default function TabularView() {
         const handleTimetableNavigation = () => {
             if (fromTimetable && passedSlot && !filtersSetFromTimetable) {
                 const slot = passedSlot;
+                console.log("DEBUG: handleTimetableNavigation - received slot:", slot);
 
-                console.log("DEBUG: Received slot from timetable:", slot);
-
-                // Extract and set filters from slot
                 const newFilters = {
                     program: slot.program_id?.toString() || '',
                     batch: slot.batch_id?.toString() || '',
@@ -99,10 +100,10 @@ export default function TabularView() {
                     timeSlot: slot.time_slot_id?.toString() || ''
                 };
 
-                console.log("DEBUG: Setting filters from slot:", newFilters);
+                console.log("DEBUG: handleTimetableNavigation - applying filters", newFilters);
                 setFilters(newFilters);
                 setFiltersSetFromTimetable(true);
-
+ 
                 // Set date from slot
                 if (slot.date) {
                     try {
@@ -126,7 +127,7 @@ export default function TabularView() {
                         console.error("Error parsing slot date:", error);
                     }
                 }
-
+ 
                 // Create a manual time slot object
                 if (slot.start_time && slot.end_time) {
                     const manualTimeSlot = {
@@ -137,17 +138,17 @@ export default function TabularView() {
                         slot_name: slot.slot_name || `${slot.start_time} - ${slot.end_time}`,
                         fromTimetable: true
                     };
-
+ 
                     setTimeSlots([manualTimeSlot]);
                 }
-
+ 
                 // Clear the location state to prevent re-applying on refresh
                 if (window.history.replaceState) {
                     window.history.replaceState({}, document.title);
                 }
             }
         };
-
+ 
         handleTimetableNavigation();
     }, [fromTimetable, passedSlot]);
 
@@ -420,7 +421,15 @@ export default function TabularView() {
                                 subject_id: s.subject_id || parseInt(params.subjectId)
                             };
                         });
-                        console.log(`DEBUG: Students fetched successful, count: ${formattedStudents.length}`);
+
+                        // Robust alphanumeric sorting by roll_number
+                        formattedStudents.sort((a, b) => {
+                            const rollA = String(a.roll_number || '');
+                            const rollB = String(b.roll_number || '');
+                            return rollA.localeCompare(rollB, undefined, { numeric: true, sensitivity: 'base' });
+                        });
+
+                        console.log(`DEBUG: fetchStudents - setting students array (count: ${formattedStudents.length}) with default 'P'`);
                         setStudents(formattedStudents);
                         setStudentsFetched(true);
                     } else {
@@ -438,7 +447,7 @@ export default function TabularView() {
         };
 
         fetchStudents();
-    }, [filters.academicYear, filters.semester, filters.division, filters.paper, fromTimetable, passedSlot, filtersSetFromTimetable]);
+    }, [filters.academicYear, filters.semester, filters.division, filters.paper]);
 
     // Fetch existing attendance when time slot is selected
     useEffect(() => {
@@ -491,23 +500,26 @@ export default function TabularView() {
 
                     if (response && response.success && response.data && response.data.length > 0) {
                         // Attendance exists, update student statuses
-                        console.log("DEBUG: Attendance list response:", response.data);
-                        setStudents(prevStudents =>
-                            prevStudents.map(student => {
+                        console.log(`DEBUG: fetchExistingAttendance - found ${response.data.length} records. Updating student state.`);
+                        setStudents(prevStudents => {
+                            const updatedStudents = prevStudents.map(student => {
                                 const attendanceRecord = response.data.find(a => a.student_id === student.id);
                                 if (attendanceRecord && attendanceRecord.status) {
-                                    // Status is nested object with status_code
-                                    console.log(`DEBUG: Found attendance for student ${student.id}:`, attendanceRecord.status);
+                                    const statusToSet = attendanceRecord.status.status_code || 'P';
+                                    console.log(`   - Student ${student.id} (${student.roll_number}): Mapping API status ${JSON.stringify(attendanceRecord.status)} -> ${statusToSet}`);
                                     return {
                                         ...student,
-                                        status: attendanceRecord.status.status_code || 'P'
+                                        status: statusToSet
                                     };
                                 }
                                 return student;
-                            })
-                        );
+                            });
+                            console.log("DEBUG: fetchExistingAttendance - students state update complete");
+                            return updatedStudents;
+                        });
                     } else {
                         // No attendance data for this slot, reset all to 'P'
+                        console.log("DEBUG: fetchExistingAttendance - no records found in API response. Resetting all to 'P'.");
                         setStudents(prevStudents =>
                             prevStudents.map(student => ({
                                 ...student,
@@ -525,7 +537,7 @@ export default function TabularView() {
         };
 
         fetchExistingAttendance();
-    }, [filters.timeSlot, students.length, attendanceStatuses.length, fromTimetable, timeSlots, filters.academicYear, filters.semester, filters.division, filters.paper, selectedDate]);
+    }, [filters.timeSlot, students.length, studentsFetched, attendanceStatuses.length, timeSlots, filters.academicYear, filters.semester, filters.division, filters.paper, selectedDate, refreshTrigger]);
 
     // Filter students based on selected filters
     const filteredStudents = students.filter(student => {
@@ -751,14 +763,8 @@ export default function TabularView() {
 
     // Success Alert
     const handleSuccessAlertConfirm = () => {
-        if (!fromTimetable) {
-            const stateToSave = {
-                filters: filters,
-                selectedDate: selectedDate
-            };
-            localStorage.setItem('attendanceTabularViewState', JSON.stringify(stateToSave));
-        }
-        window.location.reload();
+        setShowSuccessAlert(false);
+        setRefreshTrigger(prev => prev + 1);
     };
     const handleErrorAlertConfirm = () => {
         setShowErrorAlert(false);
@@ -913,6 +919,7 @@ export default function TabularView() {
     const activeStudent = students.find(s => s.id === activePopup);
 
     console.log("DEBUG: TabularView Rendering - Current Filters:", filters);
+    console.log("DEBUG: TabularView Rendering - First Student Status:", students[0]?.name, "->", students[0]?.status);
     console.log("DEBUG: TabularView Rendering - Available TimeSlots:", timeSlots);
 
     return (

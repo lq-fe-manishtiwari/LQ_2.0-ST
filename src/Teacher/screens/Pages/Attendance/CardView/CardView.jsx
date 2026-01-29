@@ -35,15 +35,17 @@ export default function CardView() {
 
     // State for attendance data
     const [attendanceData, setAttendanceData] = useState([]);
+    const [lectures, setLectures] = useState([]);
     const [loading, setLoading] = useState(false);
+    const [loadingLectures, setLoadingLectures] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [showSuccessAlert, setShowSuccessAlert] = useState(false);
 
     // State for pending changes: { [day]: { [studentId]: { statusId, remarks } } }
     const [pendingChanges, setPendingChanges] = useState({});
 
-    // State for selected days in the month for bulk actions
-    const [selectedDays, setSelectedDays] = useState([]);
+    // State for selected lectures in the month for bulk actions
+    const [selectedLectures, setSelectedLectures] = useState([]);
 
     // Months array
     const months = useMemo(() => [
@@ -54,7 +56,19 @@ export default function CardView() {
     ], []);
 
     const getDaysInMonth = (year, month) => new Date(year, month, 0).getDate();
-    const days = useMemo(() => Array.from({ length: getDaysInMonth(selectedYear, selectedMonth) }, (_, i) => i + 1), [selectedYear, selectedMonth]);
+
+    const formatTime12h = (timeStr) => {
+        if (!timeStr) return '';
+        try {
+            const [hours, minutes] = timeStr.split(':');
+            let h = parseInt(hours, 10);
+            const ampm = h >= 12 ? 'PM' : 'AM';
+            h = h % 12 || 12;
+            return `${h}:${minutes} ${ampm}`;
+        } catch (e) {
+            return timeStr;
+        }
+    };
 
     const getMonthName = (monthValue) => {
         return months.find(m => m.value === monthValue)?.label || '';
@@ -94,6 +108,40 @@ export default function CardView() {
         });
         return unique;
     }, [attendanceStatuses, isPresent, isAbsent]);
+
+    const displayColumns = useMemo(() => {
+        const totalDays = getDaysInMonth(selectedYear, selectedMonth);
+        const columns = [];
+
+        for (let d = 1; d <= totalDays; d++) {
+            const dateStr = `${selectedYear}-${String(selectedMonth).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+            const dayLectures = lectures.filter(l => l.date === dateStr);
+
+            if (dayLectures.length > 0) {
+                // Day has scheduled classes
+                dayLectures.forEach(l => {
+                    columns.push({
+                        ...l,
+                        is_scheduled: true,
+                        colKey: `${l.date}_${l.time_slot_id}`,
+                        day: d,
+                        formatted_start_time: formatTime12h(l.start_time)
+                    });
+                });
+            } else {
+                // Day has no classes - show as disabled
+                columns.push({
+                    date: dateStr,
+                    is_scheduled: false,
+                    colKey: `disabled_${dateStr}`,
+                    day: d,
+                    start_time: '',
+                    formatted_start_time: ''
+                });
+            }
+        }
+        return columns;
+    }, [selectedYear, selectedMonth, lectures]);
 
     // Fetch teacher ID and collegeId
     useEffect(() => {
@@ -234,10 +282,12 @@ export default function CardView() {
     const fetchAttendanceData = useCallback(async () => {
         if (!filters.academicYear || !filters.semester || !filters.division || !filters.paper) {
             setAttendanceData([]);
+            setLectures([]);
             return;
         }
 
         setLoading(true);
+        setLoadingLectures(true);
         try {
             const dateRange = getMonthDateRange();
             const currentAlloc = allocations.find(a =>
@@ -247,48 +297,63 @@ export default function CardView() {
                 a.subjects?.some(s => s.subject_id == filters.paper)
             );
 
-            const payload = {
-                academic_year_id: parseInt(filters.academicYear),
-                semester_id: parseInt(filters.semester),
-                division_id: parseInt(filters.division),
+            // 1. Fetch Subject Timetable (Valid Slots)
+            const commonPayload = {
                 subject_id: parseInt(filters.paper),
                 start_date: dateRange.start_date,
                 end_date: dateRange.end_date,
+                academic_year_id: parseInt(filters.academicYear),
+                semester_id: parseInt(filters.semester),
+                division_id: parseInt(filters.division),
+                college_id: collegeId
+            };
+
+            const timetableResponse = await TeacherAttendanceManagement.getSubjectTimetable(commonPayload);
+            let fetchedLectures = [];
+            if (timetableResponse.success && timetableResponse.data?.lectures) {
+                fetchedLectures = timetableResponse.data.lectures;
+                setLectures(fetchedLectures);
+            } else {
+                setLectures([]);
+            }
+
+            // 2. Fetch Existing Attendance
+            const attendancePayload = {
+                ...commonPayload,
                 timetable_allocation_id: currentAlloc?.timetable_allocation_id || "",
                 timetable_id: currentAlloc?.timetable_id || 0
             };
 
-            const response = await TeacherAttendanceManagement.getAttendanceBySubject(payload);
+            const response = await TeacherAttendanceManagement.getAttendanceBySubject(attendancePayload);
             if (response.success && response.data) {
-                processAttendanceData(response.data);
+                processAttendanceData(response.data, fetchedLectures);
                 setPendingChanges({});
-                setSelectedDays([]);
+                setSelectedLectures([]);
             } else {
                 setAttendanceData([]);
             }
         } catch (error) {
             console.error("Error fetching attendance:", error);
             setAttendanceData([]);
+            setLectures([]);
         } finally {
             setLoading(false);
+            setLoadingLectures(false);
         }
-    }, [filters, selectedYear, selectedMonth, allocations]);
+    }, [filters, selectedYear, selectedMonth, allocations, collegeId]);
 
     useEffect(() => {
         fetchAttendanceData();
     }, [fetchAttendanceData]);
 
-    const processAttendanceData = (data) => {
-        if (!Array.isArray(data) || data.length === 0) {
-            setAttendanceData([]);
-            return;
-        }
+    const processAttendanceData = (data, fetchedLectures) => {
+        if (!Array.isArray(data)) return;
 
         const studentMap = new Map();
         data.forEach(record => {
             const studentId = record.student_id;
-            const date = new Date(record.date);
-            const day = date.getDate();
+            // Key is date_timeSlotId to handle multiple slots on same day
+            const colKey = `${record.date}_${record.time_slot_id}`;
             const status = record.status;
 
             if (!studentMap.has(studentId)) {
@@ -302,15 +367,22 @@ export default function CardView() {
             }
 
             const student = studentMap.get(studentId);
-            student.attendance[day] = status;
-            student.metadata[day] = {
+            student.attendance[colKey] = status;
+            student.metadata[colKey] = {
                 time_slot_id: record.time_slot_id,
                 timetable_allocation_id: record.timetable_allocation_id,
                 timetable_id: record.timetable_id
             };
         });
 
-        const studentsArray = Array.from(studentMap.values()).map((student, index) => ({
+        const sortedStudents = Array.from(studentMap.values())
+            .sort((a, b) => {
+                const rollA = String(a.rollNo || '');
+                const rollB = String(b.rollNo || '');
+                return rollA.localeCompare(rollB, undefined, { numeric: true, sensitivity: 'base' });
+            });
+
+        const studentsArray = sortedStudents.map((student, index) => ({
             ...student,
             srNo: String(index + 1).padStart(2, '0')
         }));
@@ -332,12 +404,12 @@ export default function CardView() {
         return { color: '#6b7280', backgroundColor: '#f3f4f6', border: '1.5px solid #6b728040' };
     };
 
-    const toggleStatus = (studentId, day) => {
+    const toggleStatus = (studentId, colKey) => {
         if (sortedStatuses.length < 2) return;
 
         setAttendanceData(prev => prev.map(student => {
             if (student.id === studentId) {
-                const currentStatus = student.attendance[day];
+                const currentStatus = student.attendance[colKey];
                 let nextStatus;
 
                 if (!currentStatus) {
@@ -348,34 +420,42 @@ export default function CardView() {
                 }
 
                 setPendingChanges(prevChanges => {
-                    const newDayChanges = { ...(prevChanges[day] || {}) };
-                    newDayChanges[studentId] = {
-                        statusId: nextStatus.status_id,
-                        statusName: nextStatus.status_name
+                    const studentChanges = prevChanges[colKey] || {};
+                    return {
+                        ...prevChanges,
+                        [colKey]: {
+                            ...studentChanges,
+                            [studentId]: {
+                                status_id: nextStatus.status_id,
+                                status_code: nextStatus.status_code,
+                                remarks: ''
+                            }
+                        }
                     };
-                    return { ...prevChanges, [day]: newDayChanges };
                 });
 
                 return {
                     ...student,
-                    attendance: { ...student.attendance, [day]: nextStatus }
+                    attendance: { ...student.attendance, [colKey]: nextStatus }
                 };
             }
             return student;
         }));
     };
 
-    const toggleDaySelection = (day) => {
-        setSelectedDays(prev =>
-            prev.includes(day) ? prev.filter(d => d !== day) : [...prev, day]
+    const toggleLectureSelection = (colKey) => {
+        setSelectedLectures(prev =>
+            prev.includes(colKey)
+                ? prev.filter(k => k !== colKey)
+                : [...prev, colKey]
         );
     };
 
-    const markAllPresentGlobal = () => {
-        if (selectedDays.length === 0) {
+    const handleBulkAction = (targetStatus) => {
+        if (selectedLectures.length === 0) {
             Swal.fire({
-                title: 'No Dates Selected',
-                text: 'Please select dates in the table header first.',
+                title: 'No Lectures Selected',
+                text: 'Please select lectures in the table header first.',
                 icon: 'warning',
                 confirmButtonColor: '#FF9013',
                 customClass: {
@@ -385,18 +465,19 @@ export default function CardView() {
             return;
         }
 
-        const targetStatus = sortedStatuses.find(s => isPresent(s));
         if (!targetStatus) return;
 
         const allChanges = { ...pendingChanges };
         const updatedData = attendanceData.map(student => {
             const updatedAttendance = { ...student.attendance };
-            selectedDays.forEach(day => {
-                updatedAttendance[day] = targetStatus;
-                if (!allChanges[day]) allChanges[day] = {};
-                allChanges[day][student.id] = {
-                    statusId: targetStatus.status_id,
-                    statusName: targetStatus.status_name
+            selectedLectures.forEach(colKey => {
+                updatedAttendance[colKey] = targetStatus;
+
+                if (!allChanges[colKey]) allChanges[colKey] = {};
+                allChanges[colKey][student.id] = {
+                    status_id: targetStatus.status_id,
+                    status_code: targetStatus.status_code,
+                    remarks: ''
                 };
             });
             return { ...student, attendance: updatedAttendance };
@@ -404,52 +485,16 @@ export default function CardView() {
 
         setAttendanceData(updatedData);
         setPendingChanges(allChanges);
-        setSelectedDays([]);
-    };
-
-    const markAllAbsentGlobal = () => {
-        if (selectedDays.length === 0) {
-            Swal.fire({
-                title: 'No Dates Selected',
-                text: 'Please select dates in the table header first.',
-                icon: 'warning',
-                confirmButtonColor: '#FF9013',
-                customClass: {
-                    confirmButton: 'btn-confirm'
-                }
-            });
-            return;
-        }
-
-        const targetStatus = sortedStatuses.find(s => isAbsent(s));
-        if (!targetStatus) return;
-
-        const allChanges = { ...pendingChanges };
-        const updatedData = attendanceData.map(student => {
-            const updatedAttendance = { ...student.attendance };
-            selectedDays.forEach(day => {
-                updatedAttendance[day] = targetStatus;
-                if (!allChanges[day]) allChanges[day] = {};
-                allChanges[day][student.id] = {
-                    statusId: targetStatus.status_id,
-                    statusName: targetStatus.status_name
-                };
-            });
-            return { ...student, attendance: updatedAttendance };
-        });
-
-        setAttendanceData(updatedData);
-        setPendingChanges(allChanges);
-        setSelectedDays([]);
+        setSelectedLectures([]);
     };
 
     const handleSubmit = async () => {
-        const modifiedDays = Object.keys(pendingChanges);
-        if (modifiedDays.length === 0) return;
+        const modifiedColKeys = Object.keys(pendingChanges);
+        if (modifiedColKeys.length === 0) return;
 
         const result = await Swal.fire({
             title: 'Submit Changes?',
-            text: `You have modified attendance for ${modifiedDays.length} day(s).`,
+            text: `You have modified attendance for ${modifiedColKeys.length} lecture slot(s).`,
             icon: 'question',
             showCancelButton: true,
             confirmButtonText: 'Yes, Submit',
@@ -465,17 +510,18 @@ export default function CardView() {
 
         setIsSubmitting(true);
         try {
-            const payload = modifiedDays.map(day => {
-                const dayDate = `${selectedYear}-${String(selectedMonth).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+            const payload = modifiedColKeys.map(colKey => {
+                const [date, timeSlotId] = colKey.split('_');
+                const parsedTimeSlotId = parseInt(timeSlotId);
 
-                const studentsList = Object.keys(pendingChanges[day]).map(studId => ({
+                const studentsList = Object.keys(pendingChanges[colKey]).map(studId => ({
                     student_id: parseInt(studId),
-                    status_id: pendingChanges[day][studId].statusId,
-                    remarks: pendingChanges[day][studId].statusName
+                    status_id: pendingChanges[colKey][studId].status_id,
+                    remarks: pendingChanges[colKey][studId].status_code 
                 }));
 
-                const student = attendanceData.find(s => s.id === parseInt(Object.keys(pendingChanges[day])[0]));
-                const meta = student?.metadata[day] || {};
+                // Find lecture info from the scheduled lectures state
+                const lectureInfo = lectures.find(l => l.date === date && l.time_slot_id === parsedTimeSlotId);
 
                 const currentAlloc = allocations.find(a =>
                     a.academic_year_id == filters.academicYear &&
@@ -490,10 +536,10 @@ export default function CardView() {
                     division_id: parseInt(filters.division),
                     subject_id: parseInt(filters.paper),
                     college_id: collegeId,
-                    date: dayDate,
-                    time_slot_id: meta.time_slot_id || 0,
-                    timetable_allocation_id: meta.timetable_allocation_id || currentAlloc?.timetable_allocation_id || "",
-                    timetable_id: meta.timetable_id || currentAlloc?.timetable_id || 0,
+                    date: date,
+                    time_slot_id: parsedTimeSlotId,
+                    timetable_allocation_id: lectureInfo?.timetable_allocation_id || currentAlloc?.timetable_allocation_id || "",
+                    timetable_id: lectureInfo?.timetable_id || currentAlloc?.timetable_id || 0,
                     students: studentsList,
                 };
             });
@@ -529,14 +575,13 @@ export default function CardView() {
     };
 
     const getAttendanceTotals = (student) => {
-        const attendanceValues = Object.values(student.attendance);
-        const present = attendanceValues.filter(s => isPresent(s)).length;
-        const absent = attendanceValues.filter(s => isAbsent(s)).length;
+        const present = displayColumns.filter(col => col.is_scheduled && isPresent(student.attendance[col.colKey])).length;
+        const absent = displayColumns.filter(col => col.is_scheduled && isAbsent(student.attendance[col.colKey])).length;
         return { present, absent };
     };
 
-    const getDailyPresentCount = (day) => {
-        return attendanceData.filter(student => isPresent(student.attendance[day])).length;
+    const getLecturePresentCount = (colKey) => {
+        return attendanceData.filter(student => isPresent(student.attendance[colKey])).length;
     };
 
     const hasChanges = Object.keys(pendingChanges).length > 0;
@@ -552,8 +597,7 @@ export default function CardView() {
                 confirmButtonColor: '#ef4444',
                 cancelButtonColor: '#2162C1',
                 customClass: {
-                    confirmButton: 'btn-confirm',
-                    cancelButton: 'btn-cancel'
+                    confirmButton: 'btn-confirm'
                 }
             }).then(result => {
                 if (result.isConfirmed) fetchAttendanceData();
@@ -564,7 +608,7 @@ export default function CardView() {
     // Success Alert Handler
     const handleSuccessAlertConfirm = () => {
         setShowSuccessAlert(false);
-        fetchAttendanceData();
+        fetchAttendanceData(); // Refresh data to show saved states
     };
 
     return (
@@ -655,11 +699,11 @@ export default function CardView() {
                                 </div>
                             ))}
                         </div>
-                        {selectedDays.length > 0 && (
+                        {selectedLectures.length > 0 && (
                             <div className="flex items-center gap-2 bg-blue-50 text-blue-700 font-bold text-[10px] px-3 py-1.5 rounded-lg border border-blue-200 animate-in fade-in slide-in-from-left-4">
                                 <CheckCircle2 size={12} />
-                                {selectedDays.length} Dates Selected
-                                <button onClick={() => setSelectedDays([])} className="ml-1 text-red-500 hover:underline">Cancel</button>
+                                {selectedLectures.length} Lectures Selected
+                                <button onClick={() => setSelectedLectures([])} className="ml-1 text-red-500 hover:underline">Cancel</button>
                             </div>
                         )}
                     </div>
@@ -676,15 +720,15 @@ export default function CardView() {
                             </button>
                         )}
                         <button
-                            onClick={markAllPresentGlobal}
-                            className={`flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-lg font-bold shadow-md hover:shadow-lg transition-all active:scale-95 text-xs ${selectedDays.length === 0 ? 'opacity-50 grayscale cursor-not-allowed' : 'hover:translate-y-[-2px]'}`}
+                            onClick={() => handleBulkAction(sortedStatuses.find(s => isPresent(s)))}
+                            className={`flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-lg font-bold shadow-md hover:shadow-lg transition-all active:scale-95 text-xs ${selectedLectures.length === 0 ? 'opacity-50 grayscale cursor-not-allowed' : 'hover:translate-y-[-2px]'}`}
                         >
                             <CheckCircle2 size={14} />
                             <span>Mark All Present</span>
                         </button>
                         <button
-                            onClick={markAllAbsentGlobal}
-                            className={`flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-red-500 to-rose-600 text-white rounded-lg font-bold shadow-md hover:shadow-lg transition-all active:scale-95 text-xs ${selectedDays.length === 0 ? 'opacity-50 grayscale cursor-not-allowed' : 'hover:translate-y-[-2px]'}`}
+                            onClick={() => handleBulkAction(sortedStatuses.find(s => isAbsent(s)))}
+                            className={`flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-red-500 to-rose-600 text-white rounded-lg font-bold shadow-md hover:shadow-lg transition-all active:scale-95 text-xs ${selectedLectures.length === 0 ? 'opacity-50 grayscale cursor-not-allowed' : 'hover:translate-y-[-2px]'}`}
                         >
                             <AlertCircle size={14} />
                             <span>Mark All Absent</span>
@@ -700,12 +744,20 @@ export default function CardView() {
                         <p className="text-gray-500 font-bold">Synchronizing records...</p>
                     </div>
                 </div>
+            ) : lectures.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-20 bg-gray-50 rounded-2xl border-2 border-dashed border-gray-200">
+                    <div className="w-16 h-16 bg-blue-50 text-blue-400 rounded-full flex items-center justify-center mb-4">
+                        <Calendar size={32} />
+                    </div>
+                    <h3 className="text-lg font-bold text-gray-800">No Lectures Scheduled</h3>
+                    <p className="text-gray-500 text-sm max-w-xs text-center">There are no lectures scheduled for the selected subject and month in the timetable.</p>
+                </div>
             ) : attendanceData.length === 0 ? (
                 <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-20 text-center">
                     <div className="flex flex-col items-center justify-center gap-4 text-gray-400">
-                        <Calendar size={48} />
-                        <h3 className="text-xl font-bold text-gray-800">No records found</h3>
-                        <p className="max-w-xs mx-auto text-sm">Please update your filters or check the selected month.</p>
+                        <Users size={48} />
+                        <h3 className="text-xl font-bold text-gray-800">No students found</h3>
+                        <p className="max-w-xs mx-auto text-sm">No students are allocated to this division/subject.</p>
                     </div>
                 </div>
             ) : (
@@ -717,13 +769,15 @@ export default function CardView() {
                                     <th className="py-4 px-2 w-[60px] bg-blue-800 z-50 sticky left-0 font-bold border-r border-blue-700 shadow-sm">SR</th>
                                     <th className="py-4 px-2 w-[80px] bg-blue-800 z-50 sticky left-[60px] font-bold border-r border-blue-700 shadow-sm">Roll</th>
                                     <th className="py-4 px-6 w-[240px] text-left bg-blue-800 z-50 sticky left-[140px] font-bold border-r border-blue-700 shadow-[2px_0_5px_rgba(0,0,0,0.1)]">Student Name</th>
-                                    {days.map(day => {
-                                        const isSelected = selectedDays.includes(day);
+                                    {displayColumns.map(col => {
+                                        const isSelected = selectedLectures.includes(col.colKey);
+                                        const isDisabled = !col.is_scheduled;
+                                        
                                         return (
                                             <th
-                                                key={day}
-                                                onClick={() => toggleDaySelection(day)}
-                                                className={`p-0 border-r border-blue-700 w-14 cursor-pointer transition-all hover:bg-blue-700 relative overflow-hidden ${isSelected ? 'bg-blue-600' : ''}`}
+                                                key={col.colKey}
+                                                onClick={() => !isDisabled && toggleLectureSelection(col.colKey)}
+                                                className={`p-0 border-r border-blue-700 w-16 relative overflow-hidden transition-all ${isDisabled ? 'bg-blue-800 text-white/40 cursor-not-allowed' : 'bg-blue-800 text-white cursor-pointer hover:bg-blue-700'} ${isSelected ? 'bg-blue-600' : ''}`}
                                             >
                                                 <div className="flex flex-col items-center justify-center py-2 h-full">
                                                     {isSelected ? (
@@ -731,7 +785,10 @@ export default function CardView() {
                                                             <CheckCircle2 size={16} />
                                                         </div>
                                                     ) : (
-                                                        <span className="font-bold text-[11px] h-[20px] flex items-center justify-center">{day}</span>
+                                                        <>
+                                                            <span className="font-bold text-[11px] h-[16px] flex items-center justify-center">{col.day}</span>
+                                                            <span className="text-[7px] opacity-70 font-medium truncate w-full px-1">{col.formatted_start_time || ''}</span>
+                                                        </>
                                                     )}
                                                 </div>
                                             </th>
@@ -751,17 +808,22 @@ export default function CardView() {
                                             <td className="py-3 px-6 border-r border-gray-300 text-left bg-white group-hover:bg-blue-50 sticky left-[140px] z-40 shadow-[2px_0_5px_rgba(0,0,0,0.02)] border-b-2 border-gray-300">
                                                 <span className="truncate block max-w-[180px] font-bold text-gray-700">{student.name}</span>
                                             </td>
-                                            {days.map(day => {
-                                                const isColSelected = selectedDays.includes(day);
+                                            {displayColumns.map(col => {
+                                                const isColSelected = selectedLectures.includes(col.colKey);
+                                                const isDisabled = !col.is_scheduled;
+                                                const status = student.attendance[col.colKey];
+                                                const style = getStatusStyle(status);
+                                                
                                                 return (
-                                                    <td key={day} className={`p-1 border-r border-gray-300 border-b-2 border-gray-300 transition-colors ${isColSelected ? 'bg-blue-50/40' : ''}`}>
+                                                    <td key={col.colKey} className={`p-1 border-r border-gray-300 border-b-2 border-gray-300 transition-colors ${isDisabled ? 'bg-gray-100 cursor-not-allowed' : (isColSelected ? 'bg-blue-50/40' : '')}`}>
                                                         <button
-                                                            onClick={() => toggleStatus(student.id, day)}
-                                                            className={`flex items-center justify-center w-8 h-8 mx-auto rounded-lg font-black text-[10px] transition-all transform active:scale-75 ${pendingChanges[day]?.[student.id] ? 'ring-2 ring-blue-500 ring-offset-1 z-10' : ''
+                                                            onClick={() => !isDisabled && toggleStatus(student.id, col.colKey)}
+                                                            className={`flex items-center justify-center w-8 h-8 mx-auto rounded-lg font-black text-[10px] transition-all transform ${isDisabled ? 'opacity-0' : 'active:scale-75 cursor-pointer'} ${pendingChanges[col.colKey]?.[student.id] ? 'ring-2 ring-blue-500 ring-offset-1 z-10' : ''
                                                                 }`}
-                                                            style={getStatusStyle(student.attendance[day])}
+                                                            style={style}
+                                                            disabled={isDisabled}
                                                         >
-                                                            {student.attendance[day]?.status_code || ''}
+                                                            {status?.status_code || ''}
                                                         </button>
                                                     </td>
                                                 );
@@ -782,9 +844,9 @@ export default function CardView() {
                                     <td colSpan="3" className="py-4 px-6 text-right font-black text-[11px] text-gray-700 tracking-wider sticky left-0 z-40 bg-gray-100 border-r border-gray-300">
                                         Total Present Count
                                     </td>
-                                    {days.map(day => (
-                                        <td key={day} className="py-4 border-r border-gray-300 font-black text-[11px] text-blue-700 bg-white">
-                                            {getDailyPresentCount(day)}
+                                    {displayColumns.map(col => (
+                                        <td key={col.colKey} className={`py-4 border-r border-gray-300 font-black text-[11px] ${!col.is_scheduled ? 'bg-gray-100' : 'text-blue-700 bg-white'}`}>
+                                            {col.is_scheduled ? getLecturePresentCount(col.colKey) : ''}
                                         </td>
                                     ))}
                                     <td colSpan="2" className="bg-gray-50 border-l border-gray-300"></td>
