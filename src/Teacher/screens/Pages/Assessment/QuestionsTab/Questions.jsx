@@ -368,6 +368,7 @@ const Questions = () => {
 
         {/* Questions Grid */}
         <div className="p-6">
+            <div className="max-h-[500px] overflow-y-auto pr-2 blue-scrollbar">
           <div className="grid gap-4">
             {/* Question Card 1 */}
             <div className="border border-gray-200 rounded-lg p-5 hover:shadow-md transition-shadow">
@@ -469,6 +470,7 @@ const Questions = () => {
                 <span>Created: 3 days ago</span>
               </div>
             </div>
+          </div>
           </div>
 
           {/* Pagination */}

@@ -132,6 +132,7 @@ export default function CheckOut() {
         {/* Books Table */}
         <div className="bg-white shadow-lg rounded-xl border border-gray-200 overflow-hidden">
           <div className="overflow-x-auto">
+              <div className="h-[500px] overflow-y-auto blue-scrollbar">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="table-header">
                 <tr>
@@ -200,6 +201,7 @@ export default function CheckOut() {
                 )}
               </tbody>
             </table>
+            </div>
           </div>
 
           {/* Summary Footer */}

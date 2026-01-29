@@ -214,6 +214,7 @@ export default function MyRegistrations() {
 
       {/* Table */}
       <div className="overflow-x-auto bg-white rounded-lg shadow">
+          <div className="h-[500px] overflow-y-auto blue-scrollbar">
         <table className="w-full">
           <thead className="bg-blue-600 text-white">
             <tr>
@@ -240,6 +241,7 @@ export default function MyRegistrations() {
             )}
           </tbody>
         </table>
+        </div>
       </div>
 
       {/* Pagination */}

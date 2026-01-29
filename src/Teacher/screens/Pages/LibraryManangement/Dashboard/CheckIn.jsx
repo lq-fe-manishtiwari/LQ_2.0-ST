@@ -66,6 +66,7 @@ export default function CheckIn() {
 
         <div className="bg-white shadow-xl rounded-2xl border border-gray-200 overflow-hidden">
           <div className="overflow-x-auto">
+              <div className="h-[500px] overflow-y-auto blue-scrollbar">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-[#2162C1] text-white">
                 <tr>
@@ -102,6 +103,7 @@ export default function CheckIn() {
                 ))}
               </tbody>
             </table>
+          </div>
           </div>
 
           <div className="bg-gray-50 px-6 py-5 border-t border-gray-200 flex flex-col sm:flex-row justify-between items-center gap-4">

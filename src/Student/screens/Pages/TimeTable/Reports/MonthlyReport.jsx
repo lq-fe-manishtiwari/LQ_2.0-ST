@@ -289,6 +289,7 @@ const MonthlyReport = () => {
                     </div>
                 </div>
                 <div className="overflow-x-auto">
+                      <div className="h-[500px] overflow-y-auto blue-scrollbar">
                     <table className="w-full min-w-max">
                         <thead className="bg-blue-800 text-white">
                             <tr>
@@ -341,6 +342,7 @@ const MonthlyReport = () => {
                         </tbody>
 
                     </table>
+                    </div>
                 </div>
             </div>
         </div>
