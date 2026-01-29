@@ -1,9 +1,10 @@
-import { authHeader, handleResponse, authHeaderToPost, PMSNEWAPI,ExamMGMAPI,FinanceAPI } from '@/_services/api';
+import { authHeader, handleResponse, authHeaderToPost, PMSNEWAPI,ExamMGMAPI,FinanceAPI,DevAPI } from '@/_services/api';
 
 
 export const regularFormService = {
    getStudentExamForms,
-   allocateExamFees
+   allocateExamFees,
+   getStudentHistory,
 };
 
 /**
@@ -37,4 +38,15 @@ function allocateExamFees(payload) {
     `${FinanceAPI}/admin/student-fee-allocations/exam-fees`,
     requestOptions
   ).then(handleResponse);
+}
+
+function getStudentHistory(studentId) {
+  const requestOptions = {
+    method: "GET",
+    headers: authHeader(),
+  };
+
+  
+  return fetch(`${DevAPI}/admin/students/student/${studentId}/history/active`, requestOptions)
+    .then(handleResponse);
 }

@@ -10,6 +10,9 @@ const RegularForm = () => {
   const [loading, setLoading] = useState(true);
   const [feeData, setFeeData] = useState(null);
   const [loadingFees, setLoadingFees] = useState(false);
+  const [studentHistory, setStudentHistory] = useState(null);
+  const [loadingHistory, setLoadingHistory] = useState(false);
+  const [processingPayment, setProcessingPayment] = useState(false);
 
   // Get student ID from localStorage or context
   const getStudentId = () => {
@@ -22,28 +25,41 @@ const RegularForm = () => {
     }
   };
 
-  // Load fee data when payment modal opens
+  // Load fee data and student history when payment modal opens
   const loadFeeData = async (form) => {
     const studentId = getStudentId();
     if (!studentId || !form) return;
 
+    setLoadingHistory(true);
     setLoadingFees(true);
     try {
+      // First call getStudentHistory to get proper IDs
+      const historyResponse = await regularFormService.getStudentHistory(
+        parseInt(studentId), 
+        parseInt(form.academic_year_id), 
+        parseInt(form.semester_id)
+      );
+      setStudentHistory(historyResponse);
+      
+      // Then use the IDs from history response for allocateExamFees
+      const studentData = historyResponse?.[0];
       const payload = {
-        academic_year_id: parseInt(form.academic_year_id),
-        semester_id: parseInt(form.semester_id),
+        academic_year_id: studentData?.academic_year_id || parseInt(form.academic_year_id),
+        semester_id: studentData?.semester_id || parseInt(form.semester_id),
         fee_type_id: parseInt(form.fee_type_id),
         student_ids: [parseInt(studentId)]
       };
       
       console.log('Payment API payload:', payload);
-      const response = await regularFormService.allocateExamFees(payload);
-      setFeeData(response);
+      const feeResponse = await regularFormService.allocateExamFees(payload);
+      setFeeData(feeResponse);
     } catch (error) {
-      console.error('Failed to load fee data:', error);
+      console.error('Failed to load data:', error);
       setFeeData(null);
+      setStudentHistory(null);
     } finally {
       setLoadingFees(false);
+      setLoadingHistory(false);
     }
   };
 
@@ -52,8 +68,50 @@ const RegularForm = () => {
     setPaymentModal(true);
     loadFeeData(form);
   };
+
+  // Razorpay payment handler
+  const handleRazorpayPayment = () => {
+    const totalAmount = feeData?.reduce((total, allocation) => total + (allocation.pending_amount || 0), 0) || 1700;
+    const studentData = studentHistory?.[0];
+    
+    const options = {
+      key: "rzp_test_9WseLWo2O16lbc",
+      amount: totalAmount * 100,
+      currency: "INR",
+      name: "Exam Fee Payment",
+      description: `Payment for ${selectedForm?.exam_form_name}`,
+      handler: function (response) {
+        console.log('Payment successful:', response);
+        setPaymentModal(false);
+        alert(`Payment successful! Payment ID: ${response.razorpay_payment_id}`);
+      },
+      prefill: {
+        name: studentData?.firstname + " " + studentData?.lastname || "Student",
+        email: studentData?.email || "",
+        contact: studentData?.mobile || ""
+      },
+      theme: {
+        color: "#3B82F6"
+      },
+      modal: {
+        ondismiss: function() {
+          setProcessingPayment(false);
+        }
+      }
+    };
+
+    setProcessingPayment(true);
+    const rzp = new window.Razorpay(options);
+    rzp.open();
+  };
   // Load student exam forms on component mount
   useEffect(() => {
+    // Load Razorpay script
+    const script = document.createElement('script');
+    script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+    script.async = true;
+    document.body.appendChild(script);
+
     const loadExamForms = async () => {
       const studentId = getStudentId();
       if (!studentId) {
@@ -235,30 +293,30 @@ const RegularForm = () => {
 
       {/* ================= PAYMENT MODAL ================= */}
       {paymentModal && selectedForm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-          <div className="bg-white w-[95%] max-w-4xl rounded-xl shadow-lg overflow-hidden">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="bg-white w-full max-w-4xl max-h-[90vh] rounded-xl shadow-lg overflow-hidden">
             <div className="bg-blue-600 px-6 py-4 flex justify-between items-center">
               <h3 className="text-lg font-semibold text-white">Payment Details - {selectedForm.exam_form_name}</h3>
               <button onClick={() => setPaymentModal(false)}>
                 <X className="text-white" />
               </button>
             </div>
-            <div className="p-6">
+            <div className="p-6 overflow-y-auto max-h-[calc(90vh-80px)]">
               {/* Student Info */}
               <div className="bg-gray-50 p-4 rounded-lg mb-6">
                 <h4 className="font-semibold mb-3 text-gray-800">Student Information</h4>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
                   <div>
-                    <span className="text-sm text-gray-600">Name:</span>
-                    <p className="font-medium">Rajesh Patil</p>
+                    <span className="text-gray-600">Name:</span>
+                    <p className="font-medium">{studentHistory?.[0]?.student_name || "Rajesh Patil"}</p>
                   </div>
                   <div>
-                    <span className="text-sm text-gray-600">Program:</span>
-                    <p className="font-medium">{selectedForm.program_name}</p>
+                    <span className="text-gray-600">Roll Number:</span>
+                    <p className="font-medium">{studentHistory?.[0]?.roll_number || "N/A"}</p>
                   </div>
                   <div>
-                    <span className="text-sm text-gray-600">Batch:</span>
-                    <p className="font-medium">{selectedForm.batch_name}</p>
+                    <span className="text-gray-600">Program:</span>
+                    <p className="font-medium">{studentHistory?.[0]?.academic_year?.program?.program_name || selectedForm.program_name}</p>
                   </div>
                 </div>
               </div>
@@ -270,62 +328,49 @@ const RegularForm = () => {
                   <div className="p-6 text-center text-gray-500">
                     Loading fee details...
                   </div>
-                ) : feeData ? (
+                ) : feeData && feeData.length > 0 ? (
                   <div className="overflow-x-auto">
-                    <table className="w-full border border-gray-200 rounded-lg">
+                    <table className="w-full border border-gray-200 rounded-lg text-sm">
                       <thead className="bg-gray-100">
                         <tr>
-                          <th className="px-4 py-3 text-left font-medium text-gray-700">Fee Type</th>
-                          <th className="px-4 py-3 text-right font-medium text-gray-700">Amount</th>
-                          <th className="px-4 py-3 text-center font-medium text-gray-700">Due Date</th>
+                          <th className="px-3 py-2 text-left font-medium text-gray-700">Fee Type</th>
+                          <th className="px-3 py-2 text-right font-medium text-gray-700">Total</th>
+                          <th className="px-3 py-2 text-right font-medium text-gray-700">Paid</th>
+                          <th className="px-3 py-2 text-right font-medium text-gray-700">Balance</th>
+                          <th className="px-3 py-2 text-center font-medium text-gray-700">Due Date</th>
                         </tr>
                       </thead>
                       <tbody>
-                        {feeData.fees?.map((fee, index) => (
-                          <tr key={index} className="border-t">
-                            <td className="px-4 py-3">{fee.fee_type_name || 'Fee'}</td>
-                            <td className="px-4 py-3 text-right font-medium">₹{fee.amount || 0}</td>
-                            <td className="px-4 py-3 text-center">{fee.due_date || 'N/A'}</td>
-                          </tr>
-                        ))}
+                        {feeData.map((allocation, index) => 
+                          allocation.fee_lines?.map((feeLine, lineIndex) => (
+                            <tr key={`${index}-${lineIndex}`} className="border-t">
+                              <td className="px-3 py-2">{feeLine.particular_name}</td>
+                              <td className="px-3 py-2 text-right font-medium">₹{feeLine.total_amount || 0}</td>
+                              <td className="px-3 py-2 text-right font-medium">₹{feeLine.paid_amount || 0}</td>
+                              <td className="px-3 py-2 text-right font-medium">₹{feeLine.balance || 0}</td>
+                              <td className="px-3 py-2 text-center">{feeLine.due_date || 'N/A'}</td>
+                            </tr>
+                          ))
+                        )}
                         <tr className="border-t bg-blue-50">
-                          <td className="px-4 py-3 font-semibold">Total Amount</td>
-                          <td className="px-4 py-3 text-right font-bold text-blue-600">
-                            ₹{feeData.total_amount || 0}
+                          <td className="px-3 py-2 font-semibold">Total</td>
+                          <td className="px-3 py-2 text-right font-bold text-blue-600">
+                            ₹{feeData.reduce((total, allocation) => total + (allocation.total_fees || 0), 0)}
                           </td>
-                          <td className="px-4 py-3"></td>
+                          <td className="px-3 py-2 text-right font-bold text-green-600">
+                            ₹{feeData.reduce((total, allocation) => total + (allocation.paid_amount || 0), 0)}
+                          </td>
+                          <td className="px-3 py-2 text-right font-bold text-red-600">
+                            ₹{feeData.reduce((total, allocation) => total + (allocation.pending_amount || 0), 0)}
+                          </td>
+                          <td className="px-3 py-2"></td>
                         </tr>
                       </tbody>
                     </table>
                   </div>
                 ) : (
-                  <div className="overflow-x-auto">
-                    <table className="w-full border border-gray-200 rounded-lg">
-                      <thead className="bg-gray-100">
-                        <tr>
-                          <th className="px-4 py-3 text-left font-medium text-gray-700">Fee Type</th>
-                          <th className="px-4 py-3 text-right font-medium text-gray-700">Amount</th>
-                          <th className="px-4 py-3 text-center font-medium text-gray-700">Due Date</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        <tr className="border-t">
-                          <td className="px-4 py-3">Exam Registration Fee</td>
-                          <td className="px-4 py-3 text-right font-medium">₹1,500</td>
-                          <td className="px-4 py-3 text-center">15 Dec 2024</td>
-                        </tr>
-                        <tr className="border-t">
-                          <td className="px-4 py-3">Processing Fee</td>
-                          <td className="px-4 py-3 text-right font-medium">₹200</td>
-                          <td className="px-4 py-3 text-center">15 Dec 2024</td>
-                        </tr>
-                        <tr className="border-t bg-blue-50">
-                          <td className="px-4 py-3 font-semibold">Total Amount</td>
-                          <td className="px-4 py-3 text-right font-bold text-blue-600">₹1,700</td>
-                          <td className="px-4 py-3"></td>
-                        </tr>
-                      </tbody>
-                    </table>
+                  <div className="text-center py-4 text-gray-500">
+                    No fee data available
                   </div>
                 )}
               </div>
@@ -353,8 +398,12 @@ const RegularForm = () => {
                 >
                   Cancel
                 </button>
-                <button className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">
-                  Proceed to Pay ₹{feeData?.total_amount || 1700}
+                <button 
+                  onClick={handleRazorpayPayment}
+                  disabled={processingPayment || !feeData}
+                  className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
+                >
+                  {processingPayment ? 'Processing...' : `Proceed to Pay ₹${feeData?.reduce((total, allocation) => total + (allocation.pending_amount || 0), 0) || 1700}`}
                 </button>
               </div>
             </div>
