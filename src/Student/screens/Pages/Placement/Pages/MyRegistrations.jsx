@@ -3,7 +3,9 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Search, Eye, Filter, ChevronDown, Clock, CheckCircle, XCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { studentPlacementService } from '../Services/studentPlacement.service';
+import { studentPlacementService } from '../Services/studentPlacement.service.js';
+import { getApplicationsByCollege, getApplicationsByCollegeAndStatus, getJobOpeningsForStudent } from '../Services/studentPlacement.service.js';
+import { useUserProfile } from '../../../../../contexts/UserProfileContext';
 
 // Custom Select Component
 const CustomSelect = ({ label, value, onChange, options, placeholder }) => {
@@ -64,6 +66,7 @@ export default function MyRegistrations() {
     filterOpen: false,
     status: ''
   });
+  const { getUserId } = useUserProfile();
 
   const navigate = useNavigate();
   const entriesPerPage = 10;
@@ -76,12 +79,32 @@ export default function MyRegistrations() {
   const loadRegistrations = async () => {
     setLoading(true);
     try {
-      // Use hardcoded PRN ID directly
-      const data = await studentPlacementService.getStudentDriveApplications();
-      setRegistrations(data || []);
+      // Get user ID using useUserProfile hook like AddStudentProject
+      const userId = getUserId();
+      const studentId = userId; // Assuming userId is the student ID
+      const collegeId = 5; // You may need to get this from context too
+      
+      if (!studentId || !collegeId) {
+        console.error('Student ID or College ID not found');
+        setRegistrations([]);
+        return;
+      }
+      
+      // Get student's applications (registrations)
+      const applications = await getApplicationsByCollege(collegeId);
+      const studentApplications = applications.filter(app => 
+        app.application_data?.student_id === studentId
+      );
+      setRegistrations(studentApplications);
     } catch (error) {
       console.error('Failed to load registrations:', error);
-      setRegistrations([]);
+      // Fallback to existing service
+      try {
+        const data = await studentPlacementService.getStudentDriveApplications();
+        setRegistrations(data || []);
+      } catch (fallbackError) {
+        setRegistrations([]);
+      }
     } finally {
       setLoading(false);
     }
@@ -116,7 +139,10 @@ export default function MyRegistrations() {
     }
 
     if (filters.status) {
-      list = list.filter(item => item.status === filters.status);
+      list = list.filter(item => 
+        item.status === filters.status || 
+        item.application_status?.toLowerCase() === filters.status.toLowerCase()
+      );
     }
 
     const totalEntries = list.length;

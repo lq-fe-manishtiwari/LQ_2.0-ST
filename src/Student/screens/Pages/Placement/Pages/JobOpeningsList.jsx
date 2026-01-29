@@ -4,6 +4,8 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Search, Filter, ChevronDown } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import SweetAlert from 'react-bootstrap-sweetalert';
+import { getJobOpeningsForStudent } from '../Services/studentPlacement.service';
+import { useUserProfile } from '../../../../../contexts/UserProfileContext';
 
 export default function JobList() {
   const [jobs, setJobs] = useState([]);
@@ -11,6 +13,7 @@ export default function JobList() {
   const [alert, setAlert] = useState(null);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const { getUserId } = useUserProfile();
 
   const [filters, setFilters] = useState({
     filterOpen: false,
@@ -27,66 +30,50 @@ export default function JobList() {
 
   const loadJobs = async () => {
     setLoading(true);
-    // Mock data
-    const mockData = [
-      {
-        placement_id: 'PL20260101',
-        organisation: 'Infosys',
-        opening_date: '15/01/2026',
-        job_role: 'Software Engineer',
-        selection_criteria: 'CGPA >= 7.0, No backlogs',
-        ctc: '8.5',
-        job_description: 'Full stack development with Java and React',
-        position_open_till: '28/02/2026',
-        expected_joining_date: '01/07/2026'
-      },
-      {
-        placement_id: 'PL20260102',
-        organisation: 'TCS',
-        opening_date: '20/01/2026',
-        job_role: 'System Engineer',
-        selection_criteria: 'CGPA >= 6.5, All branches',
-        ctc: '7.2',
-        job_description: 'Software development and maintenance',
-        position_open_till: '15/03/2026',
-        expected_joining_date: '15/07/2026'
-      },
-      {
-        placement_id: 'PL20260103',
-        organisation: 'Wipro',
-        opening_date: '25/01/2026',
-        job_role: 'Project Engineer',
-        selection_criteria: 'CGPA >= 6.0, CSE/IT/ECE',
-        ctc: '6.8',
-        job_description: 'Client-facing project development',
-        position_open_till: '20/03/2026',
-        expected_joining_date: '01/08/2026'
-      },
-      {
-        placement_id: 'PL20260104',
-        organisation: 'Cognizant',
-        opening_date: '01/02/2026',
-        job_role: 'Programmer Analyst',
-        selection_criteria: 'CGPA >= 7.5, No active backlogs',
-        ctc: '9.0',
-        job_description: 'Application development and testing',
-        position_open_till: '25/03/2026',
-        expected_joining_date: '10/08/2026'
-      },
-      {
-        placement_id: 'PL20260105',
-        organisation: 'Accenture',
-        opening_date: '05/02/2026',
-        job_role: 'Associate Software Engineer',
-        selection_criteria: 'CGPA >= 7.0, All branches eligible',
-        ctc: '8.0',
-        job_description: 'Digital transformation projects',
-        position_open_till: '30/03/2026',
-        expected_joining_date: '20/08/2026'
+    try {
+      // Get student ID using useUserProfile hook like AddStudentProject
+      const userId = getUserId();
+      const studentId = userId; // Assuming userId is the student ID
+      
+      if (!studentId) {
+        console.error('Student ID not found');
+        setJobs([]);
+        return;
       }
-    ];
-    setJobs(mockData);
-    setLoading(false);
+      
+      const jobOpenings = await getJobOpeningsForStudent(studentId);
+      setJobs(jobOpenings || []);
+    } catch (error) {
+      console.error('Failed to load job openings:', error);
+      // Fallback to mock data
+      const mockData = [
+        {
+          placement_id: 'PL20260101',
+          organisation: 'Infosys',
+          opening_date: '15/01/2026',
+          job_role: 'Software Engineer',
+          selection_criteria: 'CGPA >= 7.0, No backlogs',
+          ctc: '8.5',
+          job_description: 'Full stack development with Java and React',
+          position_open_till: '28/02/2026',
+          expected_joining_date: '01/07/2026'
+        },
+        {
+          placement_id: 'PL20260102',
+          organisation: 'TCS',
+          opening_date: '20/01/2026',
+          job_role: 'System Engineer',
+          selection_criteria: 'CGPA >= 6.5, All branches',
+          ctc: '7.2',
+          job_description: 'Software development and maintenance',
+          position_open_till: '15/03/2026',
+          expected_joining_date: '15/07/2026'
+        }
+      ];
+      setJobs(mockData);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const paginatedData = useMemo(() => {
