@@ -35,7 +35,7 @@ const StudentAcademicJourney = ({ studentData, historyLoading, enrichedHistory =
     }
 
     setHistoryLoadingLocal(true);
-    StudentService.getStudentHistory(studentId)
+    StudentService.getStudentHistoryWithoutactive(studentId)
       .then((res) => {
         // eslint-disable-next-line no-console
         console.log("Student history response:", res);
