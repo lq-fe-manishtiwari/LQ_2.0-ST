@@ -14,7 +14,7 @@ const StudentEducationalDetails = ({ studentData }) => {
         {title}
       </h3>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 xs:grid-cols-2 lg:grid-cols-3 gap-4">
         {items.map((info, index) => (
           <div key={index} className="bg-gray-50 p-4 rounded-lg border">
             <div className="flex items-center mb-2">
@@ -39,8 +39,9 @@ const StudentEducationalDetails = ({ studentData }) => {
           <GraduationCap className="w-5 h-5 text-indigo-500 mr-2" />
           Previous Qualifications
         </h3>
-        <div className="bg-gray-50 p-8 rounded-lg border text-center">
-          <p className="text-gray-500">No education details available</p>
+        <div className="bg-gray-50 p-6 sm:p-12 rounded-lg border text-center">
+          <GraduationCap className="w-12 h-12 sm:w-16 sm:h-16 mx-auto mb-4 text-gray-400" />
+          <p className="text-gray-500 text-base sm:text-lg">No education details available</p>
         </div>
       </div>
     </div>

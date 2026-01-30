@@ -34,7 +34,7 @@ const StudentCommunicationDetails = ({ studentData }) => {
         {title}
       </h3>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 xs:grid-cols-2 lg:grid-cols-3 gap-4">
         {items.map((info, index) => (
           <div key={index} className="bg-gray-50 p-4 rounded-lg border">
             <div className="flex items-center mb-2">

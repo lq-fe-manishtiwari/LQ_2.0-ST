@@ -4,11 +4,11 @@ import TabsNav from "../Profile/Components/TabNav";
 
 export default function ProfileLayout() {
   return (
-    <div className="p-0 sm:p-6">
-      <h2 className="pageheading mb-2 sm:mb-4">My Profile</h2>
-      <TabsNav/>
+    <div className="p-4 sm:p-6 bg-gray-50 min-h-screen">
+      <h2 className="pageheading mb-4 sm:mb-6 text-xl sm:text-2xl font-bold text-gray-800">My Profile</h2>
+      <TabsNav />
 
-      <div className="mt-1 sm:mt-3 sm:bg-white sm:p-4 sm:rounded-xl sm:shadow-sm sm:border sm:border-gray-100">
+      <div className="mt-2 sm:mt-4">
         <Outlet />
       </div>
     </div>
