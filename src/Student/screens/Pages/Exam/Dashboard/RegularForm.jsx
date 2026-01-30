@@ -35,12 +35,12 @@ const RegularForm = () => {
     try {
       // First call getStudentHistory to get proper IDs
       const historyResponse = await regularFormService.getStudentHistory(
-        parseInt(studentId), 
-        parseInt(form.academic_year_id), 
+        parseInt(studentId),
+        parseInt(form.academic_year_id),
         parseInt(form.semester_id)
       );
       setStudentHistory(historyResponse);
-      
+
       // Then use the IDs from history response for allocateExamFees
       const studentData = historyResponse?.[0];
       const payload = {
@@ -49,7 +49,7 @@ const RegularForm = () => {
         fee_type_id: parseInt(form.fee_type_id),
         student_ids: [parseInt(studentId)]
       };
-      
+
       console.log('Payment API payload:', payload);
       const feeResponse = await regularFormService.allocateExamFees(payload);
       setFeeData(feeResponse);
@@ -156,7 +156,6 @@ const RegularForm = () => {
       },
       modal: {
         ondismiss: async () => {
-          await updatePaymentStatus(feeAllocationId, "FAILED", {});
           alert('Payment cancelled');
         }
       },
@@ -168,33 +167,34 @@ const RegularForm = () => {
     try {
       const rzp = new window.Razorpay(options);
       rzp.open();
-      await updatePaymentStatus(feeAllocationId, "INITIATED", { razorpay_order_id: orderId });
     } catch (err) {
       console.error("Razorpay open failed:", err);
-      await updatePaymentStatus(feeAllocationId, "FAILED", {});
       alert("Unable to open payment gateway");
     }
   };
 
   const updatePaymentStatus = async (feeAllocationId, status, razorpayData) => {
-    try {
-      const totalAmount = feeData?.reduce((total, allocation) => total + (allocation.pending_amount || 0), 0) || 1700;
-      
-      const payload = {
-        student_exam_form_id: feeAllocationId,
-        status: status === "SUCCESS" ? "APPROVED" : "PENDING",
-        payment_details: status === "SUCCESS" ? [{
-          receipt_no: `RCPT-${new Date().getFullYear()}-${Date.now()}`,
-          payment_mode: "ONLINE",
-          transaction_id: razorpayData?.razorpay_payment_id || null,
-          paid_amount: totalAmount.toString(),
-          payment_date: new Date().toISOString().split('T')[0]
-        }] : []
-      };
-      
-      await regularFormService.updatePaymentStatus(payload);
-    } catch (error) {
-      console.error('Failed to update payment status:', error);
+    // Only call updateStudentExamForm API after successful payment
+    if (status === "SUCCESS") {
+      try {
+        const totalAmount = feeData?.reduce((total, allocation) => total + (allocation.pending_amount || 0), 0) || 1700;
+
+        const payload = {
+          student_exam_form_id: selectedForm.student_exam_form_id,
+          status: "APPROVED",
+          payment_details: [{
+            receipt_no: `RCPT-${new Date().getFullYear()}-${Date.now()}`,
+            payment_mode: "ONLINE",
+            transaction_id: razorpayData?.razorpay_payment_id || null,
+            paid_amount: totalAmount.toString(),
+            payment_date: new Date().toISOString().split('T')[0]
+          }]
+        };
+
+        await regularFormService.updateStudentExamForm(payload);
+      } catch (error) {
+        console.error('Failed to update payment status:', error);
+      }
     }
   };
   // Load student exam forms on component mount
@@ -240,17 +240,13 @@ const RegularForm = () => {
             />
           </div>
 
-          <button
+          {/* <button
             onClick={() => setOpen(true)}
             className="bg-green-600 hover:bg-green-700 text-white font-medium px-6 py-2 rounded-lg flex items-center gap-2"
           >
             Fill Form
-          </button>
+          </button> */}
         </div>
-
-        <h2 className="text-2xl font-bold text-gray-900 mb-6">
-          My Exam Forms
-        </h2>
 
         {loading ? (
           <div className="p-6 text-center text-gray-500">
@@ -284,26 +280,24 @@ const RegularForm = () => {
                     <td className="px-4 py-3">{form.batch_name || 'N/A'}</td>
                     <td className="px-4 py-3">{form.academic_year_name || 'N/A'}</td>
                     <td className="px-4 py-3">
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                        form.status === 'PENDING' ? 'bg-yellow-100 text-yellow-800' :
+                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${form.status === 'PENDING' ? 'bg-yellow-100 text-yellow-800' :
                         form.status === 'APPROVED' ? 'bg-green-100 text-green-800' :
-                        form.status === 'REJECTED' ? 'bg-red-100 text-red-800' :
-                        'bg-gray-100 text-gray-800'
-                      }`}>
+                          form.status === 'REJECTED' ? 'bg-red-100 text-red-800' :
+                            'bg-gray-100 text-gray-800'
+                        }`}>
                         {form.status || 'N/A'}
                       </span>
                     </td>
                     <td className="px-4 py-3">
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                        form.payment_details ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                      }`}>
+                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${form.payment_details ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                        }`}>
                         {form.payment_details ? 'Paid' : 'Unpaid'}
                       </span>
                     </td>
                     <td className="px-4 py-3 text-center">
                       <div className="flex justify-center items-center gap-2">
                         {!form.payment_details && (
-                          <button 
+                          <button
                             onClick={() => handlePayNowClick(form)}
                             className="bg-green-600 hover:bg-green-700 text-white text-sm font-medium px-3 py-1 rounded"
                           >
@@ -386,117 +380,147 @@ const RegularForm = () => {
 
       {/* ================= PAYMENT MODAL ================= */}
       {paymentModal && selectedForm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="bg-white w-full max-w-4xl max-h-[90vh] rounded-xl shadow-lg overflow-hidden">
-            <div className="bg-blue-600 px-6 py-4 flex justify-between items-center">
-              <h3 className="text-lg font-semibold text-white">Payment Details - {selectedForm.exam_form_name}</h3>
-              <button onClick={() => setPaymentModal(false)}>
-                <X className="text-white" />
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="bg-white w-full max-w-3xl max-h-[90vh] rounded-2xl shadow-2xl overflow-hidden">
+            {/* Modal Header */}
+            <div className="table-header px-6 py-4 flex justify-between items-center">
+              <h3 className="text-lg font-semibold text-white">Payment Details</h3>
+              <button
+                onClick={() => setPaymentModal(false)}
+                className="text-white hover:bg-white/20 rounded-full p-1 transition-colors"
+              >
+                <X size={20} />
               </button>
             </div>
-            <div className="p-6 overflow-y-auto max-h-[calc(90vh-80px)]">
-              {/* Student Info */}
-              <div className="bg-gray-50 p-4 rounded-lg mb-6">
-                <h4 className="font-semibold mb-3 text-gray-800">Student Information</h4>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
-                  <div>
-                    <span className="text-gray-600">Name:</span>
-                    <p className="font-medium">{studentHistory?.[0]?.student_name || "Rajesh Patil"}</p>
-                  </div>
-                  <div>
-                    <span className="text-gray-600">Roll Number:</span>
-                    <p className="font-medium">{studentHistory?.[0]?.roll_number || "N/A"}</p>
-                  </div>
-                  <div>
-                    <span className="text-gray-600">Program:</span>
-                    <p className="font-medium">{studentHistory?.[0]?.academic_year?.program?.program_name || selectedForm.program_name}</p>
+
+            <div className="p-6 overflow-y-auto max-h-[calc(90vh-80px)] bg-gray-50">
+              {/* Exam Form Name Badge */}
+              <div className="mb-6 text-center">
+                <span className="inline-block px-4 py-2 bg-blue-100 text-blue-800 rounded-full text-sm font-medium">
+                  {selectedForm.exam_form_name}
+                </span>
+              </div>
+
+              {/* Student Info Card */}
+              <div className="bg-white rounded-xl shadow-sm border border-gray-100 mb-6 overflow-hidden">
+                <div className="table-header px-4 py-3">
+                  <h4 className="font-semibold text-white text-sm">Student Information</h4>
+                </div>
+                <div className="p-4">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                    <div className="flex flex-col">
+                      <span className="text-gray-500 text-xs uppercase tracking-wide mb-1">Name</span>
+                      <p className="font-semibold text-gray-800">{studentHistory?.[0]?.student_name || "N/A"}</p>
+                    </div>
+                    <div className="flex flex-col">
+                      <span className="text-gray-500 text-xs uppercase tracking-wide mb-1">Roll Number</span>
+                      <p className="font-semibold text-gray-800">{studentHistory?.[0]?.roll_number || "N/A"}</p>
+                    </div>
+                    <div className="flex flex-col">
+                      <span className="text-gray-500 text-xs uppercase tracking-wide mb-1">Program</span>
+                      <p className="font-semibold text-gray-800">{studentHistory?.[0]?.academic_year?.program?.program_name || selectedForm.program_name}</p>
+                    </div>
                   </div>
                 </div>
               </div>
 
-              {/* Fee Details */}
-              <div className="mb-6">
-                <h4 className="font-semibold mb-4 text-gray-800">Fee Breakdown</h4>
+              {/* Fee Details Card */}
+              <div className="bg-white rounded-xl shadow-sm border border-gray-100 mb-6 overflow-hidden">
+                <div className="table-header px-4 py-3">
+                  <h4 className="font-semibold text-white text-sm">Fee Breakdown</h4>
+                </div>
                 {loadingFees ? (
-                  <div className="p-6 text-center text-gray-500">
-                    Loading fee details...
+                  <div className="p-8 text-center text-gray-500">
+                    <div className="animate-pulse">Loading fee details...</div>
                   </div>
                 ) : feeData && feeData.length > 0 ? (
                   <div className="overflow-x-auto">
-                    <table className="w-full border border-gray-200 rounded-lg text-sm">
-                      <thead className="bg-gray-100">
+                    <table className="w-full text-sm">
+                      <thead className="bg-gray-50 border-b border-gray-200">
                         <tr>
-                          <th className="px-3 py-2 text-left font-medium text-gray-700">Fee Type</th>
-                          <th className="px-3 py-2 text-right font-medium text-gray-700">Total</th>
-                          <th className="px-3 py-2 text-right font-medium text-gray-700">Paid</th>
-                          <th className="px-3 py-2 text-right font-medium text-gray-700">Balance</th>
-                          <th className="px-3 py-2 text-center font-medium text-gray-700">Due Date</th>
+                          <th className="px-4 py-3 text-left font-semibold text-gray-600">Fee Type</th>
+                          <th className="px-4 py-3 text-right font-semibold text-gray-600">Total</th>
+                          <th className="px-4 py-3 text-right font-semibold text-gray-600">Paid</th>
+                          <th className="px-4 py-3 text-right font-semibold text-gray-600">Balance</th>
+                          <th className="px-4 py-3 text-center font-semibold text-gray-600">Due Date</th>
                         </tr>
                       </thead>
-                      <tbody>
-                        {feeData.map((allocation, index) => 
+                      <tbody className="divide-y divide-gray-100">
+                        {feeData.map((allocation, index) =>
                           allocation.fee_lines?.map((feeLine, lineIndex) => (
-                            <tr key={`${index}-${lineIndex}`} className="border-t">
-                              <td className="px-3 py-2">{feeLine.particular_name}</td>
-                              <td className="px-3 py-2 text-right font-medium">₹{feeLine.total_amount || 0}</td>
-                              <td className="px-3 py-2 text-right font-medium">₹{feeLine.paid_amount || 0}</td>
-                              <td className="px-3 py-2 text-right font-medium">₹{feeLine.balance || 0}</td>
-                              <td className="px-3 py-2 text-center">{feeLine.due_date || 'N/A'}</td>
+                            <tr key={`${index}-${lineIndex}`} className="hover:bg-gray-50">
+                              <td className="px-4 py-3 text-gray-800">{feeLine.particular_name}</td>
+                              <td className="px-4 py-3 text-right font-medium text-gray-700">₹{feeLine.total_amount || 0}</td>
+                              <td className="px-4 py-3 text-right font-medium text-green-600">₹{feeLine.paid_amount || 0}</td>
+                              <td className="px-4 py-3 text-right font-medium text-red-600">₹{feeLine.balance || 0}</td>
+                              <td className="px-4 py-3 text-center text-gray-600">{feeLine.due_date || 'N/A'}</td>
                             </tr>
                           ))
                         )}
-                        <tr className="border-t bg-blue-50">
-                          <td className="px-3 py-2 font-semibold">Total</td>
-                          <td className="px-3 py-2 text-right font-bold text-blue-600">
+                      </tbody>
+                      <tfoot className="table-header">
+                        <tr>
+                          <td className="px-4 py-3 font-bold text-white">Total Amount</td>
+                          <td className="px-4 py-3 text-right font-bold text-white">
                             ₹{feeData.reduce((total, allocation) => total + (allocation.total_fees || 0), 0)}
                           </td>
-                          <td className="px-3 py-2 text-right font-bold text-green-600">
+                          <td className="px-4 py-3 text-right font-bold text-green-200">
                             ₹{feeData.reduce((total, allocation) => total + (allocation.paid_amount || 0), 0)}
                           </td>
-                          <td className="px-3 py-2 text-right font-bold text-red-600">
+                          <td className="px-4 py-3 text-right font-bold text-red-200">
                             ₹{feeData.reduce((total, allocation) => total + (allocation.pending_amount || 0), 0)}
                           </td>
-                          <td className="px-3 py-2"></td>
+                          <td className="px-4 py-3"></td>
                         </tr>
-                      </tbody>
+                      </tfoot>
                     </table>
                   </div>
                 ) : (
-                  <div className="text-center py-4 text-gray-500">
+                  <div className="p-8 text-center text-gray-500">
                     No fee data available
                   </div>
                 )}
               </div>
 
-              {/* Payment Method */}
-              <div className="mb-6">
-                <h4 className="font-semibold mb-3 text-gray-800">Payment Method</h4>
-                <div className="space-y-2">
-                  <label className="flex items-center">
-                    <input type="radio" name="payment" value="online" className="mr-2" defaultChecked />
-                    <span>Online Payment (UPI/Card/Net Banking)</span>
-                  </label>
-                  <label className="flex items-center">
-                    <input type="radio" name="payment" value="offline" className="mr-2" />
-                    <span>Offline Payment (Bank Transfer)</span>
-                  </label>
+              {/* Payment Method Card */}
+              <div className="bg-white rounded-xl shadow-sm border border-gray-100 mb-6 overflow-hidden">
+                <div className="table-header px-4 py-3">
+                  <h4 className="font-semibold text-white text-sm">Payment Method</h4>
+                </div>
+                <div className="p-4">
+                  <div className="space-y-3">
+                    <label className="flex items-center p-3 border border-gray-200 rounded-lg cursor-pointer hover:bg-blue-50 hover:border-blue-300 transition-colors">
+                      <input type="radio" name="payment" value="online" className="w-4 h-4 text-blue-600" defaultChecked />
+                      <div className="ml-3">
+                        <span className="font-medium text-gray-800">Online Payment</span>
+                        <p className="text-xs text-gray-500">UPI / Credit Card / Debit Card / Net Banking</p>
+                      </div>
+                    </label>
+                    <label className="flex items-center p-3 border border-gray-200 rounded-lg cursor-pointer hover:bg-blue-50 hover:border-blue-300 transition-colors">
+                      <input type="radio" name="payment" value="offline" className="w-4 h-4 text-blue-600" />
+                      <div className="ml-3">
+                        <span className="font-medium text-gray-800">Offline Payment</span>
+                        <p className="text-xs text-gray-500">Bank Transfer / Cash Deposit</p>
+                      </div>
+                    </label>
+                  </div>
                 </div>
               </div>
 
               {/* Action Buttons */}
-              <div className="flex justify-end gap-4">
-                <button 
+              <div className="flex justify-end gap-3 pt-2">
+                <button
                   onClick={() => setPaymentModal(false)}
-                  className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+                  className="px-6 py-2.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-100 font-medium transition-colors"
                 >
                   Cancel
                 </button>
-                <button 
+                <button
                   onClick={handleRazorpayPayment}
                   disabled={processingPayment || !feeData}
-                  className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
+                  className="px-6 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed font-medium transition-colors shadow-sm"
                 >
-                  {processingPayment ? 'Processing...' : `Proceed to Pay ₹${feeData?.reduce((total, allocation) => total + (allocation.pending_amount || 0), 0) || 1700}`}
+                  {processingPayment ? 'Processing...' : `Proceed to Pay ₹${feeData?.reduce((total, allocation) => total + (allocation.pending_amount || 0), 0) || 0}`}
                 </button>
               </div>
             </div>
