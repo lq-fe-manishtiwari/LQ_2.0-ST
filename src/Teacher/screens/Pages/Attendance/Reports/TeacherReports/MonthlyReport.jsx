@@ -33,15 +33,23 @@ const MonthlyReport = () => {
     const fetchAttendanceReport = async (collegeId, teacherId) => {
         setLoading(true);
         try {
-            const response = await TeacherAttendanceManagement.getTeacherAttendanceDetailedReport(
+            const response = await TeacherAttendanceManagement.getTeacherAttendanceSummaryReports(
                 collegeId,
                 teacherId,
                 startDate,
                 endDate
             );
 
-            setSummaryData(response.summary);
-            setAllStaffData(response.records || []);
+            if (response.success && response.data) {
+                const data = response.data;
+                setSummaryData({
+                    totalDays: data.total_days,
+                    presentDays: data.total_present_days,
+                    absentDays: data.total_absent_days,
+                    attendancePercentage: data.attendance_percentage
+                });
+                setAllStaffData(data.daily_details || []);
+            }
         } catch (error) {
             console.error('Attendance fetch failed:', error);
         } finally {
@@ -123,7 +131,7 @@ const MonthlyReport = () => {
                         <tr>
                             <th>Date</th>
                             <th>Status</th>
-                            <th>Working Hours</th>
+                            <th>Lectures</th>
                         </tr>
                     </thead>
 
@@ -141,15 +149,14 @@ const MonthlyReport = () => {
                                         {formatDateForDisplay(row.date)}
                                     </td>
                                     <td className="text-center">
-                                        <span className={`px-3 py-1 rounded-full text-xs ${
-                                            row.attendanceStatus === 'Present'
-                                                ? 'bg-green-100 text-green-700'
-                                                : 'bg-red-100 text-red-700'
-                                        }`}>
+                                        <span className={`px-3 py-1 rounded-full text-xs ${row.attendanceStatus === 'Present'
+                                            ? 'bg-green-100 text-green-700'
+                                            : 'bg-red-100 text-red-700'
+                                            }`}>
                                             {row.attendanceStatus}
                                         </span>
                                     </td>
-                                    <td className="text-center">{row.totalWorkingHours}</td>
+                                    <td className="text-center">{row.daily_lecture_scheduled_count}</td>
                                 </tr>
                             ))
                         )}
