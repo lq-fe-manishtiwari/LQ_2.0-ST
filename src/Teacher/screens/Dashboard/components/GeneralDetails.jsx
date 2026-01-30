@@ -124,16 +124,16 @@ const GeneralDetails = ({
         {title}
       </h3>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {items.map((info, index) => (
           <div key={index} className="bg-gray-50 p-4 rounded-lg border">
             <div className="flex items-center mb-2">
-              {info.icon}
-              <label className="block text-sm font-medium text-gray-700 ml-2">
+              <span className="text-gray-400 mr-2">{info.icon}</span>
+              <label className="block text-xs font-medium text-gray-500">
                 {info.label}
               </label>
             </div>
-            <p className="text-gray-900 font-medium">{info.value}</p>
+            <p className="text-gray-900 font-medium break-words">{info.value || "N/A"}</p>
           </div>
         ))}
       </div>
