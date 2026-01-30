@@ -88,7 +88,6 @@ export default function TabularView() {
         const handleTimetableNavigation = () => {
             if (fromTimetable && passedSlot && !filtersSetFromTimetable) {
                 const slot = passedSlot;
-                console.log("DEBUG: handleTimetableNavigation - received slot:", slot);
 
                 const newFilters = {
                     program: slot.program_id?.toString() || '',
@@ -100,7 +99,6 @@ export default function TabularView() {
                     timeSlot: slot.time_slot_id?.toString() || ''
                 };
 
-                console.log("DEBUG: handleTimetableNavigation - applying filters", newFilters);
                 setFilters(newFilters);
                 setFiltersSetFromTimetable(true);
  
@@ -152,9 +150,12 @@ export default function TabularView() {
         handleTimetableNavigation();
     }, [fromTimetable, passedSlot]);
 
-    // Auto-select first available filter values
+    // Ref to track if initial filters have been set
+    const initialFiltersSet = useRef(false);
+
+    // Auto-select first available filter values on initial load
     useEffect(() => {
-        if (allocations.length > 0 && !filters.paper && !fromTimetable) {
+        if (!initialFiltersSet.current && allocations.length > 0 && !fromTimetable && !filtersSetFromTimetable) {
             const firstAlloc = allocations[0];
             const newFilters = {
                 program: firstAlloc.program?.program_id?.toString() || '',
@@ -165,10 +166,10 @@ export default function TabularView() {
                 paper: firstAlloc.subjects?.[0]?.subject_id?.toString() || '',
                 timeSlot: ''
             };
-            console.log("DEBUG: Auto-selecting first allocation for TabularView", newFilters);
             setFilters(newFilters);
+            initialFiltersSet.current = true;
         }
-    }, [allocations, fromTimetable]);
+    }, [allocations, fromTimetable, filtersSetFromTimetable]);
 
     // Restore saved state on component mount (only if not from timetable)
     useEffect(() => {
@@ -280,28 +281,13 @@ export default function TabularView() {
         }
     }, [currentTeacherId]);
 
-    // Auto-select first values when allocations load (only if not from timetable)
-    useEffect(() => {
-        if (allocations.length > 0 && !filters.paper && !filtersSetFromTimetable) {
-            const firstAlloc = allocations[0];
-            const newFilters = {
-                program: firstAlloc.program?.program_id?.toString() || '',
-                batch: firstAlloc.batch?.batch_id?.toString() || '',
-                academicYear: firstAlloc.academic_year_id?.toString() || '',
-                semester: firstAlloc.semester_id?.toString() || '',
-                division: firstAlloc.division_id?.toString() || '',
-                paper: firstAlloc.subjects?.[0]?.subject_id?.toString() || ''
-            };
-            setFilters(newFilters);
-        }
-    }, [allocations, filters.paper, filtersSetFromTimetable]);
+
 
     // Fetch time slots when paper is selected
     useEffect(() => {
         const fetchTimeSlots = async () => {
             // If coming from timetable and we already have a manual time slot, skip fetch
             if (fromTimetable && filtersSetFromTimetable && timeSlots.length > 0 && timeSlots[0]?.fromTimetable) {
-                console.log("DEBUG: Using manual time slot from timetable");
                 return;
             }
 
@@ -318,19 +304,16 @@ export default function TabularView() {
                         collegeId: collegeId
                     };
                     const response = await TeacherAttendanceManagement.getTimeSlots(params);
-                    console.log("DEBUG: getTimeSlots response:", response);
 
                     if (response && response.data && response.data.length > 0) {
                         // Filter out holidays - only show non-holiday time slots
                         const validTimeSlots = response.data.filter(slot => !slot.is_holiday);
 
                         if (validTimeSlots.length > 0) {
-                            console.log("DEBUG: Setting validTimeSlots:", validTimeSlots);
                             setTimeSlots(validTimeSlots);
                             // Auto-select first time slot only if none currently selected
                             if (!filters.timeSlot) {
                                 const firstSlotId = validTimeSlots[0].time_slot_id?.toString();
-                                console.log("DEBUG: Auto-selecting first time slot:", firstSlotId);
                                 setFilters(prev => ({ ...prev, timeSlot: firstSlotId }));
                             }
                         } else {
@@ -455,11 +438,6 @@ export default function TabularView() {
     // Fetch existing attendance when time slot is selected
     useEffect(() => {
         const fetchExistingAttendance = async () => {
-            console.log("DEBUG: fetchExistingAttendance triggered", {
-                timeSlot: filters.timeSlot,
-                studentsCount: students.length,
-                filters: filters
-            });
             if (filters.timeSlot && students.length > 0 && filters.academicYear && filters.semester && filters.division && filters.paper) {
                 try {
                     let selectedTimeSlot;
@@ -494,22 +472,17 @@ export default function TabularView() {
                         timetable_id: selectedTimeSlot.timetable_id,
                         date: selectedDate
                     };
-
-                    console.log("DEBUG: Fetching existing attendance with payload:", payload);
                     setLoadingStudents(true);
 
                     const response = await TeacherAttendanceManagement.getAttendanceList(payload);
-                    console.log("DEBUG: Attendance List Response:", response);
 
                     if (response && response.success && response.data && response.data.length > 0) {
                         // Attendance exists, update student statuses
-                        console.log(`DEBUG: fetchExistingAttendance - found ${response.data.length} records. Updating student state.`);
                         setStudents(prevStudents => {
                             const updatedStudents = prevStudents.map(student => {
                                 const attendanceRecord = response.data.find(a => a.student_id === student.id);
                                 if (attendanceRecord && attendanceRecord.status) {
                                     const statusToSet = attendanceRecord.status.status_code || 'P';
-                                    console.log(`   - Student ${student.id} (${student.roll_number}): Mapping API status ${JSON.stringify(attendanceRecord.status)} -> ${statusToSet}`);
                                     return {
                                         ...student,
                                         status: statusToSet
@@ -517,12 +490,10 @@ export default function TabularView() {
                                 }
                                 return student;
                             });
-                            console.log("DEBUG: fetchExistingAttendance - students state update complete");
                             return updatedStudents;
                         });
                     } else {
                         // No attendance data for this slot, reset all to 'P'
-                        console.log("DEBUG: fetchExistingAttendance - no records found in API response. Resetting all to 'P'.");
                         setStudents(prevStudents =>
                             prevStudents.map(student => ({
                                 ...student,
@@ -553,15 +524,11 @@ export default function TabularView() {
         return true;
     });
 
-    console.log("DEBUG: Filtered Students for Rendering:", filteredStudents.length, filteredStudents);
-
     // Filter handlers
     const handleFilterChange = (newFilters) => {
-        console.log("DEBUG: handleFilterChange called with:", newFilters);
         setFilters(newFilters);
         // If user manually changes filters, reset the timetable flag
         if (filtersSetFromTimetable) {
-            console.log("DEBUG: Resetting filtersSetFromTimetable to false");
             setFiltersSetFromTimetable(false);
         }
     };
@@ -854,8 +821,6 @@ export default function TabularView() {
                     s.status_code?.toUpperCase().includes(searchLabel)
                 );
             }
-
-            console.log(`DEBUG: Mapping status code ${statusCode} to ID:`, status?.status_id);
             return status?.status_id || null;
         };
 
@@ -1038,31 +1003,21 @@ export default function TabularView() {
 
                     <div className="h-8 w-px bg-gray-200 shrink-0"></div>
 
-                    <div className="flex items-center gap-2">
-                        <button
-                            onClick={() => handleBulkStatusUpdate(presentStatusCode)}
-                            className="flex items-center gap-1.5 px-3 py-1.5 bg-green-50 text-green-700 rounded-lg border border-green-100 hover:bg-green-100 transition-colors text-sm font-medium"
-                        >
-                            <Check size={16} /> Mark Present
-                        </button>
-                        <button
-                            onClick={() => handleBulkStatusUpdate(absentStatusCode)}
-                            className="flex items-center gap-1.5 px-3 py-1.5 bg-red-50 text-red-700 rounded-lg border border-red-100 hover:bg-red-100 transition-colors text-sm font-medium"
-                        >
-                            <X size={16} /> Mark Absent
-                        </button>
-                    </div>
-
-                    <div className="h-8 w-px bg-gray-200 shrink-0"></div>
-
-                    <div className="flex items-center gap-2 overflow-x-auto no-scrollbar">
-                        {otherStatuses.map(status => (
+                    {/* Dynamic Statuses from API */}
+                    <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-0.5">
+                        {attendanceStatuses.map(status => (
                             <button
-                                key={status.id}
-                                onClick={() => handleBulkStatusUpdate(status.id)}
-                                className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-50 text-gray-700 rounded-lg border border-gray-100 hover:bg-gray-100 transition-colors text-sm font-medium shrink-0"
+                                key={status.status_id}
+                                onClick={() => handleBulkStatusUpdate(status.status_code)}
+                                className="flex items-center gap-1.5 px-3 py-1.5 bg-white rounded-lg border transition-all hover:scale-105 active:scale-95 text-[11px] font-bold shrink-0 uppercase tracking-tighter shadow-sm"
+                                style={{
+                                    backgroundColor: `${status.color_code}10`,
+                                    borderColor: `${status.color_code}30`,
+                                    color: status.color_code
+                                }}
                             >
-                                {status.icon} {status.label}
+                                {getIconForStatus(status.status_code)}
+                                <span>{status.status_name}</span>
                             </button>
                         ))}
                     </div>
