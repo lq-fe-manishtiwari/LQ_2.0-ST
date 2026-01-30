@@ -121,8 +121,8 @@ export default function ProfileDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+    <div className="max-w-7xl mx-auto">
+      <div className="py-2 sm:py-4">
 
         {/* Back Button */}
         <div className="mb-6">
@@ -144,10 +144,10 @@ export default function ProfileDashboard() {
                 <img
                   src={profileImage}
                   alt="Profile"
-                  className="w-20 h-20 sm:w-24 sm:h-24 rounded-full object-cover border-4 border-gray-100 shadow-sm"
+                  className="w-20 h-20 sm:w-24 sm:h-24 rounded-full object-cover border-4 border-gray-100 shadow-sm mx-auto"
                 />
               ) : (
-                <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-blue-600 flex items-center justify-center text-white text-2xl sm:text-3xl font-bold border-4 border-blue-300 shadow-sm">
+                <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-blue-600 flex items-center justify-center text-white text-2xl sm:text-3xl font-bold border-4 border-blue-300 shadow-sm mx-auto">
                   {studentName ? studentName.charAt(0).toUpperCase() : 'S'}
                 </div>
               )}
@@ -194,39 +194,41 @@ export default function ProfileDashboard() {
         <div className="block md:hidden mb-6">
           <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
             {/* First Row */}
-            <div className="flex">
+            <div className="flex divide-x border-b">
               {tabs.slice(0, 3).map((tab) => (
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
                   className={`${activeTab === tab.id
-                    ? "text-blue-600 border-b-2 border-blue-500"
+                    ? "text-blue-600 bg-blue-50/50"
                     : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
-                    } flex-1 py-4 px-2 flex flex-row items-center justify-center gap-2 text-sm font-medium`}
+                    } flex-1 py-3 px-1 flex flex-col items-center justify-center gap-1.5 text-[10px] xs:text-xs font-semibold transition-colors`}
                 >
-                  {tab.icon}
-                  <span>{tab.name}</span>
+                  <div className={`${activeTab === tab.id ? "text-blue-600" : "text-gray-400"}`}>
+                    {React.cloneElement(tab.icon, { className: "w-5 h-5" })}
+                  </div>
+                  <span className="text-center leading-tight">{tab.name}</span>
                 </button>
               ))}
             </div>
 
             {/* Second Row */}
-            <div className="border-t">
-              <div className="flex">
-                {tabs.slice(3).map((tab) => (
-                  <button
-                    key={tab.id}
-                    onClick={() => setActiveTab(tab.id)}
-                    className={`${activeTab === tab.id
-                      ? "text-blue-600 border-b-2 border-blue-500"
-                      : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
-                      } flex-1 py-4 px-2 flex flex-row items-center justify-center gap-2 text-sm font-medium`}
-                  >
-                    {tab.icon}
-                    <span>{tab.name}</span>
-                  </button>
-                ))}
-              </div>
+            <div className="flex divide-x">
+              {tabs.slice(3).map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`${activeTab === tab.id
+                    ? "text-blue-600 bg-blue-50/50"
+                    : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
+                    } flex-1 py-3 px-1 flex flex-col items-center justify-center gap-1.5 text-[10px] xs:text-xs font-semibold transition-colors`}
+                >
+                  <div className={`${activeTab === tab.id ? "text-blue-600" : "text-gray-400"}`}>
+                    {React.cloneElement(tab.icon, { className: "w-5 h-5" })}
+                  </div>
+                  <span className="text-center leading-tight">{tab.name}</span>
+                </button>
+              ))}
             </div>
           </div>
         </div>
@@ -234,7 +236,7 @@ export default function ProfileDashboard() {
         {/* Desktop Tabs */}
         <div className="hidden md:block bg-white rounded-xl shadow-sm border mb-6">
           <div className="border-b border-gray-200">
-            <nav className="flex justify-center space-x-8 px-6" aria-label="Tabs">
+            <nav className="flex justify-start lg:justify-center space-x-4 lg:space-x-8 px-6 overflow-x-auto no-scrollbar" aria-label="Tabs">
               {tabs.map((tab) => (
                 <button
                   key={tab.id}
@@ -242,7 +244,7 @@ export default function ProfileDashboard() {
                   className={`${activeTab === tab.id
                     ? "border-blue-500 text-blue-600"
                     : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-                    } py-4 px-1 border-b-2 font-medium text-sm flex items-center space-x-2 transition`}
+                    } py-4 px-1 border-b-2 font-medium text-sm flex items-center space-x-2 transition whitespace-nowrap`}
                 >
                   {tab.icon}
                   <span>{tab.name}</span>

@@ -155,22 +155,22 @@ const StudentAcademicJourney = ({ studentData, historyLoading, enrichedHistory =
                     </div>
 
                     {/* Grid */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3">
+                    <div className="grid grid-cols-1 xs:grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3">
                       <div className="bg-blue-50 p-2.5 sm:p-3 rounded-lg border border-blue-100">
-                        <p className="text-xs font-semibold text-blue-600 uppercase tracking-wide mb-1">Batch</p>
-                        <p className="font-semibold text-gray-800 text-xs sm:text-sm break-words">{record.batch_name || "---"}</p>
+                        <p className="text-[10px] font-semibold text-blue-600 uppercase tracking-wide mb-1">Batch</p>
+                        <p className="font-bold text-gray-800 text-xs sm:text-sm break-words">{record.batch_name || "---"}</p>
                       </div>
                       <div className="bg-purple-50 p-2.5 sm:p-3 rounded-lg border border-purple-100">
-                        <p className="text-xs font-semibold text-purple-600 uppercase tracking-wide mb-1">Division</p>
-                        <p className="font-semibold text-gray-800 text-xs sm:text-sm break-words">{record.division_name || "---"}</p>
+                        <p className="text-[10px] font-semibold text-purple-600 uppercase tracking-wide mb-1">Division</p>
+                        <p className="font-bold text-gray-800 text-xs sm:text-sm break-words">{record.division_name || "---"}</p>
                       </div>
                       <div className="bg-green-50 p-2.5 sm:p-3 rounded-lg border border-green-100">
-                        <p className="text-xs font-semibold text-green-600 uppercase tracking-wide mb-1">Roll Number</p>
-                        <p className="font-semibold text-gray-800 text-xs sm:text-sm break-words">{record.roll_number || "---"}</p>
+                        <p className="text-[10px] font-semibold text-green-600 uppercase tracking-wide mb-1">Roll Number</p>
+                        <p className="font-bold text-gray-800 text-xs sm:text-sm break-words">{record.roll_number || "---"}</p>
                       </div>
                       <div className="bg-orange-50 p-2.5 sm:p-3 rounded-lg border border-orange-100">
-                        <p className="text-xs font-semibold text-orange-600 uppercase tracking-wide mb-1">Status</p>
-                        <p className="font-semibold text-gray-800 text-xs sm:text-sm capitalize">{record.is_active ? "Active" : "Inactive"}</p>
+                        <p className="text-[10px] font-semibold text-orange-600 uppercase tracking-wide mb-1">Status</p>
+                        <p className="font-bold text-gray-800 text-xs sm:text-sm capitalize">{record.is_active ? "Active" : "Inactive"}</p>
                       </div>
                     </div>
 

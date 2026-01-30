@@ -97,6 +97,7 @@ export default function SubjectSelectionDashboard() {
     // State for alerts
     const [alert, setAlert] = useState(null);
     const [deleteConfirm, setDeleteConfirm] = useState(null);
+    const [modalAlert, setModalAlert] = useState(null);
 
     // Fetch initial data
     useEffect(() => {
@@ -238,15 +239,19 @@ export default function SubjectSelectionDashboard() {
             const allocationsData = response.data;
             setTeacherAllocations(allocationsData);
 
-            // Extract class teacher allocations only
+            // Extract from both class teacher and normal allocations
             const classAllocations = allocationsData.class_teacher_allocation || [];
-            setClassTeacherAllocations(classAllocations);
+            const normalAllocations = allocationsData.normal_allocation || [];
+            
+            // Combine both allocation types
+            const allAllocations = [...classAllocations, ...normalAllocations];
+            setClassTeacherAllocations(allAllocations);
 
-            // Extract unique programs from class teacher allocations
+            // Extract unique programs from all allocations
             const uniquePrograms = [];
             const programIds = new Set();
             
-            classAllocations.forEach(allocation => {
+            allAllocations.forEach(allocation => {
                 if (allocation.program && !programIds.has(allocation.program.program_id)) {
                     programIds.add(allocation.program.program_id);
                     uniquePrograms.push({
@@ -426,16 +431,34 @@ export default function SubjectSelectionDashboard() {
             }
 
             setIsModalOpen(false);
-        } catch (error) {
-            console.error("Error creating configuration:", error);
+            setShowAddNewPage(false);
+            setModalAlert(null);
             setAlert(
                 <SweetAlert
-                    danger
-                    title="Error"
+                    success
+                    title="Success!"
                     onConfirm={() => setAlert(null)}
                     confirmBtnCssClass="btn-confirm"
                 >
-                    Failed to create configuration. Please try again.
+                    Configuration created successfully.
+                </SweetAlert>
+            );
+        } catch (error) {
+            console.error("Error creating configuration:", error);
+            
+            // Check if it's a duplicate error
+            const errorMessage = error.response?.data?.message || error.message || "Failed to create configuration";
+            const isDuplicate = errorMessage.includes("Duplicate") || errorMessage.includes("already exists");
+            
+            setModalAlert(
+                <SweetAlert
+                    warning={isDuplicate}
+                    danger={!isDuplicate}
+                    title={isDuplicate ? "Already Exists" : "Error"}
+                    onConfirm={() => setModalAlert(null)}
+                    confirmBtnCssClass="btn-confirm"
+                >
+                    {errorMessage}
                 </SweetAlert>
             );
         }
@@ -710,9 +733,13 @@ export default function SubjectSelectionDashboard() {
         return (
             <AddSubjectSelectionModal
                 isOpen={true}
-                onClose={() => setShowAddNewPage(false)}
+                onClose={() => {
+                    setShowAddNewPage(false);
+                    setModalAlert(null);
+                }}
                 onSubmit={handleAddNew}
                 programs={programs}
+                alert={modalAlert}
             />
         );
     }
