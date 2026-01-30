@@ -84,6 +84,7 @@ const AddSubjectSelectionModal = ({
     onClose,
     onSubmit,
     programs = [],
+    alert: parentAlert
 }) => {
     const [formData, setFormData] = useState({
         programId: "",
@@ -260,48 +261,89 @@ const AddSubjectSelectionModal = ({
         return Object.keys(newErrors).length === 0;
     };
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
 
         if (validate()) {
-            // Get the names for display purposes from modal data
-            const payload = {
-                programId: formData.programId,
-                program: programs.find(p => p.program_id === formData.programId)?.program_name || "",
-                batchId: formData.batchId,
-                batch: modalBatches.find(b => b.batch_id === formData.batchId)?.batch_name ||
-                    modalBatches.find(b => b.batch_id === formData.batchId)?.batch_year || "",
-                academicYearId: formData.academicYearId,
-                academicYear: modalAcademicYears.find(y => y.id === formData.academicYearId)?.name || "",
-                semesterId: formData.semesterId,
-                semester: modalSemesters.find(s => s.id === formData.semesterId)?.name || "",
-                subjectTypeId: formData.subjectTypeId,
-                subjectType: modalSubjectTypes.find(t => t.id === formData.subjectTypeId)?.name || "",
-            };
+            try {
+                // Get the names for display purposes from modal data
+                const payload = {
+                    programId: formData.programId,
+                    program: programs.find(p => p.program_id === formData.programId)?.program_name || "",
+                    batchId: formData.batchId,
+                    batch: modalBatches.find(b => b.batch_id === formData.batchId)?.batch_name ||
+                        modalBatches.find(b => b.batch_id === formData.batchId)?.batch_year || "",
+                    academicYearId: formData.academicYearId,
+                    academicYear: modalAcademicYears.find(y => y.id === formData.academicYearId)?.name || "",
+                    semesterId: formData.semesterId,
+                    semester: modalSemesters.find(s => s.id === formData.semesterId)?.name || "",
+                    subjectTypeId: formData.subjectTypeId,
+                    subjectType: modalSubjectTypes.find(t => t.id === formData.subjectTypeId)?.name || "",
+                };
 
-            // Add vertical if selected
-            if (formData.subTypeId && hasVerticals) {
-                const vertical = verticalOptions.find(v => v.id === parseInt(formData.subTypeId));
-                payload.verticalId = formData.subTypeId;
-                payload.vertical = vertical?.name || "";
+                // Add vertical if selected
+                if (formData.subTypeId && hasVerticals) {
+                    const vertical = verticalOptions.find(v => v.id === parseInt(formData.subTypeId));
+                    payload.verticalId = formData.subTypeId;
+                    payload.vertical = vertical?.name || "";
+                }
+
+                // Transform data to configuration format
+                const configPayload = {
+                    academicYearId: payload.academicYearId,
+                    semesterId: payload.semesterId,
+                    subjectTypeId: payload.subjectTypeId,
+                    verticalId: payload.verticalId || null,
+                    maxSelections: 0,
+                    minSelections: 0,
+                    startTime: null,
+                    endTime: null,
+                    studentLimitPerSubject: null,
+                    subjectSetRequest: [],
+                };
+
+                await subjectSelectionService.createSubjectSelectionConfig(configPayload);
+
+                // Show success and close
+                setAlert(
+                    <SweetAlert
+                        success
+                        title="Success!"
+                        onConfirm={() => {
+                            setAlert(null);
+                            onClose();
+                            onSubmit(payload); // Notify parent for refresh
+                        }}
+                        confirmBtnCssClass="btn-confirm"
+                    >
+                        Configuration created successfully.
+                    </SweetAlert>
+                );
+            } catch (error) {
+                console.error("Error creating configuration:", error);
+                
+                // Check if it's a duplicate error
+                const errorMessage = error.response?.data?.message || error.message || error || "Failed to create configuration";
+                const isDuplicate = errorMessage.toLowerCase().includes("duplicate paper selection already exists");
+                
+                console.log("Error details:", {
+                    errorMessage,
+                    isDuplicate,
+                    fullError: error
+                });
+                
+                setAlert(
+                    <SweetAlert
+                        warning={isDuplicate}
+                        danger={!isDuplicate}
+                        title={isDuplicate ? "Paper Selection Already Exists" : "Error"}
+                        onConfirm={() => setAlert(null)}
+                        confirmBtnCssClass="btn-confirm"
+                    >
+                        {isDuplicate ? "This paper selection configuration already exists for the selected academic year, semester, subject type, and vertical combination." : errorMessage}
+                    </SweetAlert>
+                );
             }
-
-            onSubmit(payload);
-
-            // Show success alert
-            setAlert(
-                <SweetAlert
-                    success
-                    title="Success!"
-                    onConfirm={() => {
-                        setAlert(null);
-                        onClose();
-                    }}
-                    confirmBtnCssClass="btn-confirm"
-                >
-                    Configuration created successfully.
-                </SweetAlert>
-            );
         }
     };
 
@@ -443,7 +485,7 @@ const AddSubjectSelectionModal = ({
             </div>
 
             {/* Alerts */}
-            {alert}
+            {parentAlert || alert}
         </div>
     );
 };
@@ -453,6 +495,7 @@ AddSubjectSelectionModal.propTypes = {
     onClose: PropTypes.func.isRequired,
     onSubmit: PropTypes.func.isRequired,
     programs: PropTypes.array,
+    alert: PropTypes.node,
 };
 
 export default AddSubjectSelectionModal;
