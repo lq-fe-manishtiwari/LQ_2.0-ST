@@ -422,18 +422,21 @@ export default function TabularView() {
                             };
                         });
 
-                        // Robust alphanumeric sorting by roll_number
+                        // Robust alphanumeric sorting by roll_number or roll_no
                         formattedStudents.sort((a, b) => {
-                            const rollA = String(a.roll_number || '');
-                            const rollB = String(b.roll_number || '');
+                            const rollA = String(a.roll_number || a.roll_no || a.rollNo || '');
+                            const rollB = String(b.roll_number || b.roll_no || b.rollNo || '');
+                            
+                            if (rollA === '' && rollB === '') return 0;
+                            if (rollA === '') return 1;
+                            if (rollB === '') return -1;
+
                             return rollA.localeCompare(rollB, undefined, { numeric: true, sensitivity: 'base' });
                         });
 
-                        console.log(`DEBUG: fetchStudents - setting students array (count: ${formattedStudents.length}) with default 'P'`);
                         setStudents(formattedStudents);
                         setStudentsFetched(true);
                     } else {
-                        console.log("DEBUG: No students found in division");
                         setStudents([]);
                         setStudentsFetched(true);
                     }
@@ -698,6 +701,18 @@ export default function TabularView() {
     const presentStatusCode = getStatusByCodes(['P', 'PR', 'PRESENT'])?.status_code || 'P';
     const absentStatusCode = getStatusByCodes(['A', 'AB', 'ABSENT'])?.status_code || 'A';
 
+    const isPresent = (status) => {
+        const s = String(status || '').toUpperCase().trim();
+        const pCode = String(presentStatusCode || 'P').toUpperCase();
+        return s === 'P' || s === 'PR' || s === 'PRESENT' || s.includes('PRESENT') || s === pCode;
+    };
+
+    const isAbsent = (status) => {
+        const s = String(status || '').toUpperCase().trim();
+        const aCode = String(absentStatusCode || 'A').toUpperCase();
+        return s === 'A' || s === 'AB' || s === 'ABSENT' || s.includes('ABSENT') || s === 'ABS' || s === aCode;
+    };
+
     // Mark all students as present
     const markAllPresent = () => {
         setStudents(students.map(s => ({ ...s, status: presentStatusCode })));
@@ -711,10 +726,7 @@ export default function TabularView() {
     const handleStatusClick = (student, e) => {
         e.stopPropagation();
         // Toggle between dynamic present and absent codes
-        const currentStatus = String(student.status || '').toUpperCase();
-        const isPresent = currentStatus === 'P' || currentStatus === 'PR' || currentStatus === 'PRESENT';
-
-        if (isPresent) {
+        if (isPresent(student.status)) {
             updateStudentStatus(student.id, absentStatusCode);
         } else {
             updateStudentStatus(student.id, presentStatusCode);
@@ -725,9 +737,11 @@ export default function TabularView() {
     const toggleStudentStatus = (id) => {
         const student = students.find(s => s.id === id);
         if (student) {
-            const currentStatus = String(student.status || '').toUpperCase();
-            const isPresent = currentStatus === 'P' || currentStatus === 'PR' || currentStatus === 'PRESENT';
-            updateStudentStatus(id, isPresent ? absentStatusCode : presentStatusCode);
+            if (isPresent(student.status)) {
+                updateStudentStatus(id, absentStatusCode);
+            } else {
+                updateStudentStatus(id, presentStatusCode);
+            }
         }
     };
 
@@ -918,10 +932,6 @@ export default function TabularView() {
 
     const activeStudent = students.find(s => s.id === activePopup);
 
-    console.log("DEBUG: TabularView Rendering - Current Filters:", filters);
-    console.log("DEBUG: TabularView Rendering - First Student Status:", students[0]?.name, "->", students[0]?.status);
-    console.log("DEBUG: TabularView Rendering - Available TimeSlots:", timeSlots);
-
     return (
         <div className="bg-white rounded-lg shadow-sm overflow-hidden border border-gray-200 relative min-h-[400px]">
             {/* Filter Section - Using reusable component */}
@@ -1099,20 +1109,14 @@ export default function TabularView() {
                                     <div className="w-2.5 h-2.5 rounded-full bg-green-500"></div>
                                     <span className="text-sm font-semibold text-gray-700">Total Present: </span>
                                     <span className="text-lg font-bold text-green-600">
-                                        {filteredStudents.filter(s => {
-                                            const status = String(s.status || '').toUpperCase().trim();
-                                            return status === 'P' || status === 'PR' || status === 'PRESENT' || status.includes('PRESENT');
-                                        }).length}
+                                        {filteredStudents.filter(s => isPresent(s.status)).length}
                                     </span>
                                 </div>
                                 <div className="flex items-center gap-2">
                                     <div className="w-2.5 h-2.5 rounded-full bg-red-500"></div>
                                     <span className="text-sm font-semibold text-gray-700">Total Absent: </span>
                                     <span className="text-lg font-bold text-red-600">
-                                        {filteredStudents.filter(s => {
-                                            const status = String(s.status || '').toUpperCase().trim();
-                                            return status === 'A' || status === 'AB' || status === 'ABSENT' || status.includes('ABSENT');
-                                        }).length}
+                                        {filteredStudents.filter(s => isAbsent(s.status)).length}
                                     </span>
                                 </div>
                             </div>
