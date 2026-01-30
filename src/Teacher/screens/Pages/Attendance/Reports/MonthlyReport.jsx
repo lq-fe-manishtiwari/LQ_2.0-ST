@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import AttendanceFilters from "../../Attendance/Components/AttendanceFilters";
 import { timetableService } from '../../TimeTable/Services/timetable.service';
-
+import { TeacherAttendanceManagement } from '../Services/attendance.service';
+import { api } from '../../../../../_services/api';
 
 const MonthlyReport = () => {
     const [allocations, setAllocations] = useState([]);
@@ -42,26 +43,152 @@ const MonthlyReport = () => {
     // Subject/Paper options
     const [paperOptions, setPaperOptions] = useState([]);
     const [loadingPapers, setLoadingPapers] = useState(false);
+    
+const [summaryData, setSummaryData] = useState(null);
+const [students, setStudents] = useState([]);
+const [loading, setLoading] = useState(false);
+const [currentTeacherId, setCurrentTeacherId] = useState(null);
+const teacherId = currentTeacherId;
 
-    // Sample data
-    const monthlyData = {
-        totalWorkingDays: 22,
-        averageAttendance: 93.5,
-        highestAttendance: 100,
-        lowestAttendance: 81.82,
-        below35Count: 0
+    const stats = summaryData ? {
+  avg: summaryData.average_attendance_percentage?.toFixed(2) || 0,
+  highest: summaryData.highest_attendance_percentage?.toFixed(2) || 0,
+  lowest: summaryData.lowest_attendance_percentage?.toFixed(2) || 0,
+  below35: summaryData.below_threshold_count || 0
+} : {
+  avg: 0,
+  highest: 0,
+  lowest: 0,
+  below35: 0
+};
+useEffect(() => {
+    const getTeacherIdFromStorage = () => {
+        let teacherId = null;
+        const userProfileStr =
+            localStorage.getItem("userProfile") ||
+            sessionStorage.getItem("userProfile");
+        if (userProfileStr) {
+            try {
+                const userProfile = JSON.parse(userProfileStr);
+                if (userProfile?.teacher_id) {
+                    teacherId = userProfile.teacher_id;
+                }
+            } catch (e) {
+                console.error("Error parsing userProfile:", e);
+            }
+        }
+        return teacherId ? parseInt(teacherId, 10) : null;
     };
 
-    const allPersonWiseData = [
-        { id: 1, rollNo: '1001', name: 'Rajesh Kumar', present: 20, absent: 2, percentage: 90.91 },
-        { id: 2, rollNo: '1002', name: 'Priya Sharma', present: 22, absent: 0, percentage: 100 },
-        { id: 3, rollNo: '1003', name: 'Amit Patel', present: 19, absent: 3, percentage: 86.36 },
-        { id: 4, rollNo: '1004', name: 'Sneha Reddy', present: 21, absent: 1, percentage: 95.45 },
-        { id: 5, rollNo: '1005', name: 'Vikram Singh', present: 18, absent: 4, percentage: 81.82 },
-        { id: 6, rollNo: '1006', name: 'Anita Desai', present: 22, absent: 0, percentage: 100 },
-        { id: 7, rollNo: '1007', name: 'Rahul Verma', present: 20, absent: 2, percentage: 90.91 },
-        { id: 8, rollNo: '1008', name: 'Kavita Nair', present: 21, absent: 1, percentage: 95.45 },
-    ];
+    const teacherId = getTeacherIdFromStorage();
+    if (teacherId && !isNaN(teacherId)) {
+        setCurrentTeacherId(teacherId);
+    }
+}, []);
+useEffect(() => {
+    const fetchAllocations = async () => {
+        if (!currentTeacherId) return;
+        setLoadingAllocations(true);
+        try {
+            const response = await api.getTeacherAllocatedPrograms(currentTeacherId);
+            if (response?.success) {
+                const data = response.data;
+                const allAllocations = [
+                    ...(data.class_teacher_allocation || []),
+                    ...(data.normal_allocation || [])
+                ];
+                setAllocations(allAllocations);
+            }
+        } catch (error) {
+            console.error("Error fetching allocations:", error);
+        } finally {
+            setLoadingAllocations(false);
+        }
+    };
+    fetchAllocations();
+}, [currentTeacherId]);
+
+useEffect(() => {
+  const fetchMonthlySummary = async () => {
+    if (
+      !teacherId ||
+      !apiIds.collegeId ||
+      !apiIds.academicYearId ||
+      !apiIds.semesterId ||
+      !apiIds.divisionId ||
+      !startDate ||
+      !endDate
+    ) {
+      setStudents([]);
+      setSummaryData(null);
+      return;
+    }
+
+    try {
+      setLoading(true);
+
+      const params = {
+        teacherId,
+        collegeId: apiIds.collegeId,
+        academicYearId: apiIds.academicYearId,
+        semesterId: apiIds.semesterId,
+        divisionId: apiIds.divisionId,
+        startDate,
+        endDate
+      };
+
+      if (selectedSubject !== 'all') {
+        params.paperId = selectedSubject;
+      }
+
+      console.log("Teacher Monthly Summary Params:", params);
+
+      const response = await TeacherAttendanceManagement.getSummaryReport(params);
+
+      if (response?.success && response.data) {
+        setSummaryData(response.data);
+
+        const getStatus = (p) => {
+          if (p >= 75) return 'Excellent';
+          if (p >= 35) return 'Good';
+          return 'Poor';
+        };
+
+        const formattedStudents = (response.data.student_details || []).map(s => ({
+          id: s.student_id,
+          rollNo: s.roll_number || '-',
+          name: s.student_name,
+          present: s.present_count,
+          absent: s.absent_count,
+          percentage: s.attendance_percentage,
+          status: getStatus(s.attendance_percentage)
+        }));
+
+        setStudents(formattedStudents);
+      } else {
+        setStudents([]);
+        setSummaryData(null);
+      }
+    } catch (err) {
+      console.error("Teacher monthly summary error:", err);
+      setStudents([]);
+      setSummaryData(null);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  fetchMonthlySummary();
+}, [
+  teacherId,
+  startDate,
+  endDate,
+  selectedSubject,
+  apiIds.collegeId,
+  apiIds.academicYearId,
+  apiIds.semesterId,
+  apiIds.divisionId
+]);
 
     // Extract numeric IDs from filters
     useEffect(() => {
@@ -127,26 +254,28 @@ const MonthlyReport = () => {
     }, [apiIds.academicYearId, apiIds.semesterId]);
 
     // Filter and sort data based on filterType
-    const getFilteredData = () => {
-        let filtered = [...allPersonWiseData];
+// Filter students based on filterType
+const getFilteredStudents = () => {
+    let result = [...students];
 
-        switch (filterType) {
-            case 'highest':
-                // Sort descending by percentage
-                return filtered.sort((a, b) => b.percentage - a.percentage);
-            case 'lowest':
-                // Sort ascending by percentage
-                return filtered.sort((a, b) => a.percentage - b.percentage);
-            case 'below35':
-                // Filter only below 35%
-                return filtered.filter(person => person.percentage < 35);
-            case 'all':
-            default:
-                return filtered;
-        }
-    };
+    switch (filterType) {
+        case 'highest':
+            return result.sort((a, b) => b.percentage - a.percentage);
+        case 'lowest':
+            return result.sort((a, b) => a.percentage - b.percentage);
+        case 'below35':
+            return result.filter(s => s.percentage < 35);
+        case 'all':
+        default:
+            return result;
+    }
+};
+const filteredStudents = getFilteredStudents();
 
-    const personWiseData = getFilteredData();
+// Show this when filter is active
+const isFiltered = filterType !== 'all';
+
+   const personWiseData = filteredStudents;
 
     const handleExport = () => {
         console.log('Exporting monthly report to Excel');
@@ -187,13 +316,13 @@ const MonthlyReport = () => {
                 </h3>
 
                 <AttendanceFilters
-                    filters={filters}
-                    onFilterChange={setFilters}
-                    allocations={allocations}
-                    loadingAllocations={loadingAllocations}
-                    showPaperFilter={false}
-                    showTimeSlotFilter={false}
-                />
+    filters={filters}
+    onFilterChange={setFilters}
+    allocations={allocations} 
+    loadingAllocations={loadingAllocations}
+    showPaperFilter={true} 
+    showTimeSlotFilter={false} 
+/>
             </div>
 
             {/* Additional Filters */}
@@ -272,7 +401,7 @@ const MonthlyReport = () => {
                     <div className="flex items-center justify-between">
                         <div className="text-left">
                             <p className="text-sm font-medium text-green-600 mb-1">Avg Attendance</p>
-                            <p className="text-3xl font-bold text-green-900">{monthlyData.averageAttendance}%</p>
+                            <p className="text-3xl font-bold text-green-900">{stats.avg}%</p>
                         </div>
                         <div className="w-12 h-12 bg-green-200 rounded-full flex items-center justify-center">
                             <svg className="w-6 h-6 text-green-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -291,7 +420,7 @@ const MonthlyReport = () => {
                     <div className="flex items-center justify-between">
                         <div className="text-left">
                             <p className="text-sm font-medium text-blue-600 mb-1">Highest Attendance</p>
-                            <p className="text-3xl font-bold text-blue-900">{monthlyData.highestAttendance}%</p>
+                            <p className="text-3xl font-bold text-blue-900">{stats.highest}%</p>
                         </div>
                         <div className="w-12 h-12 bg-blue-200 rounded-full flex items-center justify-center">
                             <svg className="w-6 h-6 text-blue-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -310,7 +439,7 @@ const MonthlyReport = () => {
                     <div className="flex items-center justify-between">
                         <div className="text-left">
                             <p className="text-sm font-medium text-orange-600 mb-1">Lowest Attendance</p>
-                            <p className="text-3xl font-bold text-orange-900">{monthlyData.lowestAttendance}%</p>
+                            <p className="text-3xl font-bold text-orange-900">{stats.lowest}%</p>
                         </div>
                         <div className="w-12 h-12 bg-orange-200 rounded-full flex items-center justify-center">
                             <svg className="w-6 h-6 text-orange-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -329,7 +458,7 @@ const MonthlyReport = () => {
                     <div className="flex items-center justify-between">
                         <div className="text-left">
                             <p className="text-sm font-medium text-red-600 mb-1">Below 35%</p>
-                            <p className="text-3xl font-bold text-red-900">{monthlyData.below35Count}</p>
+                            <p className="text-3xl font-bold text-red-900">{stats.below35}</p>
                         </div>
                         <div className="w-12 h-12 bg-red-200 rounded-full flex items-center justify-center">
                             <svg className="w-6 h-6 text-red-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">

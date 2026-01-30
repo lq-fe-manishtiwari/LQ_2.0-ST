@@ -338,7 +338,7 @@ const Attendencedashboard = () => {
 
                     {/* Faculty-Wise Attendance (Pie Chart - Single Faculty) */}
                     {/* Follow-up Section */}
-                    <div>
+                    {/* <div>
                         <SectionHeader
                             title="Follow-up:"
                             icon={<span className="text-red-500">{Icons.Bell}</span>}
@@ -367,7 +367,7 @@ const Attendencedashboard = () => {
                                 </button>
                             </div>
                         </div>
-                    </div>
+                    </div> */}
 
                 </div>
 
@@ -420,7 +420,7 @@ const Attendencedashboard = () => {
                     </div>
 
                     {/* Absence Classification - Pie Chart Removed, Simple Clean List */}
-                    <div>
+                    {/* <div>
                         <SectionHeader
                             title="Absence Classification"
                             icon={<span className="text-red-500">{Icons.Bell}</span>}
@@ -465,10 +465,11 @@ const Attendencedashboard = () => {
                                 <span className="font-bold text-gray-800">{totalAbsences}</span>
                             </div>
                         </div>
-                    </div>
+                    </div> */}
 
 
                 </div>
+                
             </div>
         </div>
     );

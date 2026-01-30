@@ -16,9 +16,78 @@ export const TeacherAttendanceManagement = {
     getSubjectTimetable,
     //Report
     getTeacherAttendanceSummaryReports,
+    getDailyReport,
+    getSummaryReport,
 };
 
 // ... existing functions ...
+function getSummaryReport(params) {
+    const {
+        collegeId,
+        divisionId,
+        semesterId,
+        academicYearId,
+        programId,
+        startDate,
+        endDate,
+        paperId,
+    } = params;
+
+    let queryString = `collegeId=${collegeId}&startDate=${startDate}&endDate=${endDate}`;
+
+    if (divisionId) queryString += `&divisionId=${divisionId}`;
+    if (semesterId) queryString += `&semesterId=${semesterId}`;
+    if (academicYearId) queryString += `&academicYearId=${academicYearId}`;
+    if (programId) queryString += `&programId=${programId}`;
+    if (paperId) queryString += `&paperId=${paperId}`;
+
+    const requestOptions = {
+        method: 'GET',
+        headers: authHeader(),
+    };
+
+    const finalUrl = `${TimetableAPI}/attendance/student/summary-report?${queryString}`;
+
+    return fetch(finalUrl, requestOptions)
+        .then(handleResponse)
+        .then(data => ({ success: true, data }))
+        .catch(error => ({
+            success: false,
+            message: error.message || 'Failed to fetch student summary report',
+        }));
+}
+function getDailyReport(params) {
+    const { collegeId, divisionId, semesterId, academicYearId, programId, date, batchId, paperId } = params;
+
+    // Build query string
+    let queryString = `collegeId=${collegeId}&divisionId=${divisionId}&semesterId=${semesterId}&academicYearId=${academicYearId}&programId=${programId}&date=${date}`;
+
+    
+    if (paperId) {
+        queryString += `&subjectId=${paperId}`;
+    }
+
+    const requestOptions = {
+        method: 'GET',
+        headers: authHeader(),
+    };
+
+    const finalUrl = `${TimetableAPI}/attendance/student/report?${queryString}`;
+    console.log('=== API Request ===');
+    console.log('URL:', finalUrl);
+    console.log('Query String:', queryString);
+
+    return fetch(finalUrl, requestOptions)
+        .then(handleResponse)
+        .then(data => ({
+            success: true,
+            data: data
+        }))
+        .catch(error => ({
+            success: false,
+            message: error.message || 'Failed to fetch student attendance report'
+        }));
+}
 
 function getSubjectTimetable(payload) {
     const requestOptions = {
