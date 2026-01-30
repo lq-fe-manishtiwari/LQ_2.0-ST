@@ -140,8 +140,8 @@ function getTeacherAttendanceSummaryReports(collegeId, teacherId, startDate, end
         method: 'GET',
         headers: authHeader(),
     };
-
-    const url = `${TimetableAPI}/teacher-attendance/detailed-report` +
+    // teacher-attendance/teacher/detailed-report
+    const url = `${TimetableAPI}/teacher-attendance/teacher/detailed-report` +
                 `?collegeId=${collegeId}` +
                 `&teacherId=${teacherId}` +
                 `&startDate=${startDate}` +

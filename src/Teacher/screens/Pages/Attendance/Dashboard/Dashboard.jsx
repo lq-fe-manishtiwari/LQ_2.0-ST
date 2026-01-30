@@ -12,6 +12,8 @@ import {
     Cell,
     Legend,
 } from "recharts";
+import { useUserProfile } from "../../../../../contexts/UserProfileContext";
+import { TeacherAttendanceManagement } from "../Services/attendance.service";
 
 // --- Reusable Components ---
 const StatCard = ({ title, value, subtext, icon, color, delay }) => (
@@ -220,11 +222,49 @@ const Icons = {
 
 // --- Main Component ---
 const Attendencedashboard = () => {
+    const { getApiIds, isLoaded } = useUserProfile();
     const [animated, setAnimated] = useState(false);
+    const [dashboardData, setDashboardData] = useState(null);
+    const [loading, setLoading] = useState(false);
 
     useEffect(() => {
         setAnimated(true);
     }, []);
+
+    useEffect(() => {
+        if (!isLoaded) return;
+
+        const { collegeId, teacherId } = getApiIds();
+        if (!collegeId || !teacherId) return;
+
+        fetchDashboardData(collegeId, teacherId);
+    }, [isLoaded]);
+
+    const fetchDashboardData = async (collegeId, teacherId) => {
+        setLoading(true);
+        try {
+            // Get current month date range
+            const now = new Date();
+            const startDate = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
+            const endDate = now.toISOString().split('T')[0];
+
+            const response = await TeacherAttendanceManagement.getTeacherAttendanceSummaryReports(
+                collegeId,
+                teacherId,
+                startDate,
+                endDate
+            );
+
+            if (response.success && response.data) {
+                setDashboardData(response.data);
+            }
+        } catch (error) {
+            console.error('Dashboard fetch failed:', error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
     const totalAbsences = absenceData.reduce((sum, item) => sum + item.value, 0);
     return (
         <div className="min-h-screen bg-gray-50 font-sans p-6 pb-20">
@@ -251,30 +291,30 @@ const Attendencedashboard = () => {
             {/* Top Stats */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
                 <StatCard
-                    title="Total Students Enrolled"
-                    value="450"
-                    icon={<div className="text-blue-600 font-bold">450</div>}
+                    title="Total Working Days"
+                    value={loading ? "..." : (dashboardData?.total_days || "0")}
+                    icon={<div className="text-blue-600 font-bold">{dashboardData?.total_days || "0"}</div>}
                     color="bg-blue-50 text-blue-600"
                     delay={0}
                 />
                 <StatCard
-                    title="Students Present"
-                    value="400"
-                    icon={<div className="text-green-600 font-bold">400</div>}
+                    title="Days Present"
+                    value={loading ? "..." : (dashboardData?.total_present_days || "0")}
+                    icon={<div className="text-green-600 font-bold">{dashboardData?.total_present_days || "0"}</div>}
                     color="bg-green-50 text-green-600"
                     delay={100}
                 />
                 <StatCard
-                    title="Students Absent"
-                    value="50"
-                    icon={<div className="text-red-500 font-bold">50</div>}
+                    title="Days Absent"
+                    value={loading ? "..." : (dashboardData?.total_absent_days || "0")}
+                    icon={<div className="text-red-500 font-bold">{dashboardData?.total_absent_days || "0"}</div>}
                     color="bg-red-50 text-red-500"
                     delay={200}
                 />
                 <StatCard
                     title="Attendance Percentage"
-                    value="80%"
-                    icon={<div className="text-green-600 font-bold">80%</div>}
+                    value={loading ? "..." : `${dashboardData?.attendance_percentage || "0"}%`}
+                    icon={<div className="text-green-600 font-bold">{dashboardData?.attendance_percentage || "0"}%</div>}
                     color="bg-green-50 text-green-600"
                     delay={300}
                 />
