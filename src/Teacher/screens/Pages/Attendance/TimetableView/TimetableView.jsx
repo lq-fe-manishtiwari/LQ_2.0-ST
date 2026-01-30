@@ -15,7 +15,8 @@ import {
     Menu,
     Tag,
     Layers,
-    AlertCircle
+    AlertCircle,
+    PartyPopper
 } from "lucide-react";
 import { timetableService } from '../../TimeTable/Services/timetable.service';
 
@@ -45,6 +46,20 @@ const TimetableView = () => {
     const [showMonthPopup, setShowMonthPopup] = useState(false);
     const [popupDate, setPopupDate] = useState(null);
     const [popupData, setPopupData] = useState([]);
+
+    // Check holiday
+    const getHolidayInfoForDay = (date) => {
+        const dateStr = formatDateToYMD(date);
+        const dayData = timetableData.filter(item => item && item.date === dateStr);
+        
+        if (dayData.length > 0 && dayData[0].is_holiday) {
+            return {
+                isHoliday: true,
+                holidayName: dayData[0].holiday_name || "Holiday"
+            };
+        }
+        return { isHoliday: false, holidayName: null };
+    };
 
     const isSameDay = (d1, d2) => {
         if (!d1 || !d2) return false;
@@ -271,14 +286,27 @@ const TimetableView = () => {
                     // Map the API response to our component format
                     timetableArray = response.daily_schedules.flatMap(dailySchedule => {
                         const date = dailySchedule.date;
+                        const isHoliday = dailySchedule.is_holiday;
+                        const holidayName = dailySchedule.holiday_name;
 
-                        // If no slots for this day, return empty array
+                        // Create a base holiday item if it's a holiday
+                        // This ensures the holiday name is preserved even if there are no slots
+                        const baseHolidayItem = isHoliday ? [{
+                            id: `holiday_${date}`,
+                            date: date,
+                            is_holiday: true,
+                            holiday_name: holidayName || "Holiday",
+                            day_of_week: dailySchedule.day_of_week,
+                            type: "HOLIDAY"
+                        }] : [];
+
+                        // If no slots for this day, return holiday item (if any)
                         if (!dailySchedule.slots || !Array.isArray(dailySchedule.slots)) {
-                            return [];
+                            return baseHolidayItem;
                         }
 
-                        // Map each slot to our format
-                        return dailySchedule.slots.map(slot => ({
+                        // Map each slot and inject holiday info
+                        const slots = dailySchedule.slots.map(slot => ({
                             // Basic information
                             id: slot.time_slot_id || `${date}_${slot.start_time}`,
                             timetable_id: slot.timetable_id,
@@ -335,9 +363,11 @@ const TimetableView = () => {
                             college: collegeName,
 
                             // Holiday information
-                            is_holiday: dailySchedule.is_holiday || slot.is_holiday,
-                            holiday_name: dailySchedule.holiday_name || slot.holiday_name
+                            is_holiday: isHoliday,
+                            holiday_name: holidayName
                         }));
+
+                        return isHoliday && slots.length === 0 ? baseHolidayItem : slots;
                     });
 
                     console.log("Mapped timetable array:", timetableArray);
@@ -492,7 +522,7 @@ const TimetableView = () => {
         if (!Array.isArray(filteredData)) return [];
 
         return filteredData.filter(item => {
-            if (!item || !item.date) return false;
+            if (!item || !item.date || item.is_holiday) return false; // Exclude holiday items from regular schedule
             try {
                 const itemDate = new Date(item.date);
                 return isSameDay(itemDate, selectedDate);
@@ -513,7 +543,7 @@ const TimetableView = () => {
             return Array(7).fill().map((_, i) => {
                 const date = new Date();
                 date.setDate(date.getDate() + i);
-                return { date, schedule: [] };
+                return { date, schedule: [], isHoliday: false, holidayName: null };
             });
         }
 
@@ -540,9 +570,16 @@ const TimetableView = () => {
                 return timeA.localeCompare(timeB);
             });
 
+            // Check if day is holiday
+            const holidayEntry = daySchedule.find(item => item.is_holiday);
+            const isHoliday = !!holidayEntry;
+            const holidayName = isHoliday ? holidayEntry.holiday_name : null;
+
             days.push({
                 date,
-                schedule: daySchedule
+                schedule: daySchedule.filter(item => !item.is_holiday), // Filter out holiday entries from schedule for display
+                isHoliday,
+                holidayName
             });
         }
 
@@ -583,7 +620,9 @@ const TimetableView = () => {
                 schedule: [],
                 totalSlots: 0,
                 visibleSlots: [],
-                hiddenSlotsCount: 0
+                hiddenSlotsCount: 0,
+                isHoliday: false,
+                holidayName: null
             }));
         }
 
@@ -612,7 +651,7 @@ const TimetableView = () => {
         const allDays = [...prevMonthDays, ...currentDays, ...nextMonthDays];
 
         return allDays.map(dayDate => {
-            const schedule = filteredData.filter(item => {
+            const dayEntries = filteredData.filter(item => {
                 if (!item || !item.date) return false;
                 try {
                     const itemDate = new Date(item.date);
@@ -623,6 +662,12 @@ const TimetableView = () => {
                 }
             });
 
+            const holidayEntry = dayEntries.find(item => item.is_holiday);
+            const isHoliday = !!holidayEntry;
+            const holidayName = isHoliday ? holidayEntry.holiday_name : null;
+
+            const schedule = dayEntries.filter(item => !item.is_holiday); // Filter out holiday entries from regular schedule
+
             return {
                 date: dayDate,
                 dateStr: formatDateToYMD(dayDate),
@@ -630,8 +675,10 @@ const TimetableView = () => {
                 isCurrentMonth: dayDate.getMonth() === selectedDate.getMonth(),
                 schedule: schedule,
                 totalSlots: schedule.length,
-                visibleSlots: schedule.slice(0, 2),
-                hiddenSlotsCount: Math.max(0, schedule.length - 2)
+                visibleSlots: isHoliday ? [] : schedule.slice(0, 2),
+                hiddenSlotsCount: isHoliday ? 0 : Math.max(0, schedule.length - 2),
+                isHoliday,
+                holidayName
             };
         });
     }, [filteredData, selectedDate]);
@@ -642,16 +689,51 @@ const TimetableView = () => {
 
         const slots = new Set();
         filteredData.forEach(item => {
-            if (item && item.start_time) {
+            if (item && item.start_time && !item.is_holiday) {
                 slots.add(item.start_time);
             }
         });
         return Array.from(slots).sort();
     }, [filteredData]);
 
+    // Holiday Card Component
+    const HolidayCard = ({ holidayName, date }) => (
+        <div className="bg-gradient-to-r from-amber-50 to-yellow-50 border-2 border-amber-200 rounded-2xl p-6 md:p-8 shadow-sm">
+            <div className="flex flex-col md:flex-row items-center gap-6">
+                <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-amber-100 to-yellow-100 flex items-center justify-center text-amber-600 border-2 border-amber-200">
+                    <PartyPopper size={32} />
+                </div>
+                <div className="flex-1 text-center md:text-left">
+                    <div className="flex items-center gap-2 mb-2 justify-center md:justify-start">
+                        <span className="text-xs font-bold px-3 py-1 rounded-full bg-amber-100 text-amber-700">
+                            Holiday
+                        </span>
+                        {date && (
+                            <span className="text-xs text-amber-600">
+                                {formatDateToReadable(date)}
+                            </span>
+                        )}
+                    </div>
+                    <h2 className="text-2xl md:text-3xl font-bold text-amber-800 mb-2">
+                        {holidayName || "Holiday"}
+                    </h2>
+                    <p className="text-amber-600">
+                        No classes scheduled for today. Enjoy your holiday!
+                    </p>
+                </div>
+            </div>
+        </div>
+    );
+
     // Slot Detail Card Component
-    const SlotDetailCard = ({ slot }) => (
-        <div className="bg-white rounded-xl p-4 border border-slate-200 shadow-sm hover:shadow-md transition-shadow">
+    const SlotDetailCard = ({ slot }) => {
+        // If slot is holiday, show holiday card instead
+        if (slot.is_holiday) {
+            return <HolidayCard holidayName={slot.holiday_name} />;
+        }
+
+        return (
+            <div className="bg-white rounded-xl p-4 border border-slate-200 shadow-sm hover:shadow-md transition-shadow">
             <div className="flex flex-col md:flex-row gap-4">
                 {/* Left Column - Time and Type */}
                 <div className="w-full md:w-28 flex flex-col items-center justify-center gap-3 border-b md:border-b-0 md:border-r border-slate-100 pb-4 md:pb-0 pr-0 md:pr-4">
@@ -789,48 +871,80 @@ const TimetableView = () => {
                 </div>
             </div>
         </div>
-    );
+        );
+    };
 
-    const CompactSlotCard = ({ slot }) => (
-        <div
-            className="px-2 py-1.5 rounded-md bg-primary-50 border border-primary-100 hover:bg-primary-100 transition-colors cursor-pointer"
-            onClick={(e) => {
-                e.stopPropagation();
-                handleWeekSlotClick(slot);
-            }}
-        >
-            <div className="flex items-center gap-2">
-                <div className="w-2 h-2 rounded-full bg-primary-500"></div>
-                <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between">
-                        <span className="text-xs font-bold text-primary-700 truncate">
-                            {slot.subject_name || slot.subject || "Subject"}
-                        </span>
-                        <span className="text-[10px] text-primary-500 ml-1 shrink-0">
-                            {formatTimeForDisplay(slot.start_time)}
-                        </span>
+    const CompactSlotCard = ({ slot }) => {
+        // If slot is holiday, show holiday indicator
+        if (slot.is_holiday) {
+            return (
+                <div className="px-2 py-1.5 rounded-md bg-gradient-to-r from-amber-50 to-yellow-50 border border-amber-200">
+                    <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 rounded-full bg-amber-500"></div>
+                        <div className="flex-1 min-w-0">
+                            <div className="flex items-center justify-between">
+                                <span className="text-xs font-bold text-amber-700 truncate">
+                                    {slot.holiday_name || "Holiday"}
+                                </span>
+                            </div>
+                            <div className="text-[10px] text-amber-600 mt-0.5">
+                                No classes scheduled
+                            </div>
+                        </div>
                     </div>
-                    <div className="text-[10px] text-primary-600 mt-0.5 truncate">
-                        {slot.teacher_name?.split(' ')[0] || "Teacher"} • {slot.room_number || "Room"}
+                </div>
+            );
+        }
+
+        return (
+            <div
+                className="px-2 py-1.5 rounded-md bg-primary-50 border border-primary-100 hover:bg-primary-100 transition-colors cursor-pointer"
+                onClick={(e) => {
+                    e.stopPropagation();
+                    handleWeekSlotClick(slot);
+                }}
+            >
+                <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full bg-primary-500"></div>
+                    <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between">
+                            <span className="text-xs font-bold text-primary-700 truncate">
+                                {slot.subject_name || slot.subject || "Subject"}
+                            </span>
+                            <span className="text-[10px] text-primary-500 ml-1 shrink-0">
+                                {formatTimeForDisplay(slot.start_time)}
+                            </span>
+                        </div>
+                        <div className="text-[10px] text-primary-600 mt-0.5 truncate">
+                            {slot.teacher_name?.split(' ')[0] || "Teacher"} • {slot.room_number || "Room"}
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
-    );
+        );
+    };
 
     // Empty State Components
-    const EmptyDayState = () => (
-        <div className="h-[400px] flex flex-col items-center justify-center bg-white rounded-2xl border-2 border-dashed border-slate-200 p-6">
-            <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center text-3xl mb-4 opacity-50">
-                <BookOpen size={32} className="text-slate-400" />
+    const EmptyDayState = () => {
+        const holidayInfo = getHolidayInfoForDay(selectedDate);
+        
+        if (holidayInfo.isHoliday) {
+            return <HolidayCard holidayName={holidayInfo.holidayName} date={selectedDate} />;
+        }
+
+        return (
+            <div className="h-[400px] flex flex-col items-center justify-center bg-white rounded-2xl border-2 border-dashed border-slate-200 p-6">
+                <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center text-3xl mb-4 opacity-50">
+                    <BookOpen size={32} className="text-slate-400" />
+                </div>
+                <h2 className="text-xl font-bold text-slate-400">No Classes Scheduled</h2>
+                <p className="text-slate-400 mt-1 text-center">
+                    No sessions for {dayNames[selectedDate.getDay()]}<br />
+                    <span className="text-sm">Enjoy your free time!</span>
+                </p>
             </div>
-            <h2 className="text-xl font-bold text-slate-400">No Classes Scheduled</h2>
-            <p className="text-slate-400 mt-1 text-center">
-                No sessions for {dayNames[selectedDate.getDay()]}<br />
-                <span className="text-sm">Enjoy your free time!</span>
-            </p>
-        </div>
-    );
+        );
+    };
 
     const EmptyWeekState = () => (
         <div className="h-[500px] flex flex-col items-center justify-center bg-white rounded-3xl border-2 border-dashed border-slate-200 p-6">
@@ -1011,7 +1125,7 @@ const TimetableView = () => {
 
                                 <div className="grid grid-cols-7 gap-1">
                                     {calendarData.map((item, idx) => {
-                                        const hasClasses = Array.isArray(timetableData) && timetableData.some(slot => {
+                                        const dayEntries = Array.isArray(timetableData) ? timetableData.filter(slot => {
                                             if (!slot || !slot.date) return false;
                                             try {
                                                 const slotDate = new Date(slot.date);
@@ -1019,7 +1133,10 @@ const TimetableView = () => {
                                             } catch (e) {
                                                 return false;
                                             }
-                                        });
+                                        }) : [];
+                                        
+                                        const hasClasses = dayEntries.some(slot => !slot.is_holiday);
+                                        const isHoliday = dayEntries.some(slot => slot.is_holiday);
                                         const isToday = item.fullDate && isSameDay(item.fullDate, new Date());
 
                                         return (
@@ -1032,14 +1149,17 @@ const TimetableView = () => {
                                                                 ? "bg-primary-600 text-white shadow-lg shadow-primary-200 font-bold"
                                                                 : isToday
                                                                     ? "bg-blue-50 text-blue-600 hover:bg-blue-100"
-                                                                    : "bg-slate-50 text-slate-600 hover:bg-primary-50 hover:text-primary-600"
+                                                                        : "bg-slate-50 text-slate-600 hover:bg-primary-50 hover:text-primary-600"
                                                             }`}
                                                     >
                                                         <span>{item.day}</span>
                                                         {isToday && (
                                                             <div className={`absolute bottom-1 w-1 h-1 rounded-full ${isSameDay(item.fullDate, selectedDate) ? 'bg-white' : 'bg-blue-500'}`}></div>
                                                         )}
-                                                        {hasClasses && !isToday && (
+                                                        {isHoliday && !isToday && (
+                                                            <div className={`absolute bottom-1 w-1 h-1 rounded-full ${isSameDay(item.fullDate, selectedDate) ? 'bg-white' : 'bg-amber-500'}`}></div>
+                                                        )}
+                                                        {hasClasses && !isHoliday && !isToday && (
                                                             <div className={`absolute bottom-1 w-1 h-1 rounded-full ${isSameDay(item.fullDate, selectedDate) ? 'bg-white' : 'bg-primary-500'}`}></div>
                                                         )}
                                                     </button>
@@ -1185,7 +1305,7 @@ const TimetableView = () => {
                                     {/* Day Header */}
                                     <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm mb-4">
                                         <div className="flex items-center gap-4">
-                                            <div className={`w-16 h-16 rounded-2xl flex flex-col items-center justify-center border-2 shrink-0 ${dayScheduleData.length === 0 ? 'bg-slate-100 border-slate-200' : isSelectedDateToday ? 'bg-blue-50 border-blue-200' : 'bg-primary-50 border-primary-100'}`}>
+                                            <div className={`w-16 h-16 rounded-2xl flex flex-col items-center justify-center border-2 shrink-0 ${getHolidayInfoForDay(selectedDate).isHoliday ? 'bg-amber-50 border-amber-200' : dayScheduleData.length === 0 ? 'bg-slate-100 border-slate-200' : isSelectedDateToday ? 'bg-blue-50 border-blue-200' : 'bg-primary-50 border-primary-100'}`}>
                                                 <span className="text-xs font-bold text-slate-400">
                                                     {monthNames[selectedDate.getMonth()].slice(0, 3)}
                                                 </span>
@@ -1201,15 +1321,21 @@ const TimetableView = () => {
                                                     )}
                                                 </h1>
                                                 <p className="text-slate-500 font-medium mt-1">
-                                                    {dayScheduleData.length === 0 ? "No classes scheduled" : `${dayScheduleData.length} session${dayScheduleData.length > 1 ? 's' : ''}`}
+                                                    {getHolidayInfoForDay(selectedDate).isHoliday 
+                                                        ? getHolidayInfoForDay(selectedDate).holidayName
+                                                        : dayScheduleData.length === 0 
+                                                            ? "No classes scheduled" 
+                                                            : `${dayScheduleData.length} session${dayScheduleData.length > 1 ? 's' : ''}`}
                                                 </p>
                                             </div>
                                         </div>
                                     </div>
-
+ 
                                     {/* Schedule List */}
                                     <div className="space-y-4">
-                                        {dayScheduleData.length > 0 ? (
+                                        {getHolidayInfoForDay(selectedDate).isHoliday ? (
+                                            <HolidayCard holidayName={getHolidayInfoForDay(selectedDate).holidayName} date={selectedDate} />
+                                        ) : dayScheduleData.length > 0 ? (
                                             dayScheduleData.map((slot, index) => (
                                                 <SlotDetailCard key={slot.id || `${slot.date}_${slot.start_time}_${index}`} slot={slot} />
                                             ))
@@ -1229,7 +1355,7 @@ const TimetableView = () => {
                                             const isToday = isSameDay(day.date, new Date());
                                             const isSelected = isSameDay(day.date, selectedDate);
                                             return (
-                                                <div key={idx} className={`p-3 text-center border-r border-slate-100 last:border-r-0 ${isSelected ? 'bg-primary-50' : ''}`}>
+                                                <div key={idx} className={`p-3 text-center border-r border-slate-100 last:border-r-0 ${isSelected ? 'bg-primary-50' : ''} ${day.isHoliday ? 'bg-amber-50' : ''}`}>
                                                     <div className="text-xs font-bold text-slate-400 mb-1">
                                                         {calendarDays[day.date.getDay() === 0 ? 6 : day.date.getDay() - 1]}
                                                         {isToday && (
@@ -1238,11 +1364,15 @@ const TimetableView = () => {
                                                     </div>
                                                     <button
                                                         onClick={() => handleWeekDayClick(day.date)}
-                                                        className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ${isToday ? 'bg-blue-600 text-white' : isSelected ? 'bg-primary-100 text-primary-700' : 'text-slate-700 hover:bg-slate-100'}`}
+                                                        className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ${isToday ? 'bg-blue-600 text-white' : isSelected ? 'bg-primary-100 text-primary-700' : day.isHoliday ? 'bg-amber-100 text-orange-700' : 'text-slate-700 hover:bg-slate-100'}`}
                                                     >
                                                         {day.date.getDate()}
                                                     </button>
-                                                    {day.schedule.length > 0 && (
+                                                    {day.isHoliday ? (
+                                                        <div className="text-[10px] text-orange-700 font-bold mt-1 truncate px-1">
+                                                            {day.holidayName}
+                                                        </div>
+                                                    ) : day.schedule.length > 0 && (
                                                         <div className="text-[10px] text-primary-500 mt-1">
                                                             {day.schedule.length} class{day.schedule.length > 1 ? 'es' : ''}
                                                         </div>
@@ -1267,7 +1397,14 @@ const TimetableView = () => {
                                                             const slot = day.schedule.find(s => s && s.start_time === time);
                                                             return (
                                                                 <div key={dayIndex} className="p-2 border-r border-slate-100 last:border-r-0 min-h-[60px]">
-                                                                    {slot ? (
+                                                                    {day.isHoliday && timeIndex === 0 ? (
+                                                                        <div className="h-full p-2 rounded-md bg-gradient-to-r from-amber-50 to-yellow-50 border border-amber-200">
+                                                                            <div className="text-xs font-bold text-amber-700">Holiday</div>
+                                                                            <div className="text-[10px] text-amber-600 truncate">
+                                                                                {day.holidayName}
+                                                                            </div>
+                                                                        </div>
+                                                                    ) : slot ? (
                                                                         <div
                                                                             className="h-full p-2 rounded-md bg-primary-50 border border-primary-100 hover:bg-primary-100 transition-colors cursor-pointer"
                                                                             onClick={(e) => {
@@ -1312,39 +1449,51 @@ const TimetableView = () => {
                                             return (
                                                 <div
                                                     key={index}
-                                                    className={`min-h-[120px] border-r border-b border-slate-100 p-2 ${!dayData.isCurrentMonth ? 'bg-slate-50/50' : ''} ${isToday ? 'bg-blue-50' : ''} ${isSameDay(dayData.date, selectedDate) ? 'bg-primary-100' : ''}`}
+                                                    className={`min-h-[120px] border-r border-b border-slate-100 p-2 ${!dayData.isCurrentMonth ? 'bg-slate-50/50' : ''} ${isToday ? 'bg-blue-50' : ''} ${isSameDay(dayData.date, selectedDate) ? 'bg-primary-100' : ''} ${dayData.isHoliday ? 'bg-gradient-to-br from-amber-50/30 to-yellow-50/30' : ''}`}
                                                     onClick={() => handleMonthDateClick(dayData.date, dayData.schedule)}
                                                 >
                                                     <div className="flex flex-col h-full">
                                                         <div className="flex justify-between items-center mb-1">
-                                                            <span className={`text-sm font-bold ${dayData.isCurrentMonth ? 'text-slate-700' : 'text-slate-400'} ${isSameDay(dayData.date, selectedDate) ? 'bg-primary-600 text-white rounded-full w-6 h-6 flex items-center justify-center' : ''} ${isToday && !isSameDay(dayData.date, selectedDate) ? 'text-blue-600' : ''}`}>
+                                                            <span className={`text-sm font-bold ${dayData.isCurrentMonth ? 'text-slate-700' : 'text-slate-400'} ${isSameDay(dayData.date, selectedDate) ? 'bg-primary-600 text-white rounded-full w-6 h-6 flex items-center justify-center' : ''} ${isToday && !isSameDay(dayData.date, selectedDate) ? 'text-blue-600' : ''} ${dayData.isHoliday ? 'text-amber-700' : ''}`}>
                                                                 {dayData.dayNumber}
                                                                 {isToday && (
                                                                     <span className="absolute top-0 right-0 w-2 h-2 bg-blue-500 rounded-full"></span>
                                                                 )}
                                                             </span>
-                                                            {dayData.schedule.length > 0 && (
+                                                            {dayData.isHoliday ? (
+                                                                <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-600 font-bold">
+                                                                    <PartyPopper size={8} />
+                                                                </span>
+                                                            ) : dayData.schedule.length > 0 && (
                                                                 <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-primary-100 text-primary-600 font-bold">
                                                                     {dayData.schedule.length}
                                                                 </span>
                                                             )}
                                                         </div>
                                                         <div className="flex-1 space-y-1" onClick={(e) => e.stopPropagation()}>
-                                                            {dayData.visibleSlots.map((slot, slotIndex) => (
-                                                                <CompactSlotCard key={slotIndex} slot={slot} />
-                                                            ))}
-                                                            {dayData.hiddenSlotsCount > 0 && (
-                                                                <button
-                                                                    onClick={(e) => {
-                                                                        e.stopPropagation();
-                                                                        setPopupDate(dayData.date);
-                                                                        setPopupData(dayData.schedule);
-                                                                        setShowMonthPopup(true);
-                                                                    }}
-                                                                    className="text-[10px] text-slate-500 px-2 py-1 bg-slate-100 rounded-md w-full text-left"
-                                                                >
-                                                                    +{dayData.hiddenSlotsCount} more
-                                                                </button>
+                                                            {dayData.isHoliday ? (
+                                                                <div className="text-[10px] text-amber-600 font-bold px-2 py-1 bg-gradient-to-r from-amber-50 to-yellow-50 border border-amber-200 rounded-md">
+                                                                    {dayData.holidayName || "Holiday"}
+                                                                </div>
+                                                            ) : (
+                                                                <>
+                                                                    {dayData.visibleSlots.map((slot, slotIndex) => (
+                                                                        <CompactSlotCard key={slotIndex} slot={slot} />
+                                                                    ))}
+                                                                    {dayData.hiddenSlotsCount > 0 && (
+                                                                        <button
+                                                                            onClick={(e) => {
+                                                                                e.stopPropagation();
+                                                                                setPopupDate(dayData.date);
+                                                                                setPopupData(dayData.schedule);
+                                                                                setShowMonthPopup(true);
+                                                                            }}
+                                                                            className="text-[10px] text-slate-500 px-2 py-1 bg-slate-100 rounded-md w-full text-left"
+                                                                        >
+                                                                            +{dayData.hiddenSlotsCount} more
+                                                                        </button>
+                                                                    )}
+                                                                </>
                                                             )}
                                                         </div>
                                                     </div>
