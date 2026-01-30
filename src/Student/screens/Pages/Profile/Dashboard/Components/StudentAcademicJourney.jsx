@@ -97,114 +97,116 @@ const StudentAcademicJourney = ({ studentData, historyLoading, enrichedHistory =
   }, [studentData?.student_id, userProfile?.student_id]);
 
   return (
-    <div className="space-y-4">
-      {/* Timeline section */}
+    <div className="space-y-10">
+      {/* Timeline section remains the same */}
       <div>
-        <div className="flex items-center gap-3 mb-10">
-          <div className="p-2 bg-gray-50 rounded-xl text-gray-400">
-            <GraduationCap size={20} />
-          </div>
-          <h3 className="text-xl font-black text-gray-900 tracking-tight">Academic Milestone History</h3>
-        </div>
+        <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+          <GraduationCap className="w-5 h-5 text-indigo-500 mr-2" />
+          Academic History
+        </h3>
 
         {historyLoadingEffective ? (
-          <div className="py-20 flex flex-col items-center justify-center space-y-4">
-            <div className="h-12 w-12 animate-spin rounded-full border-t-4 border-blue-600 border-r-transparent"></div>
-            <p className="text-gray-400 font-bold animate-pulse text-sm">Building your journey...</p>
+          <div className="bg-gray-50 p-12 rounded-lg border flex items-center justify-center">
+            <div className="h-12 w-12 animate-spin rounded-full border-t-4 border-blue-600"></div>
           </div>
         ) : enrichedHistoryEffective.length === 0 ? (
-          <div className="bg-gray-50/50 p-16 rounded-[2rem] border border-dashed border-gray-200 text-center">
-            <GraduationCap className="w-16 h-16 mx-auto mb-4 text-gray-200" />
-            <p className="text-gray-400 font-bold text-lg">Your academic story starts here.</p>
-            <p className="text-gray-300 text-sm mt-1">No historical records available yet.</p>
+          <div className="bg-gray-50 p-12 rounded-lg border text-center">
+            <GraduationCap className="w-16 h-16 mx-auto mb-4 text-gray-400" />
+            <p className="text-gray-500 text-lg">No academic history available</p>
           </div>
         ) : (
-          <div className="relative px-2 sm:px-4">
+          <div className="relative">
             {/* Timeline line */}
-            <div className="absolute left-6 sm:left-10 top-0 bottom-0 w-1 bg-gradient-to-b from-blue-600 via-indigo-400 to-transparent rounded-full opacity-20"></div>
-
-            <div className="space-y-12 relative">
+            <div className="absolute left-3 sm:left-6 top-0 bottom-0 w-0.5 bg-gradient-to-b from-blue-400 to-blue-200"></div>
+            <div className="space-y-6 sm:space-y-8 relative">
               {enrichedHistoryEffective.map((record, index) => (
-                <div key={index} className="relative pl-12 sm:pl-20 group">
-                  {/* Timeline Node */}
-                  <div className="absolute left-[1.125rem] sm:left-[2.125rem] top-4 w-6 h-6 rounded-full bg-white border-4 border-blue-600 shadow-xl shadow-blue-100 z-10 transition-transform group-hover:scale-125"></div>
+                <div key={index} className="relative pl-10 sm:pl-16">
+                  {/* Timeline circle */}
+                  <div className="absolute left-0 sm:left-3 top-2 sm:top-3 w-6 h-6 rounded-full bg-blue-500 border-4 border-white shadow-md flex items-center justify-center z-10">
+                    <span className="text-white text-xs font-bold">{enrichedHistory.length - index}</span>
+                  </div>
 
                   {/* Card */}
-                  <div className="bg-white p-6 sm:p-8 rounded-[2rem] shadow-sm border border-gray-100 hover:border-blue-200 hover:shadow-2xl hover:shadow-blue-50 transition-all duration-500">
+                  <div className="bg-white p-4 sm:p-6 rounded-xl shadow-md border border-gray-200 hover:shadow-lg transition-all">
                     {/* Header */}
-                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
-                      <div>
-                        <div className="flex items-center gap-3 mb-2 flex-wrap">
-                          <h4 className="text-xl sm:text-2xl font-black text-gray-900 tracking-tight">
-                            {record.class_name || "Academic Standard"}
+                    <div className="flex flex-col sm:flex-row items-start sm:items-start justify-between mb-3 sm:mb-4 gap-2">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-2 flex-wrap">
+                          <GraduationCap className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600 flex-shrink-0" />
+                          <h4 className="text-base sm:text-lg font-bold text-gray-800 break-words">
+                            {record.class_name || "Class"}
                           </h4>
                           {record.is_active && (
-                            <span className="px-4 py-1 rounded-full text-[10px] font-black uppercase tracking-widest bg-green-500 text-white shadow-lg shadow-green-100">
-                              Current Standard
+                            <span className="px-2 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-700 whitespace-nowrap">
+                              Current
                             </span>
                           )}
                         </div>
-                        <div className="flex items-center gap-2 text-gray-400 font-bold text-xs sm:text-sm uppercase tracking-wider">
-                          <span>{record.academic_year_name || "---"}</span>
-                          <span className="w-1 h-1 bg-gray-300 rounded-full"></span>
-                          <span>{record.semester_name || "---"}</span>
-                        </div>
+                        <p className="text-xs sm:text-sm text-gray-600 break-words">
+                          {record.academic_year_name || "Academic Year"} • {record.semester_name || "Semester"}
+                        </p>
                       </div>
-
-                      <div className="bg-blue-50 px-5 py-2 rounded-2xl border border-blue-100/50 flex flex-col items-center md:items-end">
-                        <span className="text-[10px] font-black text-blue-400 uppercase tracking-widest leading-tight">Achievement</span>
-                        <span className="text-blue-700 font-black text-lg">Rank #{record.roll_number || "--"}</span>
-                      </div>
-                    </div>
-
-                    {/* Stats Grid */}
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
-                      <div className="bg-gray-50/50 p-4 rounded-2xl border border-gray-100">
-                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Batch Code</p>
-                        <p className="font-bold text-gray-700">{record.batch_name || "---"}</p>
-                      </div>
-                      <div className="bg-gray-50/50 p-4 rounded-2xl border border-gray-100">
-                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Section</p>
-                        <p className="font-bold text-gray-700">{record.division_name || "---"}</p>
-                      </div>
-                      <div className="bg-gray-50/50 p-4 rounded-2xl border border-gray-100">
-                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Academic Status</p>
-                        <p className={`font-bold ${record.is_active ? 'text-green-600' : 'text-gray-500'}`}>
-                          {record.is_active ? "In Progress" : "Completed"}
+                      <div className="text-left sm:text-right">
+                        <p className="text-xs text-gray-500 uppercase tracking-wide">Timeline</p>
+                        <p className="text-xs sm:text-sm font-semibold text-blue-600 whitespace-nowrap">
+                          {index === 0 ? "Most Recent" : `Step ${enrichedHistory.length - index}`}
                         </p>
                       </div>
                     </div>
 
-                    {/* Timeline Events Pill */}
+                    {/* Grid */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3">
+                      <div className="bg-blue-50 p-2.5 sm:p-3 rounded-lg border border-blue-100">
+                        <p className="text-xs font-semibold text-blue-600 uppercase tracking-wide mb-1">Batch</p>
+                        <p className="font-semibold text-gray-800 text-xs sm:text-sm break-words">{record.batch_name || "---"}</p>
+                      </div>
+                      <div className="bg-purple-50 p-2.5 sm:p-3 rounded-lg border border-purple-100">
+                        <p className="text-xs font-semibold text-purple-600 uppercase tracking-wide mb-1">Division</p>
+                        <p className="font-semibold text-gray-800 text-xs sm:text-sm break-words">{record.division_name || "---"}</p>
+                      </div>
+                      <div className="bg-green-50 p-2.5 sm:p-3 rounded-lg border border-green-100">
+                        <p className="text-xs font-semibold text-green-600 uppercase tracking-wide mb-1">Roll Number</p>
+                        <p className="font-semibold text-gray-800 text-xs sm:text-sm break-words">{record.roll_number || "---"}</p>
+                      </div>
+                      <div className="bg-orange-50 p-2.5 sm:p-3 rounded-lg border border-orange-100">
+                        <p className="text-xs font-semibold text-orange-600 uppercase tracking-wide mb-1">Status</p>
+                        <p className="font-semibold text-gray-800 text-xs sm:text-sm capitalize">{record.is_active ? "Active" : "Inactive"}</p>
+                      </div>
+                    </div>
+
+                    {/* Timeline Events */}
                     {(record.allocated_at || record.promoted_at || record.deallocated_at) && (
-                      <div className="flex flex-wrap gap-4 pt-6 border-t border-gray-50">
-                        {record.allocated_at && (
-                          <div className="flex items-center gap-2">
-                            <div className="w-2 h-2 rounded-full bg-blue-500"></div>
-                            <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">Enroll:</span>
-                            <span className="text-xs font-black text-gray-700">
-                              {moment.unix(record.allocated_at).format("MMM DD, YYYY")}
-                            </span>
-                          </div>
-                        )}
-                        {record.promoted_at && (
-                          <div className="flex items-center gap-2">
-                            <div className="w-2 h-2 rounded-full bg-green-500"></div>
-                            <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">Promote:</span>
-                            <span className="text-xs font-black text-gray-700">
-                              {moment.unix(record.promoted_at).format("MMM DD, YYYY")}
-                            </span>
-                          </div>
-                        )}
-                        {record.deallocated_at && (
-                          <div className="flex items-center gap-2">
-                            <div className="w-2 h-2 rounded-full bg-red-500"></div>
-                            <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">End:</span>
-                            <span className="text-xs font-black text-gray-700">
-                              {moment.unix(record.deallocated_at).format("MMM DD, YYYY")}
-                            </span>
-                          </div>
-                        )}
+                      <div className="mt-3 sm:mt-4 pt-3 sm:pt-4 border-t border-gray-200">
+                        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Timeline Events</p>
+                        <div className="flex flex-col sm:flex-row sm:flex-wrap gap-2 sm:gap-3">
+                          {record.allocated_at && (
+                            <div className="flex items-center gap-2 text-xs sm:text-sm">
+                              <span className="w-2 h-2 rounded-full bg-blue-500 flex-shrink-0"></span>
+                              <span className="text-gray-600 whitespace-nowrap">Allocated:</span>
+                              <span className="font-semibold text-gray-800">
+                                {moment.unix(record.allocated_at).format("DD/MM/YYYY")}
+                              </span>
+                            </div>
+                          )}
+                          {record.promoted_at && (
+                            <div className="flex items-center gap-2 text-xs sm:text-sm">
+                              <span className="w-2 h-2 rounded-full bg-green-500 flex-shrink-0"></span>
+                              <span className="text-gray-600 whitespace-nowrap">Promoted:</span>
+                              <span className="font-semibold text-gray-800">
+                                {moment.unix(record.promoted_at).format("DD/MM/YYYY")}
+                              </span>
+                            </div>
+                          )}
+                          {record.deallocated_at && (
+                            <div className="flex items-center gap-2 text-xs sm:text-sm">
+                              <span className="w-2 h-2 rounded-full bg-red-500 flex-shrink-0"></span>
+                              <span className="text-gray-600 whitespace-nowrap">Deallocated:</span>
+                              <span className="font-semibold text-gray-800">
+                                {moment.unix(record.deallocated_at).format("DD/MM/YYYY")}
+                              </span>
+                            </div>
+                          )}
+                        </div>
                       </div>
                     )}
                   </div>
@@ -214,6 +216,39 @@ const StudentAcademicJourney = ({ studentData, historyLoading, enrichedHistory =
           </div>
         )}
       </div>
+
+      {/* STUDENT HISTORY SECTION - Updated to use enrichedHistory */}
+      {/* <div>
+        <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+          <History className="w-5 h-5 text-red-600 mr-2" />
+          Student Academic History
+        </h3>
+
+        <div className="bg-gray-50 p-6 rounded-lg border">
+          {historyLoadingEffective ? (
+            <p className="text-gray-600">Loading history...</p>
+          ) : enrichedHistoryEffective.length === 0 ? (
+            <div>
+              <p className="text-gray-600 mb-2">No history records found.</p>
+              <p className="text-gray-500 text-sm">
+                Current student ID: {studentData?.student_id || "Not available"}
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {enrichedHistoryEffective.map((item, idx) => (
+                <div key={idx} className="p-4 bg-white border rounded-lg shadow">
+                  <p><strong>Class:</strong> {item.class_name || "N/A"}</p>
+                  <p><strong>Division:</strong> {item.division_name || "N/A"}</p>
+                  <p><strong>Year:</strong> {item.academic_year_name || "N/A"}</p>
+                  <p><strong>Roll Number:</strong> {item.roll_number || "N/A"}</p>
+                  <p><strong>Status:</strong> {item.is_active ? "Active" : "Inactive"}</p>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div> */}
     </div>
   );
 };

@@ -30,7 +30,7 @@ export default function ProfileDashboard() {
     { id: 'educational', name: 'Educational', icon: <GraduationCap className="w-5 h-5" /> },
     { id: 'communication', name: 'Communication', icon: <MessageCircle className="w-5 h-5" /> },
     { id: 'transport', name: 'Transport', icon: <Bus className="w-5 h-5" /> },
-    { id: 'academic', name: 'Journey', icon: <FileText className="w-5 h-5" /> },
+    { id: 'academic', name: 'Academic Journey', icon: <FileText className="w-5 h-5" /> },
     { id: 'fees', name: 'Fees', icon: <CreditCard className="w-5 h-5" /> }
   ];
 
@@ -72,6 +72,7 @@ export default function ProfileDashboard() {
         return <StudentTransportDetails studentData={studentData} />;
 
       case 'academic':
+
         return (
           <StudentAcademicJourney
             studentData={studentData}
@@ -90,10 +91,10 @@ export default function ProfileDashboard() {
   // Show loading state
   if (profileLoading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600 font-medium">Loading profile data...</p>
+          <p className="text-gray-600">Loading profile data...</p>
         </div>
       </div>
     );
@@ -102,17 +103,14 @@ export default function ProfileDashboard() {
   // Show error state
   if (profileError && !profile) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-        <div className="text-center w-full max-w-md">
-          <div className="bg-red-50 border border-red-200 rounded-2xl p-6 sm:p-8 shadow-sm">
-            <div className="bg-red-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 text-red-600">
-              <User className="w-8 h-8" />
-            </div>
-            <h3 className="text-red-900 text-lg font-bold mb-2">Error Loading Profile</h3>
-            <p className="text-red-600 text-sm mb-6">{profileError}</p>
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="bg-red-50 border border-red-200 rounded-lg p-6 max-w-md">
+            <h3 className="text-red-800 font-medium mb-2">Error Loading Profile</h3>
+            <p className="text-red-600 text-sm mb-4">{profileError}</p>
             <button
               onClick={fetchProfile}
-              className="w-full bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-xl text-sm font-bold shadow-md transition-all active:scale-95"
+              className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm font-medium"
             >
               Try Again
             </button>
@@ -123,133 +121,143 @@ export default function ProfileDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC]">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
+    <div className="min-h-screen bg-gray-50">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
 
-        {/* Action Header */}
-        <div className="flex items-center justify-between mb-6">
+        {/* Back Button */}
+        <div className="mb-6">
           <Link
-            to="/student-dashboard"
-            className="group flex items-center space-x-2 text-gray-500 hover:text-blue-600 transition-colors"
+            to="/student"
+            className="inline-flex items-center space-x-2 text-gray-600 hover:text-gray-900 bg-white px-4 py-2 rounded-lg border hover:shadow-sm transition"
           >
-            <div className="p-2 rounded-lg group-hover:bg-blue-50 transition-colors">
-              <ArrowLeft className="w-5 h-5" />
-            </div>
-            <span className="font-semibold text-sm sm:text-base">Back</span>
+            <ArrowLeft className="w-5 h-5" />
+            <span>Back to Dashboard</span>
           </Link>
-          <div className="text-xs font-bold text-gray-400 tracking-wider uppercase">Student Profile</div>
         </div>
 
-        {/* Premium Profile card */}
-        <div className="relative overflow-hidden bg-white rounded-3xl shadow-sm border border-gray-100 p-6 sm:p-8 mb-8">
-          <div className="absolute top-0 right-0 p-4 opacity-5">
-            <User size={120} />
-          </div>
-
-          <div className="relative z-10 flex flex-col sm:flex-row items-center sm:items-center gap-6 text-center sm:text-left">
-            {/* Avatar Section */}
-            <div className="relative group">
+        {/* Profile Header */}
+        <div className="bg-white rounded-xl shadow-sm border p-4 sm:p-6 mb-6">
+          <div className="flex flex-col sm:flex-row items-center sm:items-start space-y-4 sm:space-y-0 sm:space-x-6 text-center sm:text-left">
+            {/* Profile Image */}
+            <div className="flex-shrink-0">
               {profileImage ? (
-                <div className="relative">
-                  <img
-                    src={profileImage}
-                    alt="Profile"
-                    className="w-24 h-24 sm:w-32 sm:h-32 rounded-3xl object-cover border-4 border-white shadow-xl"
-                  />
-                  <div className="absolute -bottom-2 -right-2 bg-green-500 w-6 h-6 rounded-full border-4 border-white"></div>
-                </div>
+                <img
+                  src={profileImage}
+                  alt="Profile"
+                  className="w-20 h-20 sm:w-24 sm:h-24 rounded-full object-cover border-4 border-gray-100 shadow-sm"
+                />
               ) : (
-                <div className="w-24 h-24 sm:w-32 sm:h-32 rounded-3xl bg-gradient-to-br from-blue-600 to-indigo-700 flex items-center justify-center text-white text-3xl sm:text-4xl font-black border-4 border-white shadow-xl uppercase">
-                  {studentName ? studentName.charAt(0) : 'S'}
+                <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-blue-600 flex items-center justify-center text-white text-2xl sm:text-3xl font-bold border-4 border-blue-300 shadow-sm">
+                  {studentName ? studentName.charAt(0).toUpperCase() : 'S'}
                 </div>
               )}
             </div>
 
-            {/* Identity Info */}
-            <div className="flex-1">
-              <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 mb-4">
-                <h1 className="text-2xl sm:text-3xl font-black text-gray-900 tracking-tight">
-                  {studentName}
-                </h1>
-                <div className="flex items-center justify-center sm:justify-start gap-2">
-                  <span className="bg-blue-600 text-white px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest shadow-sm">
-                    Student
-                  </span>
-                  <span className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest border ${profile?.is_active
-                    ? 'bg-green-50 text-green-600 border-green-200'
-                    : 'bg-red-50 text-red-600 border-red-200'}`}>
-                    {profile?.is_active ? 'Active' : 'Inactive'}
-                  </span>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-2 gap-x-8 text-sm sm:text-base">
+            {/* Profile Info */}
+            <div className="flex-1 w-full">
+              <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900 mb-1">
+                {studentName}
+              </h1>
+              <div className="space-y-1 sm:space-y-0 sm:flex sm:flex-wrap sm:gap-x-4 text-gray-600 mb-3">
                 {profile?.admission_number && (
-                  <div className="flex items-center justify-center sm:justify-start space-x-2 text-gray-500">
-                    <span className="font-medium">Admission ID:</span>
-                    <span className="font-bold text-gray-800">{profile.admission_number}</span>
-                  </div>
+                  <p className="text-sm sm:text-base">
+                    Admission No: <span className="font-semibold text-gray-800">{profile.admission_number}</span>
+                  </p>
                 )}
                 {profile?.roll_number && (
-                  <div className="flex items-center justify-center sm:justify-start space-x-2 text-gray-500">
-                    <span className="font-medium">Roll Number:</span>
-                    <span className="font-bold text-gray-800">{profile.roll_number}</span>
-                  </div>
+                  <p className="text-sm sm:text-base">
+                    Roll No: <span className="font-semibold text-gray-800">{profile.roll_number}</span>
+                  </p>
                 )}
+              </div>
+
+              {/* Tags */}
+              <div className="flex flex-wrap justify-center sm:justify-start gap-2">
+                <span className="bg-blue-50 text-blue-700 px-3 py-1 sm:px-4 sm:py-1.5 rounded-full text-xs sm:text-sm font-medium border border-blue-100">
+                  Student
+                </span>
+                <span className={`px-3 py-1 sm:px-4 sm:py-1.5 rounded-full text-xs sm:text-sm font-medium border ${profile?.is_active ? 'bg-green-50 text-green-700 border-green-100' : 'bg-red-50 text-red-700 border-red-100'
+                  }`}>
+                  {profile?.is_active ? 'Active' : 'Inactive'}
+                </span>
                 {profile?.user?.user_type && (
-                  <div className="flex items-center justify-center sm:justify-start space-x-2 text-gray-500">
-                    <span className="font-medium">Account Type:</span>
-                    <span className="font-bold text-gray-800">{profile.user.user_type}</span>
-                  </div>
+                  <span className="bg-purple-50 text-purple-700 px-3 py-1 sm:px-4 sm:py-1.5 rounded-full text-xs sm:text-sm font-medium border border-purple-100">
+                    {profile.user.user_type}
+                  </span>
                 )}
               </div>
             </div>
           </div>
         </div>
 
-        {/* Modern Tabs Section */}
-        <div className="mb-8 overflow-x-auto no-scrollbar -mx-4 px-4 sm:mx-0 sm:px-0">
-          <div className="flex sm:flex-wrap gap-2 sm:gap-3 min-w-max sm:min-w-0">
-            {tabs.map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`
-                  flex items-center gap-2 px-5 py-3 rounded-2xl whitespace-nowrap transition-all duration-300 font-bold text-sm
-                  ${activeTab === tab.id
-                    ? "bg-blue-600 text-white shadow-lg shadow-blue-200 scale-105"
-                    : "bg-white text-gray-500 hover:bg-gray-50 hover:text-gray-900 border border-gray-100"
-                  }
-                `}
-              >
-                <span className={activeTab === tab.id ? "text-white" : "text-gray-400 group-hover:text-blue-600"}>
+        {/* Mobile Tabs */}
+        <div className="block md:hidden mb-6">
+          <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
+            {/* First Row */}
+            <div className="flex">
+              {tabs.slice(0, 3).map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`${activeTab === tab.id
+                    ? "text-blue-600 border-b-2 border-blue-500"
+                    : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
+                    } flex-1 py-4 px-2 flex flex-row items-center justify-center gap-2 text-sm font-medium`}
+                >
                   {tab.icon}
-                </span>
-                {tab.name}
-              </button>
-            ))}
+                  <span>{tab.name}</span>
+                </button>
+              ))}
+            </div>
+
+            {/* Second Row */}
+            <div className="border-t">
+              <div className="flex">
+                {tabs.slice(3).map((tab) => (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id)}
+                    className={`${activeTab === tab.id
+                      ? "text-blue-600 border-b-2 border-blue-500"
+                      : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
+                      } flex-1 py-4 px-2 flex flex-row items-center justify-center gap-2 text-sm font-medium`}
+                  >
+                    {tab.icon}
+                    <span>{tab.name}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
         </div>
 
-        {/* Interactive Content area */}
-        <div className="bg-white rounded-[2rem] shadow-sm border border-gray-100 p-5 sm:p-10 min-h-[400px]">
-          <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-            {renderTabContent()}
+        {/* Desktop Tabs */}
+        <div className="hidden md:block bg-white rounded-xl shadow-sm border mb-6">
+          <div className="border-b border-gray-200">
+            <nav className="flex justify-center space-x-8 px-6" aria-label="Tabs">
+              {tabs.map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`${activeTab === tab.id
+                    ? "border-blue-500 text-blue-600"
+                    : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                    } py-4 px-1 border-b-2 font-medium text-sm flex items-center space-x-2 transition`}
+                >
+                  {tab.icon}
+                  <span>{tab.name}</span>
+                </button>
+              ))}
+            </nav>
           </div>
+        </div>
+
+        {/* Tab Content */}
+        <div className="bg-white rounded-xl shadow-sm border p-4 sm:p-6">
+          {renderTabContent()}
         </div>
 
       </div>
-
-      {/* Custom Styles for hiding scrollbar but allowing scroll */}
-      <style>{`
-        .no-scrollbar::-webkit-scrollbar {
-          display: none;
-        }
-        .no-scrollbar {
-          -ms-overflow-style: none;
-          scrollbar-width: none;
-        }
-      `}</style>
     </div>
   );
 }
