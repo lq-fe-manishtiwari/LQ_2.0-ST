@@ -70,39 +70,132 @@ const RegularForm = () => {
   };
 
   // Razorpay payment handler
-  const handleRazorpayPayment = () => {
-    const totalAmount = feeData?.reduce((total, allocation) => total + (allocation.pending_amount || 0), 0) || 1700;
+  const handleRazorpayPayment = async () => {
+    if (!window.Razorpay) {
+      alert('Payment system not loaded. Please refresh.');
+      return;
+    }
+
+    if (processingPayment) return;
+    setProcessingPayment(true);
+
+    try {
+      const studentId = getStudentId();
+      const studentData = studentHistory?.[0];
+      const totalAmount = feeData?.reduce((total, allocation) => total + (allocation.pending_amount || 0), 0) || 1700;
+
+      // Step 1: Allocate Exam Fees
+      const allocationPayload = {
+        academic_year_id: studentData?.academic_year_id || parseInt(selectedForm.academic_year_id),
+        semester_id: studentData?.semester_id || parseInt(selectedForm.semester_id),
+        fee_type_id: parseInt(selectedForm.fee_type_id),
+        student_ids: [parseInt(studentId)]
+      };
+
+      const allocationResponse = await regularFormService.allocateExamFees(allocationPayload);
+      const feeAllocationId = allocationResponse?.[0]?.fee_allocation_id;
+
+      if (!feeAllocationId) {
+        alert('Failed to allocate exam fees');
+        return;
+      }
+
+      // Step 2: Create Razorpay Order
+      const orderPayload = {
+        amount: totalAmount,
+        currency: "INR",
+        gateway_key_id: "rzp_live_e1RWThJDwXuKic",
+        gateway_secret_key: "hV8WqaXrBlQ9sbhhaWLFErJO",
+        student_id: parseInt(studentId),
+        academic_year_id: allocationPayload.academic_year_id,
+        semester_id: allocationPayload.semester_id,
+        fee_type_id: allocationPayload.fee_type_id,
+        full_name: (studentData?.firstname || "") + " " + (studentData?.lastname || "") || "Student",
+        email: studentData?.email || "",
+        phone: studentData?.mobile || ""
+      };
+
+      const orderResp = await regularFormService.createRazorpayOrder(orderPayload);
+
+      if (!orderResp?.order?.id) {
+        alert("Unable to initiate payment");
+        return;
+      }
+
+      // Step 3: Open Razorpay
+      openRazorpay(orderResp.order.id, feeAllocationId, allocationPayload, orderResp);
+
+    } catch (error) {
+      console.error('Payment initiation failed:', error);
+      alert('Payment initiation failed. Please try again.');
+    } finally {
+      setProcessingPayment(false);
+    }
+  };
+
+  const openRazorpay = async (orderId, feeAllocationId, allocationData, orderResponse) => {
     const studentData = studentHistory?.[0];
-    
+    const totalAmount = feeData?.reduce((total, allocation) => total + (allocation.pending_amount || 0), 0) || 1700;
+
     const options = {
-      key: "rzp_test_9WseLWo2O16lbc",
+      key: "rzp_live_e1RWThJDwXuKic",
       amount: totalAmount * 100,
       currency: "INR",
       name: "Exam Fee Payment",
       description: `Payment for ${selectedForm?.exam_form_name}`,
-      handler: function (response) {
-        console.log('Payment successful:', response);
-        setPaymentModal(false);
-        alert(`Payment successful! Payment ID: ${response.razorpay_payment_id}`);
-      },
+      order_id: orderId,
       prefill: {
         name: studentData?.firstname + " " + studentData?.lastname || "Student",
         email: studentData?.email || "",
         contact: studentData?.mobile || ""
       },
-      theme: {
-        color: "#3B82F6"
+      handler: async (response) => {
+        await updatePaymentStatus(feeAllocationId, "SUCCESS", response);
+        setPaymentModal(false);
+        alert(`Payment successful! Payment ID: ${response.razorpay_payment_id}`);
       },
       modal: {
-        ondismiss: function() {
-          setProcessingPayment(false);
+        ondismiss: async () => {
+          await updatePaymentStatus(feeAllocationId, "FAILED", {});
+          alert('Payment cancelled');
         }
+      },
+      theme: {
+        color: "#3B82F6"
       }
     };
 
-    setProcessingPayment(true);
-    const rzp = new window.Razorpay(options);
-    rzp.open();
+    try {
+      const rzp = new window.Razorpay(options);
+      rzp.open();
+      await updatePaymentStatus(feeAllocationId, "INITIATED", { razorpay_order_id: orderId });
+    } catch (err) {
+      console.error("Razorpay open failed:", err);
+      await updatePaymentStatus(feeAllocationId, "FAILED", {});
+      alert("Unable to open payment gateway");
+    }
+  };
+
+  const updatePaymentStatus = async (feeAllocationId, status, razorpayData) => {
+    try {
+      const totalAmount = feeData?.reduce((total, allocation) => total + (allocation.pending_amount || 0), 0) || 1700;
+      
+      const payload = {
+        student_exam_form_id: feeAllocationId,
+        status: status === "SUCCESS" ? "APPROVED" : "PENDING",
+        payment_details: status === "SUCCESS" ? [{
+          receipt_no: `RCPT-${new Date().getFullYear()}-${Date.now()}`,
+          payment_mode: "ONLINE",
+          transaction_id: razorpayData?.razorpay_payment_id || null,
+          paid_amount: totalAmount.toString(),
+          payment_date: new Date().toISOString().split('T')[0]
+        }] : []
+      };
+      
+      await regularFormService.updatePaymentStatus(payload);
+    } catch (error) {
+      console.error('Failed to update payment status:', error);
+    }
   };
   // Load student exam forms on component mount
   useEffect(() => {

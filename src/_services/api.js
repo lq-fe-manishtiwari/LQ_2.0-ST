@@ -205,6 +205,17 @@ export function authHeaderToPost() {
   return { 'Content-Type': 'application/json', 'view': 'web' };
 }
 
+export function EventauthHeaderToPostwithoutToken() {
+  const token = currentUserToken?.value?.token;
+  if (token) {
+    return {
+      'Content-Type': 'application/json',
+      'view': 'web'
+    };
+  }
+  return { 'Content-Type': 'application/json', 'view': 'web' };
+}
+
 export function authHeaderToFile() {
   const token = currentUserToken?.value?.token;
   if (token) {
