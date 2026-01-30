@@ -92,7 +92,7 @@ class SubjectSelectionService {
     async getBatchesByProgramId(programId) {
         // /: /api/batches/{id}
         const requestOptions = { method: 'GET', headers: authHeader() };
-        return fetch(`${AcademicAPI}/admin/academic/batches/${programId}`, requestOptions)
+        return fetch(`${AcademicAPI}/batches/${programId}`, requestOptions)
             .then(handleResponse);
     }
 
@@ -170,7 +170,7 @@ class SubjectSelectionService {
             }
 
             const requestOptions = { method: "GET", headers: authHeader() };
-            const url = `${AcademicAPI}/admin/academic/subject-selection-configs/academic-year/${academicYearId}/semester/${semesterId}${params.toString() ? `?${params.toString()}` : ''}`;
+            const url = `${AcademicAPI}/subject-selection-configs/academic-year/${academicYearId}/semester/${semesterId}${params.toString() ? `?${params.toString()}` : ''}`;
 
             console.log("Fetching configs from:", url);
             const response = await fetch(url, requestOptions);
@@ -198,7 +198,7 @@ class SubjectSelectionService {
 
             const requestOptions = { method: "GET", headers: authHeader() };
             const response = await fetch(
-                `${AcademicAPI}/admin/academic/api/student/subjects/types-ui/academic-year/${academicYearId}/semester/${semesterId}`,
+                `${AcademicAPI}/api/student/subjects/types-ui/academic-year/${academicYearId}/semester/${semesterId}`,
                 requestOptions
             );
             console.log("response", response);
@@ -252,7 +252,7 @@ class SubjectSelectionService {
             };
 
             const response = await fetch(
-                `${AcademicAPI}/admin/academic/subject-selection-configs`,
+                `${AcademicAPI}/subject-selection-configs`,
                 requestOptions
             );
             return handleResponse(response);
@@ -276,7 +276,7 @@ class SubjectSelectionService {
             };
 
             const response = await fetch(
-                `${AcademicAPI}/admin/academic/subject-selection-configs/edit/${configId}`,
+                `${AcademicAPI}/subject-selection-configs/edit/${configId}`,
                 requestOptions
             );
             return handleResponse(response);
@@ -306,7 +306,7 @@ class SubjectSelectionService {
             }
 
             const requestOptions = { method: "GET", headers: authHeader() };
-            const url = `${AcademicAPI}/admin/academic/api/subjects/by-tab/${tabId}/academic-year/${academicYearId}/semester/${semesterId}${params.toString() ? `?${params.toString()}` : ''}`;
+            const url = `${AcademicAPI}/api/subjects/by-tab/${tabId}/academic-year/${academicYearId}/semester/${semesterId}${params.toString() ? `?${params.toString()}` : ''}`;
 
             console.log("Fetching subjects from:", url);
             const response = await fetch(url, requestOptions);
@@ -333,7 +333,7 @@ class SubjectSelectionService {
 
             const requestOptions = { method: "GET", headers: authHeader() };
             const response = await fetch(
-                `${AcademicAPI}/admin/academic/student/subject-selection/status/${configId}`,
+                `${AcademicAPI}/student/subject-selection/status/${configId}`,
                 requestOptions
             );
             const data = await handleResponse(response);
@@ -367,7 +367,7 @@ class SubjectSelectionService {
             };
 
             const response = await fetch(
-                `${AcademicAPI}/admin/academic/student/subject-selection?currentStudentId=${studentId}`,
+                `${AcademicAPI}/student/subject-selection?currentStudentId=${studentId}`,
                 requestOptions
             );
             const data = await handleResponse(response);
@@ -401,7 +401,7 @@ class SubjectSelectionService {
             };
 
             const response = await fetch(
-                `${AcademicAPI}/admin/academic/student/subject-selection?currentStudentId=${studentId}`,
+                `${AcademicAPI}/student/subject-selection?currentStudentId=${studentId}`,
                 requestOptions
             );
             const data = await handleResponse(response);
@@ -451,7 +451,7 @@ class SubjectSelectionService {
             });
 
             const response = await fetch(
-                `${AcademicAPI}/admin/academic/student/subject-selection/bulk`,
+                `${AcademicAPI}/student/subject-selection/bulk`,
                 requestOptions
             );
             const data = await handleResponse(response);
