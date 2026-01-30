@@ -1,10 +1,12 @@
-import { authHeader, handleResponse, authHeaderToPost, PMSNEWAPI,ExamMGMAPI,FinanceAPI,DevAPI } from '@/_services/api';
+import { authHeader, handleResponse, authHeaderToPost, PMSNEWAPI,ExamMGMAPI,FinanceAPI,DevAPI,EventauthHeaderToPostwithoutToken } from '@/_services/api';
 
 
 export const regularFormService = {
    getStudentExamForms,
    allocateExamFees,
    getStudentHistory,
+   createRazorpayOrder,
+   updateStudentExamForm,
 };
 
 /**
@@ -49,4 +51,31 @@ function getStudentHistory(studentId) {
   
   return fetch(`${DevAPI}/admin/students/student/${studentId}/history/active`, requestOptions)
     .then(handleResponse);
+}
+
+function createRazorpayOrder(values) {
+    const requestOptions = {
+        method: 'POST',
+        headers: EventauthHeaderToPostwithoutToken(),
+        body: JSON.stringify(values)
+    };
+    return fetch(`${FinanceAPI}/razorpay/create-order`, requestOptions)
+        .then(handleResponse);
+}
+
+/**
+ * PUT: Update Student Exam Form Status & Payment Details
+ * /api/admin/student-exam-forms
+ */
+function updateStudentExamForm(payload) {
+  const requestOptions = {
+    method: "PUT",
+    headers: authHeaderToPost(),
+    body: JSON.stringify(payload)
+  };
+
+  return fetch(
+    `${ExamMGMAPI}/admin/student-exam-forms`,
+    requestOptions
+  ).then(handleResponse);
 }
