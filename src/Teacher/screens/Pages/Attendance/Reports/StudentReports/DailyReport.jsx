@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import AttendanceFilters from "../../../Attendance/Components/AttendanceFilters";
 import { timetableService } from "../../../TimeTable/Services/timetable.service";
 import { api } from '../../../../../../_services/api';
-
+import { TeacherAttendanceManagement } from '../../Services/attendance.service';
 
 const StudentDailyReport = () => {
 
@@ -33,6 +33,7 @@ const StudentDailyReport = () => {
         academicYearId: null,
         semesterId: null,
         divisionId: null,
+        programId: null,
         collegeId: null
     });
 
@@ -62,9 +63,10 @@ const StudentDailyReport = () => {
             ...prev,
             academicYearId: extractNumericId(filters.academicYear),
             semesterId: extractNumericId(filters.semester),
-            divisionId: extractNumericId(filters.division)
+            divisionId: extractNumericId(filters.division),
+            programId: extractNumericId(filters.program) 
         }));
-    }, [filters.academicYear, filters.semester, filters.division]);
+    }, [filters.academicYear, filters.semester, filters.division,filters.program  ]);
 
     // Initialize collegeId
     useEffect(() => {
@@ -178,18 +180,85 @@ const StudentDailyReport = () => {
     }, [apiIds.academicYearId, apiIds.semesterId]);
 
     // Mock student data (replace with actual API call)
+    // useEffect(() => {
+    //     // Simulate API call
+    //     const mockStudents = Array(50).fill().map((_, i) => ({
+    //         id: i + 1,
+    //         rollNo: `2024${String(i + 1).padStart(3, '0')}`,
+    //         name: `Student ${i + 1}`,
+    //         status: i % 3 === 0 ? 'A' : i % 5 === 0 ? 'OL' : i % 7 === 0 ? 'ML' : 'P',
+    //         reason: i % 3 === 0 ? 'Not Specified' : i % 5 === 0 ? 'Family Function' : i % 7 === 0 ? 'Sick Leave' : '-'
+    //     }));
+
+    //     setAllStudents(mockStudents);
+    // }, [selectedDate, selectedSubject, filters]);
+
+
     useEffect(() => {
-        // Simulate API call
-        const mockStudents = Array(50).fill().map((_, i) => ({
-            id: i + 1,
-            rollNo: `2024${String(i + 1).padStart(3, '0')}`,
-            name: `Student ${i + 1}`,
-            status: i % 3 === 0 ? 'A' : i % 5 === 0 ? 'OL' : i % 7 === 0 ? 'ML' : 'P',
-            reason: i % 3 === 0 ? 'Not Specified' : i % 5 === 0 ? 'Family Function' : i % 7 === 0 ? 'Sick Leave' : '-'
+  const fetchTeacherDailyReport = async () => {
+    if (
+      !currentTeacherId ||
+      !apiIds.collegeId ||
+      !apiIds.academicYearId ||
+      !apiIds.semesterId ||
+      !apiIds.divisionId ||
+      !selectedDate
+    ) {
+      setAllStudents([]);
+      return;
+    }
+
+    try {
+      setLoading(true);
+
+      const params = {
+        teacherId: currentTeacherId,
+        collegeId: apiIds.collegeId,
+        academicYearId: apiIds.academicYearId,
+        semesterId: apiIds.semesterId,
+        divisionId: apiIds.divisionId,
+        programId: apiIds.programId,
+        date: selectedDate
+      };
+
+      if (selectedSubject !== 'all') {
+        params.paperId = selectedSubject;
+      }
+
+      const response = await TeacherAttendanceManagement.getDailyReport(params);
+
+      if (response?.success && response.data) {
+        const students = response.data.attendance_records.map(record => ({
+          id: record.student_id,
+          rollNo: record.roll_number || '-',
+          name: record.student_name,
+          status: (record.status_code || 'P').toUpperCase(),
+          reason: record.remarks || '-'
         }));
 
-        setAllStudents(mockStudents);
-    }, [selectedDate, selectedSubject, filters]);
+        setAllStudents(students);
+      } else {
+        setAllStudents([]);
+      }
+    } catch (error) {
+      console.error("Teacher report error:", error);
+      setAllStudents([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  fetchTeacherDailyReport();
+}, [
+  currentTeacherId,
+  selectedDate,
+  selectedSubject,
+  apiIds.collegeId,
+  apiIds.academicYearId,
+  apiIds.semesterId,
+  apiIds.divisionId
+]);
+
 
     // Calculate statistics
     const stats = {
