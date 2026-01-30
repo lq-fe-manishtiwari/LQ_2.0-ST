@@ -181,7 +181,7 @@ const RegularForm = () => {
 
         const payload = {
           student_exam_form_id: selectedForm.student_exam_form_id,
-          status: "APPROVED",
+          status: "ACCEPTED",
           payment_details: [{
             receipt_no: `RCPT-${new Date().getFullYear()}-${Date.now()}`,
             payment_mode: "ONLINE",
@@ -281,7 +281,7 @@ const RegularForm = () => {
                     <td className="px-4 py-3">{form.academic_year_name || 'N/A'}</td>
                     <td className="px-4 py-3">
                       <span className={`px-2 py-1 rounded-full text-xs font-medium ${form.status === 'PENDING' ? 'bg-yellow-100 text-yellow-800' :
-                        form.status === 'APPROVED' ? 'bg-green-100 text-green-800' :
+                        form.status === 'ACCEPTED' ? 'bg-green-100 text-green-800' :
                           form.status === 'REJECTED' ? 'bg-red-100 text-red-800' :
                             'bg-gray-100 text-gray-800'
                         }`}>
