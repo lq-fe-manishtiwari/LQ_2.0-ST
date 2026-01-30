@@ -107,53 +107,40 @@ export default function ATKT() {
         </div>
 
         {/* 📊 Table */}
-        <div className="overflow-x-auto bg-white shadow-lg rounded-lg">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-indigo-700">
+        <div className="overflow-hidden rounded-xl shadow bg-white">
+          <table className="w-full text-sm">
+            <thead className="table-header">
               <tr>
-                {[
-                  'Program',
-                  'Semester',
-                  'Student Name',
-                  'Roll No',
-                  'Exam Type',
-                  'Receipt',
-                  'Action',
-                ].map((head) => (
-                  <th
-                    key={head}
-                    className="px-6 py-4 text-left text-xs font-semibold text-white bg-blue-700"
-                  >
-                    {head}
-                  </th>
-                ))}
+                <th className="table-th">Program</th>
+                <th className="table-th">Semester</th>
+                <th className="table-th">Student Name</th>
+                <th className="table-th">Roll No</th>
+                <th className="table-th">Exam Type</th>
+                <th className="table-th">Receipt</th>
+                <th className="table-th">Action</th>
               </tr>
             </thead>
 
-            <tbody className="bg-white divide-y divide-gray-200">
+            <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan="7" className="px-6 py-12 text-center text-gray-500">
+                  <td colSpan="7" className="px-4 py-12 text-center text-gray-500">
                     Loading...
                   </td>
                 </tr>
               ) : paginatedData.length > 0 ? (
                 paginatedData.map((item) => (
-                  <tr key={item.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 text-sm font-medium">
-                      {item.program}
-                    </td>
-                    <td className="px-6 py-4 text-sm">{item.semester}</td>
-                    <td className="px-6 py-4 text-sm">{item.studentName}</td>
-                    <td className="px-6 py-4 text-sm font-semibold">
-                      {item.rollNo}
-                    </td>
-                    <td className="px-6 py-4 text-sm">{item.examType}</td>
-                    <td className="px-6 py-4 text-sm">{item.receipt}</td>
+                  <tr key={item.id} className="border-b last:border-none hover:bg-gray-50">
+                    <td className="px-4 py-3 font-medium">{item.program}</td>
+                    <td className="px-4 py-3">{item.semester}</td>
+                    <td className="px-4 py-3">{item.studentName}</td>
+                    <td className="px-4 py-3 font-semibold">{item.rollNo}</td>
+                    <td className="px-4 py-3">{item.examType}</td>
+                    <td className="px-4 py-3">{item.receipt}</td>
 
                     {/* 🔘 Heroicons Actions */}
-                    <td className="px-6 py-4 text-sm">
-                      <div className="flex gap-4">
+                    <td className="px-4 py-3">
+                      <div className="flex justify-center items-center gap-2">
                         <button
                           onClick={() => handleView(item)}
                           title="View"
@@ -161,17 +148,13 @@ export default function ATKT() {
                         >
                           <EyeIcon className="w-5 h-5" />
                         </button>
-
-                      
-
-                      
                       </div>
                     </td>
                   </tr>
                 ))
               ) : (
                 <tr>
-                  <td colSpan="7" className="px-6 py-12 text-center text-gray-500">
+                  <td colSpan="7" className="px-4 py-12 text-center text-gray-500">
                     No ATKT records found
                   </td>
                 </tr>
