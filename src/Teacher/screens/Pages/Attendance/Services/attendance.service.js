@@ -13,7 +13,9 @@ export const TeacherAttendanceManagement = {
     getGroupedAttendance,
     getAttendanceBySubject,
     saveMultipleBulkAttendance,
-    getSubjectTimetable
+    getSubjectTimetable,
+    //Report
+    getTeacherAttendanceSummaryReports,
 };
 
 // ... existing functions ...
@@ -130,6 +132,30 @@ function getTimeSlots(params) {
         .catch(error => ({
             success: false,
             message: error.message || 'Failed to fetch time slots'
+        }));
+}
+
+function getTeacherAttendanceSummaryReports(collegeId, teacherId, startDate, endDate) {
+    const requestOptions = {
+        method: 'GET',
+        headers: authHeader(),
+    };
+
+    const url = `${TimetableAPI}/teacher-attendance/detailed-report` +
+                `?collegeId=${collegeId}` +
+                `&teacherId=${teacherId}` +
+                `&startDate=${startDate}` +
+                `&endDate=${endDate}`;
+
+    return fetch(url, requestOptions)
+        .then(handleResponse)
+        .then(data => ({
+            success: true,
+            data: data
+        }))
+        .catch(error => ({
+            success: false,
+            message: error.message || 'Failed to fetch teacher attendance report'
         }));
 }
 

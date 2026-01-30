@@ -3,17 +3,14 @@ import DailyReport from './DailyReport';
 import MonthlyReport from './MonthlyReport';
 
 const TeacherReports = () => {
-    const [activeReport, setActiveReport] = useState('daily');
+    const [activeReport, setActiveReport] = useState('monthly');
 
     const reportTabs = [
-        { id: 'daily', label: 'Daily Summary', icon: '📅' },
         { id: 'monthly', label: 'Attendance Summary', icon: '📊' },
     ];
 
     const renderReport = () => {
         switch (activeReport) {
-            case 'daily':
-                return <DailyReport />;
             case 'monthly':
                 return <MonthlyReport />;
             default:
