@@ -68,7 +68,7 @@ const StudentPersonalDetails = ({ studentData, studentName, profileImage, onProf
         {title}
       </h3>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 xs:grid-cols-2 lg:grid-cols-3 gap-4">
         {items.map((info, index) => (
           <div key={index} className="bg-gray-50 p-4 rounded-lg border">
             <div className="flex items-center mb-2">
@@ -97,7 +97,7 @@ const StudentPersonalDetails = ({ studentData, studentName, profileImage, onProf
           Profile Picture
         </h3>
 
-        <div className="bg-gray-50 p-6 rounded-lg border flex items-center space-x-4">
+        <div className="bg-gray-50 p-4 sm:p-6 rounded-lg border flex flex-col sm:flex-row items-center sm:items-start space-y-4 sm:space-y-0 sm:space-x-6 text-center sm:text-left">
           {/* Profile Preview */}
           <div className="flex-shrink-0">
             {localImage ? (
@@ -114,13 +114,13 @@ const StudentPersonalDetails = ({ studentData, studentName, profileImage, onProf
           </div>
 
           {/* Upload Button */}
-          <div>
+          <div className="flex-1">
             <p className="text-sm text-gray-600 mb-2">
               {localImage ? "Profile picture uploaded" : "No profile picture uploaded"}
             </p>
 
             <button
-              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm"
+              className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg text-sm font-medium w-full sm:w-auto transition-colors"
               onClick={() => fileInputRef.current.click()}
               disabled={uploading}
             >
@@ -134,6 +134,9 @@ const StudentPersonalDetails = ({ studentData, studentName, profileImage, onProf
               className="hidden"
               onChange={handleFileSelect}
             />
+            <p className="mt-2 text-xs text-gray-400 font-medium">
+              Supported formats: JPG, PNG. Max size 2MB.
+            </p>
           </div>
         </div>
       </div>
