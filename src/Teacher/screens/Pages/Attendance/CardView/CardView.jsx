@@ -136,11 +136,29 @@ export default function CardView() {
                     colKey: `disabled_${dateStr}`,
                     day: d,
                     start_time: '',
-                    formatted_start_time: ''
+                    formatted_start_time: '',
+                    is_future: new Date(dateStr) > new Date()
                 });
             }
         }
-        return columns;
+        
+        // Mark columns as disabled if they are in the future, even if scheduled
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        return columns.map(col => {
+            const colDate = new Date(col.date);
+            colDate.setHours(0, 0, 0, 0);
+            
+            if (colDate > today) {
+                return { 
+                    ...col, 
+                    is_scheduled: false, 
+                    is_future: true 
+                };
+            }
+            return col;
+        });
     }, [selectedYear, selectedMonth, lectures]);
 
     // Fetch teacher ID and collegeId
@@ -628,19 +646,21 @@ export default function CardView() {
         </p>
     </div>
 
-    {/* Right - Controls (month + submit) */}
-    <div className="flex items-center gap-3 sm:gap-4 flex-wrap justify-end">
-        {/* Month Picker */}
-        <input
-            type="month"
-            value={`${selectedYear}-${String(selectedMonth).padStart(2, '0')}`}
-            onChange={(e) => {
-                const [year, month] = e.target.value.split('-');
-                setSelectedYear(parseInt(year));
-                setSelectedMonth(parseInt(month));
-            }}
-            className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white cursor-pointer font-bold text-gray-700 h-10 text-sm min-w-[160px]"
-        />
+                    <div className="flex items-center gap-4 shrink-0">
+                        {/* Month Picker */}
+                        <div className="relative">
+                            <input
+                                type="month"
+                                value={`${selectedYear}-${String(selectedMonth).padStart(2, '0')}`}
+                                max={`${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`}
+                                onChange={(e) => {
+                                    const [year, month] = e.target.value.split('-');
+                                    setSelectedYear(parseInt(year));
+                                    setSelectedMonth(parseInt(month));
+                                }}
+                                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white cursor-pointer font-bold text-gray-700 h-[40px] text-sm"
+                            />
+                        </div>
 
         {/* Unsaved badge + Submit button group */}
         <div className="flex items-center gap-3">
