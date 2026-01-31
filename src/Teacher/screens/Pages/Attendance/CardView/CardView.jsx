@@ -136,11 +136,29 @@ export default function CardView() {
                     colKey: `disabled_${dateStr}`,
                     day: d,
                     start_time: '',
-                    formatted_start_time: ''
+                    formatted_start_time: '',
+                    is_future: new Date(dateStr) > new Date()
                 });
             }
         }
-        return columns;
+        
+        // Mark columns as disabled if they are in the future, even if scheduled
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        return columns.map(col => {
+            const colDate = new Date(col.date);
+            colDate.setHours(0, 0, 0, 0);
+            
+            if (colDate > today) {
+                return { 
+                    ...col, 
+                    is_scheduled: false, 
+                    is_future: true 
+                };
+            }
+            return col;
+        });
     }, [selectedYear, selectedMonth, lectures]);
 
     // Fetch teacher ID and collegeId
@@ -630,6 +648,7 @@ export default function CardView() {
                             <input
                                 type="month"
                                 value={`${selectedYear}-${String(selectedMonth).padStart(2, '0')}`}
+                                max={`${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`}
                                 onChange={(e) => {
                                     const [year, month] = e.target.value.split('-');
                                     setSelectedYear(parseInt(year));

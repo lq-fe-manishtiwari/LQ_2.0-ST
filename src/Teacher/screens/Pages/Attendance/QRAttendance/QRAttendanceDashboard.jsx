@@ -619,6 +619,16 @@ const QRAttendanceDashboard = () => {
             return;
         }
 
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const selDate = new Date(selectedDate);
+        selDate.setHours(0, 0, 0, 0);
+
+        if (selDate > today) {
+            setErrorAlert("Cannot generate QR for future dates");
+            return;
+        }
+
         // If existing QR session is available, use it
         if (existingQRSession) {
             console.log("Using existing QR session:", existingQRSession);
@@ -883,6 +893,7 @@ const QRAttendanceDashboard = () => {
                         <input
                             type="date"
                             value={selectedDate}
+                            max={new Date().toISOString().split('T')[0]}
                             onChange={(e) => {
                                 const newDate = e.target.value;
                                 setSelectedDate(newDate);

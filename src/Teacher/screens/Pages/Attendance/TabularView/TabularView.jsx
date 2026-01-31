@@ -573,10 +573,17 @@ export default function TabularView() {
 
     const navigateMonth = (direction) => {
         const newMonth = new Date(currentMonth);
+        const today = new Date();
         if (direction === 'prev') {
             newMonth.setMonth(newMonth.getMonth() - 1);
         } else {
-            newMonth.setMonth(newMonth.getMonth() + 1);
+            // Prevent future month selection
+            if (newMonth.getFullYear() < today.getFullYear() || 
+                (newMonth.getFullYear() === today.getFullYear() && newMonth.getMonth() < today.getMonth())) {
+                newMonth.setMonth(newMonth.getMonth() + 1);
+            } else {
+                return;
+            }
         }
         setCurrentMonth(newMonth);
     };
@@ -621,19 +628,25 @@ export default function TabularView() {
         const selectedYear = parseInt(selectedDate.split('-')[0]);
 
         for (let day = 1; day <= daysInMonth; day++) {
+            const dateObj = new Date(year, month, day);
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            const isFuture = dateObj > today;
+
             const isSelected = day === selectedDay && month === selectedMonth && year === selectedYear;
-            const isToday = new Date().getDate() === day &&
-                new Date().getMonth() === month &&
-                new Date().getFullYear() === year;
+            const isToday = today.getDate() === day &&
+                today.getMonth() === month &&
+                today.getFullYear() === year;
 
             days.push(
                 <button
                     key={day}
-                    onClick={() => handleDateSelect(day)}
+                    onClick={() => !isFuture && handleDateSelect(day)}
+                    disabled={isFuture}
                     className={`h-8 w-8 rounded-full flex items-center justify-center text-sm transition-colors
                         ${isSelected ? 'bg-blue-600 text-white' :
                             isToday ? 'bg-blue-100 text-blue-600' :
-                                'hover:bg-gray-100 text-gray-700'}`}
+                                isFuture ? 'text-gray-300 cursor-not-allowed' : 'hover:bg-gray-100 text-gray-700'}`}
                 >
                     {day}
                 </button>
