@@ -252,21 +252,39 @@ const Attendencedashboard = () => {
         if (!collegeId || !teacherId) return;
 
         fetchDashboardData(collegeId, teacherId);
-        fetchTimetableData(collegeId);
+        fetchTimetableData(collegeId, teacherId);
     }, [isLoaded, selectedDate, isCustomDate]);
 
-    const fetchTimetableData = async (collegeId) => {
+    const fetchTimetableData = async (collegeId, teacherId) => {
         try {
             const formattedDate = moment(selectedDate).format('YYYY-MM-DD');
-            const response = await TeacherAttendanceManagement.getTimetableDashboardDetails(collegeId, formattedDate);
-            if (response.success && response.data) {
-                setTimetableStats({
-                    ongoingClasses: response.data.ongoing_classes || [],
-                    recentClasses: response.data.recently_completed_classes || [],
-                    upcomingClasses: response.data.upcoming_classes || [],
-                    upcomingHolidays: response.data.upcoming_holidays || []
-                });
+
+            console.log('[Dashboard] fetchTimetableData called with:', collegeId, teacherId);
+            const [dashboardRes, holidaysRes] = await Promise.all([
+                TeacherAttendanceManagement.getTimetableDashboardDetails(collegeId, formattedDate),
+                TeacherAttendanceManagement.getDashboardHolidays(teacherId, collegeId, formattedDate)
+            ]);
+            console.log('[Dashboard] Holidays API Response:', holidaysRes);
+
+            const newStats = {
+                ongoingClasses: [],
+                recentClasses: [],
+                upcomingClasses: [],
+                upcomingHolidays: []
+            };
+
+            if (dashboardRes.success && dashboardRes.data) {
+                newStats.ongoingClasses = dashboardRes.data.ongoing_classes || [];
+                newStats.recentClasses = dashboardRes.data.recently_completed_classes || [];
+                newStats.upcomingClasses = dashboardRes.data.upcoming_classes || [];
             }
+
+
+            if (holidaysRes.success && holidaysRes.data && holidaysRes.data.holidays) {
+                newStats.upcomingHolidays = holidaysRes.data.holidays;
+            }
+
+            setTimetableStats(newStats);
         } catch (err) {
             console.error("Timetable dashboard fetch failed:", err);
         }
