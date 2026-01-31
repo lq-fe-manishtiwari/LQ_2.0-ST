@@ -12,6 +12,10 @@ import {
     Cell,
     Legend,
 } from "recharts";
+import { Clock, CalendarDays, Calendar } from "lucide-react";
+import DatePicker from 'react-datepicker';
+import "react-datepicker/dist/react-datepicker.css";
+import moment from 'moment';
 import { useUserProfile } from "../../../../../contexts/UserProfileContext";
 import { TeacherAttendanceManagement } from "../Services/attendance.service";
 
@@ -226,6 +230,16 @@ const Attendencedashboard = () => {
     const [animated, setAnimated] = useState(false);
     const [dashboardData, setDashboardData] = useState(null);
     const [loading, setLoading] = useState(false);
+    const [selectedDate, setSelectedDate] = useState(new Date());
+    const [isCustomDate, setIsCustomDate] = useState(false);
+
+    // New State for Timetable Data
+    const [timetableStats, setTimetableStats] = useState({
+        ongoingClasses: [],
+        recentClasses: [],
+        upcomingClasses: [],
+        upcomingHolidays: []
+    });
 
     useEffect(() => {
         setAnimated(true);
@@ -238,15 +252,42 @@ const Attendencedashboard = () => {
         if (!collegeId || !teacherId) return;
 
         fetchDashboardData(collegeId, teacherId);
-    }, [isLoaded]);
+        fetchTimetableData(collegeId);
+    }, [isLoaded, selectedDate, isCustomDate]);
+
+    const fetchTimetableData = async (collegeId) => {
+        try {
+            const formattedDate = moment(selectedDate).format('YYYY-MM-DD');
+            const response = await TeacherAttendanceManagement.getTimetableDashboardDetails(collegeId, formattedDate);
+            if (response.success && response.data) {
+                setTimetableStats({
+                    ongoingClasses: response.data.ongoing_classes || [],
+                    recentClasses: response.data.recently_completed_classes || [],
+                    upcomingClasses: response.data.upcoming_classes || [],
+                    upcomingHolidays: response.data.upcoming_holidays || []
+                });
+            }
+        } catch (err) {
+            console.error("Timetable dashboard fetch failed:", err);
+        }
+    };
 
     const fetchDashboardData = async (collegeId, teacherId) => {
         setLoading(true);
         try {
-            // Get current month date range
-            const now = new Date();
-            const startDate = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
-            const endDate = now.toISOString().split('T')[0];
+            let startDate, endDate;
+
+            if (isCustomDate) {
+                // Specific date selected by user
+                const formattedDate = moment(selectedDate).format('YYYY-MM-DD');
+                startDate = formattedDate;
+                endDate = formattedDate;
+            } else {
+                // Default: First day of current month to today
+                const now = new Date();
+                startDate = moment(new Date(now.getFullYear(), now.getMonth(), 1)).format('YYYY-MM-DD');
+                endDate = moment(now).format('YYYY-MM-DD');
+            }
 
             const response = await TeacherAttendanceManagement.getTeacherAttendanceSummaryReports(
                 collegeId,
@@ -284,9 +325,28 @@ const Attendencedashboard = () => {
         }
       `}</style>
 
-            <h1 className="text-2xl font-bold text-gray-800 mb-6">
-                Attendance Summary
-            </h1>
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
+                <h1 className="text-2xl font-bold text-gray-800">
+                    Attendance Summary
+                </h1>
+
+                <div className="relative">
+                    <div className="flex items-center bg-white border border-gray-200 rounded-lg px-3 py-1.5 shadow-sm hover:border-blue-400 transition-colors cursor-pointer group">
+                        <Calendar className="w-4 h-4 text-gray-500 mr-2 group-hover:text-blue-500" />
+                        <DatePicker
+                            selected={selectedDate}
+                            onChange={(date) => {
+                                setSelectedDate(date);
+                                setIsCustomDate(true);
+                            }}
+                            dateFormat="dd-MM-yyyy"
+                            className="bg-transparent border-none outline-none text-sm font-medium text-gray-700 w-24 cursor-pointer"
+                            placeholderText="Select Date"
+                        />
+                        <Clock className="w-4 h-4 text-gray-400 ml-2" />
+                    </div>
+                </div>
+            </div>
 
             {/* Top Stats */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
@@ -469,7 +529,125 @@ const Attendencedashboard = () => {
 
 
                 </div>
-                
+            </div>
+
+            {/* Ongoing Classes Section */}
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 sm:p-8 mb-8 sm:mb-10">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
+                    <h2 className="text-xl font-bold text-gray-800 flex items-center gap-3">
+                        <Clock className="h-6 w-6 text-indigo-600" />
+                        Ongoing Classes ({timetableStats.ongoingClasses.length})
+                    </h2>
+                    <span className="px-4 py-1.5 bg-green-50 text-green-700 text-xs font-bold rounded-full border border-green-100 tracking-wider">
+                        Live Now
+                    </span>
+                </div>
+
+                {timetableStats.ongoingClasses.length === 0 ? (
+                    <p className="text-center text-gray-500 py-8 text-sm">No classes ongoing at the moment.</p>
+                ) : (
+                    <div className="flex gap-5 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-gray-300">
+                        {timetableStats.ongoingClasses.map((cls, i) => (
+                            <div
+                                key={i}
+                                className="min-w-[280px] bg-gradient-to-br from-indigo-50/70 to-blue-50/70 border border-indigo-200/50 rounded-xl p-5 hover:shadow-md transition-shadow"
+                            >
+                                <div className="flex items-start justify-between mb-3">
+                                    <h3 className="font-bold text-indigo-900 text-lg">{cls.subject_name}</h3>
+                                    <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse" />
+                                </div>
+                                <div className="space-y-2 text-sm text-gray-700">
+                                    <p><span className="font-medium">Teacher:</span> {cls.teacher_name}</p>
+                                    <p><span className="font-medium">Room:</span> {cls.classroom}</p>
+                                    <p className="flex items-center gap-2 text-indigo-700 font-medium">
+                                        <Clock className="h-4 w-4" />
+                                        {cls.start_time} - {cls.end_time}
+                                    </p>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                )}
+            </div>
+
+            {/* Recent & Upcoming Classes */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-8 mb-8 sm:mb-10">
+                <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 sm:p-6 hover:shadow-md transition-shadow">
+                    <h2 className="text-xl font-bold text-gray-800 mb-6 flex items-center gap-3">
+                        <Clock className="h-5 w-5 text-indigo-600" />
+                        Recent Classes
+                    </h2>
+                    <div className="space-y-4">
+                        {timetableStats.recentClasses.length === 0 ? (
+                            <p className="text-center text-gray-500 py-4 text-sm">No recent classes.</p>
+                        ) : (
+                            timetableStats.recentClasses.slice(0, 3).map((cls, i) => (
+                                <div key={i} className="border border-gray-200 rounded-xl p-5 hover:bg-gray-50 transition">
+                                    <div className="flex justify-between items-start">
+                                        <div className="flex-1">
+                                            <h4 className="font-semibold text-gray-900">{cls.subject_name}</h4>
+                                            <p className="text-sm text-gray-600 mt-1">Teacher: {cls.teacher_name}</p>
+                                            <p className="text-sm text-gray-600">Room: {cls.classroom} • {cls.start_time} - {cls.end_time}</p>
+                                        </div>
+                                        <span className="px-4 py-2 bg-green-100 text-green-700 text-xs font-medium rounded-full">
+                                            Completed
+                                        </span>
+                                    </div>
+                                </div>
+                            ))
+                        )}
+                    </div>
+                </div>
+
+                <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 sm:p-6 hover:shadow-md transition-shadow">
+                    <h2 className="text-xl font-bold text-gray-800 mb-6 flex items-center gap-3">
+                        <CalendarDays className="h-5 w-5 text-indigo-600" />
+                        Upcoming Classes
+                    </h2>
+                    <div className="space-y-4">
+                        {timetableStats.upcomingClasses.length === 0 ? (
+                            <p className="text-center text-gray-500 py-4 text-sm">No upcoming classes.</p>
+                        ) : (
+                            timetableStats.upcomingClasses.slice(0, 3).map((cls, i) => (
+                                <div key={i} className="border border-gray-200 rounded-xl p-5 hover:bg-gray-50 transition">
+                                    <div className="flex justify-between items-center">
+                                        <div>
+                                            <h4 className="font-semibold text-gray-900">{cls.subject_name}</h4>
+                                            <p className="text-sm text-gray-600 mt-1">Time: {cls.start_time} - {cls.end_time} • Room: {cls.classroom}</p>
+                                        </div>
+                                        <Clock className="h-8 w-8 text-indigo-500 opacity-70" />
+                                    </div>
+                                </div>
+                            ))
+                        )}
+                    </div>
+                </div>
+            </div>
+
+            {/* Upcoming Holidays Section */}
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 sm:p-10 mb-8 sm:mb-10">
+                <h2 className="text-2xl font-bold text-center text-gray-800 mb-10 tracking-tight">
+                    Upcoming Holidays
+                </h2>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+                    {timetableStats.upcomingHolidays.length === 0 ? (
+                        <p className="col-span-full text-center text-gray-500 py-4">No upcoming holidays.</p>
+                    ) : (
+                        timetableStats.upcomingHolidays.map((holiday, i) => (
+                            <div key={i} className="text-center p-6 sm:p-8 bg-gradient-to-br from-purple-50 to-indigo-50 rounded-2xl border border-indigo-100/50">
+                                <h3 className="text-xl font-bold text-purple-800 mb-3 truncate px-2" title={holiday.name}>
+                                    {holiday.name}
+                                </h3>
+                                <p className="text-gray-700 font-bold text-sm mb-4">
+                                    {holiday.start_date} → {holiday.end_date}
+                                </p>
+                                <div className="px-6 py-1.5 bg-white text-red-600 rounded-full inline-block text-[10px] font-bold tracking-widest border border-red-50 shadow-sm">
+                                    No Classes
+                                </div>
+                            </div>
+                        ))
+                    )}
+                </div>
             </div>
         </div>
     );
