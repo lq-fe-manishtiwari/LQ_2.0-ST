@@ -19,6 +19,7 @@ export const TeacherAttendanceManagement = {
     getDailyReport,
     getSummaryReport,
     getTimetableDashboardDetails,
+    getDashboardHolidays,
 };
 
 function getTimetableDashboardDetails(collegeId, date) {
@@ -44,12 +45,30 @@ function getTimetableDashboardDetails(collegeId, date) {
                 { subject_name: "Biology 202", teacher_name: "Dr. Wilson", classroom: "Room 103", start_time: "10:00", end_time: "11:00", type: "Lecture" },
                 { subject_name: "Art History", teacher_name: "Prof. Miller", classroom: "Studio A", start_time: "10:00", end_time: "11:00", type: "Practical" }
             ],
-            upcoming_holidays: [
-                { name: "Republic Day", start_date: "2026-01-26", end_date: "2026-01-26" },
-                { name: "Holi", start_date: "2026-03-14", end_date: "2026-03-15" }
-            ]
+            upcoming_holidays: []
         }
     });
+}
+
+function getDashboardHolidays(teacherId, collegeId, date) {
+    const requestOptions = {
+        method: 'GET',
+        headers: authHeader(),
+    };
+
+    const queryString = `teacherId=${teacherId}&collegeId=${collegeId}&date=${date}`;
+    const url = `${TimetableAPI}/teacher/dashboard/holidays?${queryString}`;
+    
+    return fetch(url, requestOptions)
+        .then(handleResponse)
+        .then(data => ({
+            success: true,
+            data: data
+        }))
+        .catch(error => ({
+            success: false,
+            message: error.message || 'Failed to fetch dashboard holidays'
+        }));
 }
 
 // ... existing functions ...
