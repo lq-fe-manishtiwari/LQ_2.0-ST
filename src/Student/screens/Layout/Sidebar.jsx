@@ -110,61 +110,61 @@ const StudentSidebar = ({ isOpen, toggle }) => {
           "/student-view-content",
         ],
       },
-      {
-        to: "/my-assessment",
-        label: "Assessment",
-        iconActive: assessmentActive,
-        iconInactive: assessmentInactive,
-        match: ["/my-assessment", "/st-view-test-details", "/st-retest"],
-      },
-      {
-        to: "/student-learning-plan",
-        label: "Learning Plan",
-        iconActive: studyplanActive,
-        iconInactive: studyplanInactive,
-        match: [
-          "/student-learning-plan",
-          "/student-lp-view-curriculum",
-          "/student-lp-start-quiz",
-        ],
-      },
-      {
-        to: "/student-analytics",
-        label: "Insights",
-        iconActive: analyticsActive,
-        iconInactive: analyticsInactive,
-      },
-      {
-        to: "/student-coding",
-        label: "Coding",
-        iconActive: codingActive,
-        iconInactive: codingInactive,
-      },
-      {
-        to: "/student-quickNotesList",
-        label: "Quick Notes",
-        iconActive: quicknotesActive,
-        iconInactive: quicknotesInactive,
-        match: ["/student-quickNotesList", "/student-view-note"],
-      },
+      // {
+      //   to: "/my-assessment",
+      //   label: "Assessment",
+      //   iconActive: assessmentActive,
+      //   iconInactive: assessmentInactive,
+      //   match: ["/my-assessment", "/st-view-test-details", "/st-retest"],
+      // },
+      // {
+      //   to: "/student-learning-plan",
+      //   label: "Learning Plan",
+      //   iconActive: studyplanActive,
+      //   iconInactive: studyplanInactive,
+      //   match: [
+      //     "/student-learning-plan",
+      //     "/student-lp-view-curriculum",
+      //     "/student-lp-start-quiz",
+      //   ],
+      // },
+      // {
+      //   to: "/student-analytics",
+      //   label: "Insights",
+      //   iconActive: analyticsActive,
+      //   iconInactive: analyticsInactive,
+      // },
+      // {
+      //   to: "/student-coding",
+      //   label: "Coding",
+      //   iconActive: codingActive,
+      //   iconInactive: codingInactive,
+      // },
+      // {
+      //   to: "/student-quickNotesList",
+      //   label: "Quick Notes",
+      //   iconActive: quicknotesActive,
+      //   iconInactive: quicknotesInactive,
+      //   match: ["/student-quickNotesList", "/student-view-note"],
+      // },
       {
         to: "/student/leaves",
         label: "Leaves",
         iconActive: classActive,
         iconInactive: classInactive,
       },
-      {
-        to: "/student-engage",
-        label: "Engage",
-        iconActive: classActive,
-        iconInactive: classInactive,
-      },
-      {
-        to: "/student/alumini",
-        label: "Alumni",
-        iconActive: classActive,
-        iconInactive: classInactive,
-      },
+      // {
+      //   to: "/student-engage",
+      //   label: "Engage",
+      //   iconActive: classActive,
+      //   iconInactive: classInactive,
+      // },
+      // {
+      //   to: "/student/alumini",
+      //   label: "Alumni",
+      //   iconActive: classActive,
+      //   iconInactive: classInactive,
+      // },
       {
         to: "/student/academic-calendar",
         label: "Academic Calender",
@@ -172,54 +172,54 @@ const StudentSidebar = ({ isOpen, toggle }) => {
         iconInactive: classInactive,
       },
 
-      {
-        to: "/student/my-library",
-        label: "My Library",
-        iconActive: classActive,
-        iconInactive: classInactive,
-      },
-      {
-        to: "/student-placement",
-        label: "Placement",
-        iconActive: classActive,
-        iconInactive: classInactive,
-      },
-      {
-        to: "/student/us-feedback",
-        label: "Feedback",
-        iconActive: assessmentActive,
-        iconInactive: assessmentInactive,
-        match: ["/student/us-feedback"],
-      },
-      {
-        to: "/student/committees",
-        label: "My Committees",
-        iconActive: classActive,
-        iconInactive: classInactive,
-        match: [
-          "/student/committees",
-          "/student/committee"
-        ],
-      },
+      // {
+      //   to: "/student/my-library",
+      //   label: "My Library",
+      //   iconActive: classActive,
+      //   iconInactive: classInactive,
+      // },
+      // {
+      //   to: "/student-placement",
+      //   label: "Placement",
+      //   iconActive: classActive,
+      //   iconInactive: classInactive,
+      // },
+      // {
+      //   to: "/student/us-feedback",
+      //   label: "Feedback",
+      //   iconActive: assessmentActive,
+      //   iconInactive: assessmentInactive,
+      //   match: ["/student/us-feedback"],
+      // },
+      // {
+      //   to: "/student/committees",
+      //   label: "My Committees",
+      //   iconActive: classActive,
+      //   iconInactive: classInactive,
+      //   match: [
+      //     "/student/committees",
+      //     "/student/committee"
+      //   ],
+      // },
 
-      {
-        to: "/certificate",
-        label: "Certificate",
-        iconActive: classActive,
-        iconInactive: classInactive,
-      },
-      {
-        to: "/Documents",
-        label: "My Documents",
-        iconActive: classActive,
-        iconInactive: classInactive,
-      },
-      {
-        to: "/student/exam",
-        label: "Examination",
-        iconActive: classActive,
-        iconInactive: classInactive,
-      },
+      // {
+      //   to: "/certificate",
+      //   label: "Certificate",
+      //   iconActive: classActive,
+      //   iconInactive: classInactive,
+      // },
+      // {
+      //   to: "/Documents",
+      //   label: "My Documents",
+      //   iconActive: classActive,
+      //   iconInactive: classInactive,
+      // },
+      // {
+      //   to: "/student/exam",
+      //   label: "Examination",
+      //   iconActive: classActive,
+      //   iconInactive: classInactive,
+      // },
     ],
     []
   );
