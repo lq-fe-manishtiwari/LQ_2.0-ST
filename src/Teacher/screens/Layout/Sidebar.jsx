@@ -325,7 +325,7 @@ const Sidebar = ({ isOpen, toggle }) => {
               alt={item.label}
               className="w-5 h-5"
             />
-            {isOpen && <span className="text-sm font-medium">{item.label}</span>}
+            {(isOpen || closeOnClick) && <span className="text-sm font-medium">{item.label}</span>}
           </Link>
         </li>
       );

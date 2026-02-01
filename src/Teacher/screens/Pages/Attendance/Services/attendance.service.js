@@ -22,32 +22,25 @@ export const TeacherAttendanceManagement = {
     getDashboardHolidays,
 };
 
-function getTimetableDashboardDetails(collegeId, date) {
-    // This is a dummy function as requested by the user
-    return Promise.resolve({
-        success: true,
-        data: {
-            active_classes_count: 5,
-            cancelled_classes_count: 1,
-            substituted_classes_count: 2,
-            free_teachers_count: 12,
-            occupied_classrooms_count: 8,
-            available_classrooms_count: 4,
-            ongoing_classes: [
-                { subject_name: "Advanced Mathematics", teacher_name: "Dr. Smith", classroom: "Room 101", start_time: "09:00", end_time: "10:00" },
-                { subject_name: "Basic Physics", teacher_name: "Prof. Johnson", classroom: "Room 102", start_time: "09:00", end_time: "10:00" }
-            ],
-            recently_completed_classes: [
-                { subject_name: "Chemistry 101", teacher_name: "Dr. Brown", classroom: "Lab 1", start_time: "08:00", end_time: "09:00" },
-                { subject_name: "English Literature", teacher_name: "Ms. Davis", classroom: "Room 201", start_time: "08:00", end_time: "09:00" }
-            ],
-            upcoming_classes: [
-                { subject_name: "Biology 202", teacher_name: "Dr. Wilson", classroom: "Room 103", start_time: "10:00", end_time: "11:00", type: "Lecture" },
-                { subject_name: "Art History", teacher_name: "Prof. Miller", classroom: "Studio A", start_time: "10:00", end_time: "11:00", type: "Practical" }
-            ],
-            upcoming_holidays: []
-        }
-    });
+function getTimetableDashboardDetails(teacherId, collegeId, date) {
+    const requestOptions = {
+        method: 'GET',
+        headers: authHeader(),
+    };
+
+    const queryString = `teacherId=${teacherId}&collegeId=${collegeId}&date=${date}`;
+    const url = `${TimetableAPI}/teacher/dashboard/timetable?${queryString}`;
+
+    return fetch(url, requestOptions)
+        .then(handleResponse)
+        .then(data => ({
+            success: true,
+            data: data
+        }))
+        .catch(error => ({
+            success: false,
+            message: error.message || 'Failed to fetch timetable dashboard details'
+        }));
 }
 
 function getDashboardHolidays(teacherId, collegeId, date) {
@@ -58,7 +51,7 @@ function getDashboardHolidays(teacherId, collegeId, date) {
 
     const queryString = `teacherId=${teacherId}&collegeId=${collegeId}&date=${date}`;
     const url = `${TimetableAPI}/teacher/dashboard/holidays?${queryString}`;
-    
+
     return fetch(url, requestOptions)
         .then(handleResponse)
         .then(data => ({
@@ -113,7 +106,7 @@ function getDailyReport(params) {
     // Build query string
     let queryString = `collegeId=${collegeId}&divisionId=${divisionId}&semesterId=${semesterId}&academicYearId=${academicYearId}&programId=${programId}&date=${date}`;
 
-    
+
     if (paperId) {
         queryString += `&subjectId=${paperId}`;
     }
@@ -262,10 +255,10 @@ function getTeacherAttendanceSummaryReports(collegeId, teacherId, startDate, end
     };
     // teacher-attendance/teacher/detailed-report
     const url = `${TimetableAPI}/teacher-attendance/teacher/detailed-report` +
-                `?collegeId=${collegeId}` +
-                `&teacherId=${teacherId}` +
-                `&startDate=${startDate}` +
-                `&endDate=${endDate}`;
+        `?collegeId=${collegeId}` +
+        `&teacherId=${teacherId}` +
+        `&startDate=${startDate}` +
+        `&endDate=${endDate}`;
 
     return fetch(url, requestOptions)
         .then(handleResponse)
