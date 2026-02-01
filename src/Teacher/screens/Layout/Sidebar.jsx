@@ -403,7 +403,7 @@ const Sidebar = ({ isOpen, toggle }) => {
       {/* ===== Mobile Sidebar Drawer ===== */}
       {isMobileOpen && (
         <div
-          className="fixed inset-0 bg-black bg-opacity-50 z-40 md:hidden"
+          className="fixed inset-0 bg-black bg-opacity-50 z-[100] md:hidden"
           onClick={handleMobileToggle}
         >
           <div
