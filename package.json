@@ -1,5 +1,5 @@
 {
-  "name": "lq",
+  "name": "LQ",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -11,6 +11,10 @@
   },
   "dependencies": {
     "@apollo/client": "^4.0.11",
+    "@capacitor/android": "^8.0.2",
+    "@capacitor/assets": "^3.0.5",
+    "@capacitor/cli": "^8.0.2",
+    "@capacitor/core": "^8.0.2",
     "@dnd-kit/core": "^6.3.1",
     "@dnd-kit/sortable": "^10.0.0",
     "@dnd-kit/utilities": "^3.2.2",
