@@ -52,7 +52,10 @@ const ViewUpadateTeacher = ({ slotId, slotType, initialData = [], onRefresh }) =
                     : '',
                 teacher_name: `${item.user_firstname || ''} ${item.user_middlename || ''} ${item.user_lastname || ''}`.trim(),
                 // Store additional notes
-                additional_notes: item.note || ''
+                additional_notes: item.note || '',
+                // Initializing teaching fields
+                teaching_unit: Array.isArray(item.teaching_unit) ? item.teaching_unit : (item.teaching_unit ? [item.teaching_unit] : []),
+                book_used: Array.isArray(item.book_used) ? item.book_used : (item.book_used ? [item.book_used] : [])
             }));
             console.log('Transformed data:', transformedData);
             setItems(transformedData);
@@ -79,11 +82,37 @@ const ViewUpadateTeacher = ({ slotId, slotType, initialData = [], onRefresh }) =
     };
 
     const handleInputChange = (e) => {
-        const { name, value } = e.target;
         setCurrentItem({
             ...currentItem,
             [name]: value
         });
+    };
+
+    const handleDynamicFieldChange = (field, index, value) => {
+        const newArray = [...(currentItem[field] || [])];
+        newArray[index] = value;
+        setCurrentItem(prev => ({
+            ...prev,
+            [field]: newArray
+        }));
+    };
+
+    const addDynamicField = (field) => {
+        setCurrentItem(prev => ({
+            ...prev,
+            [field]: [...(prev[field] || []), '']
+        }));
+    };
+
+    const removeDynamicField = (field, index) => {
+        const newArray = [...(currentItem[field] || [])];
+        if (newArray.length > 0) {
+            newArray.splice(index, 1);
+            setCurrentItem(prev => ({
+                ...prev,
+                [field]: newArray
+            }));
+        }
     };
 
     const handleFileChange = async (e) => {
@@ -141,6 +170,38 @@ const ViewUpadateTeacher = ({ slotId, slotType, initialData = [], onRefresh }) =
         } finally {
             setUploading(false);
         }
+    };
+
+    // Helper to render tags with truncation and limits
+    const renderTags = (tags = [], type = 'unit') => {
+        if (!tags || tags.length === 0) return <span className="text-gray-400 text-sm">-</span>;
+        
+        const maxTags = 4;
+        const visibleTags = tags.slice(0, maxTags);
+        const remaining = tags.length - maxTags;
+        
+        const bgColor = type === 'unit' ? 'bg-blue-50' : 'bg-purple-50';
+        const textColor = type === 'unit' ? 'text-blue-700' : 'text-purple-700';
+        const borderColor = type === 'unit' ? 'border-blue-100' : 'border-purple-100';
+
+        return (
+            <div className="flex flex-wrap gap-1 justify-center max-w-full overflow-hidden">
+                {visibleTags.map((tag, idx) => (
+                    <span 
+                        key={idx} 
+                        className={`${bgColor} ${textColor} ${borderColor} px-2 py-0.5 rounded text-[10px] sm:text-xs border truncate max-w-[120px]`}
+                        title={tag}
+                    >
+                        {tag}
+                    </span>
+                ))}
+                {remaining > 0 && (
+                    <span className="bg-gray-100 text-gray-600 px-2 py-0.5 rounded text-[10px] sm:text-xs border border-gray-200 font-medium">
+                        +{remaining}
+                    </span>
+                )}
+            </div>
+        );
     };
 
     const removeUploadedFile = () => {
@@ -233,6 +294,14 @@ const ViewUpadateTeacher = ({ slotId, slotType, initialData = [], onRefresh }) =
             if (currentItem.additional_notes) {
                 payload.note = currentItem.additional_notes;
             }
+
+            if (currentItem.teaching_unit) {
+                payload.teaching_unit = currentItem.teaching_unit.filter(item => item.trim() !== '');
+            }
+
+            if (currentItem.book_used) {
+                payload.book_used = currentItem.book_used.filter(item => item.trim() !== '');
+            }
     
             console.log('Updating class update with payload:', payload);
     
@@ -307,7 +376,7 @@ document_name:
                                 <div key={item.class_update_id} className="p-4 space-y-3">
                                     {/* Academic Diary */}
                                     <div>
-                                        <h3 className="text-sm font-semibold text-gray-700 mb-2">Academic Diary</h3>
+                                        <h3 className="text-sm font-semibold text-gray-700 mb-2">Synopsis</h3>
                                         <div className="text-gray-700 bg-gray-50 p-3 rounded-lg">
                                             <div className="font-medium mb-1">
                                                 {item.academic_diary || item.notes || 'No message'}
@@ -364,6 +433,22 @@ document_name:
                                         )}
                                     </div>
 
+                                    {/* Teaching Units & Books */}
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <div>
+                                            <h3 className="text-sm font-semibold text-gray-700 mb-1">Units</h3>
+                                            <div className="max-w-full overflow-hidden">
+                                                {renderTags(item.teaching_unit, 'unit')}
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <h3 className="text-sm font-semibold text-gray-700 mb-1">Books</h3>
+                                            <div className="max-w-full overflow-hidden">
+                                                {renderTags(item.book_used, 'book')}
+                                            </div>
+                                        </div>
+                                    </div>
+
                                     {/* Actions */}
                                     <div className="flex gap-2 pt-2 border-t">
                                         <button
@@ -400,16 +485,22 @@ document_name:
                         <table className="w-full min-w-[900px]">
                             <thead className="table-header text-white">
                                 <tr style={{ backgroundColor: "#2162C1" }}>
-                                    <th className="table-th text-center text-white" style={{ backgroundColor: "#2162C1" }}>
-                                        Academic Diary
+                                    <th className="px-4 py-3 text-center text-white font-semibold text-sm w-[20%]" style={{ backgroundColor: "#2162C1" }}>
+                                        Synopsis
                                     </th>
-                                    <th className="table-th text-center text-white" style={{ backgroundColor: "#2162C1" }}>
+                                    <th className="px-4 py-3 text-center text-white font-semibold text-sm w-[15%]" style={{ backgroundColor: "#2162C1" }}>
                                         Meeting Link
                                     </th>
-                                    <th className="table-th text-center text-white" style={{ backgroundColor: "#2162C1" }}>
+                                    <th className="px-4 py-3 text-center text-white font-semibold text-sm w-[22%]" style={{ backgroundColor: "#2162C1" }}>
+                                        Teaching Units
+                                    </th>
+                                    <th className="px-4 py-3 text-center text-white font-semibold text-sm w-[22%]" style={{ backgroundColor: "#2162C1" }}>
+                                        Books Used
+                                    </th>
+                                    <th className="px-4 py-3 text-center text-white font-semibold text-sm w-[10%]" style={{ backgroundColor: "#2162C1" }}>
                                         Document
                                     </th>
-                                    <th className="table-th text-center text-white" style={{ backgroundColor: "#2162C1" }}>
+                                    <th className="px-4 py-3 text-center text-white font-semibold text-sm w-[11%]" style={{ backgroundColor: "#2162C1" }}>
                                         Actions
                                     </th>
                                 </tr>
@@ -422,55 +513,59 @@ document_name:
                                     
                                     return (
                                         <tr key={item.class_update_id} className="hover:bg-gray-50 transition-colors">
-                                            <td className="px-6 py-4">
-                                                <div className="text-gray-700">
-                                                    <div className="font-medium mb-1">
-                                                        {item.academic_diary || item.notes || 'No message'}
+                                            <td className="px-4 py-4">
+                                                <div className="text-gray-700 text-center">
+                                                    <div className="font-medium text-sm line-clamp-2" title={item.academic_diary || item.notes}>
+                                                        {item.academic_diary || item.notes || '-'}
                                                     </div>
                                                     {item.additional_notes && (
-                                                        <p className="text-sm text-gray-500 mt-1">
+                                                        <p className="text-[10px] text-gray-500 mt-1 truncate" title={item.additional_notes}>
                                                             {item.additional_notes}
                                                         </p>
                                                     )}
                                                 </div>
                                             </td>
 
-                                            <td className="px-6 py-4 text-center">
+                                            <td className="px-4 py-4 text-center">
                                                 {hasMeetingLink ? (
-                                                    <div className="p-2 max-w-xs mx-auto">
-                                                        <div className="flex items-center gap-2 mb-1 justify-center">
-                                                            <LinkIcon size={14} className="text-blue-600" />
-                                                            <span className="text-xs font-medium text-blue-700">Meeting Link</span>
-                                                        </div>
+                                                    <div className="max-w-[120px] mx-auto overflow-hidden">
                                                         <a 
                                                             href={item.meeting_link}
                                                             target="_blank"
                                                             rel="noopener noreferrer"
-                                                            className="text-xs text-blue-600 hover:text-blue-800 break-all underline inline-flex items-center gap-1"
+                                                            className="text-xs text-blue-600 hover:text-blue-800 underline inline-flex items-center gap-1 transition-colors"
                                                             title={item.meeting_link}
                                                         >
-                                                            Open
-                                                            <ExternalLink size={12} />
+                                                            <span className="truncate max-w-[80px]">Link</span>
+                                                            <ExternalLink size={10} className="flex-shrink-0" />
                                                         </a>
                                                     </div>
                                                 ) : (
-                                                    <span className="text-gray-400 text-sm">No link</span>
+                                                    <span className="text-gray-400 text-xs">-</span>
                                                 )}
                                             </td>
 
-                                            <td className="px-6 py-4 text-center">
+                                            <td className="px-4 py-4 overflow-hidden">
+                                                {renderTags(item.teaching_unit, 'unit')}
+                                            </td>
+
+                                            <td className="px-4 py-4 overflow-hidden">
+                                                {renderTags(item.book_used, 'book')}
+                                            </td>
+
+                                            <td className="px-4 py-4 text-center overflow-hidden">
                                                 {hasDocument ? (
                                                     <a
                                                         href={item.related_document_url}
                                                         target="_blank"
                                                         rel="noopener noreferrer"
-                                                        className="text-sm text-blue-600 hover:text-blue-800 underline font-medium"
+                                                        className="text-[10px] text-blue-600 hover:text-blue-800 underline font-medium truncate max-w-full block"
                                                         title={item.document_name || 'View Document'}
                                                     >
-                                                        {item.document_name || `Document-${item.class_update_id}`}
+                                                        {item.document_name || `Doc-${item.class_update_id}`}
                                                     </a>
                                                 ) : (
-                                                    <span className="text-gray-400 text-sm">No document</span>
+                                                    <span className="text-gray-400 text-xs">-</span>
                                                 )}
                                             </td>
 
@@ -533,10 +628,94 @@ document_name:
 
                         {/* Popup Form */}
                         <form onSubmit={handleEditFormSubmit} className="p-4 sm:p-6 space-y-4 sm:space-y-6">
-                            <div className="space-y-4">
+                            <div className="space-y-6">
+                                {/* Teaching Units */}
+                                <div>
+                                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                                        Teaching Units
+                                    </label>
+                                    <div className="space-y-2">
+                                        {(currentItem.teaching_unit || (currentItem.isViewOnly ? [] : [''])).map((unit, index) => (
+                                            <div key={index} className="flex gap-2">
+                                                <input
+                                                    type="text"
+                                                    value={unit}
+                                                    onChange={(e) => handleDynamicFieldChange('teaching_unit', index, e.target.value)}
+                                                    placeholder={`Teaching Unit ${index + 1}`}
+                                                    className="flex-1 p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                                                    disabled={currentItem.isViewOnly || loading || uploading}
+                                                />
+                                                {!currentItem.isViewOnly && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => removeDynamicField('teaching_unit', index)}
+                                                        className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors border border-red-200"
+                                                    >
+                                                        <X size={16} />
+                                                    </button>
+                                                )}
+                                            </div>
+                                        ))}
+                                        {!currentItem.isViewOnly && (
+                                            <button
+                                                type="button"
+                                                onClick={() => addDynamicField('teaching_unit')}
+                                                className="text-xs text-blue-600 hover:text-blue-800 font-medium flex items-center gap-1 transition-colors"
+                                            >
+                                                + Add More Units
+                                            </button>
+                                        )}
+                                        {currentItem.isViewOnly && (!currentItem.teaching_unit || currentItem.teaching_unit.length === 0) && (
+                                            <p className="text-sm text-gray-400 italic">No units specified</p>
+                                        )}
+                                    </div>
+                                </div>
+
+                                {/* Books Used */}
+                                <div>
+                                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                                        Teaching Aids/Books Used
+                                    </label>
+                                    <div className="space-y-2">
+                                        {(currentItem.book_used || (currentItem.isViewOnly ? [] : [''])).map((book, index) => (
+                                            <div key={index} className="flex gap-2">
+                                                <input
+                                                    type="text"
+                                                    value={book}
+                                                    onChange={(e) => handleDynamicFieldChange('book_used', index, e.target.value)}
+                                                    placeholder={`Book/Aid ${index + 1}`}
+                                                    className="flex-1 p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                                                    disabled={currentItem.isViewOnly || loading || uploading}
+                                                />
+                                                {!currentItem.isViewOnly && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => removeDynamicField('book_used', index)}
+                                                        className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors border border-red-200"
+                                                    >
+                                                        <X size={16} />
+                                                    </button>
+                                                )}
+                                            </div>
+                                        ))}
+                                        {!currentItem.isViewOnly && (
+                                            <button
+                                                type="button"
+                                                onClick={() => addDynamicField('book_used')}
+                                                className="text-xs text-blue-600 hover:text-blue-800 font-medium flex items-center gap-1 transition-colors"
+                                            >
+                                                + Add More Books
+                                            </button>
+                                        )}
+                                        {currentItem.isViewOnly && (!currentItem.book_used || currentItem.book_used.length === 0) && (
+                                            <p className="text-sm text-gray-400 italic">No books/aids specified</p>
+                                        )}
+                                    </div>
+                                </div>
+
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                                        Academic Diary Message *
+                                        Synopsis *
                                     </label>
                                     <textarea 
                                         name="academic_diary"
@@ -553,7 +732,7 @@ document_name:
                                     <label className="block text-sm font-medium text-gray-700 mb-1">
                                         <span className="flex items-center gap-2">
                                             <LinkIcon size={16} />
-                                            Meeting Link (Optional)
+                                            Meeting Link
                                         </span>
                                     </label>
                                     <input
@@ -565,16 +744,16 @@ document_name:
                                         className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm sm:text-base"
                                         disabled={currentItem.isViewOnly || loading || uploading}
                                     />
-                                    <p className="text-xs text-gray-500 mt-1">
+                                    {/* <p className="text-xs text-gray-500 mt-1">
                                         This will be saved in the "link" field
-                                    </p>
+                                    </p> */}
                                 </div>
 
                                 {/* <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-1">
                                         <span className="flex items-center gap-2">
                                             <FileText size={16} />
-                                            Additional Notes (Optional)
+                                            Additional Notes
                                         </span>
                                     </label>
                                     <input
@@ -592,7 +771,7 @@ document_name:
                                     <label className="block text-sm font-medium text-gray-700 mb-1">
                                         <span className="flex items-center gap-2">
                                             <FileText size={16} />
-                                            Upload Document (Optional)
+                                            Upload Document
                                         </span>
                                     </label>
                                     <div className="border-2 border-dashed border-gray-300 rounded-lg p-4">
