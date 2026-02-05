@@ -88,7 +88,6 @@ export default function TabularView() {
         const handleTimetableNavigation = () => {
             if (fromTimetable && passedSlot && !filtersSetFromTimetable) {
                 const slot = passedSlot;
-                console.log("DEBUG: handleTimetableNavigation - received slot:", slot);
 
                 const newFilters = {
                     program: slot.program_id?.toString() || '',
@@ -100,7 +99,6 @@ export default function TabularView() {
                     timeSlot: slot.time_slot_id?.toString() || ''
                 };
 
-                console.log("DEBUG: handleTimetableNavigation - applying filters", newFilters);
                 setFilters(newFilters);
                 setFiltersSetFromTimetable(true);
  
@@ -152,9 +150,12 @@ export default function TabularView() {
         handleTimetableNavigation();
     }, [fromTimetable, passedSlot]);
 
-    // Auto-select first available filter values
+    // Ref to track if initial filters have been set
+    const initialFiltersSet = useRef(false);
+
+    // Auto-select first available filter values on initial load
     useEffect(() => {
-        if (allocations.length > 0 && !filters.paper && !fromTimetable) {
+        if (!initialFiltersSet.current && allocations.length > 0 && !fromTimetable && !filtersSetFromTimetable) {
             const firstAlloc = allocations[0];
             const newFilters = {
                 program: firstAlloc.program?.program_id?.toString() || '',
@@ -165,10 +166,10 @@ export default function TabularView() {
                 paper: firstAlloc.subjects?.[0]?.subject_id?.toString() || '',
                 timeSlot: ''
             };
-            console.log("DEBUG: Auto-selecting first allocation for TabularView", newFilters);
             setFilters(newFilters);
+            initialFiltersSet.current = true;
         }
-    }, [allocations, fromTimetable]);
+    }, [allocations, fromTimetable, filtersSetFromTimetable]);
 
     // Restore saved state on component mount (only if not from timetable)
     useEffect(() => {
@@ -280,28 +281,13 @@ export default function TabularView() {
         }
     }, [currentTeacherId]);
 
-    // Auto-select first values when allocations load (only if not from timetable)
-    useEffect(() => {
-        if (allocations.length > 0 && !filters.paper && !filtersSetFromTimetable) {
-            const firstAlloc = allocations[0];
-            const newFilters = {
-                program: firstAlloc.program?.program_id?.toString() || '',
-                batch: firstAlloc.batch?.batch_id?.toString() || '',
-                academicYear: firstAlloc.academic_year_id?.toString() || '',
-                semester: firstAlloc.semester_id?.toString() || '',
-                division: firstAlloc.division_id?.toString() || '',
-                paper: firstAlloc.subjects?.[0]?.subject_id?.toString() || ''
-            };
-            setFilters(newFilters);
-        }
-    }, [allocations, filters.paper, filtersSetFromTimetable]);
+
 
     // Fetch time slots when paper is selected
     useEffect(() => {
         const fetchTimeSlots = async () => {
             // If coming from timetable and we already have a manual time slot, skip fetch
             if (fromTimetable && filtersSetFromTimetable && timeSlots.length > 0 && timeSlots[0]?.fromTimetable) {
-                console.log("DEBUG: Using manual time slot from timetable");
                 return;
             }
 
@@ -318,19 +304,16 @@ export default function TabularView() {
                         collegeId: collegeId
                     };
                     const response = await TeacherAttendanceManagement.getTimeSlots(params);
-                    console.log("DEBUG: getTimeSlots response:", response);
 
                     if (response && response.data && response.data.length > 0) {
                         // Filter out holidays - only show non-holiday time slots
                         const validTimeSlots = response.data.filter(slot => !slot.is_holiday);
 
                         if (validTimeSlots.length > 0) {
-                            console.log("DEBUG: Setting validTimeSlots:", validTimeSlots);
                             setTimeSlots(validTimeSlots);
                             // Auto-select first time slot only if none currently selected
                             if (!filters.timeSlot) {
                                 const firstSlotId = validTimeSlots[0].time_slot_id?.toString();
-                                console.log("DEBUG: Auto-selecting first time slot:", firstSlotId);
                                 setFilters(prev => ({ ...prev, timeSlot: firstSlotId }));
                             }
                         } else {
@@ -422,18 +405,21 @@ export default function TabularView() {
                             };
                         });
 
-                        // Robust alphanumeric sorting by roll_number
+                        // Robust alphanumeric sorting by roll_number or roll_no
                         formattedStudents.sort((a, b) => {
-                            const rollA = String(a.roll_number || '');
-                            const rollB = String(b.roll_number || '');
+                            const rollA = String(a.roll_number || a.roll_no || a.rollNo || '');
+                            const rollB = String(b.roll_number || b.roll_no || b.rollNo || '');
+                            
+                            if (rollA === '' && rollB === '') return 0;
+                            if (rollA === '') return 1;
+                            if (rollB === '') return -1;
+
                             return rollA.localeCompare(rollB, undefined, { numeric: true, sensitivity: 'base' });
                         });
 
-                        console.log(`DEBUG: fetchStudents - setting students array (count: ${formattedStudents.length}) with default 'P'`);
                         setStudents(formattedStudents);
                         setStudentsFetched(true);
                     } else {
-                        console.log("DEBUG: No students found in division");
                         setStudents([]);
                         setStudentsFetched(true);
                     }
@@ -452,11 +438,6 @@ export default function TabularView() {
     // Fetch existing attendance when time slot is selected
     useEffect(() => {
         const fetchExistingAttendance = async () => {
-            console.log("DEBUG: fetchExistingAttendance triggered", {
-                timeSlot: filters.timeSlot,
-                studentsCount: students.length,
-                filters: filters
-            });
             if (filters.timeSlot && students.length > 0 && filters.academicYear && filters.semester && filters.division && filters.paper) {
                 try {
                     let selectedTimeSlot;
@@ -491,22 +472,17 @@ export default function TabularView() {
                         timetable_id: selectedTimeSlot.timetable_id,
                         date: selectedDate
                     };
-
-                    console.log("DEBUG: Fetching existing attendance with payload:", payload);
                     setLoadingStudents(true);
 
                     const response = await TeacherAttendanceManagement.getAttendanceList(payload);
-                    console.log("DEBUG: Attendance List Response:", response);
 
                     if (response && response.success && response.data && response.data.length > 0) {
                         // Attendance exists, update student statuses
-                        console.log(`DEBUG: fetchExistingAttendance - found ${response.data.length} records. Updating student state.`);
                         setStudents(prevStudents => {
                             const updatedStudents = prevStudents.map(student => {
                                 const attendanceRecord = response.data.find(a => a.student_id === student.id);
                                 if (attendanceRecord && attendanceRecord.status) {
                                     const statusToSet = attendanceRecord.status.status_code || 'P';
-                                    console.log(`   - Student ${student.id} (${student.roll_number}): Mapping API status ${JSON.stringify(attendanceRecord.status)} -> ${statusToSet}`);
                                     return {
                                         ...student,
                                         status: statusToSet
@@ -514,12 +490,10 @@ export default function TabularView() {
                                 }
                                 return student;
                             });
-                            console.log("DEBUG: fetchExistingAttendance - students state update complete");
                             return updatedStudents;
                         });
                     } else {
                         // No attendance data for this slot, reset all to 'P'
-                        console.log("DEBUG: fetchExistingAttendance - no records found in API response. Resetting all to 'P'.");
                         setStudents(prevStudents =>
                             prevStudents.map(student => ({
                                 ...student,
@@ -550,15 +524,11 @@ export default function TabularView() {
         return true;
     });
 
-    console.log("DEBUG: Filtered Students for Rendering:", filteredStudents.length, filteredStudents);
-
     // Filter handlers
     const handleFilterChange = (newFilters) => {
-        console.log("DEBUG: handleFilterChange called with:", newFilters);
         setFilters(newFilters);
         // If user manually changes filters, reset the timetable flag
         if (filtersSetFromTimetable) {
-            console.log("DEBUG: Resetting filtersSetFromTimetable to false");
             setFiltersSetFromTimetable(false);
         }
     };
@@ -603,10 +573,17 @@ export default function TabularView() {
 
     const navigateMonth = (direction) => {
         const newMonth = new Date(currentMonth);
+        const today = new Date();
         if (direction === 'prev') {
             newMonth.setMonth(newMonth.getMonth() - 1);
         } else {
-            newMonth.setMonth(newMonth.getMonth() + 1);
+            // Prevent future month selection
+            if (newMonth.getFullYear() < today.getFullYear() || 
+                (newMonth.getFullYear() === today.getFullYear() && newMonth.getMonth() < today.getMonth())) {
+                newMonth.setMonth(newMonth.getMonth() + 1);
+            } else {
+                return;
+            }
         }
         setCurrentMonth(newMonth);
     };
@@ -651,19 +628,25 @@ export default function TabularView() {
         const selectedYear = parseInt(selectedDate.split('-')[0]);
 
         for (let day = 1; day <= daysInMonth; day++) {
+            const dateObj = new Date(year, month, day);
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            const isFuture = dateObj > today;
+
             const isSelected = day === selectedDay && month === selectedMonth && year === selectedYear;
-            const isToday = new Date().getDate() === day &&
-                new Date().getMonth() === month &&
-                new Date().getFullYear() === year;
+            const isToday = today.getDate() === day &&
+                today.getMonth() === month &&
+                today.getFullYear() === year;
 
             days.push(
                 <button
                     key={day}
-                    onClick={() => handleDateSelect(day)}
+                    onClick={() => !isFuture && handleDateSelect(day)}
+                    disabled={isFuture}
                     className={`h-8 w-8 rounded-full flex items-center justify-center text-sm transition-colors
                         ${isSelected ? 'bg-blue-600 text-white' :
                             isToday ? 'bg-blue-100 text-blue-600' :
-                                'hover:bg-gray-100 text-gray-700'}`}
+                                isFuture ? 'text-gray-300 cursor-not-allowed' : 'hover:bg-gray-100 text-gray-700'}`}
                 >
                     {day}
                 </button>
@@ -698,6 +681,18 @@ export default function TabularView() {
     const presentStatusCode = getStatusByCodes(['P', 'PR', 'PRESENT'])?.status_code || 'P';
     const absentStatusCode = getStatusByCodes(['A', 'AB', 'ABSENT'])?.status_code || 'A';
 
+    const isPresent = (status) => {
+        const s = String(status || '').toUpperCase().trim();
+        const pCode = String(presentStatusCode || 'P').toUpperCase();
+        return s === 'P' || s === 'PR' || s === 'PRESENT' || s.includes('PRESENT') || s === pCode;
+    };
+
+    const isAbsent = (status) => {
+        const s = String(status || '').toUpperCase().trim();
+        const aCode = String(absentStatusCode || 'A').toUpperCase();
+        return s === 'A' || s === 'AB' || s === 'ABSENT' || s.includes('ABSENT') || s === 'ABS' || s === aCode;
+    };
+
     // Mark all students as present
     const markAllPresent = () => {
         setStudents(students.map(s => ({ ...s, status: presentStatusCode })));
@@ -711,10 +706,7 @@ export default function TabularView() {
     const handleStatusClick = (student, e) => {
         e.stopPropagation();
         // Toggle between dynamic present and absent codes
-        const currentStatus = String(student.status || '').toUpperCase();
-        const isPresent = currentStatus === 'P' || currentStatus === 'PR' || currentStatus === 'PRESENT';
-
-        if (isPresent) {
+        if (isPresent(student.status)) {
             updateStudentStatus(student.id, absentStatusCode);
         } else {
             updateStudentStatus(student.id, presentStatusCode);
@@ -725,9 +717,11 @@ export default function TabularView() {
     const toggleStudentStatus = (id) => {
         const student = students.find(s => s.id === id);
         if (student) {
-            const currentStatus = String(student.status || '').toUpperCase();
-            const isPresent = currentStatus === 'P' || currentStatus === 'PR' || currentStatus === 'PRESENT';
-            updateStudentStatus(id, isPresent ? absentStatusCode : presentStatusCode);
+            if (isPresent(student.status)) {
+                updateStudentStatus(id, absentStatusCode);
+            } else {
+                updateStudentStatus(id, presentStatusCode);
+            }
         }
     };
 
@@ -840,8 +834,6 @@ export default function TabularView() {
                     s.status_code?.toUpperCase().includes(searchLabel)
                 );
             }
-
-            console.log(`DEBUG: Mapping status code ${statusCode} to ID:`, status?.status_id);
             return status?.status_id || null;
         };
 
@@ -917,10 +909,6 @@ export default function TabularView() {
     // Deprecated helpers removed in favor of dynamic logic
 
     const activeStudent = students.find(s => s.id === activePopup);
-
-    console.log("DEBUG: TabularView Rendering - Current Filters:", filters);
-    console.log("DEBUG: TabularView Rendering - First Student Status:", students[0]?.name, "->", students[0]?.status);
-    console.log("DEBUG: TabularView Rendering - Available TimeSlots:", timeSlots);
 
     return (
         <div className="bg-white rounded-lg shadow-sm overflow-hidden border border-gray-200 relative min-h-[400px]">
@@ -1028,31 +1016,21 @@ export default function TabularView() {
 
                     <div className="h-8 w-px bg-gray-200 shrink-0"></div>
 
-                    <div className="flex items-center gap-2">
-                        <button
-                            onClick={() => handleBulkStatusUpdate(presentStatusCode)}
-                            className="flex items-center gap-1.5 px-3 py-1.5 bg-green-50 text-green-700 rounded-lg border border-green-100 hover:bg-green-100 transition-colors text-sm font-medium"
-                        >
-                            <Check size={16} /> Mark Present
-                        </button>
-                        <button
-                            onClick={() => handleBulkStatusUpdate(absentStatusCode)}
-                            className="flex items-center gap-1.5 px-3 py-1.5 bg-red-50 text-red-700 rounded-lg border border-red-100 hover:bg-red-100 transition-colors text-sm font-medium"
-                        >
-                            <X size={16} /> Mark Absent
-                        </button>
-                    </div>
-
-                    <div className="h-8 w-px bg-gray-200 shrink-0"></div>
-
-                    <div className="flex items-center gap-2 overflow-x-auto no-scrollbar">
-                        {otherStatuses.map(status => (
+                    {/* Dynamic Statuses from API */}
+                    <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-0.5">
+                        {attendanceStatuses.map(status => (
                             <button
-                                key={status.id}
-                                onClick={() => handleBulkStatusUpdate(status.id)}
-                                className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-50 text-gray-700 rounded-lg border border-gray-100 hover:bg-gray-100 transition-colors text-sm font-medium shrink-0"
+                                key={status.status_id}
+                                onClick={() => handleBulkStatusUpdate(status.status_code)}
+                                className="flex items-center gap-1.5 px-3 py-1.5 bg-white rounded-lg border transition-all hover:scale-105 active:scale-95 text-[11px] font-bold shrink-0 uppercase tracking-tighter shadow-sm"
+                                style={{
+                                    backgroundColor: `${status.color_code}10`,
+                                    borderColor: `${status.color_code}30`,
+                                    color: status.color_code
+                                }}
                             >
-                                {status.icon} {status.label}
+                                {getIconForStatus(status.status_code)}
+                                <span>{status.status_name}</span>
                             </button>
                         ))}
                     </div>
@@ -1099,20 +1077,14 @@ export default function TabularView() {
                                     <div className="w-2.5 h-2.5 rounded-full bg-green-500"></div>
                                     <span className="text-sm font-semibold text-gray-700">Total Present: </span>
                                     <span className="text-lg font-bold text-green-600">
-                                        {filteredStudents.filter(s => {
-                                            const status = String(s.status || '').toUpperCase().trim();
-                                            return status === 'P' || status === 'PR' || status === 'PRESENT' || status.includes('PRESENT');
-                                        }).length}
+                                        {filteredStudents.filter(s => isPresent(s.status)).length}
                                     </span>
                                 </div>
                                 <div className="flex items-center gap-2">
                                     <div className="w-2.5 h-2.5 rounded-full bg-red-500"></div>
                                     <span className="text-sm font-semibold text-gray-700">Total Absent: </span>
                                     <span className="text-lg font-bold text-red-600">
-                                        {filteredStudents.filter(s => {
-                                            const status = String(s.status || '').toUpperCase().trim();
-                                            return status === 'A' || status === 'AB' || status === 'ABSENT' || status.includes('ABSENT');
-                                        }).length}
+                                        {filteredStudents.filter(s => isAbsent(s.status)).length}
                                     </span>
                                 </div>
                             </div>

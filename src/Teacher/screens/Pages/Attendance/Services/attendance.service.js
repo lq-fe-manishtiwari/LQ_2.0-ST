@@ -13,10 +13,113 @@ export const TeacherAttendanceManagement = {
     getGroupedAttendance,
     getAttendanceBySubject,
     saveMultipleBulkAttendance,
-    getSubjectTimetable
+    getSubjectTimetable,
+    //Report
+    getTeacherAttendanceSummaryReports,
+    getDailyReport,
+    getSummaryReport,
+    getTimetableDashboardDetails,
 };
 
+function getTimetableDashboardDetails(collegeId, date) {
+    // This is a dummy function as requested by the user
+    return Promise.resolve({
+        success: true,
+        data: {
+            active_classes_count: 5,
+            cancelled_classes_count: 1,
+            substituted_classes_count: 2,
+            free_teachers_count: 12,
+            occupied_classrooms_count: 8,
+            available_classrooms_count: 4,
+            ongoing_classes: [
+                { subject_name: "Advanced Mathematics", teacher_name: "Dr. Smith", classroom: "Room 101", start_time: "09:00", end_time: "10:00" },
+                { subject_name: "Basic Physics", teacher_name: "Prof. Johnson", classroom: "Room 102", start_time: "09:00", end_time: "10:00" }
+            ],
+            recently_completed_classes: [
+                { subject_name: "Chemistry 101", teacher_name: "Dr. Brown", classroom: "Lab 1", start_time: "08:00", end_time: "09:00" },
+                { subject_name: "English Literature", teacher_name: "Ms. Davis", classroom: "Room 201", start_time: "08:00", end_time: "09:00" }
+            ],
+            upcoming_classes: [
+                { subject_name: "Biology 202", teacher_name: "Dr. Wilson", classroom: "Room 103", start_time: "10:00", end_time: "11:00", type: "Lecture" },
+                { subject_name: "Art History", teacher_name: "Prof. Miller", classroom: "Studio A", start_time: "10:00", end_time: "11:00", type: "Practical" }
+            ],
+            upcoming_holidays: [
+                { name: "Republic Day", start_date: "2026-01-26", end_date: "2026-01-26" },
+                { name: "Holi", start_date: "2026-03-14", end_date: "2026-03-15" }
+            ]
+        }
+    });
+}
+
 // ... existing functions ...
+function getSummaryReport(params) {
+    const {
+        collegeId,
+        divisionId,
+        semesterId,
+        academicYearId,
+        programId,
+        startDate,
+        endDate,
+        paperId,
+    } = params;
+
+    let queryString = `collegeId=${collegeId}&startDate=${startDate}&endDate=${endDate}`;
+
+    if (divisionId) queryString += `&divisionId=${divisionId}`;
+    if (semesterId) queryString += `&semesterId=${semesterId}`;
+    if (academicYearId) queryString += `&academicYearId=${academicYearId}`;
+    if (programId) queryString += `&programId=${programId}`;
+    if (paperId) queryString += `&paperId=${paperId}`;
+
+    const requestOptions = {
+        method: 'GET',
+        headers: authHeader(),
+    };
+
+    const finalUrl = `${TimetableAPI}/attendance/student/summary-report?${queryString}`;
+
+    return fetch(finalUrl, requestOptions)
+        .then(handleResponse)
+        .then(data => ({ success: true, data }))
+        .catch(error => ({
+            success: false,
+            message: error.message || 'Failed to fetch student summary report',
+        }));
+}
+function getDailyReport(params) {
+    const { collegeId, divisionId, semesterId, academicYearId, programId, date, batchId, paperId } = params;
+
+    // Build query string
+    let queryString = `collegeId=${collegeId}&divisionId=${divisionId}&semesterId=${semesterId}&academicYearId=${academicYearId}&programId=${programId}&date=${date}`;
+
+    
+    if (paperId) {
+        queryString += `&subjectId=${paperId}`;
+    }
+
+    const requestOptions = {
+        method: 'GET',
+        headers: authHeader(),
+    };
+
+    const finalUrl = `${TimetableAPI}/attendance/student/report?${queryString}`;
+    console.log('=== API Request ===');
+    console.log('URL:', finalUrl);
+    console.log('Query String:', queryString);
+
+    return fetch(finalUrl, requestOptions)
+        .then(handleResponse)
+        .then(data => ({
+            success: true,
+            data: data
+        }))
+        .catch(error => ({
+            success: false,
+            message: error.message || 'Failed to fetch student attendance report'
+        }));
+}
 
 function getSubjectTimetable(payload) {
     const requestOptions = {
@@ -130,6 +233,30 @@ function getTimeSlots(params) {
         .catch(error => ({
             success: false,
             message: error.message || 'Failed to fetch time slots'
+        }));
+}
+
+function getTeacherAttendanceSummaryReports(collegeId, teacherId, startDate, endDate) {
+    const requestOptions = {
+        method: 'GET',
+        headers: authHeader(),
+    };
+    // teacher-attendance/teacher/detailed-report
+    const url = `${TimetableAPI}/teacher-attendance/teacher/detailed-report` +
+                `?collegeId=${collegeId}` +
+                `&teacherId=${teacherId}` +
+                `&startDate=${startDate}` +
+                `&endDate=${endDate}`;
+
+    return fetch(url, requestOptions)
+        .then(handleResponse)
+        .then(data => ({
+            success: true,
+            data: data
+        }))
+        .catch(error => ({
+            success: false,
+            message: error.message || 'Failed to fetch teacher attendance report'
         }));
 }
 
