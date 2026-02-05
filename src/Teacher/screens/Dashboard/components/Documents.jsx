@@ -22,12 +22,7 @@ const Documents = ({ userProfile }) => {
           />
         </svg>
       ),
-      documents: [
-        { name: "Aadhaar Card", status: "uploaded", uploadDate: "2023-01-15", size: "2.3 MB" },
-        { name: "PAN Card", status: "uploaded", uploadDate: "2023-01-15", size: "1.8 MB" },
-        { name: "Passport", status: "pending", uploadDate: null, size: null },
-        { name: "Driving License", status: "pending", uploadDate: null, size: null },
-      ],
+      documents: userProfile?.documents?.filter(d => d.category === 'personal') || [],
     },
     {
       id: "educational",
@@ -48,12 +43,7 @@ const Documents = ({ userProfile }) => {
           />
         </svg>
       ),
-      documents: [
-        { name: "B.Ed Certificate", status: "uploaded", uploadDate: "2023-02-10", size: "3.1 MB" },
-        { name: "M.Ed Certificate", status: "uploaded", uploadDate: "2023-02-10", size: "2.9 MB" },
-        { name: "Teaching License", status: "uploaded", uploadDate: "2023-02-12", size: "1.5 MB" },
-        { name: "Subject Specialization", status: "pending", uploadDate: null, size: null },
-      ],
+      documents: userProfile?.documents?.filter(d => d.category === 'educational') || [],
     },
     {
       id: "professional",
@@ -73,12 +63,7 @@ const Documents = ({ userProfile }) => {
           />
         </svg>
       ),
-      documents: [
-        { name: "Resume/CV", status: "uploaded", uploadDate: "2023-01-20", size: "1.2 MB" },
-        { name: "Experience Certificate", status: "uploaded", uploadDate: "2023-01-20", size: "0.8 MB" },
-        { name: "Salary Certificate", status: "pending", uploadDate: null, size: null },
-        { name: "NOC from Previous Employer", status: "pending", uploadDate: null, size: null },
-      ],
+      documents: userProfile?.documents?.filter(d => d.category === 'professional') || [],
     },
     {
       id: "medical",
@@ -98,11 +83,7 @@ const Documents = ({ userProfile }) => {
           />
         </svg>
       ),
-      documents: [
-        { name: "Medical Certificate", status: "uploaded", uploadDate: "2023-03-05", size: "1.1 MB" },
-        { name: "Health Insurance", status: "uploaded", uploadDate: "2023-03-05", size: "2.0 MB" },
-        { name: "Vaccination Certificate", status: "pending", uploadDate: null, size: null },
-      ],
+      documents: userProfile?.documents?.filter(d => d.category === 'medical') || [],
     },
   ];
 
@@ -183,9 +164,8 @@ const Documents = ({ userProfile }) => {
                 {/* Left */}
                 <div className="flex items-center space-x-3 mb-2 sm:mb-0">
                   <svg
-                    className={`w-8 h-8 ${
-                      doc.status === "uploaded" ? "text-green-500" : "text-gray-400"
-                    }`}
+                    className={`w-8 h-8 ${doc.status === "uploaded" ? "text-green-500" : "text-gray-400"
+                      }`}
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"

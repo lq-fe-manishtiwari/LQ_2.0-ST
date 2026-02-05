@@ -158,26 +158,23 @@ const ProfileView = ({
           </button>
         </div>
 
-        {/* ==========================================================
-            PROFILE HEADER (UPDATED FOR MOBILE VIEW)
-        ========================================================== */}
         <div className="bg-white rounded-xl shadow-sm border p-6 mb-6">
-
           <div className="flex flex-col md:flex-row md:items-center md:space-x-6 text-center md:text-left">
-
             {/* Profile Image */}
             <div className="flex justify-center md:block mb-4 md:mb-0">
-              {uploadedImage ? (
-                <img
-                  src={uploadedImage}
-                  alt="Profile"
-                  className="w-24 h-24 rounded-full object-cover border-4 border-gray-200"
-                />
-              ) : (
-                <div className="w-24 h-24 rounded-full bg-blue-600 flex items-center justify-center text-white text-2xl font-bold border-4 border-blue-300">
-                  {fullName ? fullName.charAt(0).toUpperCase() : 'U'}
-                </div>
-              )}
+              <div className="relative inline-block">
+                {uploadedImage ? (
+                  <img
+                    src={uploadedImage}
+                    alt="Profile"
+                    className="w-24 h-24 rounded-full object-cover border-4 border-gray-200 shadow-sm"
+                  />
+                ) : (
+                  <div className="w-24 h-24 rounded-full bg-blue-600 flex items-center justify-center text-white text-3xl font-bold border-4 border-blue-100">
+                    {fullName ? fullName.charAt(0).toUpperCase() : 'U'}
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Profile Info */}
@@ -200,72 +197,29 @@ const ProfileView = ({
                 </span>
               </div>
             </div>
-
-          </div>
-
-        </div>
-
-        {/* Mobile Tabs */}
-        <div className="block md:hidden mb-6">
-          <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
-
-            {/* First Row */}
-            <div className="flex">
-              {tabs.slice(0, 3).map((tab) => (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
-                  className={`${
-                    activeTab === tab.id
-                      ? "text-blue-600 border-b-2 border-blue-500"
-                      : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
-                  } flex-1 py-4 px-2 flex flex-row items-center justify-center gap-2 text-sm font-medium`}
-                >
-                  {tab.icon}
-                  <span>{tab.name}</span>
-                </button>
-              ))}
-            </div>
-
-            {/* Second Row */}
-            <div className="border-t">
-              <div className="flex">
-                {tabs.slice(3).map((tab) => (
-                  <button
-                    key={tab.id}
-                    onClick={() => setActiveTab(tab.id)}
-                    className={`${
-                      activeTab === tab.id
-                        ? "text-blue-600 border-b-2 border-blue-500"
-                        : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
-                    } flex-1 py-4 px-2 flex flex-row items-center justify-center gap-2 text-sm font-medium`}
-                  >
-                    {tab.icon}
-                    <span>{tab.name}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-
           </div>
         </div>
 
-        {/* Desktop Tabs */}
-        <div className="hidden md:block bg-white rounded-xl shadow-sm border mb-6">
-          <div className="border-b border-gray-200">
-            <nav className="flex justify-center space-x-8 px-6" aria-label="Tabs">
+        {/* Navigation Tabs - Responsive Scroll */}
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 mb-6 overflow-hidden">
+          <div className="overflow-x-auto no-scrollbar">
+            <nav className="flex px-2" aria-label="Tabs">
               {tabs.map((tab) => (
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`${
-                    activeTab === tab.id
-                      ? "border-blue-500 text-blue-600"
-                      : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-                  } py-4 px-1 border-b-2 font-medium text-sm flex items-center space-x-2 transition`}
+                  className={`${activeTab === tab.id
+                    ? "text-blue-600 border-blue-600"
+                    : "text-gray-400 hover:text-gray-600 border-transparent"
+                    } whitespace-nowrap py-5 px-6 border-b-2 font-bold text-sm flex items-center gap-2 transition-all relative`}
                 >
-                  {tab.icon}
+                  <span className={`${activeTab === tab.id ? 'animate-pulse' : ''}`}>
+                    {tab.icon}
+                  </span>
                   <span>{tab.name}</span>
+                  {activeTab === tab.id && (
+                    <div className="absolute bottom-0 left-0 right-0 h-1 bg-blue-600 rounded-t-full"></div>
+                  )}
                 </button>
               ))}
             </nav>
@@ -273,8 +227,10 @@ const ProfileView = ({
         </div>
 
         {/* Tab Content */}
-        <div className="bg-white rounded-xl shadow-sm border p-6">
-          {renderTabContent()}
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 md:p-8 min-h-[400px]">
+          <div className="animate-in fade-in duration-500">
+            {renderTabContent()}
+          </div>
         </div>
 
       </div>

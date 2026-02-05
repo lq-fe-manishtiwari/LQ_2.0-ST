@@ -634,13 +634,17 @@ export default function CardView() {
             {/* Header Section */}
             <div className="bg-white p-4 md:p-6 rounded-xl shadow-sm border border-gray-200 mb-6 font-sans">
                 {/* Top Row: Title, Filters Toggle, Month Picker, Submit */}
-                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 pb-6 border-b border-gray-100">
-                    <div className="space-y-1">
-                        <h3 className="text-xl md:text-2xl font-bold text-gray-800">
-                            Student Attendance - {getMonthName(selectedMonth)} {selectedYear}
-                        </h3>
-                        <p className="text-sm text-gray-500 font-medium select-none text-ellipsis overflow-hidden">Select dates in table header to apply bulk marking</p>
-                    </div>
+              {/* Top Row: Title + Controls */}
+<div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-5 pb-6 border-b border-gray-100">
+    {/* Left - Title */}
+    <div className="space-y-1">
+        <h3 className="text-xl md:text-2xl font-bold text-gray-800">
+            Student Attendance - {getMonthName(selectedMonth)} {selectedYear}
+        </h3>
+        <p className="text-sm text-gray-500 font-medium select-none">
+            Select dates in table header to apply bulk marking
+        </p>
+    </div>
 
                     <div className="flex items-center gap-4 shrink-0">
                         {/* Month Picker */}
@@ -658,29 +662,36 @@ export default function CardView() {
                             />
                         </div>
 
-                        {/* Submit Section */}
-                        <div className="flex items-center gap-3">
-                            {hasChanges && (
-                                <div className="hidden lg:flex items-center shrink-0 pr-2">
-                                    <span className="px-3 py-1.5 bg-amber-100 text-amber-700 text-[10px] font-black tracking-wider rounded-full border border-amber-200 animate-pulse flex items-center gap-1">
-                                        <AlertCircle size={10} /> Unsaved Changes
-                                    </span>
-                                </div>
-                            )}
-                            <button
-                                onClick={handleSubmit}
-                                disabled={!hasChanges || isSubmitting}
-                                className={`flex items-center gap-2 px-6 py-2 rounded-lg font-black text-xs transition-all shadow-md active:scale-95 h-[40px] whitespace-nowrap shrink-0 group ${hasChanges
-                                        ? 'bg-blue-600 text-white hover:bg-blue-700'
-                                        : 'bg-gray-100 text-gray-400 cursor-not-allowed shadow-none'
-                                    }`}
-                            >
-                                {isSubmitting ? <RotateCcw className="animate-spin w-3 h-3" /> : <Save className={`w-3 h-3 ${hasChanges ? 'group-hover:scale-110 transition-transform' : ''}`} />}
-                                {isSubmitting ? 'Saving...' : 'Submit Attendance'}
-                            </button>
-                        </div>
-                    </div>
-                </div>
+        {/* Unsaved badge + Submit button group */}
+        <div className="flex items-center gap-3">
+            {hasChanges && (
+                <span className="px-2.5 py-1 bg-amber-100 text-amber-800 text-xs font-black tracking-wide rounded-full border border-amber-200 animate-pulse flex items-center gap-1 whitespace-nowrap">
+                    <AlertCircle size={12} />Unsaved Changes
+                </span>
+            )}
+
+            <button
+                onClick={handleSubmit}
+                disabled={!hasChanges || isSubmitting}
+                className={`
+                    flex items-center gap-2 px-5 py-2 rounded-lg font-black text-sm
+                    transition-all shadow-md active:scale-95 h-10 whitespace-nowrap
+                    ${hasChanges
+                        ? 'bg-blue-600 hover:bg-blue-700 text-white'
+                        : 'bg-gray-200 text-gray-400 cursor-not-allowed shadow-none'
+                    }
+                `}
+            >
+                {isSubmitting ? (
+                    <RotateCcw className="animate-spin w-4 h-4" />
+                ) : (
+                    <Save className="w-4 h-4" />
+                )}
+                {isSubmitting ? 'Saving...' : 'Submit'}
+            </button>
+        </div>
+    </div>
+</div>
 
                 {/* Filters Section */}
                 <div className="mt-6">

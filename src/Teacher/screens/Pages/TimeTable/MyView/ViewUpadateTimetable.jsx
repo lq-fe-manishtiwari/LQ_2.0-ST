@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Calendar, Clock, User, BookOpen, FilePlus, X, Loader, FileText, ExternalLink, Link as LinkIcon } from 'lucide-react';
+import { ArrowLeft, Calendar, Clock, User, BookOpen, FilePlus, X, Loader, FileText, ExternalLink, Link as LinkIcon, MapPin } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import ViewUpadateTeacher from './ViewUpadateTeacher';
 import SweetAlert from 'react-bootstrap-sweetalert';
@@ -175,6 +175,14 @@ const ViewUpadateTimetable = () => {
             if (formData.note) {
                 payload.note = formData.note;
             }
+
+            if (formData.teaching_unit) {
+                payload.teaching_unit = formData.teaching_unit;
+            }
+
+            if (formData.book_used) {
+                payload.book_used = formData.book_used;
+            }
     
             console.log('Creating class update with payload:', payload);
     
@@ -193,7 +201,7 @@ const ViewUpadateTimetable = () => {
     };
 
     const formatDate = (dateString) => {
-        if (!dateString) return 'N/A';
+        if (!dateString) return '-';
         const date = new Date(dateString);
         const day = date.getDate().toString().padStart(2, '0');
         const month = date.toLocaleString('default', { month: 'long' });
@@ -202,7 +210,7 @@ const ViewUpadateTimetable = () => {
     };
 
     const formatTime = (timeString) => {
-        if (!timeString) return 'N/A';
+        if (!timeString) return '-';
         try {
             const [hours, minutes] = timeString.split(':');
             const hour = parseInt(hours, 10);
@@ -230,10 +238,10 @@ const ViewUpadateTimetable = () => {
                         <h1 className="text-xl font-bold text-gray-800">
                             {slotData.program_name || 'Program'} - {slotData.semester_name || 'Semester'} - {slotData.division_name || 'Division'}
                         </h1>
-                        <p className="text-sm text-gray-600">
+                        {/* <p className="text-sm text-gray-600">
                             {slotData.academic_year_name || 'Academic Year'} • 
                             {slotIdentifier.type === 'exception' ? ' Exception' : ' Template Slot'}: {slotIdentifier.id}
-                        </p>
+                        </p> */}
                     </div>
                 </div>
 
@@ -267,38 +275,20 @@ const ViewUpadateTimetable = () => {
                     <div className="flex items-center gap-3 text-gray-700">
                         <User className="text-blue-600" size={24} />
                         <span className="font-bold">Teacher :</span>
-                        <span className="text-gray-600">{slotData.teacher_name || 'N/A'}</span>
+                        <span className="text-gray-600">{slotData.teacher_name || '-'}</span>
                     </div>
                     <div className="flex items-center gap-3 text-gray-700">
                         <BookOpen className="text-blue-600" size={24} />
                         <span className="font-bold">Paper :</span>
-                        <span className="text-gray-600">{slotData.subject_name || 'N/A'}</span>
+                        <span className="text-gray-600">{slotData.subject_name || '-'}</span>
                     </div>
-                </div>
-                <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-y-4">
-                    <div className="flex items-start gap-3 text-gray-700">
+                    <div className="flex items-center gap-3 text-gray-700">
+                        <MapPin className="text-blue-600" size={24} />
                         <span className="font-bold">Room :</span>
-                        <span className="text-gray-600">{slotData.room_number || slotData.classroom_name || 'N/A'}</span>
-                    </div>
-                    <div className="flex items-start gap-3 text-gray-700">
-                        <span className="font-bold">Type :</span>
-                        <span className="text-gray-600">{slotData.type || slotData.class_type || 'Regular'}</span>
-                        {slotData.is_exception && (
-                            <span className="text-xs bg-orange-100 text-orange-600 px-2 py-1 rounded-full">
-                                {slotData.exception_type || 'Exception'}
-                            </span>
-                        )}
+                        <span className="text-gray-600">{slotData.room_number || slotData.classroom_name || '-'}</span>
                     </div>
                 </div>
                 
-                {/* Debug info - remove in production */}
-                {/* <div className="mt-6 p-3 bg-gray-50 rounded-lg border border-gray-200">
-                    <p className="text-xs text-gray-500">
-                        <strong>Debug Info:</strong> Type: {slotIdentifier.type} | ID: {slotIdentifier.id} | 
-                        Template ID: {template_slot_id || slotData.template_slot_id} | 
-                        Exception ID: {exception_id || slotData.exception_id}
-                    </p>
-                </div> */}
             </div>
 
             {/* Previous Record Section */}
@@ -374,7 +364,9 @@ const AddUpdatePopup = ({ slotData, slotIdentifier, onClose, onSubmit }) => {
         meeting_link: '',
         related_document_url: '',
         note: '',
-        fileName: ''
+        fileName: '',
+        teaching_unit: [''], // Initialize with one empty field
+        book_used: ['']      // Initialize with one empty field
     });
     const [uploading, setUploading] = useState(false);
     const [file, setFile] = useState(null);
@@ -446,6 +438,33 @@ const AddUpdatePopup = ({ slotData, slotIdentifier, onClose, onSubmit }) => {
         }
     };
 
+    // Helper functions for dynamic fields
+    const handleDynamicFieldChange = (field, index, value) => {
+        setFormData(prev => {
+            const newArray = [...prev[field]];
+            newArray[index] = value;
+            return { ...prev, [field]: newArray };
+        });
+    };
+
+    const addDynamicField = (field) => {
+        setFormData(prev => ({
+            ...prev,
+            [field]: [...prev[field], '']
+        }));
+    };
+
+    const removeDynamicField = (field, index) => {
+        setFormData(prev => {
+            const newArray = [...prev[field]];
+            if (newArray.length > 1) {
+                newArray.splice(index, 1);
+                return { ...prev, [field]: newArray };
+            }
+            return prev;
+        });
+    };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
         
@@ -466,7 +485,10 @@ const AddUpdatePopup = ({ slotData, slotIdentifier, onClose, onSubmit }) => {
             meeting_link: formData.meeting_link,
             related_document_url: formData.related_document_url,
             note: formData.note,
-            fileName: formData.fileName
+            fileName: formData.fileName,
+            // Filter out empty strings
+            teaching_unit: formData.teaching_unit.filter(item => item.trim() !== ''),
+            book_used: formData.book_used.filter(item => item.trim() !== '')
         };
 
         await onSubmit(finalFormData);
@@ -490,7 +512,7 @@ const AddUpdatePopup = ({ slotData, slotIdentifier, onClose, onSubmit }) => {
                     <h2 className="text-xl font-bold text-gray-800">Add New Update</h2>
                     <button 
                         onClick={onClose}
-                        className="p-2 hover:bg-gray-100 rounded-full"
+                        className="p-2 hover:bg-gray-100 rounded-full text-gray-400 hover:text-gray-600 transition-colors"
                         disabled={uploading}
                     >
                         <X size={24} />
@@ -499,33 +521,89 @@ const AddUpdatePopup = ({ slotData, slotIdentifier, onClose, onSubmit }) => {
 
                 {/* Popup Content */}
                 <form onSubmit={handleSubmit} className="p-6 space-y-6">
-                    <div className="space-y-4">
-                        {/* <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                                Slot Information
+                    <div className="space-y-6">
+                        <div>
+                            <label className="block text-sm font-semibold text-gray-700 mb-2">
+                                Teaching Unit
                             </label>
-                            <div className="bg-gray-50 p-3 rounded-lg">
-                                <p className="text-sm text-gray-600">
-                                    <strong>Subject:</strong> {slotData.subject_name} • 
-                                    <strong> Date:</strong> {slotData.date} • 
-                                    <strong> Time:</strong> {slotData.start_time} - {slotData.end_time}
-                                </p>
-                                <p className="text-xs text-gray-500 mt-1">
-                                    {slotIdentifier.type === 'exception' ? 'Exception' : 'Template Slot'}: {slotIdentifier.id}
-                                </p>
+                            <div className="space-y-2">
+                                {formData.teaching_unit.map((unit, index) => (
+                                    <div key={index} className="flex gap-2">
+                                        <input
+                                            type="text"
+                                            value={unit}
+                                            onChange={(e) => handleDynamicFieldChange('teaching_unit', index, e.target.value)}
+                                            placeholder={`Teaching Unit ${index + 1}`}
+                                            className="flex-1 p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                            disabled={uploading}
+                                        />
+                                        {formData.teaching_unit.length > 1 && (
+                                            <button
+                                                type="button"
+                                                onClick={() => removeDynamicField('teaching_unit', index)}
+                                                className="p-3 text-red-500 hover:bg-red-50 rounded-lg transition-colors border border-red-200"
+                                            >
+                                                <X size={20} />
+                                            </button>
+                                        )}
+                                    </div>
+                                ))}
+                                <button
+                                    type="button"
+                                    onClick={() => addDynamicField('teaching_unit')}
+                                    className="text-sm text-blue-600 hover:text-blue-800 font-medium flex items-center gap-1 transition-colors"
+                                >
+                                    + Add More Units
+                                </button>
                             </div>
-                        </div> */}
+                        </div>
 
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                                Academic Diary Message *
+                            <label className="block text-sm font-semibold text-gray-700 mb-2">
+                                Teaching Aids/Books Used
+                            </label>
+                            <div className="space-y-2">
+                                {formData.book_used.map((book, index) => (
+                                    <div key={index} className="flex gap-2">
+                                        <input
+                                            type="text"
+                                            value={book}
+                                            onChange={(e) => handleDynamicFieldChange('book_used', index, e.target.value)}
+                                            placeholder={`Book/Aid ${index + 1}`}
+                                            className="flex-1 p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                            disabled={uploading}
+                                        />
+                                        {formData.book_used.length > 1 && (
+                                            <button
+                                                type="button"
+                                                onClick={() => removeDynamicField('book_used', index)}
+                                                className="p-3 text-red-500 hover:bg-red-50 rounded-lg transition-colors border border-red-200"
+                                            >
+                                                <X size={20} />
+                                            </button>
+                                        )}
+                                    </div>
+                                ))}
+                                <button
+                                    type="button"
+                                    onClick={() => addDynamicField('book_used')}
+                                    className="text-sm text-blue-600 hover:text-blue-800 font-medium flex items-center gap-1 transition-colors"
+                                >
+                                    + Add More Books
+                                </button>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label className="block text-sm font-semibold text-gray-700 mb-2">
+                                Synopsis *
                             </label>
                             <textarea 
                                 name="academic_diary"
                                 value={formData.academic_diary}
                                 onChange={handleInputChange}
                                 placeholder="Enter detailed notes about this class session..."
-                                className="w-full p-3 border border-gray-300 rounded-lg h-40 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                className="w-full p-3 border border-gray-300 rounded-lg h-32 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                 required
                                 disabled={uploading}
                             />
@@ -535,7 +613,7 @@ const AddUpdatePopup = ({ slotData, slotIdentifier, onClose, onSubmit }) => {
                             <label className="block text-sm font-medium text-gray-700 mb-1">
                                 <span className="flex items-center gap-2">
                                     <LinkIcon size={16} />
-                                    Meeting Link (Optional)
+                                    Meeting Link
                                 </span>
                             </label>
                             <input
@@ -547,16 +625,13 @@ const AddUpdatePopup = ({ slotData, slotIdentifier, onClose, onSubmit }) => {
                                 className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                 disabled={uploading}
                             />
-                            <p className="text-xs text-gray-500 mt-1">
-                                This will be saved in the "link" field
-                            </p>
                         </div>
 
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">
                                 <span className="flex items-center gap-2">
                                     <FileText size={16} />
-                                    Upload Document (Optional)
+                                    Upload Document
                                 </span>
                             </label>
                             <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">

@@ -151,12 +151,12 @@ const CommunicationDetails = ({ userProfile }) => {
           Contact Information
         </h4>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {contactFields.map((field) => (
             <div key={field.key} className="bg-gray-50 p-4 rounded-lg border">
               <div className="flex items-center mb-2">
-                {field.icon}
-                <label className="block text-sm font-medium text-gray-700 ml-2">
+                <span className="text-gray-400 mr-2">{field.icon}</span>
+                <label className="block text-xs font-medium text-gray-500">
                   {field.label}
                 </label>
               </div>
@@ -168,10 +168,10 @@ const CommunicationDetails = ({ userProfile }) => {
                   value={formData[field.key]}
                   onChange={handleInputChange}
                   placeholder={`Enter ${field.label}`}
-                  className="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 bg-white border rounded-md focus:ring-2 focus:ring-blue-500 outline-none"
                 />
               ) : (
-                <p className="text-gray-900 font-medium">
+                <p className="text-gray-900 font-medium break-words">
                   {formData[field.key] || "Not provided"}
                 </p>
               )}
@@ -189,8 +189,8 @@ const CommunicationDetails = ({ userProfile }) => {
 
         <div className="bg-gray-50 p-4 rounded-lg border">
           <div className="flex items-center mb-2">
-            <Home className="w-5 h-5 text-green-600" />
-            <label className="block text-sm font-medium text-gray-700 ml-2">
+            <Home className="w-5 h-5 text-gray-400 mr-2" />
+            <label className="block text-xs font-medium text-gray-500">
               Address
             </label>
           </div>
@@ -202,10 +202,10 @@ const CommunicationDetails = ({ userProfile }) => {
               onChange={handleInputChange}
               rows={3}
               placeholder="Enter your address"
-              className="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-green-500"
+              className="w-full px-3 py-2 bg-white border rounded-md focus:ring-2 focus:ring-green-500 outline-none"
             />
           ) : (
-            <p className="text-gray-900 font-medium">
+            <p className="text-gray-900 font-medium leading-relaxed">
               {formData.address || "Not provided"}
             </p>
           )}
@@ -219,15 +219,15 @@ const CommunicationDetails = ({ userProfile }) => {
           Emergency Contact
         </h4>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {emergencyFields.map((field) => (
             <div
               key={field.key}
-              className="bg-red-50 p-4 rounded-lg border border-red-200"
+              className="bg-gray-50 p-4 rounded-lg border"
             >
               <div className="flex items-center mb-2">
-                {field.icon}
-                <label className="block text-sm font-medium text-gray-700 ml-2">
+                <span className="text-gray-400 mr-2">{field.icon}</span>
+                <label className="block text-xs font-medium text-gray-500">
                   {field.label}
                 </label>
               </div>
@@ -239,10 +239,10 @@ const CommunicationDetails = ({ userProfile }) => {
                   value={formData[field.key]}
                   onChange={handleInputChange}
                   placeholder={`Enter ${field.label}`}
-                  className="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-red-500"
+                  className="w-full px-3 py-2 bg-white border rounded-md focus:ring-2 focus:ring-red-500 outline-none"
                 />
               ) : (
-                <p className="text-gray-900 font-medium">
+                <p className="text-gray-900 font-medium font-bold">
                   {formData[field.key] || "Not provided"}
                 </p>
               )}

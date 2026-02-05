@@ -90,18 +90,18 @@ const StudentFeesDetails = ({ studentId }) => {
                     </div>
 
                     {/* Quick Stats */}
-                    <div className="grid grid-cols-1 sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x border-b bg-gray-50/50">
-                        <div className="p-4 sm:p-5 text-center">
+                    <div className="grid grid-cols-1 xs:grid-cols-3 divide-y xs:divide-y-0 xs:divide-x border-b bg-gray-50/50">
+                        <div className="p-3 sm:p-5 text-center">
                             <p className="text-gray-500 text-[10px] sm:text-xs font-bold uppercase mb-1">Total Fee</p>
-                            <p className="text-lg sm:text-xl font-bold text-gray-800">₹{(allocation.total_fees || 0).toLocaleString('en-IN')}</p>
+                            <p className="text-base sm:text-xl font-bold text-gray-800">₹{(allocation.total_fees || 0).toLocaleString('en-IN')}</p>
                         </div>
-                        <div className="p-4 sm:p-5 text-center">
+                        <div className="p-3 sm:p-5 text-center">
                             <p className="text-gray-500 text-[10px] sm:text-xs font-bold uppercase mb-1 text-green-600">Total Paid</p>
-                            <p className="text-lg sm:text-xl font-bold text-green-600">₹{(allocation.paid_amount || 0).toLocaleString('en-IN')}</p>
+                            <p className="text-base sm:text-xl font-bold text-green-600">₹{(allocation.paid_amount || 0).toLocaleString('en-IN')}</p>
                         </div>
-                        <div className="p-4 sm:p-5 text-center">
+                        <div className="p-3 sm:p-5 text-center">
                             <p className="text-gray-500 text-[10px] sm:text-xs font-bold uppercase mb-1 text-red-500">Total Pending</p>
-                            <p className="text-lg sm:text-xl font-bold text-red-500">₹{(allocation.pending_amount || 0).toLocaleString('en-IN')}</p>
+                            <p className="text-base sm:text-xl font-bold text-red-500">₹{(allocation.pending_amount || 0).toLocaleString('en-IN')}</p>
                         </div>
                     </div>
 
@@ -109,11 +109,11 @@ const StudentFeesDetails = ({ studentId }) => {
                         {/* Installments Breakdown */}
                         {allocation.is_in_installment && allocation.installments?.length > 0 ? (
                             <div className="space-y-4">
-                                <h3 className="text-sm font-black text-gray-400 uppercase tracking-widest flex items-center gap-2 border-b pb-2">
+                                <h3 className="text-[10px] sm:text-sm font-black text-gray-400 uppercase tracking-widest flex items-center gap-2 border-b pb-2">
                                     <Calendar className="w-4 h-4" />
                                     Installment Breakdown
                                 </h3>
-                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                                <div className="grid grid-cols-1 xs:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
                                     {allocation.installments.map((inst) => {
                                         const isOverdue = inst.balance > 0 && getOverdueStatus(inst.due_date);
                                         return (
@@ -162,15 +162,15 @@ const StudentFeesDetails = ({ studentId }) => {
                                 </h3>
                                 <div className="divide-y">
                                     {allocation.fee_lines?.map((line) => (
-                                        <div key={line.fee_line_id} className="py-3 flex justify-between items-center group">
+                                        <div key={line.fee_line_id} className="py-4 flex flex-col sm:flex-row justify-between sm:items-center gap-2 group">
                                             <div>
                                                 <p className="text-sm font-bold text-gray-800 group-hover:text-blue-600 transition-colors uppercase">{line.particular_name}</p>
-                                                <p className="text-[10px] text-gray-400 font-medium">Due by: {line.due_date ? new Date(line.due_date).toLocaleDateString('en-IN') : 'N/A'}</p>
+                                                <p className="text-[10px] text-gray-400 font-medium mt-0.5">Due by: {line.due_date ? new Date(line.due_date).toLocaleDateString('en-IN') : 'N/A'}</p>
                                             </div>
-                                            <div className="text-right">
+                                            <div className="flex sm:flex-col justify-between items-center sm:items-end sm:text-right border-t sm:border-0 pt-2 sm:pt-0">
                                                 <p className="text-sm font-black text-gray-800">₹{line.total_amount.toLocaleString('en-IN')}</p>
                                                 {line.balance > 0 && (
-                                                    <p className="text-[10px] font-black text-red-500">₹{line.balance.toLocaleString('en-IN')} PENDING</p>
+                                                    <p className="text-[10px] font-black text-red-500 bg-red-50 px-2 py-0.5 rounded">₹{line.balance.toLocaleString('en-IN')} PENDING</p>
                                                 )}
                                             </div>
                                         </div>

@@ -786,7 +786,7 @@ const MyViewDashboard = () => {
                                 </div>
                             </div>
 
-                            <div className="flex flex-wrap gap-2 md:gap-3">
+                            <div className="flex flex-wrap gap-1 sm:gap-2 md:gap-3">
             <button
     type="button"
     onClick={() => navigate('/teacher/timetable/View-Upadate-Timetable', { 
@@ -797,7 +797,7 @@ const MyViewDashboard = () => {
             is_exception: slot.is_exception
         } 
     })}
-    className="text-xs px-3 py-1 bg-orange-500 hover:bg-orange-600 text-white rounded-full transition"
+    className="text-[10px] sm:text-xs px-2 sm:px-3 py-1 bg-orange-500 hover:bg-orange-600 text-white rounded-full transition"
 >
     Update
 </button>
@@ -809,7 +809,7 @@ const MyViewDashboard = () => {
                                             fromTimetable: true
                                         }
                                     })}
-                                    className="text-xs px-3 py-1 bg-green-500 hover:bg-green-600 text-white rounded-full transition"
+                                    className="text-[10px] sm:text-xs px-2 sm:px-3 py-1 bg-green-500 hover:bg-green-600 text-white rounded-full transition"
                                 >
                                     Mark Attendance
                                 </button>
@@ -817,7 +817,7 @@ const MyViewDashboard = () => {
                                 <button
                                     type="button"
                                     onClick={() => navigate('/teacher/attendance/qr-attendance', { state: { slot } })}
-                                    className="text-xs px-3 py-1 bg-blue-500 hover:bg-blue-600 text-white rounded-full transition"
+                                    className="text-[10px] sm:text-xs px-2 sm:px-3 py-1 bg-blue-500 hover:bg-blue-600 text-white rounded-full transition"
                                 >
                                     Generate QR
                                 </button>
@@ -833,16 +833,16 @@ const MyViewDashboard = () => {
         // If slot is holiday, show holiday indicator
         if (slot.is_holiday) {
             return (
-                <div className="px-2 py-1.5 rounded-md bg-gradient-to-r from-amber-50 to-yellow-50 border border-amber-200">
-                    <div className="flex items-center gap-2">
-                        <div className="w-2 h-2 rounded-full bg-amber-500"></div>
+                <div className="px-1 sm:px-2 py-1 rounded-md bg-gradient-to-r from-amber-50 to-yellow-50 border border-amber-200">
+                    <div className="flex items-center gap-1 sm:gap-2">
+                        <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-amber-500"></div>
                         <div className="flex-1 min-w-0">
                             <div className="flex items-center justify-between">
-                                <span className="text-xs font-bold text-amber-700 truncate">
+                                <span className="text-[10px] sm:text-xs font-bold text-amber-700 truncate">
                                     {slot.holiday_name || "Holiday"}
                                 </span>
                             </div>
-                            <div className="text-[10px] text-amber-600 mt-0.5">
+                            <div className="text-[9px] sm:text-[10px] text-amber-600 mt-0.5">
                                 No classes scheduled
                             </div>
                         </div>
@@ -853,24 +853,24 @@ const MyViewDashboard = () => {
 
         return (
             <div
-                className="px-2 py-1.5 rounded-md bg-primary-50 border border-primary-100 hover:bg-primary-100 transition-colors cursor-pointer"
+                className="px-1 sm:px-2 py-1 rounded-md bg-primary-50 border border-primary-100 hover:bg-primary-100 transition-colors cursor-pointer"
                 onClick={(e) => {
                     e.stopPropagation();
                     handleWeekSlotClick(slot);
                 }}
             >
-                <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 rounded-full bg-primary-500"></div>
+                <div className="flex items-center gap-1 sm:gap-2">
+                    <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-primary-500"></div>
                     <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between">
-                            <span className="text-xs font-bold text-primary-700 truncate">
+                            <span className="text-[10px] sm:text-xs font-bold text-primary-700 truncate">
                                 {slot.subject_name || slot.subject || "Subject"}
                             </span>
-                            <span className="text-[10px] text-primary-500 ml-1 shrink-0">
+                            <span className="text-[9px] sm:text-[10px] text-primary-500 ml-1 shrink-0">
                                 {formatTimeForDisplay(slot.start_time)}
                             </span>
                         </div>
-                        <div className="text-[10px] text-primary-600 mt-0.5 truncate">
+                        <div className="text-[9px] sm:text-[10px] text-primary-600 mt-0.5 truncate">
                             {slot.teacher_name?.split(' ')[0] || "Teacher"} • {slot.room_number || "Room"}
                         </div>
                     </div>
@@ -1016,7 +1016,7 @@ const MyViewDashboard = () => {
 
             {/* Mobile View Switcher */}
             {isMobile && !loading && !error && (
-                <div className="flex justify-center border-b border-slate-200 bg-white px-4">
+                <div className="flex justify-center border-b border-slate-200 bg-white px-3 sm:px-4">
                     <div className="flex w-full max-w-md">
                         <button
                             onClick={() => setMobileViewMode("calendar")}
@@ -1038,7 +1038,7 @@ const MyViewDashboard = () => {
                 <main className="flex-1 flex overflow-hidden">
                     {/* Sidebar - Calendar */}
                     <aside className={`${isMobile ? (mobileViewMode === 'calendar' ? 'w-full block p-4' : 'hidden') : `w-[300px] xl:w-[360px] border-r border-slate-200 bg-white ${isSidebarOpen ? 'block' : 'hidden'}`}`}>
-                        <div className="p-4 md:p-5 flex flex-col gap-5">
+                        <div className="p-3 sm:p-4 md:p-5 flex flex-col gap-4 sm:gap-5">
                             <div className="flex items-center justify-between">
                                 <h2 className="text-xl font-bold text-slate-800">Calendar</h2>
                                 {!isMobile && (
@@ -1051,7 +1051,7 @@ const MyViewDashboard = () => {
                                 )}
                             </div>
 
-                            <div className="bg-white rounded-2xl border border-slate-200 p-4 md:p-6">
+                            <div className="bg-white rounded-2xl border border-slate-200 p-3 sm:p-4 md:p-6">
                                 <div className="flex items-center justify-between mb-4">
                                     <h2 className="text-sm font-bold text-slate-800 flex items-center gap-2">
                                         <CalendarIcon size={18} className="text-primary-600" />
@@ -1207,7 +1207,7 @@ const MyViewDashboard = () => {
 
                         {/* Dynamic Button for Mobile */}
                         {isMobile && (
-                            <div className="p-4 border-b border-slate-200 bg-white">
+                            <div className="p-3 sm:p-4 border-b border-slate-200 bg-white">
                                 <div className="flex items-center justify-between">
                                     <button
                                         className="px-3 py-2 rounded-lg border border-slate-200 bg-white text-sm font-bold text-slate-700 hover:bg-slate-50"
@@ -1252,20 +1252,20 @@ const MyViewDashboard = () => {
                             </div>
                         )}
 
-                        <div className="p-4 lg:p-5 flex-1 overflow-auto">
+                        <div className="p-3 sm:p-4 lg:p-5 flex-1 overflow-auto">
                             {viewMode === 'Day' ? (
                                 <div className="max-w-4xl mx-auto">
                                     {/* Day Header */}
-                                    <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm mb-4">
-                                        <div className="flex items-center gap-4">
-                                            <div className={`w-16 h-16 rounded-2xl flex flex-col items-center justify-center border-2 shrink-0 ${dayScheduleData.length === 0 ? 'bg-slate-100 border-slate-200' : isSelectedDateToday ? 'bg-blue-50 border-blue-200' : 'bg-primary-50 border-primary-100'}`}>
+                                    <div className="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200 shadow-sm mb-4">
+                                        <div className="flex items-center gap-3 sm:gap-4">
+                                            <div className={`w-14 h-14 sm:w-16 sm:h-16 rounded-2xl flex flex-col items-center justify-center border-2 shrink-0 ${dayScheduleData.length === 0 ? 'bg-slate-100 border-slate-200' : isSelectedDateToday ? 'bg-blue-50 border-blue-200' : 'bg-primary-50 border-primary-100'}`}>
                                                 <span className="text-xs font-bold text-slate-400">
                                                     {monthNames[selectedDate.getMonth()].slice(0, 3)}
                                                 </span>
-                                                <span className="text-2xl font-bold leading-none mt-0.5">{selectedDate.getDate()}</span>
+                                                <span className="text-lg sm:text-2xl font-bold leading-none mt-0.5">{selectedDate.getDate()}</span>
                                             </div>
                                             <div>
-                                                <h1 className="text-2xl font-bold text-slate-800">
+                                                <h1 className="text-lg sm:text-2xl font-bold text-slate-800">
                                                     {isSelectedDateToday ? "Today" : dayNames[selectedDate.getDay()]}
                                                     {isSelectedDateToday && (
                                                         <span className="ml-2 text-xs bg-blue-100 text-blue-600 px-2 py-0.5 rounded-full">
@@ -1273,7 +1273,7 @@ const MyViewDashboard = () => {
                                                         </span>
                                                     )}
                                                 </h1>
-                                                <p className="text-slate-500 font-medium mt-1">
+                                                <p className="text-sm sm:text-base text-slate-500 font-medium mt-1">
                                                     {selectedDateHolidayInfo.isHoliday 
                                                         ? selectedDateHolidayInfo.holidayName
                                                         : dayScheduleData.length === 0 
@@ -1300,15 +1300,15 @@ const MyViewDashboard = () => {
                             ) : viewMode === 'Week' ? (
                                 <div className="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-sm">
                                     {/* Week Header */}
-                                    <div className="grid grid-cols-[140px_repeat(7,1fr)] border-b border-slate-100 bg-slate-50">
-                                        <div className="p-3 border-r border-slate-100 text-center">
-                                            <div className="text-xs font-bold text-slate-400">Time Slot</div>
+                                    <div className="grid grid-cols-[80px_repeat(7,1fr)] sm:grid-cols-[100px_repeat(7,1fr)] md:grid-cols-[140px_repeat(7,1fr)] border-b border-slate-100 bg-slate-50">
+                                        <div className="p-2 sm:p-3 border-r border-slate-100 text-center">
+                                            <div className="text-xs font-bold text-slate-400">Time</div>
                                         </div>
                                         {weekData.map((day, idx) => {
                                             const isToday = isSameDay(day.date, new Date());
                                             const isSelected = isSameDay(day.date, selectedDate);
                                             return (
-                                                <div key={idx} className={`p-3 text-center border-r border-slate-100 last:border-r-0 ${isSelected ? 'bg-primary-50' : ''} ${day.isHoliday ? 'bg-amber-50' : ''}`}>
+                                                <div key={idx} className={`p-2 sm:p-3 text-center border-r border-slate-100 last:border-r-0 ${isSelected ? 'bg-primary-50' : ''} ${day.isHoliday ? 'bg-amber-50' : ''}`}>
                                                     <div className="text-xs font-bold text-slate-400 mb-1">
                                                         {calendarDays[day.date.getDay() === 0 ? 6 : day.date.getDay() - 1]}
                                                         {isToday && (
@@ -1317,7 +1317,7 @@ const MyViewDashboard = () => {
                                                     </div>
                                                     <button
                                                         onClick={() => handleWeekDayClick(day.date)}
-                                                        className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ${isToday ? 'bg-blue-600 text-white' : isSelected ? 'bg-primary-100 text-primary-700' : day.isHoliday ? 'bg-amber-100 text-orange-700' : 'text-slate-700 hover:bg-slate-100'}`}
+                                                        className={`w-6 h-6 sm:w-7 sm:h-7 rounded-full flex items-center justify-center text-xs font-bold ${isToday ? 'bg-blue-600 text-white' : isSelected ? 'bg-primary-100 text-primary-700' : day.isHoliday ? 'bg-amber-100 text-orange-700' : 'text-slate-700 hover:bg-slate-100'}`}
                                                     >
                                                         {day.date.getDate()}
                                                     </button>
@@ -1340,8 +1340,8 @@ const MyViewDashboard = () => {
                                         <div className="overflow-x-auto">
                                             <div className="min-w-full">
                                                 {uniqueTimeSlots.map((time, timeIndex) => (
-                                                    <div key={timeIndex} className="grid grid-cols-[140px_repeat(7,1fr)] border-b border-slate-100">
-                                                        <div className="p-3 border-r border-slate-100 bg-slate-50/50">
+                                                    <div key={timeIndex} className="grid grid-cols-[80px_repeat(7,1fr)] sm:grid-cols-[100px_repeat(7,1fr)] md:grid-cols-[140px_repeat(7,1fr)] border-b border-slate-100">
+                                                        <div className="p-2 sm:p-3 border-r border-slate-100 bg-slate-50/50">
                                                             <div className="text-xs font-bold text-slate-600">
                                                                 {formatTimeForDisplay12hr(time)}
                                                             </div>
@@ -1349,9 +1349,9 @@ const MyViewDashboard = () => {
                                                         {weekData.map((day, dayIndex) => {
                                                             const slot = day.schedule.find(s => s && s.start_time === time);
                                                             return (
-                                                                <div key={dayIndex} className="p-2 border-r border-slate-100 last:border-r-0 min-h-[60px]">
+                                                                <div key={dayIndex} className="p-1 sm:p-2 border-r border-slate-100 last:border-r-0 min-h-[50px] sm:min-h-[60px]">
                                                                     {day.isHoliday && timeIndex === 0 ? (
-                                                                        <div className="h-full p-2 rounded-md bg-gradient-to-r from-amber-50 to-yellow-50 border border-amber-200">
+                                                                        <div className="h-full p-1 sm:p-2 rounded-md bg-gradient-to-r from-amber-50 to-yellow-50 border border-amber-200">
                                                                             <div className="text-xs font-bold text-amber-700">Holiday</div>
                                                                             <div className="text-[10px] text-amber-600 truncate">
                                                                                 {day.holidayName}
@@ -1359,7 +1359,7 @@ const MyViewDashboard = () => {
                                                                         </div>
                                                                     ) : slot ? (
                                                                         <div
-                                                                            className="h-full p-2 rounded-md bg-primary-50 border border-primary-100 hover:bg-primary-100 transition-colors cursor-pointer"
+                                                                            className="h-full p-1 sm:p-2 rounded-md bg-primary-50 border border-primary-100 hover:bg-primary-100 transition-colors cursor-pointer"
                                                                             onClick={(e) => {
                                                                                 e.stopPropagation();
                                                                                 handleWeekSlotClick(slot);
@@ -1389,7 +1389,7 @@ const MyViewDashboard = () => {
                                     {/* Month Header */}
                                     <div className="grid grid-cols-7 border-b border-slate-100 bg-slate-50">
                                         {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
-                                            <div key={day} className="p-3 text-center text-xs font-bold text-slate-400">
+                                            <div key={day} className="p-2 sm:p-3 text-center text-xs font-bold text-slate-400">
                                                 {day}
                                             </div>
                                         ))}
@@ -1402,30 +1402,27 @@ const MyViewDashboard = () => {
                                             return (
                                                 <div
                                                     key={index}
-                                                    className={`min-h-[120px] border-r border-b border-slate-100 p-2 ${!dayData.isCurrentMonth ? 'bg-slate-50/50' : ''} ${isToday ? 'bg-blue-50' : ''} ${isSameDay(dayData.date, selectedDate) ? 'bg-primary-100' : ''} ${dayData.isHoliday ? 'bg-gradient-to-br from-amber-50/30 to-yellow-50/30' : ''}`}
+                                                    className={`min-h-[100px] sm:min-h-[120px] border-r border-b border-slate-100 p-1 sm:p-2 ${!dayData.isCurrentMonth ? 'bg-slate-50/50' : ''} ${isToday ? 'bg-blue-50' : ''} ${isSameDay(dayData.date, selectedDate) ? 'bg-primary-100' : ''} ${dayData.isHoliday ? 'bg-gradient-to-br from-amber-50/30 to-yellow-50/30' : ''} cursor-pointer`}
                                                     onClick={() => handleMonthDateClick(dayData.date, dayData.schedule)}
                                                 >
                                                     <div className="flex flex-col h-full">
                                                         <div className="flex justify-between items-center mb-1">
-                                                            <span className={`text-sm font-bold ${dayData.isCurrentMonth ? 'text-slate-700' : 'text-slate-400'} ${isSameDay(dayData.date, selectedDate) ? 'bg-primary-600 text-white rounded-full w-6 h-6 flex items-center justify-center' : ''} ${isToday && !isSameDay(dayData.date, selectedDate) ? 'text-blue-600' : ''} ${dayData.isHoliday ? 'text-amber-700' : ''}`}>
+                                                            <span className={`text-sm font-bold ${dayData.isCurrentMonth ? 'text-slate-700' : 'text-slate-400'} ${isSameDay(dayData.date, selectedDate) ? 'bg-primary-600 text-white rounded-full w-5 h-5 sm:w-6 sm:h-6 flex items-center justify-center text-xs' : ''} ${isToday && !isSameDay(dayData.date, selectedDate) ? 'text-blue-600' : ''} ${dayData.isHoliday ? 'text-amber-700' : ''}`}>
                                                                 {dayData.dayNumber}
-                                                                {isToday && (
-                                                                    <span className="absolute top-0 right-0 w-2 h-2 bg-blue-500 rounded-full"></span>
-                                                                )}
                                                             </span>
                                                             {dayData.isHoliday ? (
-                                                                <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-600 font-bold">
+                                                                <span className="text-[10px] px-1 py-0.5 rounded-full bg-amber-100 text-amber-600 font-bold">
                                                                     <PartyPopper size={8} />
                                                                 </span>
                                                             ) : dayData.schedule.length > 0 && (
-                                                                <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-primary-100 text-primary-600 font-bold">
+                                                                <span className="text-[10px] px-1 py-0.5 rounded-full bg-primary-100 text-primary-600 font-bold">
                                                                     {dayData.schedule.length}
                                                                 </span>
                                                             )}
                                                         </div>
-                                                        <div className="flex-1 space-y-1" onClick={(e) => e.stopPropagation()}>
+                                                        <div className="flex-1 space-y-0.5 sm:space-y-1" onClick={(e) => e.stopPropagation()}>
                                                             {dayData.isHoliday ? (
-                                                                <div className="text-[10px] text-amber-600 font-bold px-2 py-1 bg-gradient-to-r from-amber-50 to-yellow-50 border border-amber-200 rounded-md">
+                                                                <div className="text-[10px] text-amber-600 font-bold px-1 sm:px-2 py-0.5 sm:py-1 bg-gradient-to-r from-amber-50 to-yellow-50 border border-amber-200 rounded-md">
                                                                     {dayData.holidayName || "Holiday"}
                                                                 </div>
                                                             ) : (
@@ -1441,7 +1438,7 @@ const MyViewDashboard = () => {
                                                                                 setPopupData(dayData.schedule);
                                                                                 setShowMonthPopup(true);
                                                                             }}
-                                                                            className="text-[10px] text-slate-500 px-2 py-1 bg-slate-100 rounded-md w-full text-left"
+                                                                            className="text-[10px] text-slate-500 px-1 sm:px-2 py-0.5 sm:py-1 bg-slate-100 rounded-md w-full text-left"
                                                                         >
                                                                             +{dayData.hiddenSlotsCount} more
                                                                         </button>
