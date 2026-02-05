@@ -6,6 +6,7 @@ import { useNavigate } from 'react-router-dom';
 import SweetAlert from "react-bootstrap-sweetalert";
 import { teacherProfileService } from '../Services/academicDiary.service';
 import { teachingPlanService } from '../Services/teachingPlan.service';
+import { api } from '@/_services/api';
 
 // Custom Select Component
 const CustomSelect = ({ label, value, onChange, options, placeholder, disabled = false }) => {
