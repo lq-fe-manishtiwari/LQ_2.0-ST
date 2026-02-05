@@ -7,6 +7,12 @@ import Committee from "../Dashboard/Committee";
 import AdvLearner from "../Dashboard/AdvLearner";
 import SlowLearner from "../Dashboard/SlowLearner";
 import Contributions from "../Contributions/Contributions";
+import MyViewDashboard from "../../TimeTable/MyView/MyViewDashboard";
+import Leaves from "../Dashboard/Leaves";
+import TeachingPlan from "../Dashboard/TeachingPlan";
+import AddTeachingPlan from "../Dashboard/TeachingPlan/AddTeachingPlan";
+import EditTeachingPlan from "../Dashboard/TeachingPlan/EditTeachingPlan";
+import ViewTeachingPlan from "../Dashboard/TeachingPlan/ViewTeachingPlan";
 
 export default function AcademicDiaryRoutes() {
   return (
@@ -22,9 +28,15 @@ export default function AcademicDiaryRoutes() {
         <Route path="advanced-learner" element={<AdvLearner />} />
         <Route path="slow-learner" element={<SlowLearner />} />
         <Route path="contributions" element={<Contributions />} />
-        {/* TODO: Add Teaching Plan and Timetable components when ready */}
-        {/* <Route path="teaching-plan" element={<TeachingPlan />} /> */}
-        {/* <Route path="time-table" element={<TimeTable />} /> */}
+
+        {/* ✅ Teaching Plan Routes */}
+        <Route path="teaching-plan" element={<TeachingPlan />} />
+        <Route path="teaching-plan/add" element={<AddTeachingPlan />} />
+        <Route path="teaching-plan/edit/:id" element={<EditTeachingPlan />} />
+        <Route path="teaching-plan/view/:id" element={<ViewTeachingPlan />} />
+
+        <Route path="time-table" element={<MyViewDashboard />} />
+        <Route path="leave" element={<Leaves />} />
       </Route>
     </Routes>
   );

@@ -27,6 +27,23 @@ export const listOfBooksService = {
     updatePublication,
     softDeletePublication,
     hardDeletePublication,
+
+    //-------COUNSELING OF STUDENTS-------
+    saveCounseling,
+    getCounselingById,
+    getCounselingByCollegeId,
+    getCounselingByUserId,
+    updateCounseling,
+    softDeleteCounseling,
+    hardDeleteCounseling,
+
+    //-------SOCIETAL CONTRIBUTION-------
+    saveSocietalContribution,
+    getSocietalContributionById,
+    getSocietalContributionByUserId,
+    getSocietalContributionByCollegeId,
+    updateSocietalContribution,
+    deleteSocietalContribution,
 };
 
 /* =========================
@@ -177,4 +194,131 @@ function hardDeletePublication(publicationId) {
     const requestOptions = { method: 'DELETE', headers: authHeader() };
     return fetch(`${PMSAPI}/academic-diary/list-of-publication/hard/${publicationId}`, requestOptions)
         .then(handleResponse);
+}
+
+/* =========================
+   COUNSELING OF STUDENTS
+========================= */
+function saveCounseling(values) {
+    const requestOptions = {
+        method: 'POST',
+        headers: authHeaderToPost(),
+        body: JSON.stringify(values)
+    };
+    return fetch(`${PMSAPI}/academic-diary/counseling-of-students`, requestOptions).then(handleResponse);
+}
+
+function getCounselingById(counselingId) {
+    const requestOptions = { method: 'GET', headers: authHeader() };
+    return fetch(`${PMSAPI}/academic-diary/counseling-of-students/${counselingId}`, requestOptions)
+        .then(handleResponse);
+}
+
+function getCounselingByUserId(userId, page = 0, size = 10) {
+    const requestOptions = { method: 'GET', headers: authHeader() };
+    return fetch(`${PMSAPI}/academic-diary/counseling-of-students/user/${userId}?page=${page}&size=${size}`, requestOptions)
+        .then(handleResponse);
+}
+
+function getCounselingByCollegeId(collegeId, page = 0, size = 10) {
+    const requestOptions = { method: 'GET', headers: authHeader() };
+    return fetch(`${PMSAPI}/academic-diary/counseling-of-students/college/${collegeId}?page=${page}&size=${size}`, requestOptions)
+        .then(handleResponse);
+}
+
+function updateCounseling(counselingId, values) {
+    const requestOptions = {
+        method: 'PUT',
+        headers: authHeaderToPost(),
+        body: JSON.stringify(values)
+    };
+    return fetch(`${PMSAPI}/academic-diary/counseling-of-students/${counselingId}`, requestOptions)
+        .then(handleResponse);
+}
+
+function softDeleteCounseling(counselingId) {
+    const requestOptions = { method: 'DELETE', headers: authHeader() };
+    return fetch(`${PMSAPI}/academic-diary/counseling-of-students/soft/${counselingId}`, requestOptions)
+        .then(handleResponse);
+}
+
+function hardDeleteCounseling(counselingId) {
+    const requestOptions = { method: 'DELETE', headers: authHeader() };
+    return fetch(`${PMSAPI}/academic-diary/counseling-of-students/hard/${counselingId}`, requestOptions)
+        .then(handleResponse);
+}
+
+
+// 1. SAVE (POST)
+function saveSocietalContribution(values) {
+    const requestOptions = {
+        method: 'POST',
+        headers: authHeaderToPost(),
+        body: JSON.stringify(values),
+    };
+    return fetch(
+        `${PMSAPI}/academic-diary/societal-contribution`,
+        requestOptions
+    ).then(handleResponse);
+}
+
+// 2. GET BY ID
+function getSocietalContributionById(id) {
+    const requestOptions = {
+        method: 'GET',
+        headers: authHeader(),
+    };
+    return fetch(
+        `${PMSAPI}/academic-diary/societal-contribution/${id}`,
+        requestOptions
+    ).then(handleResponse);
+}
+
+// 3. GET BY USER ID
+function getSocietalContributionByUserId(userId, page = 0, size = 10) {
+    const requestOptions = {
+        method: 'GET',
+        headers: authHeader(),
+    };
+    return fetch(
+        `${PMSAPI}/academic-diary/societal-contribution/user/${userId}?page=${page}&size=${size}`,
+        requestOptions
+    ).then(handleResponse);
+}
+
+// 4. GET BY COLLEGE ID
+function getSocietalContributionByCollegeId(collegeId, page = 0, size = 10) {
+    const requestOptions = {
+        method: 'GET',
+        headers: authHeader(),
+    };
+    return fetch(
+        `${PMSAPI}/academic-diary/societal-contribution/college/${collegeId}?page=${page}&size=${size}`,
+        requestOptions
+    ).then(handleResponse);
+}
+
+// 5. UPDATE (PUT)
+function updateSocietalContribution(id, values) {
+    const requestOptions = {
+        method: 'PUT',
+        headers: authHeaderToPost(),
+        body: JSON.stringify(values),
+    };
+    return fetch(
+        `${PMSAPI}/academic-diary/societal-contribution/${id}`,
+        requestOptions
+    ).then(handleResponse);
+}
+
+// 6. DELETE
+function deleteSocietalContribution(id) {
+    const requestOptions = {
+        method: 'DELETE',
+        headers: authHeader(),
+    };
+    return fetch(
+        `${PMSAPI}/academic-diary/societal-contribution/${id}`,
+        requestOptions
+    ).then(handleResponse);
 }

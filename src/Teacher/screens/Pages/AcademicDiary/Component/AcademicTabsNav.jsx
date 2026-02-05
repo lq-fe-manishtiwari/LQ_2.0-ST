@@ -11,6 +11,7 @@ const tabs = [
   { label: "Contributions", to: "/teacher/academic-diary/contributions" },
   { label: "Teaching Plan", to: "/teacher/academic-diary/teaching-plan" },
   { label: "Timetable", to: "/teacher/academic-diary/time-table" },
+  { label: "Leave", to: "/teacher/academic-diary/leave" },
 ];
 
 export default function AcademicTabsNav() {
@@ -30,8 +31,7 @@ export default function AcademicTabsNav() {
                 to={t.to}
                 style={{ width: "9rem" }}
                 className={({ isActive }) =>
-                  `tab-link text-center flex-1 sm:flex-none px-3 py-2 text-xs sm:text-sm ${
-                    isActive ? "tab-active" : "tab-inactive"
+                  `tab-link text-center flex-1 sm:flex-none px-3 py-2 text-xs sm:text-sm ${isActive ? "tab-active" : "tab-inactive"
                   }`
                 }
               >
