@@ -41,9 +41,16 @@ export const listOfBooksService = {
     saveSocietalContribution,
     getSocietalContributionById,
     getSocietalContributionByUserId,
-    getSocietalContributionByCollegeId,
     updateSocietalContribution,
     deleteSocietalContribution,
+
+    // ------- ANY OTHER CONTRIBUTIONS -------
+    saveAnyOtherContribution,
+    getAnyOtherContributionById,
+    getAnyOtherContributionByUserId,
+    updateAnyOtherContribution,
+    deleteAnyOtherContribution,
+
 };
 
 /* =========================
@@ -286,17 +293,6 @@ function getSocietalContributionByUserId(userId, page = 0, size = 10) {
     ).then(handleResponse);
 }
 
-// 4. GET BY COLLEGE ID
-function getSocietalContributionByCollegeId(collegeId, page = 0, size = 10) {
-    const requestOptions = {
-        method: 'GET',
-        headers: authHeader(),
-    };
-    return fetch(
-        `${PMSAPI}/academic-diary/societal-contribution/college/${collegeId}?page=${page}&size=${size}`,
-        requestOptions
-    ).then(handleResponse);
-}
 
 // 5. UPDATE (PUT)
 function updateSocietalContribution(id, values) {
@@ -319,6 +315,74 @@ function deleteSocietalContribution(id) {
     };
     return fetch(
         `${PMSAPI}/academic-diary/societal-contribution/${id}`,
+        requestOptions
+    ).then(handleResponse);
+}
+
+
+// 1. SAVE (POST)
+function saveAnyOtherContribution(values) {
+    const requestOptions = {
+        method: 'POST',
+        headers: authHeaderToPost(),
+        body: JSON.stringify(values),
+    };
+
+    return fetch(
+        `${PMSAPI}/academic-diary/any-other-contributions`,
+        requestOptions
+    ).then(handleResponse);
+}
+
+// 2. UPDATE (PUT)
+function updateAnyOtherContribution(id, values) {
+    const requestOptions = {
+        method: 'PUT',
+        headers: authHeaderToPost(),
+        body: JSON.stringify(values),
+    };
+
+    return fetch(
+        `${PMSAPI}/academic-diary/any-other-contributions/${id}`,
+        requestOptions
+    ).then(handleResponse);
+}
+
+// 3. GET BY ID
+function getAnyOtherContributionById(id) {
+    const requestOptions = {
+        method: 'GET',
+        headers: authHeader(),
+    };
+
+    return fetch(
+        `${PMSAPI}/academic-diary/any-other-contributions/${id}`,
+        requestOptions
+    ).then(handleResponse);
+}
+
+// 5. GET BY USER ID
+function getAnyOtherContributionByUserId(userId, page = 0, size = 10) {
+    const requestOptions = {
+        method: 'GET',
+        headers: authHeader(),
+    };
+
+    return fetch(
+        `${PMSAPI}/academic-diary/any-other-contributions/user/${userId}?page=${page}&size=${size}`,
+        requestOptions
+    ).then(handleResponse);
+}
+
+// 6. DELETE
+function deleteAnyOtherContribution(id) {
+    const requestOptions = {
+        method: 'DELETE',
+        headers: authHeader(),
+    };
+
+    return fetch(
+        `${PMSAPI}/academic-diary/any-other-contributions/${id}`,
         requestOptions
     ).then(handleResponse);
 }
