@@ -28,7 +28,8 @@ export default function AddTeachingPlan() {
     });
 
     const [formData, setFormData] = useState({
-        department: "Exam Department",
+        department: "",
+        department_id: null,
         levelOfSubject: "",
         selectedObjectives: [],
         courseOutcomes: [{ coNumber: "CO1", description: "" }],
@@ -67,8 +68,19 @@ export default function AddTeachingPlan() {
                                 ...(data.class_teacher_allocation || []),
                                 ...(data.normal_allocation || [])
                             ];
+
                             setAllocations(allAllocations);
+
+                            // ✅ Auto-set department from allocation
+                            if (allAllocations.length > 0 && allAllocations[0].department) {
+                                setFormData(prev => ({
+                                    ...prev,
+                                    department: allAllocations[0].department.department_name,
+                                    department_id: allAllocations[0].department.department_id // future use
+                                }));
+                            }
                         }
+
                     }
                 }
             } catch (error) {
@@ -165,7 +177,7 @@ export default function AddTeachingPlan() {
         try {
             const userProfile = JSON.parse(localStorage.getItem("userProfile") || "{}");
             const collegeId = userProfile.college_id;
-            
+
             if (collegeId) {
                 const response = await settingsService.getAllObjectivebyCollegeId(collegeId);
                 setObjectives(response || []);
@@ -207,7 +219,7 @@ export default function AddTeachingPlan() {
                 semester_id: Number(filters.semester),
                 subject_id: Number(filters.paper),
                 teacher_id: Number(teacherId),
-                department_id: 1,
+                department_id: Number(formData.department_id),
                 objective_id: formData.selectedObjectives,
                 course_outcome: formData.courseOutcomes.map(co => co.description),
                 college_id: collegeId,
@@ -260,13 +272,13 @@ export default function AddTeachingPlan() {
     return (
         <div className="p-6">
             {alert}
-            
+
             {/* Header */}
             <div className="flex items-center justify-between mb-6">
                 <h2 className="text-2xl font-semibold text-blue-700">Add Teaching Plan</h2>
-                <button 
-                    type="button" 
-                    className="w-10 h-10 rounded-full bg-blue-600 text-white flex items-center justify-center hover:bg-blue-700 transition" 
+                <button
+                    type="button"
+                    className="w-10 h-10 rounded-full bg-blue-600 text-white flex items-center justify-center hover:bg-blue-700 transition"
                     onClick={() => navigate("/teacher/academic-diary/teaching-plan")}
                 >
                     ✕
@@ -301,10 +313,9 @@ export default function AddTeachingPlan() {
                             <input
                                 type="text"
                                 value={formData.department}
+                                readOnly
                                 onChange={(e) => handleInputChange('department', e.target.value)}
                                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                placeholder="e.g. Computer Science"
-                                required
                             />
                         </div>
                         <div>
