@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from "react";
 import { Plus, Trash2, Edit3, X, Download } from "lucide-react";
-import SweetAlert from "react-bootstrap-sweetalert";
 import * as XLSX from "xlsx";
 import { listOfBooksService } from "../Services/listOfBooks.service";
-import { useUserProfile } from "../../../../../contexts/UserProfileContext"; // Context import
+import { useUserProfile } from "../../../../../contexts/UserProfileContext";
+import Swal from 'sweetalert2';
 
 /* -------------------------------
    Input Component
@@ -300,14 +300,13 @@ const BulkUploadModal = ({ onClose, onSave, userId, teacherId, collegeId, depart
    Main Publications Component
 --------------------------------*/
 const Publications = () => {
-  const userProfile = useUserProfile(); 
-  
+  const userProfile = useUserProfile();
+
   const [records, setRecords] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editRecord, setEditRecord] = useState(null);
   const [showBulkUpload, setShowBulkUpload] = useState(false);
-  const [alert, setAlert] = useState(null);
 
   // UserProfileContext
   const userId = userProfile.getUserId();
@@ -327,7 +326,7 @@ const Publications = () => {
       console.log("Fetching publications for userId:", userId);
       const data = await listOfBooksService.getPublicationsByUserId(userId);
       console.log("API Response:", data);
-      
+
       if (data && data.content && Array.isArray(data.content)) {
         setRecords(data.content);
       } else if (Array.isArray(data)) {
@@ -338,11 +337,7 @@ const Publications = () => {
       }
     } catch (err) {
       console.error(err);
-      setAlert(
-        <SweetAlert danger title="Error" onConfirm={() => setAlert(null)}>
-          Failed to fetch records.
-        </SweetAlert>
-      );
+      Swal.fire("Error", "Failed to fetch records.", "error");
       setRecords([]);
     } finally {
       setLoading(false);
@@ -364,64 +359,37 @@ const Publications = () => {
           await listOfBooksService.savePublication(entry);
         }
       }
-      setAlert(
-        <SweetAlert
-          success
-          title="Success"
-          confirmBtnCssClass="btn-confirm"
-          cancelBtnCssClass="btn-cancel"
-          onConfirm={() => setAlert(null)}
-        >
-          All records saved successfully!
-        </SweetAlert>
-      );
+      Swal.fire("Success", "All records saved successfully!", "success");
       setShowForm(false);
       setEditRecord(null);
       fetchRecords();
     } catch (err) {
       console.error(err);
-      setAlert(
-        <SweetAlert danger title="Error" onConfirm={() => setAlert(null)}>
-          Failed to save records.
-        </SweetAlert>
-      );
+      Swal.fire("Error", "Failed to save records.", "error");
     }
   };
 
   const handleDelete = async (id) => {
-    setAlert(
-      <SweetAlert
-        warning
-        showCancel
-        confirmBtnText="Yes, delete!"
-        cancelBtnText="Cancel"
-        confirmBtnCssClass="btn-confirm"
-        cancelBtnCssClass="btn-cancel"
-        confirmBtnBsStyle="danger"
-        cancelBtnBsStyle="default"
-        title="Are you sure?"
-        onConfirm={async () => {
-          try {
-            await listOfBooksService.hardDeletePublication(id);
-            setAlert(
-              <SweetAlert success title="Deleted!" onConfirm={() => setAlert(null)}>
-                Record deleted successfully.
-              </SweetAlert>
-            );
-            fetchRecords();
-          } catch (err) {
-            setAlert(
-              <SweetAlert danger title="Error" onConfirm={() => setAlert(null)}>
-                Failed to delete record.
-              </SweetAlert>
-            );
-          }
-        }}
-        onCancel={() => setAlert(null)}
-      >
-        This action cannot be undone.
-      </SweetAlert>
-    );
+    const result = await Swal.fire({
+      title: 'Are you sure?',
+      text: "You won't be able to revert this!",
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#3085d6',
+      cancelButtonColor: '#d33',
+      confirmButtonText: 'Yes, delete it!'
+    });
+
+    if (!result.isConfirmed) return;
+
+    try {
+      await listOfBooksService.hardDeletePublication(id);
+      Swal.fire("Deleted!", "Record deleted successfully.", "success");
+      fetchRecords();
+    } catch (err) {
+      console.error(err);
+      Swal.fire("Error", "Failed to delete record.", "error");
+    }
   };
 
   if (userProfile.loading) {
@@ -478,8 +446,8 @@ const Publications = () => {
                     {rec.ugc_care_listed === true
                       ? "Yes"
                       : rec.ugc_care_listed === false
-                      ? "No"
-                      : ""}
+                        ? "No"
+                        : ""}
                   </td>
                   <td className="border px-3 py-2">{rec.journal_link}</td>
                   <td className="border px-3 py-2">{rec.scopus_web_of_science_details}</td>
@@ -512,23 +480,21 @@ const Publications = () => {
         <button
           onClick={() => setShowBulkUpload(true)}
           disabled={!userId}
-          className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm transition-colors ${
-            !userId 
-              ? 'bg-gray-400 text-gray-700 cursor-not-allowed' 
+          className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm transition-colors ${!userId
+              ? 'bg-gray-400 text-gray-700 cursor-not-allowed'
               : 'bg-purple-600 text-white hover:bg-purple-700'
-          }`}
+            }`}
         >
           Bulk Upload
         </button>
-        
+
         <button
           onClick={() => setShowForm(true)}
           disabled={!userId}
-          className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm transition-colors ${
-            !userId 
-              ? 'bg-gray-400 text-gray-700 cursor-not-allowed' 
+          className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm transition-colors ${!userId
+              ? 'bg-gray-400 text-gray-700 cursor-not-allowed'
               : 'bg-blue-600 text-white hover:bg-blue-700'
-          }`}
+            }`}
         >
           <Plus size={16} /> Add Publication
         </button>
@@ -565,8 +531,6 @@ const Publications = () => {
           departmentId={departmentId}
         />
       )}
-
-      {alert}
     </div>
   );
 };

@@ -2,10 +2,9 @@ import React, { useEffect, useState } from "react";
 import { Plus, Trash2 } from "lucide-react";
 import { listOfBooksService } from "../Services/listOfBooks.service";
 import { useUserProfile } from "../../../../../contexts/UserProfileContext";
+import Swal from 'sweetalert2';
 
-/* ----------------------------------
-   Reusable Input Component
------------------------------------ */
+
 const Input = ({ label, type = "text", value, onChange }) => (
   <div>
     <label className="text-sm font-medium text-gray-700">{label}</label>
@@ -35,26 +34,20 @@ const Select = ({ label, value, onChange, options }) => (
   </div>
 );
 
-/* ----------------------------------
-   Modal Form
------------------------------------ */
-/* ----------------------------------
-   Modal Form
------------------------------------ */
 const SocietalForm = ({ onClose, onSave, initialData }) => {
   const [formData, setFormData] = useState({
     date: "",
-    place: "Indore",
-    organizer: "NSS Unit",
+    place: "",
+    organizer: "",
     nature_of_work: "",
   });
 
   useEffect(() => {
     if (initialData) {
       setFormData({
-        date: initialData.date || "",
-        place: initialData.place || "Indore",
-        organizer: initialData.organizer || "NSS Unit",
+        date: initialData.contribution_date || initialData.date || "",
+        place: initialData.place || "",
+        organizer: initialData.organizer || "",
         nature_of_work: initialData.nature_of_work || "",
       });
     }
@@ -112,9 +105,7 @@ const SocietalForm = ({ onClose, onSave, initialData }) => {
   );
 };
 
-/* ----------------------------------
-   Main Component
------------------------------------ */
+
 const Societal = () => {
   const userProfile = useUserProfile();
 
@@ -126,7 +117,6 @@ const Societal = () => {
   const userId = userProfile.getUserId();
   const collegeId = userProfile.getCollegeId();
 
-  /* Fetch societal contribution records */
   const fetchRecords = async () => {
     if (!userId) {
       setLoading(false);
@@ -149,63 +139,68 @@ const Societal = () => {
     }
   }, [userProfile.isLoaded, userId]);
 
-  /* Save societal contribution (add or edit) */
+
   const handleSave = async (formData) => {
     try {
       if (!userId || !collegeId) {
-        alert("User information (User ID or College ID) is missing. Please try reloading.");
+        Swal.fire("Error", "User information (User ID or College ID) is missing. Please try reloading.", "error");
         return;
       }
 
-      if (!formData.date || !formData.nature_of_work) {
-        alert("Date and Nature of Work are required.");
+      if (!formData.date || !formData.nature_of_work || !formData.place || !formData.organizer) {
+        Swal.fire("Warning", "Date, Place, Organizer, and Nature of Work are required.", "warning");
         return;
       }
 
       const payload = {
         college_id: collegeId,
         user_id: userId,
-        date: formData.date,
-        place: formData.place || "Indore",
-        organizer: formData.organizer || "NSS Unit",
+        contribution_date: formData.date,
+        place: formData.place,
+        organizer: formData.organizer,
         nature_of_work: formData.nature_of_work,
-        other_fields: [
-          {
-            hours: "0",
-            team_size: "0"
-          },
-          {
-            certificate_issued: "no"
-          }
-        ]
+        other_fields: []
       };
 
       console.log("Sending Payload:", JSON.stringify(payload, null, 2));
 
       if (editRecord) {
         await listOfBooksService.updateSocietalContribution(editRecord.societal_contribution_id, payload);
+        Swal.fire("Success", "Societal contribution updated successfully!", "success");
       } else {
         await listOfBooksService.saveSocietalContribution(payload);
+        Swal.fire("Success", "Societal contribution saved successfully!", "success");
       }
       setShowForm(false);
       setEditRecord(null);
       fetchRecords();
     } catch (err) {
       console.error("Error saving societal contribution:", err);
-      // Try to extract a meaningful error message
       const errorMessage = err.message || err.error || (typeof err === "string" ? err : "Unknown error");
-      alert(`Failed to save record: ${errorMessage}`);
+      Swal.fire("Error", `Failed to save record: ${errorMessage}`, "error");
     }
   };
 
-  /* Delete societal contribution */
   const handleDelete = async (id) => {
-    if (!window.confirm("Are you sure you want to delete this record?")) return;
+    const result = await Swal.fire({
+      title: 'Are you sure?',
+      text: "You won't be able to revert this!",
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#3085d6',
+      cancelButtonColor: '#d33',
+      confirmButtonText: 'Yes, delete it!'
+    });
+
+    if (!result.isConfirmed) return;
+
     try {
       await listOfBooksService.deleteSocietalContribution(id);
+      Swal.fire("Deleted!", "Record has been deleted.", "success");
       fetchRecords();
     } catch (err) {
       console.error(err);
+      Swal.fire("Error", "Failed to delete record.", "error");
     }
   };
 
@@ -233,7 +228,7 @@ const Societal = () => {
               <tbody>
                 {records.map((rec) => (
                   <tr key={rec.societal_contribution_id}>
-                    <td className="border px-3 py-2">{rec.date}</td>
+                    <td className="border px-3 py-2">{rec.contribution_date || rec.date}</td>
                     <td className="border px-3 py-2">{rec.place}</td>
                     <td className="border px-3 py-2">{rec.organizer}</td>
                     <td className="border px-3 py-2">{rec.nature_of_work}</td>

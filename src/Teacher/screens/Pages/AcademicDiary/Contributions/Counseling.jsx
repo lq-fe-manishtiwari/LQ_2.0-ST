@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Plus, Trash2 } from "lucide-react";
 import { listOfBooksService } from "../Services/listOfBooks.service";
 import { useUserProfile } from "../../../../../contexts/UserProfileContext";
+import Swal from 'sweetalert2';
 
 /* ----------------------------------
    Reusable Input Component
@@ -116,7 +117,7 @@ const Counseling = () => {
   const handleSave = async (formData) => {
     try {
       if (!userId) {
-        alert("User information not available");
+        Swal.fire("Error", "User information not available", "error");
         return;
       }
       const payload = {
@@ -127,25 +128,41 @@ const Counseling = () => {
 
       if (editRecord) {
         await listOfBooksService.updateCounseling(editRecord.counseling_id, payload);
+        Swal.fire("Success", "Counseling record updated successfully!", "success");
       } else {
         await listOfBooksService.saveCounseling(payload);
+        Swal.fire("Success", "Counseling record saved successfully!", "success");
       }
       setShowForm(false);
       setEditRecord(null);
       fetchRecords();
     } catch (err) {
       console.error(err);
+      Swal.fire("Error", "Failed to save counseling record.", "error");
     }
   };
 
   /* Delete counseling */
   const handleDelete = async (id) => {
-    if (!window.confirm("Are you sure you want to delete this record?")) return;
+    const result = await Swal.fire({
+      title: 'Are you sure?',
+      text: "You won't be able to revert this!",
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#3085d6',
+      cancelButtonColor: '#d33',
+      confirmButtonText: 'Yes, delete it!'
+    });
+
+    if (!result.isConfirmed) return;
+
     try {
       await listOfBooksService.hardDeleteCounseling(id);
       fetchRecords();
+      Swal.fire("Deleted!", "Record has been deleted.", "success");
     } catch (err) {
       console.error(err);
+      Swal.fire("Error", "Failed to delete record.", "error");
     }
   };
 
@@ -163,24 +180,18 @@ const Counseling = () => {
             <table className="w-full border text-sm">
               <thead className="bg-gray-100">
                 <tr>
-                  {records[0] && Object.keys(records[0])
-                    .filter(key => !['counseling_id', 'college_id', 'user_id', 'active_status', 'created_at', 'updated_at', 'deleted_at'].includes(key))
-                    .map((key) => (
-                      <th key={key} className="border px-3 py-2 text-left font-semibold">{key.replace(/_/g, " ")}</th>
-                    ))}
+                  <th className="border px-3 py-2 text-left font-semibold">Date</th>
+                  <th className="border px-3 py-2 text-left font-semibold">Name of Student</th>
+                  <th className="border px-3 py-2 text-left font-semibold">Details</th>
                   <th className="border px-3 py-2">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {records.map((rec) => (
                   <tr key={rec.counseling_id}>
-                    {Object.entries(rec)
-                      .filter(([key]) => !['counseling_id', 'college_id', 'user_id', 'active_status', 'created_at', 'updated_at', 'deleted_at'].includes(key))
-                      .map(([key, val], i) => (
-                        <td key={i} className="border px-3 py-2">
-                          {typeof val === 'object' ? JSON.stringify(val) : val}
-                        </td>
-                      ))}
+                    <td className="border px-3 py-2">{rec.date}</td>
+                    <td className="border px-3 py-2">{rec.name_of_students}</td>
+                    <td className="border px-3 py-2">{rec.details}</td>
                     <td className="border px-3 py-2 flex gap-2">
                       <button
                         onClick={() => { setEditRecord(rec); setShowForm(true); }}
