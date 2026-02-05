@@ -6,6 +6,7 @@ import { api } from "@/_services/api";
 import AttendanceFilters from "../../../Attendance/Components/AttendanceFilters";
 import { teachingPlanService } from "../../Services/teachingPlan.service";
 import { settingsService } from "../../Services/settings.service";
+import { contentService } from "../../../Content/Services/content.service";
 
 export default function AddTeachingPlan() {
     const navigate = useNavigate();
@@ -13,8 +14,12 @@ export default function AddTeachingPlan() {
     const [loading, setLoading] = useState(false);
     const [loadingAllocations, setLoadingAllocations] = useState(false);
     const [loadingObjectives, setLoadingObjectives] = useState(false);
+    const [loadingModules, setLoadingModules] = useState(false);
     const [allocations, setAllocations] = useState([]);
     const [objectives, setObjectives] = useState([]);
+    const [modules, setModules] = useState([]);
+    const [units, setUnits] = useState([]);
+    const [selectedModuleUnits, setSelectedModuleUnits] = useState({});
     const [teacherId, setTeacherId] = useState(null);
 
     // Form State
@@ -94,6 +99,89 @@ export default function AddTeachingPlan() {
         loadObjectives();
     }, []);
 
+    // Load modules and units when paper is selected
+    useEffect(() => {
+        if (filters.paper) {
+            loadModulesAndUnits();
+        } else {
+            setModules([]);
+            setUnits([]);
+            setSelectedModuleUnits({});
+        }
+    }, [filters.paper]);
+
+    const loadModulesAndUnits = async () => {
+        setLoadingModules(true);
+        try {
+            const subjectId = parseInt(filters.paper);
+            
+            if (!subjectId) {
+                setModules([]);
+                setUnits([]);
+                setSelectedModuleUnits({});
+                return;
+            }
+            
+            const response = await contentService.getModulesbySubject(subjectId);
+            
+            if (!response) {
+                setModules([]);
+                setUnits([]);
+                setSelectedModuleUnits({});
+                return;
+            }
+            
+            let modulesData = [];
+            let allUnits = [];
+            
+            if (response && response.modules && Array.isArray(response.modules)) {
+                modulesData = response.modules.map(item => ({
+                    id: item.module_id,
+                    name: item.module_name
+                }));
+                
+                allUnits = response.modules.flatMap(module => 
+                    (module.units || []).map(unit => ({
+                        id: unit.unit_id,
+                        name: unit.unit_name,
+                        moduleId: module.module_id
+                    }))
+                );
+            } 
+            else if (Array.isArray(response)) {
+                modulesData = response.map(item => ({
+                    id: item.module_id,
+                    name: item.module_name
+                }));
+                
+                allUnits = response.flatMap(module => 
+                    (module.units || []).map(unit => ({
+                        id: unit.unit_id,
+                        name: unit.unit_name,
+                        moduleId: module.module_id
+                    }))
+                );
+            }
+            
+            setModules(modulesData);
+            setUnits(allUnits);
+            
+            const resetUnits = {};
+            formData.teachingModules.forEach(row => {
+                resetUnits[row.id] = [];
+            });
+            setSelectedModuleUnits(resetUnits);
+            
+        } catch (error) {
+            console.error('Error loading modules and units:', error);
+            setModules([]);
+            setUnits([]);
+            setSelectedModuleUnits({});
+        } finally {
+            setLoadingModules(false);
+        }
+    };
+
     const handleInputChange = (field, value) => {
         setFormData(prev => ({ ...prev, [field]: value }));
     };
@@ -127,10 +215,32 @@ export default function AddTeachingPlan() {
     };
 
     const handleModuleChange = (id, field, value) => {
-        const newModules = formData.teachingModules.map(m =>
-            m.id === id ? { ...m, [field]: value } : m
-        );
-        setFormData(prev => ({ ...prev, teachingModules: newModules }));
+        if (field === 'moduleName') {
+            const newModules = formData.teachingModules.map(m =>
+                m.id === id ? { ...m, [field]: value, unitName: '' } : m
+            );
+            setFormData(prev => ({ ...prev, teachingModules: newModules }));
+            
+            const selectedModule = modules.find(m => m.name === value);
+            
+            if (selectedModule) {
+                const moduleUnits = units.filter(u => u.moduleId === selectedModule.id);
+                setSelectedModuleUnits(prev => ({
+                    ...prev,
+                    [id]: moduleUnits
+                }));
+            } else {
+                setSelectedModuleUnits(prev => ({
+                    ...prev,
+                    [id]: []
+                }));
+            }
+        } else {
+            const newModules = formData.teachingModules.map(m =>
+                m.id === id ? { ...m, [field]: value } : m
+            );
+            setFormData(prev => ({ ...prev, teachingModules: newModules }));
+        }
     };
 
     const handleModuleCOToggle = (moduleId, coNumber) => {
@@ -165,11 +275,22 @@ export default function AddTeachingPlan() {
                 }
             ]
         }));
+        
+        setSelectedModuleUnits(prev => ({
+            ...prev,
+            [Date.now()]: []
+        }));
     };
 
     const removeModule = (id) => {
         const newModules = formData.teachingModules.filter(m => m.id !== id);
         setFormData(prev => ({ ...prev, teachingModules: newModules.length ? newModules : [formData.teachingModules[0]] }));
+        
+        setSelectedModuleUnits(prev => {
+            const updated = { ...prev };
+            delete updated[id];
+            return updated;
+        });
     };
 
     const loadObjectives = async () => {
@@ -223,17 +344,22 @@ export default function AddTeachingPlan() {
                 objective_id: formData.selectedObjectives,
                 course_outcome: formData.courseOutcomes.map(co => co.description),
                 college_id: collegeId,
-                modules: formData.teachingModules.map(m => ({
-                    module_id: 0,
-                    topic_id: 0,
-                    co: m.coNumbers,
-                    month: m.startingMonth,
-                    week: Number(m.week),
-                    lecture_hour: Number(m.lectureHours),
-                    pre_class_activity: m.preClassActivity,
-                    post_class_activity: m.postClassActivity,
-                    instructional_technique: m.instructionalTechnique
-                }))
+                modules: formData.teachingModules.map(m => {
+                    const selectedModule = modules.find(mod => mod.name === m.moduleName);
+                    const selectedUnit = units.find(unit => unit.name === m.unitName);
+                    
+                    return {
+                        module_id: selectedModule?.id || 0,
+                        topic_id: selectedUnit?.id || 0,
+                        co: m.coNumbers,
+                        month: m.startingMonth,
+                        week: Number(m.week),
+                        lecture_hour: Number(m.lectureHours),
+                        pre_class_activity: m.preClassActivity,
+                        post_class_activity: m.postClassActivity,
+                        instructional_technique: m.instructionalTechnique
+                    };
+                })
             };
 
             console.log("Saving Teaching Plan with payload:", payload);
@@ -448,24 +574,41 @@ export default function AddTeachingPlan() {
                                 {formData.teachingModules.map((m, idx) => (
                                     <tr key={m.id} className="border-b border-gray-200 hover:bg-gray-50">
                                         <td className="px-3 py-3">
-                                            <input
-                                                type="text"
-                                                value={m.moduleName}
-                                                onChange={(e) => handleModuleChange(m.id, 'moduleName', e.target.value)}
-                                                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                                placeholder="Module Name"
-                                                required
-                                            />
+                                            {loadingModules ? (
+                                                <div className="text-sm text-gray-500">Loading modules...</div>
+                                            ) : (
+                                                <select
+                                                    value={m.moduleName}
+                                                    onChange={(e) => handleModuleChange(m.id, 'moduleName', e.target.value)}
+                                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                                >
+                                                    <option value="">Select Module</option>
+                                                    {modules.map((module) => (
+                                                        <option key={module.id} value={module.name}>
+                                                            {module.name}
+                                                        </option>
+                                                    ))}
+                                                </select>
+                                            )}
                                         </td>
                                         <td className="px-3 py-3">
-                                            <input
-                                                type="text"
-                                                value={m.unitName}
-                                                onChange={(e) => handleModuleChange(m.id, 'unitName', e.target.value)}
-                                                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                                placeholder="Unit Topic"
-                                                required
-                                            />
+                                            {loadingModules ? (
+                                                <div className="text-sm text-gray-500">Loading units...</div>
+                                            ) : (
+                                                <select
+                                                    value={m.unitName}
+                                                    onChange={(e) => handleModuleChange(m.id, 'unitName', e.target.value)}
+                                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                                    disabled={!m.moduleName}
+                                                >
+                                                    <option value="">Select Unit</option>
+                                                    {(selectedModuleUnits[m.id] || []).map((unit) => (
+                                                        <option key={unit.id} value={unit.name}>
+                                                            {unit.name}
+                                                        </option>
+                                                    ))}
+                                                </select>
+                                            )}
                                         </td>
                                         <td className="px-3 py-3">
                                             <div className="relative">
@@ -508,7 +651,6 @@ export default function AddTeachingPlan() {
                                                 value={m.startingMonth}
                                                 onChange={(e) => handleModuleChange(m.id, 'startingMonth', e.target.value)}
                                                 className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                                required
                                             >
                                                 <option value="">Select Month</option>
                                                 {months.map((month) => (
@@ -527,7 +669,6 @@ export default function AddTeachingPlan() {
                                                 placeholder="Week"
                                                 min="1"
                                                 max="52"
-                                                required
                                             />
                                         </td>
                                         <td className="px-3 py-3">
@@ -538,7 +679,6 @@ export default function AddTeachingPlan() {
                                                 className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                                                 placeholder="Hours"
                                                 min="1"
-                                                required
                                             />
                                         </td>
                                         <td className="px-3 py-3">
@@ -549,7 +689,6 @@ export default function AddTeachingPlan() {
                                                 className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                                                 placeholder="Pre Class Activity"
                                                 style={{ minWidth: '200px' }}
-                                                required
                                             />
                                         </td>
                                         <td className="px-3 py-3">
@@ -560,7 +699,6 @@ export default function AddTeachingPlan() {
                                                 className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                                                 placeholder="Instructional Technique"
                                                 style={{ minWidth: '200px' }}
-                                                required
                                             />
                                         </td>
                                         <td className="px-3 py-3">
@@ -571,7 +709,6 @@ export default function AddTeachingPlan() {
                                                 className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                                                 placeholder="Post Class Activity"
                                                 style={{ minWidth: '200px' }}
-                                                required
                                             />
                                         </td>
                                         <td className="px-3 py-3 text-center">

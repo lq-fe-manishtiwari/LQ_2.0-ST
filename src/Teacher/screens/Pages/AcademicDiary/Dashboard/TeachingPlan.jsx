@@ -476,19 +476,13 @@ export default function TeachingPlanDashboard() {
             <div className="hidden lg:block bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
                 <div className="overflow-x-auto">
                     <div className="h-[500px] overflow-y-auto blue-scrollbar">
-                        <table className="w-full border-collapse min-w-[1400px]">
+                        <table className="w-full border-collapse min-w-[600px]">
                             <thead className="bg-primary-600">
                                 <tr>
-                                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-50  tracking-wider whitespace-nowrap" style={{ minWidth: '150px' }}>Teacher Name</th>
-                                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-50  tracking-wider whitespace-nowrap" style={{ minWidth: '120px' }}>Module</th>
-                                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-50  tracking-wider whitespace-nowrap" style={{ minWidth: '180px' }}>Topic Covered</th>
-                                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-50 tracking-wider whitespace-nowrap" style={{ minWidth: '80px' }}>CO</th>
-                                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-50  tracking-wider whitespace-nowrap" style={{ minWidth: '150px' }}>Module Starting Month</th>
-                                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-50  tracking-wider whitespace-nowrap" style={{ minWidth: '100px' }}>Week</th>
-                                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-50  tracking-wider whitespace-nowrap" style={{ minWidth: '120px' }}>Lecture Hours</th>
-                                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-50  tracking-wider whitespace-nowrap" style={{ minWidth: '150px' }}>Pre Class Activity</th>
-                                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-50  tracking-wider whitespace-nowrap" style={{ minWidth: '180px' }}>Instructional Techniques</th>
-                                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-50  tracking-wider whitespace-nowrap" style={{ minWidth: '150px' }}>Post Class Activity</th>
+                                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-50  tracking-wider whitespace-nowrap" style={{ minWidth: '180px' }}>Paper</th>
+                                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-50  tracking-wider whitespace-nowrap" style={{ minWidth: '120px' }}>Academic Year</th>
+                                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-50  tracking-wider whitespace-nowrap" style={{ minWidth: '100px' }}>Semester</th>
+                                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-50  tracking-wider whitespace-nowrap" style={{ minWidth: '100px' }}>Division</th>
                                     <th className="px-4 py-3 text-center text-xs font-medium text-gray-50  tracking-wider whitespace-nowrap" style={{ minWidth: '120px' }}>Actions</th>
                                 </tr>
                             </thead>
@@ -497,53 +491,35 @@ export default function TeachingPlanDashboard() {
                                     currentEntries.map((item) => (
                                         <tr key={item.id} className="hover:bg-gray-50 border-b border-gray-100">
                                             <td className="px-4 py-4 text-sm font-medium text-gray-900 whitespace-nowrap">
-                                                {item.teacher_name || item.teacher_id}
+                                                {item.subject?.name || 'N/A'}
                                             </td>
                                             <td className="px-4 py-4 text-sm text-gray-700 whitespace-nowrap">
-                                                {item.module_name || item.module || 'N/A'}
-                                            </td>
-                                            <td className="px-4 py-4 text-sm text-gray-600">
-                                                {item.topic_name || item.topic_covered || 'N/A'}
+                                                {item.academic_year?.name || 'N/A'}
                                             </td>
                                             <td className="px-4 py-4 text-sm text-gray-600 whitespace-nowrap">
-                                                {Array.isArray(item.co) ? item.co.join(', ') : (item.co || '')}
+                                                {item.semester?.name || 'N/A'}
                                             </td>
                                             <td className="px-4 py-4 text-sm text-gray-600 whitespace-nowrap">
-                                                {item.month || item.module_starting_month}
-                                            </td>
-                                            <td className="px-4 py-4 text-sm text-gray-600 whitespace-nowrap">
-                                                {item.week}
-                                            </td>
-                                            <td className="px-4 py-4 text-sm text-gray-600 whitespace-nowrap">
-                                                {item.lecture_hour || item.lecture_hours} hrs
-                                            </td>
-                                            <td className="px-4 py-4 text-sm text-gray-600">
-                                                {item.pre_class_activity || item.preClassActivity}
-                                            </td>
-                                            <td className="px-4 py-4 text-sm text-gray-600">
-                                                {item.instructional_technique || item.instructional_techniques || item.instructionalTechnique}
-                                            </td>
-                                            <td className="px-4 py-4 text-sm text-gray-600">
-                                                {item.post_class_activity || item.postClassActivity}
+                                                {item.division_name || 'N/A'}
                                             </td>
                                             <td className="px-4 py-4 text-center">
                                                 <div className="flex justify-center space-x-2">
                                                     <button
-                                                        onClick={() => navigate(`/teacher/academic-diary/teaching-plan/view/${item.id}`)}
+                                                        onClick={() => navigate(`/teacher/academic-diary/teaching-plan/view/${item.teaching_plan_id}`)}
                                                         className="text-blue-600 hover:text-blue-800 p-1"
                                                         title="View"
                                                     >
                                                         <FileText className="w-4 h-4" />
                                                     </button>
                                                     <button
-                                                        onClick={() => navigate(`/teacher/academic-diary/teaching-plan/edit/${item.id}`)}
+                                                        onClick={() => navigate(`/teacher/academic-diary/teaching-plan/edit/${item.teaching_plan_id}`)}
                                                         className="text-green-600 hover:text-green-800 p-1"
                                                         title="Edit"
                                                     >
                                                         <Edit className="w-4 h-4" />
                                                     </button>
                                                     <button
-                                                        onClick={() => handleDeleteConfirm(item.id)}
+                                                        onClick={() => handleDeleteConfirm(item.teaching_plan_id)}
                                                         className="text-red-600 hover:text-red-800 p-1"
                                                         title="Delete"
                                                     >
@@ -555,7 +531,7 @@ export default function TeachingPlanDashboard() {
                                     ))
                                 ) : (
                                     <tr>
-                                        <td colSpan="11" className="px-6 py-8 text-center text-gray-500">
+                                        <td colSpan="5" className="px-6 py-8 text-center text-gray-500">
                                             No teaching plans found
                                         </td>
                                     </tr>
@@ -682,4 +658,4 @@ export default function TeachingPlanDashboard() {
             )}
         </div>
     );
-}
+} 
