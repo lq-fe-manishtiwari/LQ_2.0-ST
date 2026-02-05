@@ -142,5 +142,49 @@ export const studentPlacementService = {
           console.error('Error fetching student drive applications:', error);
           throw error;
         }
-      }
+      },
+
+ getStudentInterviews: async (prnId) => {
+    try {
+      const requestOptions = {
+        method: 'GET',
+        headers: authHeader()
+      };
+      const response = await fetch(`${API_BASE_URL}/student/offers/interviews/prn/${prnId}`, requestOptions);
+      return handleResponse(response);
+    } catch (error) {
+      console.error('Error fetching student drive applications:', error);
+      throw error;
+    }
+  },
+
+   getStudentOfferLetters: async (prnId) => {
+    try {
+      const requestOptions = {
+        method: 'GET',
+        headers: authHeader()
+      };
+      const response = await fetch(`${API_BASE_URL}/student/offers/prn/${prnId}`, requestOptions);
+      return handleResponse(response);
+    } catch (error) {
+      console.error('Error fetching student drive applications:', error);
+      throw error;
+    }
+  },
+
+   updateStudentOfferLetters: async (prnId,placementId,status) => {
+    try {
+       const requestOptions = {
+      method: 'PUT',
+      headers: authHeaderToPost(),
+      body: JSON.stringify({ offer_status: status })
+    };
+      const response = await fetch(`${API_BASE_URL}/student/offers/${prnId}/${placementId}/status`, requestOptions);
+      return handleResponse(response);
+    } catch (error) {
+      console.error('Error fetching student drive applications:', error);
+      throw error;
+    }
+  },
+
 };
