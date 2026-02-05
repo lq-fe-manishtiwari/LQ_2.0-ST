@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from "react";
 import { Plus, Trash2, Edit3, X, Download } from "lucide-react";
-import SweetAlert from "react-bootstrap-sweetalert";
 import * as XLSX from "xlsx";
 import { listOfBooksService } from "../Services/listOfBooks.service";
-import { useUserProfile } from "../../../../../contexts/UserProfileContext"; // Context import
+import { useUserProfile } from "../../../../../contexts/UserProfileContext";
+import Swal from 'sweetalert2';
 
 /* -------------------------------
    Input Component
@@ -47,8 +47,8 @@ const MultiParticipationForm = ({ onClose, onSave, initialData, userId, teacherI
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    onSave(rows.map(row => ({ 
-      ...row, 
+    onSave(rows.map(row => ({
+      ...row,
       user_id: userId,
       teacher_id: teacherId,
       college_id: collegeId,
@@ -179,13 +179,12 @@ const BulkUploadModal = ({ onClose, onSave, userId, teacherId, collegeId, depart
 --------------------------------*/
 const Participations = () => {
   const userProfile = useUserProfile(); // UserProfileContext 
-  
+
   const [records, setRecords] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editRecord, setEditRecord] = useState(null);
   const [showBulkUpload, setShowBulkUpload] = useState(false);
-  const [alert, setAlert] = useState(null);
 
   // UserProfileContext 
   const userId = userProfile.getUserId();
@@ -206,7 +205,7 @@ const Participations = () => {
       console.log("Fetching participations for userId:", userId);
       const data = await listOfBooksService.getParticipationInSeminarByUserId(userId);
       console.log("API Response:", data);
-      
+
       if (data && data.content && Array.isArray(data.content)) {
         setRecords(data.content);
       } else if (Array.isArray(data)) {
@@ -217,7 +216,7 @@ const Participations = () => {
       }
     } catch (err) {
       console.error(err);
-      setAlert(<SweetAlert danger title="Error" onConfirm={() => setAlert(null)}>Failed to fetch records.</SweetAlert>);
+      Swal.fire("Error", "Failed to fetch records.", "error");
       setRecords([]);
     } finally {
       setLoading(false);
@@ -240,34 +239,38 @@ const Participations = () => {
           await listOfBooksService.saveParticipationInSeminar(entry);
         }
       }
-      setAlert(<SweetAlert success title="Success" onConfirm={() => setAlert(null)}>All records saved successfully!</SweetAlert>);
+      Swal.fire("Success", "All records saved successfully!", "success");
       setShowForm(false);
       setEditRecord(null);
       fetchRecords();
     } catch (err) {
       console.error(err);
-      setAlert(<SweetAlert danger title="Error" onConfirm={() => setAlert(null)}>Failed to save records.</SweetAlert>);
+      Swal.fire("Error", "Failed to save records.", "error");
     }
   };
 
   /* Delete */
   const handleDelete = async (id) => {
-    setAlert(
-      <SweetAlert
-        warning showCancel confirmBtnText="Yes, delete!" cancelBtnText="Cancel" confirmBtnBsStyle="danger"
-        cancelBtnBsStyle="default" title="Are you sure?" onConfirm={async () => {
-          try {
-            await listOfBooksService.hardDeleteParticipationInSeminar(id);
-            setAlert(<SweetAlert success title="Deleted!" onConfirm={() => setAlert(null)}>Record deleted successfully.</SweetAlert>);
-            fetchRecords();
-          } catch (err) {
-            setAlert(<SweetAlert danger title="Error" onConfirm={() => setAlert(null)}>Failed to delete record.</SweetAlert>);
-          }
-        }} onCancel={() => setAlert(null)}
-      >
-        This action cannot be undone.
-      </SweetAlert>
-    );
+    const result = await Swal.fire({
+      title: 'Are you sure?',
+      text: "You won't be able to revert this!",
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#3085d6',
+      cancelButtonColor: '#d33',
+      confirmButtonText: 'Yes, delete it!'
+    });
+
+    if (!result.isConfirmed) return;
+
+    try {
+      await listOfBooksService.hardDeleteParticipationInSeminar(id);
+      Swal.fire("Deleted!", "Record deleted successfully.", "success");
+      fetchRecords();
+    } catch (err) {
+      console.error(err);
+      Swal.fire("Error", "Failed to delete record.", "error");
+    }
   };
 
   if (userProfile.loading) {
@@ -311,17 +314,17 @@ const Participations = () => {
                   <td className="border px-3 py-2">{rec.details_of_participation}</td>
                   <td className="border px-3 py-2">{rec.publication_details}</td>
                   <td className="border px-3 py-2 flex gap-2">
-                    <button 
-                      onClick={() => { 
-                        setEditRecord([rec]); 
-                        setShowForm(true); 
-                      }} 
+                    <button
+                      onClick={() => {
+                        setEditRecord([rec]);
+                        setShowForm(true);
+                      }}
                       className="px-3 py-1 bg-yellow-500 text-white rounded-lg text-xs flex items-center gap-1"
                     >
                       <Edit3 size={14} /> Edit
                     </button>
-                    <button 
-                      onClick={() => handleDelete(rec.participation_in_seminar_id)} 
+                    <button
+                      onClick={() => handleDelete(rec.participation_in_seminar_id)}
                       className="px-3 py-1 bg-red-600 text-white rounded-lg text-xs flex items-center gap-1"
                     >
                       <Trash2 size={14} /> Delete
@@ -338,23 +341,21 @@ const Participations = () => {
         <button
           onClick={() => setShowBulkUpload(true)}
           disabled={!userId}
-          className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm transition-colors ${
-            !userId 
-              ? 'bg-gray-400 text-gray-700 cursor-not-allowed' 
+          className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm transition-colors ${!userId
+              ? 'bg-gray-400 text-gray-700 cursor-not-allowed'
               : 'bg-purple-600 text-white hover:bg-purple-700'
-          }`}
+            }`}
         >
           Bulk Upload
         </button>
-        
+
         <button
           onClick={() => setShowForm(true)}
           disabled={!userId}
-          className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm transition-colors ${
-            !userId 
-              ? 'bg-gray-400 text-gray-700 cursor-not-allowed' 
+          className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm transition-colors ${!userId
+              ? 'bg-gray-400 text-gray-700 cursor-not-allowed'
               : 'bg-blue-600 text-white hover:bg-blue-700'
-          }`}
+            }`}
         >
           <Plus size={16} /> Add Participation
         </button>
@@ -388,8 +389,6 @@ const Participations = () => {
           departmentId={departmentId}
         />
       )}
-
-      {alert}
     </div>
   );
 };
