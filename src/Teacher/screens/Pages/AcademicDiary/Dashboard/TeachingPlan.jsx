@@ -138,8 +138,8 @@ export default function TeachingPlanDashboard() {
                     teacherId: filters.teacherId
                 });
             } else if (collegeId) {
-
-                response = await teachingPlanService.GetAllTeachingPlanByCollegeId(collegeId);
+                const teacher_id = userProfile.teacher_id;
+                response = await teachingPlanService.GetTeachingPlanByTeacherId(teacher_id, collegeId);
             }
 
 

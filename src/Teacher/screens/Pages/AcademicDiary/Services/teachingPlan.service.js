@@ -7,6 +7,7 @@ export const teachingPlanService = {
     PostTeachingPlan,
     GetTeachingPlanById,
     GetAllTeachingPlanByCollegeId,
+    GetTeachingPlanByTeacherId,
     FilterTeachingPlans,
     UpdateTeachingPlan,
     DeleteTeachingPlan,
@@ -34,6 +35,20 @@ async function GetAllTeachingPlanByCollegeId(collegeId) {
     const requestOptions = { method: 'GET', headers: authHeader() };
     return fetch(`${TP_API}/get-all/college/${collegeId}`, requestOptions).then(handleResponse);
 }
+
+// 7. GET BY TEACHER ID: Get Teaching Plan by Teacher & College
+async function GetTeachingPlanByTeacherId(teacherId, collegeId) {
+    const requestOptions = {
+        method: 'GET',
+        headers: authHeader()
+    };
+
+    return fetch(
+        `${TP_API}/get-by-teacher?teacherId=${teacherId}&collegeId=${collegeId}`,
+        requestOptions
+    ).then(handleResponse);
+}
+
 
 // 4. FILTER: Teaching Plan filter API
 async function FilterTeachingPlans(params) {
