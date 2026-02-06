@@ -26,52 +26,55 @@ export default function JobList() {
 
   /* ===================== NORMALIZATION ===================== */
 
-  const flattenVacancies = (jobs = [], sourceType) => {
-    const result = [];
+ const flattenVacancies = (jobs = [], sourceType) => {
+  const result = [];
 
-    jobs.forEach(job => {
-      (job.vacancy_details || []).forEach(vacancy => {
-        result.push({
-          placement_id: vacancy.placement_id,
-          sourceType,
+  jobs.forEach(job => {
+    (job.vacancy_details || []).forEach(vacancy => {
+      result.push({
+        placement_id: vacancy.placement_id,
+        sourceType,
 
-          job_opening_id:
-            sourceType === 'JOB' ? job.job_opening_id : job.drive_id,
+        job_opening_id:
+          sourceType === 'JOB' ? job.job_opening_id : job.drive_id,
 
-          company:
-            sourceType === 'JOB'
-              ? job.company
-              : job.companies?.[0] || {},
+        company:
+          sourceType === 'JOB'
+            ? job.company
+            : {
+                company_name: vacancy.company_name
+              },
 
-          role_name: vacancy.role || vacancy.role_name,
-          min_ctc: vacancy.min_ctc,
-          max_ctc: vacancy.max_ctc,
+        role_name: vacancy.role || vacancy.role_name,
+        min_ctc: vacancy.min_ctc,
+        max_ctc: vacancy.max_ctc,
 
-          job_opening_date:
-            sourceType === 'JOB'
-              ? job.job_opening_date
-              : job.drive_date,
+        job_opening_date:
+          sourceType === 'JOB'
+            ? job.job_opening_date
+            : job.drive_date,
 
-          application_deadline: job.application_deadline,
-          venue: job.venue,
+        application_deadline: job.application_deadline,
+        venue: job.venue,
 
-          status:
-            sourceType === 'CAMPUS' && job.status === 'SCHEDULED'
-              ? 'OPEN'
-              : job.status,
+        status:
+          sourceType === 'CAMPUS' && job.status === 'SCHEDULED'
+            ? 'OPEN'
+            : job.status,
 
-          college_id: job.college_id,
+        college_id: job.college_id,
 
-          originalJobData: {
-            ...job,
-            vacancy_details: [vacancy]
-          }
-        });
+        originalJobData: {
+          ...job,
+          vacancy_details: [vacancy]
+        }
       });
     });
+  });
 
-    return result;
-  };
+  return result;
+};
+
 
   /* ===================== LOAD DATA ===================== */
 

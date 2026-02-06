@@ -204,9 +204,7 @@ export default function PlacementConsent() {
                   <h1 className="text-2xl font-bold text-gray-900">
                     {collegePolicy.policy_name || 'Placement Consent Policy'}
                   </h1>
-                  <p className="text-sm text-gray-600 mt-1">
-                    Policy ID: {collegePolicy.policy_id}
-                  </p>
+             
                 </div>
                 {collegePolicy.policy_document_path && (
                   <a
