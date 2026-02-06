@@ -1,5 +1,5 @@
 // ListOfBooks & ParticipationInSeminar Service
-import { authHeader, handleResponse, authHeaderToPost, PMSAPI } from '@/_services/api';
+import { authHeader, handleResponse, authHeaderToPost, PMSAPI, AcademicAPI } from '@/_services/api';
 
 export const listOfBooksService = {
     // --- List of Books ---
@@ -50,6 +50,16 @@ export const listOfBooksService = {
     getAnyOtherContributionByUserId,
     updateAnyOtherContribution,
     deleteAnyOtherContribution,
+
+     // --- Lectures Observed ---
+    saveLectureObserved,
+    getLectureObservedById,
+    getLectureObservedByUserId,
+    updateLectureObserved,
+    deleteLectureObserved,
+    getProgramByCollegeId,
+    getBatchByProgramId,
+    getSubjectsByAcademicYearAndSemester,
 
 };
 
@@ -385,4 +395,77 @@ function deleteAnyOtherContribution(id) {
         `${PMSAPI}/academic-diary/any-other-contributions/${id}`,
         requestOptions
     ).then(handleResponse);
+}
+
+// ------- LECTURES OBSERVED -------
+function saveLectureObserved(values) {
+    const requestOptions = {
+        method: 'POST',
+        headers: authHeaderToPost(),
+        body: JSON.stringify(values),
+    };
+    return fetch(`${PMSAPI}/academic-diary/lecture-observed`, requestOptions).then(handleResponse);
+}
+
+function getLectureObservedById(id) {
+    const requestOptions = { method: 'GET', headers: authHeader() };
+    return fetch(`${PMSAPI}/academic-diary/lecture-observed/${id}`, requestOptions).then(handleResponse);
+}
+
+function getLectureObservedByUserId(userId, page = 0, size = 10) {
+    const requestOptions = { method: 'GET', headers: authHeader() };
+    return fetch(`${PMSAPI}/academic-diary/lecture-observed/user/${userId}?page=${page}&size=${size}`, requestOptions)
+        .then(handleResponse);
+}
+
+function updateLectureObserved(id, values) {
+    const requestOptions = {
+        method: 'PUT',
+        headers: authHeaderToPost(),
+        body: JSON.stringify(values),
+    };
+    return fetch(`${PMSAPI}/academic-diary/lecture-observed/${id}`, requestOptions).then(handleResponse);
+}
+
+function deleteLectureObserved(id) {
+    const requestOptions = { method: 'DELETE', headers: authHeader() };
+    return fetch(`${PMSAPI}/academic-diary/lecture-observed/${id}`, requestOptions).then(handleResponse);
+}
+
+
+function getProgramByCollegeId(collegeId) {
+  const requestOptions = { method: 'GET', headers: authHeader() };
+  return fetch(`${AcademicAPI}/programs/by-college/${collegeId}`, requestOptions)
+    .then(handleResponse);
+}
+function getBatchByProgramId(program_is) {
+	// /: /api/batches/{id}
+	const requestOptions = { method: 'GET', headers: authHeader() };
+	return fetch(`${AcademicAPI}/batches/${program_is}`, requestOptions)
+		.then(handleResponse);
+}
+
+function getSubjectsByAcademicYearAndSemester(academicYearId, semesterId) {
+    const requestOptions = {
+        method: 'GET',
+        headers: authHeader()
+    };
+
+    return fetch(
+        `${AcademicAPI}/subject-allocation/subjects-by-academic-year-semester?academicYearId=${academicYearId}&semesterId=${semesterId}`,
+        requestOptions
+    )
+        .then(async response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            return { success: true, data: data };
+        })
+        .catch(error => {
+            console.error('Error fetching subjects by academic year and semester:', error);
+            throw error;
+        });
 }

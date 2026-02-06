@@ -14,6 +14,7 @@ import TeachingPlan from "../Dashboard/TeachingPlan";
 import AddTeachingPlan from "../Dashboard/TeachingPlan/AddTeachingPlan";
 import EditTeachingPlan from "../Dashboard/TeachingPlan/EditTeachingPlan";
 import ViewTeachingPlan from "../Dashboard/TeachingPlan/ViewTeachingPlan";
+import MonitoringReports from "../MonitoringReport/MonitoringReports";
 
 export default function AcademicDiaryRoutes() {
   return (
@@ -39,6 +40,7 @@ export default function AcademicDiaryRoutes() {
 
         <Route path="time-table" element={<MyViewDashboard />} />
         <Route path="leave" element={<Leaves />} />
+        <Route path="monitoring-reports" element={<MonitoringReports />} />
       </Route>
     </Routes>
   );
