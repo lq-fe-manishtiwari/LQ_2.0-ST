@@ -18,6 +18,7 @@ const PROFILE_FIELD_MAP = {
 export default function RegistrationForm({
   job,
   collegeId,
+  placementId,
   onClose,
   onSuccess
 }) {
@@ -36,7 +37,14 @@ export default function RegistrationForm({
   const [selectedJobIndexes, setSelectedJobIndexes] = useState([]);
   const [acceptedEligibility, setAcceptedEligibility] = useState({});
 
-  const jobRoles = job.job_roles || [];
+  // Filter to show only the role matching the clicked placement_id
+  const jobRoles = (job.job_roles || []).filter(role => {
+    const vacancy = (job.vacancy_details || []).find(
+      v => v.placement_id === placementId
+    );
+    return vacancy && role.role_name?.trim().toLowerCase() === vacancy.role?.trim().toLowerCase();
+  });
+  
   const vacancyDetails = job.vacancy_details || [];
   const eligibility = job.eligibility_criteria || [];
 
@@ -268,6 +276,7 @@ const handleSubmit = async e => {
         confirmBtnCssClass="btn-confirm"
         onConfirm={() => {
           setAlert(null);
+          onClose?.();
           onSuccess?.();
         }}
       >
