@@ -3,9 +3,9 @@ import { Outlet } from "react-router-dom";
 import TabsNav from "../Components/TabNav";
 
 const SETTINGS_TABS = [
-    { label: "Rubrics Configuration", to: "/admin-assessment/settings/rubrics" },
-    { label: "CO Configuration", to: "/admin-assessment/settings/co" },
-    { label: "Question Level Setting", to: "/admin-assessment/settings/question-level-setting" },
+    { label: "Rubrics Configuration", to: "rubrics" },
+    { label: "CO Configuration", to: "co" },
+    { label: "Question Level Setting", to: "question-level-setting" },
 ];
 
 export default function SettingsLayout() {

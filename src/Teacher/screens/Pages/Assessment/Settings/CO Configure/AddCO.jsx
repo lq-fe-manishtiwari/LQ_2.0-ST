@@ -1,19 +1,22 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { COService } from "../Service/co.service";
-import { courseService } from "../../../Content/services/courses.service";
-// import { batchService } from "../../../Academics/Services/batch.Service";
-import { collegeService } from "../../../Content/services/college.service";
-import { useUserProfile } from "../../../../../../contexts/UserProfileContext";
-// import { useColleges } from "../../../../../contexts/CollegeContext";
-import { Formik, Form } from "formik";
+import { useUserProfile } from "@/contexts/UserProfileContext";
+import { api } from "@/_services/api";
+
+const handleResponse = (res) => res.data;
 
 const AddCO = () => {
-  const { userID, userRole } = useUserProfile();
-  const { colleges } = useColleges();
+  const [allocations, setAllocations] = useState([]);
+
+  const { getTeacherId, isLoaded } = useUserProfile();
+  const teacherId = getTeacherId();
 
   const [programs, setPrograms] = useState([]);
+
   const [batches, setBatches] = useState([]);
+
   const [semesters, setSemesters] = useState([]);
+
   const [papers, setPapers] = useState([]);
 
   const [selectedProgram, setSelectedProgram] = useState("");
@@ -44,158 +47,92 @@ const AddCO = () => {
 
   const collegeId = getActiveCollegeId();
 
-  // Fetch Programs (same logic as PaperDashboard)
+  // Load Programs when page opens
   useEffect(() => {
-    const fetchPrograms = async () => {
+    const loadPrograms = async () => {
       try {
-        let programData = [];
+        if (!isLoaded) return;
 
-        if (userRole === "SUPERADMIN") {
-          const stored = localStorage.getItem("college_programs");
-          if (stored) {
-            programData = JSON.parse(stored);
-          } else if (collegeId) {
-            const activeCollege = colleges.find(
-              (c) => c.college_id === collegeId || c.id === collegeId
-            );
-            if (activeCollege?.programs) {
-              programData = activeCollege.programs;
-            } else if (userID && collegeId) {
-              programData = await collegeService.getProgrambyUserIdandCollegeId(
-                userID,
-                collegeId
-              );
-            }
-          }
-        } else {
-          if (userID && collegeId) {
-            programData = await collegeService.getProgrambyUserIdandCollegeId(
-              userID,
-              collegeId
-            );
-          }
+        const teacherId = getTeacherId();
+        const res = await api.getTeacherAllocatedPrograms(teacherId);
+
+        if (res?.success) {
+          const data = res.data?.normal_allocation || [];
+          setAllocations(data);
+          setPrograms([
+            ...new Map(
+              data.map((a) => [a.program.program_id, a.program])
+            ).values(),
+          ]);
         }
-
-        setPrograms(Array.isArray(programData) ? programData : []);
       } catch (err) {
-        console.error("Failed to load programs:", err);
+        console.error("Program API error", err);
       }
     };
 
-    if (collegeId || userRole === "SUPERADMIN") {
-      fetchPrograms();
-    }
-  }, [collegeId, userRole, userID, colleges]);
+    loadPrograms();
+  }, [isLoaded]);
+
+  // Fetch Programs (same logic as PaperDashboard)
+  useEffect(() => {
+    if (!selectedProgram) return;
+
+    const filtered = allocations.filter(
+      (a) => String(a.program.program_id) === String(selectedProgram)
+    );
+
+    const uniqueDivisions = [
+      ...new Map(
+        filtered.map((a) => [a.division.division_id, a.division])
+      ).values(),
+    ];
+
+    setBatches(uniqueDivisions);
+    setSelectedBatch("");
+    setSemesters([]);
+    setPapers([]);
+  }, [selectedProgram, allocations]);
 
   // Fetch Batches when program changes
   useEffect(() => {
-    if (!selectedProgram) {
-      setBatches([]);
-      setSemesters([]);
-      setSelectedBatch("");
-      setSelectedSemester("");
-      return;
-    }
+    if (!selectedBatch) return;
 
-    const fetchBatches = async () => {
-      try {
-        const res = await batchService.getBatchByProgramId([selectedProgram]);
-        if (Array.isArray(res)) {
-          setBatches(res);
+    const filtered = allocations.filter(
+      (a) =>
+        String(a.program.program_id) === String(selectedProgram) &&
+        String(a.division.division_id) === String(selectedBatch)
+    );
 
-          // Extract all semesters from all academic years
-          const allSemesters = [];
-          res.forEach((batch) => {
-            if (batch.academic_years && Array.isArray(batch.academic_years)) {
-              batch.academic_years.forEach((ay) => {
-                if (ay.semester_divisions && Array.isArray(ay.semester_divisions)) {
-                  ay.semester_divisions.forEach((sem) => {
-                    allSemesters.push({
-                      semester_id: sem.semester_id,
-                      name: sem.name || sem.semester_name,
-                      semester_number: sem.semester_number,
-                      academic_year_id: ay.academic_year_id,
-                      batch_id: batch.batch_id,
-                    });
-                  });
-                }
-              });
-            }
-          });
+    const uniqueSemesters = [
+      ...new Map(filtered.map((a) => [a.semester.id, a.semester])).values(),
+    ];
 
-          // Remove duplicates
-          const uniqueSemesters = allSemesters.filter(
-            (s, i, self) => i === self.findIndex((t) => t.semester_id === s.semester_id)
-          );
-
-          setSemesters(uniqueSemesters);
-        } else {
-          setBatches([]);
-          setSemesters([]);
-        }
-      } catch (err) {
-        console.error("Failed to load batches:", err);
-        setBatches([]);
-        setSemesters([]);
-      }
-    };
-
-    fetchBatches();
-  }, [selectedProgram]);
+    setSemesters(uniqueSemesters);
+    setSelectedSemester("");
+    setPapers([]);
+  }, [selectedBatch]);
 
   // Fetch Papers / Courses (same logic as PaperDashboard)
   useEffect(() => {
-    const fetchPapers = async () => {
-      if (!collegeId) return;
+    if (!selectedSemester) return;
 
-      setLoading(true);
-      try {
-        const [collegeSubjects, globalSubjects] = await Promise.all([
-          courseService.getSubjectsByCollegeId(collegeId),
-          courseService.getGlobalSubjectsByCollegeId(collegeId),
-        ]);
+    const filtered = allocations.filter(
+      (a) =>
+        String(a.program.program_id) === String(selectedProgram) &&
+        String(a.division.division_id) === String(selectedBatch) &&
+        String(a.semester.id) === String(selectedSemester)
+    );
 
-        let all = [];
-        if (Array.isArray(collegeSubjects)) all.push(...collegeSubjects);
-        if (Array.isArray(globalSubjects)) all.push(...globalSubjects);
+    const uniquePapers = [
+      ...new Map(filtered.map((a) => [a.paper.id, a.paper])).values(),
+    ];
 
-        // Remove duplicates by subject_id
-        const unique = all.filter(
-          (item, index, self) => index === self.findIndex((t) => t.subject_id === item.subject_id)
-        );
-
-        // Optional: enrich with type/mode/specialization names if needed
-        const enriched = unique.map((p) => ({
-          ...p,
-          name: p.subject_name || p.name || "Unnamed Course",
-          is_global: p.is_global || p.college_id === null,
-        }));
-
-        setPapers(enriched.sort((a, b) => b.subject_id - a.subject_id));
-      } catch (err) {
-        console.error("Failed to load papers/courses:", err);
-        setPapers([]);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    if (collegeId) {
-      fetchPapers();
-    }
-  }, [collegeId]);
+    setPapers(uniquePapers);
+    setSelectedCourse("");
+  }, [selectedSemester]);
 
   // Filter papers by selected semester (if your backend supports it)
   // If not, you may need to filter client-side or adjust backend query
-  const filteredPapers = useMemo(() => {
-    if (!selectedSemester) return papers;
-
-    // If your subjects have semester_id field:
-    return papers.filter((p) => String(p.semester_id) === String(selectedSemester));
-
-    // If not → show all (or implement better backend filtering)
-    // return papers;
-  }, [papers, selectedSemester]);
 
   // ────────────────────────────────────────────────
   //  CO Logic (remains almost same)
@@ -250,52 +187,60 @@ const AddCO = () => {
     }
   };
 
-const handleCourseSubmit = async () => {
-  if (!selectedCourse || !selectedSemester) {
-    alert("Please select semester and course.");
-    return;
-  }
-
-  const college_id = getActiveCollegeId();
-
-  const coRows = courseCoData[selectedCourse] || [];
-
-  try {
-    setLoading(true);
-
-    for (let i = 0; i < coRows.length; i++) {
-      const co = coRows[i];
-
-      if (!co.coCode || !co.coStatement) continue;
-
-      const payload = {
-        college_id: Number(college_id),
-        subject_id: Number(selectedCourse),
-        outcome_code: co.coCode,
-        outcome_title: co.coStatement,        
-        outcome_description: co.coStatement,    
-        outcome_order: i + 1,
-        is_active: true,
-      };
-
-      await COService.saveCO(payload);
+  const handleCourseSubmit = async () => {
+    if (!selectedCourse || !selectedSemester) {
+      alert("Please select semester and course.");
+      return;
     }
 
-    alert("Course Outcomes saved successfully ✅");
+    const college_id = getActiveCollegeId();
 
-    // Optional: reset form
-    setCourseCoData((prev) => ({
-      ...prev,
-      [selectedCourse]: [{ coCode: "CO1", coStatement: "" }],
-    }));
-  } catch (error) {
-    console.error("Error saving COs:", error);
-    alert("Failed to save Course Outcomes ❌");
-  } finally {
-    setLoading(false);
-  }
-};
+    const coRows = courseCoData[selectedCourse] || [];
 
+    try {
+      setLoading(true);
+
+      for (let i = 0; i < coRows.length; i++) {
+        const co = coRows[i];
+
+        if (!co.coCode || !co.coStatement) continue;
+
+        const payload = {
+          college_id: Number(college_id),
+          subject_id: Number(selectedCourse),
+          outcome_code: co.coCode,
+          outcome_title: co.coStatement,
+          outcome_description: co.coStatement,
+          outcome_order: i + 1,
+          is_active: true,
+        };
+
+        await COService.saveCO(payload);
+      }
+
+      alert("Course Outcomes saved successfully ✅");
+
+      // Optional: reset form
+      setCourseCoData((prev) => ({
+        ...prev,
+        [selectedCourse]: [{ coCode: "CO1", coStatement: "" }],
+      }));
+    } catch (error) {
+      console.error("Error saving COs:", error);
+      alert("Failed to save Course Outcomes ❌");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    console.log({
+      selectedProgram,
+      selectedBatch,
+      selectedSemester,
+      selectedCourse,
+    });
+  }, [selectedProgram, selectedBatch, selectedSemester, selectedCourse]);
 
   return (
     <div className="p-6 max-w-5xl mx-auto">
@@ -319,7 +264,7 @@ const handleCourseSubmit = async () => {
             <option value="">Select Program</option>
             {programs.map((p) => (
               <option key={p.program_id} value={p.program_id}>
-                {p.program_name}
+                {p.program?.program_name || p.program_name}
               </option>
             ))}
           </select>
@@ -340,8 +285,8 @@ const handleCourseSubmit = async () => {
           >
             <option value="">Select Batch</option>
             {batches.map((b) => (
-              <option key={b.batch_id} value={b.batch_id}>
-                {b.batch_name || b.batch_year || `Batch ${b.batch_id}`}
+              <option key={b.division_id} value={b.division_id}>
+                {b.division_name}
               </option>
             ))}
           </select>
@@ -360,13 +305,11 @@ const handleCourseSubmit = async () => {
             disabled={!selectedBatch}
           >
             <option value="">Select Semester</option>
-            {semesters
-              .filter((s) => !selectedBatch || s.batch_id == selectedBatch)
-              .map((s) => (
-                <option key={s.semester_id} value={s.semester_id}>
-                  {s.name || `Semester ${s.semester_number}`}
-                </option>
-              ))}
+            {semesters.map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.name}
+              </option>
+            ))}
           </select>
         </div>
 
@@ -380,37 +323,49 @@ const handleCourseSubmit = async () => {
             disabled={!selectedSemester || loading}
           >
             <option value="">Select Paper</option>
-            {filteredPapers.map((c) => (
-              <option key={c.subject_id} value={c.subject_id}>
-                {c.name} {c.paper_code ? `(${c.paper_code})` : ""}
+            {papers.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.paper_name}
               </option>
             ))}
           </select>
-          {loading && <p className="text-sm text-gray-500 mt-1">Loading courses...</p>}
+          {loading && (
+            <p className="text-sm text-gray-500 mt-1">Loading courses...</p>
+          )}
         </div>
       </div>
 
       {/* CO Input Sections */}
       {selectedCourses.map((courseId) => {
-        const course = papers.find((c) => String(c.subject_id) === String(courseId));
+        const course = papers.find((c) => String(c.id) === String(courseId));
+
         const coRows = courseCoData[courseId] || [];
 
         return (
-          <div key={courseId} className="mb-8 bg-white rounded-lg shadow border">
+          <div
+            key={courseId}
+            className="mb-8 bg-white rounded-lg shadow border"
+          >
             <div className="bg-blue-600 text-white px-5 py-3 rounded-t-lg font-medium">
-              {course?.name || "Course"} {course?.paper_code ? `(${course.paper_code})` : ""}
+              {course?.name || "Course"}{" "}
+              {course?.paper_code ? `(${course.paper_code})` : ""}
             </div>
 
             <div className="p-5">
               {coRows.map((row, idx) => (
-                <div key={idx} className="grid grid-cols-12 gap-4 mb-4 items-center">
+                <div
+                  key={idx}
+                  className="grid grid-cols-12 gap-4 mb-4 items-center"
+                >
                   <div className="col-span-3">
                     <input
                       type="text"
                       className="w-full border rounded px-3 py-2"
                       placeholder="CO Code (e.g. CO1)"
                       value={row.coCode}
-                      onChange={(e) => handleCoChange(courseId, idx, "coCode", e.target.value)}
+                      onChange={(e) =>
+                        handleCoChange(courseId, idx, "coCode", e.target.value)
+                      }
                     />
                   </div>
                   <div className="col-span-8">
@@ -419,7 +374,14 @@ const handleCourseSubmit = async () => {
                       className="w-full border rounded px-3 py-2"
                       placeholder="Course Outcome Statement"
                       value={row.coStatement}
-                      onChange={(e) => handleCoChange(courseId, idx, "coStatement", e.target.value)}
+                      onChange={(e) =>
+                        handleCoChange(
+                          courseId,
+                          idx,
+                          "coStatement",
+                          e.target.value
+                        )
+                      }
                     />
                   </div>
                   <div className="col-span-1 flex gap-2">
