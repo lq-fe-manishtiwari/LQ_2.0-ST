@@ -6,6 +6,7 @@ import { Plus, Upload } from "lucide-react";
 const tabs = [
   { label: "Professional Ethics", to: "/teacher/academic-diary/professional-ethics" },
   { label: "Committee", to: "/teacher/academic-diary/committee" },
+  { label: "Daily Work Report", to: "/teacher/academic-diary/daily-work-report" },
   { label: "Advanced Learner", to: "/teacher/academic-diary/advanced-learner" },
   { label: "Slow Learner", to: "/teacher/academic-diary/slow-learner" },
   { label: "Contributions", to: "/teacher/academic-diary/contributions" },

@@ -6,6 +6,7 @@ import ProfessionalEthics from "../Dashboard/ProfessionalEthics";
 import Committee from "../Dashboard/Committee";
 import AdvLearner from "../Dashboard/AdvLearner";
 import SlowLearner from "../Dashboard/SlowLearner";
+import DailyWorkReport from "../Dashboard/DailyWorkReport";
 import Contributions from "../Contributions/Contributions";
 import MyViewDashboard from "../../TimeTable/MyView/MyViewDashboard";
 import Leaves from "../Dashboard/Leaves";
@@ -25,6 +26,7 @@ export default function AcademicDiaryRoutes() {
         <Route index element={<Navigate to="professional-ethics" replace />} />
         <Route path="professional-ethics" element={<ProfessionalEthics />} />
         <Route path="committee" element={<Committee />} />
+        <Route path="daily-work-report" element={<DailyWorkReport />} />
         <Route path="advanced-learner" element={<AdvLearner />} />
         <Route path="slow-learner" element={<SlowLearner />} />
         <Route path="contributions" element={<Contributions />} />
