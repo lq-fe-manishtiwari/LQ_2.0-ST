@@ -24,7 +24,7 @@ export default function RegistrationForm({
 }) {
   if (!job) return null;
 
-  const driveId = job.job_opening_id;
+  const driveId = job.drive_id || job.job_opening_id;
 
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -48,11 +48,12 @@ export default function RegistrationForm({
   const vacancyDetails = job.vacancy_details || [];
   const eligibility = job.eligibility_criteria || [];
 
-  useEffect(() => {
-    if (!collegeId || !job?.job_opening_id) return;
-    loadForm();
-    initEligibility();
-  }, [collegeId, job?.job_opening_id]);
+ useEffect(() => {
+  if (!collegeId || !driveId) return;
+
+  loadForm();
+  initEligibility();
+}, [collegeId, driveId]);
 
   const loadForm = async () => {
     try {
@@ -354,6 +355,10 @@ const handleSubmit = async e => {
       />
     );
   };
+    const companyName =
+  job?.company?.company_name ||
+  job?.companies?.[0]?.company_name ||
+  'Company';
 
   if (loading) {
     return (
@@ -371,7 +376,10 @@ const handleSubmit = async e => {
           {/* Header */}
           <div className="flex items-center justify-between p-6 bg-blue-600 rounded-t-2xl">
             <div>
-              <h1 className="text-2xl font-bold text-white">{job.company.company_name}</h1>
+
+                <h1 className="text-2xl font-bold text-white">
+                {companyName}
+                </h1>
               <p className="text-blue-100 mt-1">{job.location} • Apply before: <span className="font-semibold text-white">{job.application_deadline}</span></p>
             </div>
             <button 
