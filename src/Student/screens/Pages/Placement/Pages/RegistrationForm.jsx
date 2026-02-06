@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import SweetAlert from 'react-bootstrap-sweetalert';
 import { Loader2, X } from 'lucide-react';
 import { studentPlacementService, createStudentDriveApplication } from '../Services/studentPlacement.service';
-import { api } from '../../../../../_services/api';
+import { api,uploadFileToS3 } from '../../../../../_services/api';
 
 const PROFILE_FIELD_MAP = {
   'Full Name': user => `${user.firstname} ${user.middlename || ''} ${user.lastname}`.trim(),
@@ -163,10 +163,48 @@ export default function RegistrationForm({
       )
       .join(' | ');
 
-  const handleSubmit = async e => {
-    e.preventDefault();
+const handleSubmit = async e => {
+  e.preventDefault();
 
-    if (!selectedJobIndexes.length)
+  if (!selectedJobIndexes.length)
+    return setAlert(
+      <SweetAlert
+        warning
+        title="Required"
+        confirmBtnCssClass="btn-confirm"
+        onConfirm={() => setAlert(null)}
+      >
+        Select at least one role
+      </SweetAlert>
+    );
+
+  if (!resumeFile)
+    return setAlert(
+      <SweetAlert
+        warning
+        title="Required"
+        confirmBtnCssClass="btn-confirm"
+        onConfirm={() => setAlert(null)}
+      >
+        Upload resume
+      </SweetAlert>
+    );
+
+  if (!formValues.prn_id?.trim())
+    return setAlert(
+      <SweetAlert
+        warning
+        title="Required"
+        confirmBtnCssClass="btn-confirm"
+        onConfirm={() => setAlert(null)}
+      >
+        Enter PRN number
+      </SweetAlert>
+    );
+
+  if (eligibility.length) {
+    const accepted = eligibility.some(c => acceptedEligibility[c.criteria_id]);
+    if (!accepted) {
       return setAlert(
         <SweetAlert
           warning
@@ -174,126 +212,111 @@ export default function RegistrationForm({
           confirmBtnCssClass="btn-confirm"
           onConfirm={() => setAlert(null)}
         >
-          Select at least one role
+          Please accept at least one eligibility criteria
         </SweetAlert>
       );
+    }
+  }
 
-    if (!resumeFile)
-      return setAlert(
-        <SweetAlert
-          warning
-          title="Required"
-          confirmBtnCssClass="btn-confirm"
-          onConfirm={() => setAlert(null)}
-        >
-          Upload resume
-        </SweetAlert>
-      );
+  setSubmitting(true);
 
-    if (!formValues.prn_id?.trim())
-      return setAlert(
-        <SweetAlert
-          warning
-          title="Required"
-          confirmBtnCssClass="btn-confirm"
-          onConfirm={() => setAlert(null)}
-        >
-          Enter PRN number
-        </SweetAlert>
-      );
+  const eligibilityIds = eligibility
+    .filter(c => acceptedEligibility[c.criteria_id])
+    .map(c => c.criteria_id);
 
-    // Check eligibility acceptance
-    if (eligibility.length) {
-      const accepted = eligibility.some(c => acceptedEligibility[c.criteria_id]);
-      if (!accepted) {
-        return setAlert(
-          <SweetAlert
-            warning
-            title="Required"
-            confirmBtnCssClass="btn-confirm"
-            onConfirm={() => setAlert(null)}
-          >
-            Please accept at least one eligibility criteria
-          </SweetAlert>
-        );
-      }
+  try {
+    // 🔹 1. Upload resume to S3
+    const s3Response = await uploadFileToS3(resumeFile);
+
+    const resumeUrl =
+      s3Response
+
+    if (!resumeUrl) {
+      throw new Error('Resume upload failed');
     }
 
-    setSubmitting(true);
+    // 🔹 2. Submit applications
+    await Promise.all(
+      selectedJobIndexes.map(i => {
+        const role = jobRoles[i];
 
-    const eligibilityIds = eligibility
-      .filter(c => acceptedEligibility[c.criteria_id])
-      .map(c => c.criteria_id);
+        return createStudentDriveApplication({
+          prn_id: formValues.prn_id.trim(),
+          college_id: collegeId,
+          drive_id: driveId,
+          placement_id: getPlacementIdForRole(role.role_name),
+          job_role_ids: [role.job_role_id],
+          eligibility_criteria_ids: eligibilityIds,
 
-    try {
-      await Promise.all(
-        selectedJobIndexes.map(i => {
-          const role = jobRoles[i];
+          application_data: {
+            ...formValues,
+            resume_name: resumeFile.name,
+            resume_type: resumeFile.type,
+            resume_size: resumeFile.size
+          },
 
-          return createStudentDriveApplication({
-            prn_id: formValues.prn_id.trim(),
-            college_id: collegeId,
-            drive_id: driveId,
-            placement_id: getPlacementIdForRole(role.role_name),
-            job_role_ids: [role.job_role_id],
-            eligibility_criteria_ids: eligibilityIds,
-            application_data: {
-              ...formValues,
-              resume_name: resumeFile.name,
-              resume_type: resumeFile.type,
-              resume_size: resumeFile.size
-            },
-            resume_url: '', // TODO: Upload resume and set resume_url before submission
-            application_status: 'PENDING'
-          });
-        })
-      );
+          resume_url: resumeUrl, // ✅ S3 URL
+          application_status: 'PENDING'
+        });
+      })
+    );
 
+    setAlert(
+      <SweetAlert
+        success
+        title="Success"
+        confirmBtnCssClass="btn-confirm"
+        onConfirm={() => {
+          setAlert(null);
+          onSuccess?.();
+        }}
+      >
+        Application submitted successfully!
+      </SweetAlert>
+    );
+
+  } catch (err) {
+    console.error(err);
+
+    if (err.message === 'Resume upload failed') {
       setAlert(
         <SweetAlert
-          success
-          title="Success"
+          error
+          title="Upload Failed"
           confirmBtnCssClass="btn-confirm"
-          onConfirm={() => {
-            setAlert(null);
-            onSuccess?.();
-          }}
+          onConfirm={() => setAlert(null)}
         >
-          Application submitted successfully!
+          Resume upload failed. Please try again.
         </SweetAlert>
       );
-
-    } catch (err) {
-      console.error(err);
-      
-      // Handle duplicate application error
-      if (err.response?.data?.message?.includes('Application already exists')) {
-        setAlert(
-          <SweetAlert
-            warning
-            title="Already Applied"
-            confirmBtnCssClass="btn-confirm"
-            onConfirm={() => setAlert(null)}
-          >
-            You have already applied for this drive. Please check your applications.
-          </SweetAlert>
-        );
-      } else {
-        setAlert(
-          <SweetAlert
-            error
-            title="Error"
-            confirmBtnCssClass="btn-confirm"
-            onConfirm={() => setAlert(null)}
-          >
-            {err.response?.data?.message || 'Submission failed'}
-          </SweetAlert>
-        );
-      }
-    } finally {
-      setSubmitting(false);
+    } else if (err.response?.message?.includes('Application already exists')) {
+      setAlert(
+        <SweetAlert
+          warning
+          title="Already Applied"
+          confirmBtnCssClass="btn-confirm"
+          onConfirm={() => setAlert(null)}
+        >
+          You have already applied for this drive.
+        </SweetAlert>
+      );
+    } else {
+      setAlert(
+        <SweetAlert
+          error
+          title="Error"
+          confirmBtnCssClass="btn-confirm"
+          onConfirm={() => setAlert(null)}
+        >
+          {err.response?.message || 'Already Applied'}
+        </SweetAlert>
+      );
     }
-  };
+  } finally {
+    setSubmitting(false);
+  }
+};
+
 
   const renderField = f => {
     const common = {

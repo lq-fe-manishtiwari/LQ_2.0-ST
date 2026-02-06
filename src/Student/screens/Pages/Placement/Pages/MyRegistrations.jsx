@@ -216,10 +216,10 @@ export default function MyRegistrations() {
           <table className="w-full">
           <thead className="bg-primary-600">
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-50   tracking-wider">Application ID</th>
+              {/* <th className="px-6 py-3 text-left text-xs font-medium text-gray-50   tracking-wider">Application ID</th> */}
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-50   tracking-wider">Placement ID</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-50   tracking-wider">Drive ID</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-50   tracking-wider">Job Role IDs</th>
+              {/* <th className="px-6 py-3 text-left text-xs font-medium text-gray-50   tracking-wider">Drive ID</th> */}
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-50   tracking-wider">Job Role</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-50   tracking-wider">Email</th>
               <th className="px-6 py-3 text-center text-xs font-medium text-gray-50   tracking-wider">Status</th>
             </tr>
@@ -227,9 +227,9 @@ export default function MyRegistrations() {
           <tbody className="bg-white divide-y divide-gray-200">
             {currentEntries.length ? currentEntries.map(item => (
               <tr key={item.application_id} className="hover:bg-gray-50">
-                <td className="px-6 py-4 text-sm text-gray-900">{item.application_id}</td>
+                {/* <td className="px-6 py-4 text-sm text-gray-900">{item.application_id}</td> */}
                 <td className="px-6 py-4 text-sm text-gray-500">{item.placement_id || 'N/A'}</td>
-                <td className="px-6 py-4 text-sm text-gray-500">{item.drive_id}</td>
+                {/* <td className="px-6 py-4 text-sm text-gray-500">{item.drive_id}</td> */}
                 <td className="px-6 py-4 text-sm text-gray-500">{item.job_role_ids?.join(', ') || 'N/A'}</td>
                 <td className="px-6 py-4 text-sm text-gray-500">{item.application_data?.email || 'N/A'}</td>
                 <td className="px-6 py-4 text-center">{getStatusBadge(item.application_status)}</td>
