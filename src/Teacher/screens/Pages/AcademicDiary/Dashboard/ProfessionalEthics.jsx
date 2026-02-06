@@ -460,7 +460,7 @@ const ProfessionalEthics = () => {
 
                         <div className="flex items-center gap-4">
                           {/* Action Buttons (Visible on hover or when expanded) */}
-                          <div className={`flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity ${isExpanded ? 'opacity-100' : ''}`}>
+                          {/* <div className={`flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity ${isExpanded ? 'opacity-100' : ''}`}>
                             <button
                               onClick={(e) => { e.stopPropagation(); handleEditClick(ethics); }}
                               className="p-1.5 text-blue-500 hover:bg-blue-100 rounded-lg transition-colors"
@@ -475,7 +475,7 @@ const ProfessionalEthics = () => {
                             >
                               <Trash2 size={14} />
                             </button>
-                          </div>
+                          </div> */}
                           <div className={`text-gray-400 transform transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`}>
                             <ChevronDown size={18} />
                           </div>

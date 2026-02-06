@@ -67,9 +67,9 @@ const Leaves = () => {
     }
 
     return (
-        <div className="p-6 bg-gray-50 min-h-screen">
+        <div className="p-4 md:p-6 bg-gray-50 min-h-screen">
             <div className="mb-6">
-                <h1 className="text-2xl font-semibold">
+                <h1 className="text-xl md:text-2xl font-semibold">
                     Academic Diary – Leave Record
                 </h1>
                 <p className="text-sm text-gray-600">
@@ -92,7 +92,8 @@ const Leaves = () => {
                         <h3 className="text-lg font-semibold">{leaveTypeName}</h3>
                     </div>
 
-                    <div className="overflow-x-auto">
+                    {/* Desktop View */}
+                    <div className="hidden md:block overflow-x-auto">
                         <table className="w-full border-collapse">
                             <thead className="table-header">
                                 <tr>
@@ -134,6 +135,41 @@ const Leaves = () => {
                                 ))}
                             </tbody>
                         </table>
+                    </div>
+
+                    {/* Mobile View */}
+                    <div className="block md:hidden p-4 space-y-4">
+                        {rows.map((row, index) => (
+                            <div
+                                key={row.apply_leave_id}
+                                className="border rounded-lg p-4 bg-gray-50"
+                            >
+                                <div className="flex justify-between items-start mb-2">
+                                    <div className="font-medium text-gray-900">
+                                        {row.start_date}
+                                        {row.end_date &&
+                                            row.end_date !== row.start_date && (
+                                                <> – {row.end_date}</>
+                                            )}
+                                    </div>
+                                    <span className="text-xs font-medium bg-blue-100 text-blue-800 px-2 py-1 rounded">
+                                        #{index + 1}
+                                    </span>
+                                </div>
+
+                                <div className="flex justify-between items-center text-sm text-gray-600 mb-2">
+                                    <span>Duration:</span>
+                                    <span className="font-semibold text-gray-900">
+                                        {row.no_of_days} Day{row.no_of_days > 1 ? 's' : ''}
+                                    </span>
+                                </div>
+
+                                <div className="pt-2 border-t mt-2 flex justify-between items-center text-sm">
+                                    <span className="text-gray-500">Authority Signature:</span>
+                                    <span className="text-gray-400 italic">—</span>
+                                </div>
+                            </div>
+                        ))}
                     </div>
                 </div>
             ))}

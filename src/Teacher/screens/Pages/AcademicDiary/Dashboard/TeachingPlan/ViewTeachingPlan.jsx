@@ -19,7 +19,7 @@ export default function ViewTeachingPlan() {
     setLoading(true);
     try {
       const response = await teachingPlanService.GetTeachingPlanById(id);
-      
+
       if (response) {
         // Map API response to component state using enriched_modules
         setPlanData({
@@ -28,23 +28,23 @@ export default function ViewTeachingPlan() {
           teacher: response.teacher ? `${response.teacher.firstname} ${response.teacher.lastname}` : '-',
           academicYear: response.academic_year?.name || '-',
           semester: response.semester?.name || '-',
-          batch: response.batch_name || '-',
+          batch: response.academic_year?.batch_name || '-',
           division: response.division?.division_name || response.division_name || '-',
           subject: response.subject?.name || '-',
-          
+
           // Basic Information
           department: response.department?.department_name || '-',
-          levelOfSubject: response.level_of_paper || '-',
-          
+          levelOfSubject: response.subject_level || '-',
+
           // Objectives
           selectedObjectives: response.objectives || [],
-          
+
           // Course Outcomes
           courseOutcomes: response.course_outcome?.map((desc, idx) => ({
             coNumber: `CO${idx + 1}`,
             coDescription: desc
           })) || [],
-          
+
           // Table rows - Use enriched_modules which has module_name and unit_name directly
           tableRows: response.enriched_modules?.map((mod, idx) => ({
             id: mod.teaching_module_id || idx,

@@ -32,7 +32,7 @@ const Contributions = () => {
   };
 
   return (
-    <div className="p-6 bg-gray-50 min-h-screen flex justify-center">
+    <div className=" bg-gray-50 min-h-screen flex justify-center">
       <div className="w-full max-w-6xl bg-white rounded-xl shadow-md p-6">
         {/* Header */}
         <div className="mb-8 text-center">

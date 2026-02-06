@@ -74,50 +74,22 @@ export default function TeachingPlanDashboard() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
 
-    // Filter State - Use IDs for API mapping
+    // Filter State - Using Names matching TabularView logic
     const [filters, setFilters] = useState({
-        programId: '',
-        academicYearId: '',
-        semesterId: '',
-        subjectId: '',
-        teacherId: '',
-        batchId: '',
+        program: '',
+        batch: '',
+        academicYear: '',
+        semester: '',
+        division: '',
+        paper: '',
     });
 
     // Filter visibility state
     const [filterOpen, setFilterOpen] = useState(false);
 
-    // Allocations for dynamic filters
-    const [allocations, setAllocations] = useState([]);
-    const [loadingAllocations, setLoadingAllocations] = useState(false);
-
     // Pagination
     const entriesPerPage = 10;
     const [currentPage, setCurrentPage] = useState(1);
-
-    // Load allocations to populate filters
-    const loadAllocations = async () => {
-        setLoadingAllocations(true);
-        try {
-            const userProfile = JSON.parse(localStorage.getItem("userProfile") || "{}");
-            const tid = userProfile.teacher_id;
-            if (tid) {
-                const response = await api.getTeacherAllocatedPrograms(tid);
-                if (response?.success) {
-                    const data = response.data;
-                    const allAllocations = [
-                        ...(data.class_teacher_allocation || []),
-                        ...(data.normal_allocation || [])
-                    ];
-                    setAllocations(allAllocations);
-                }
-            }
-        } catch (error) {
-            console.error("Error loading allocations:", error);
-        } finally {
-            setLoadingAllocations(false);
-        }
-    };
 
     // Load teaching plans based on current filters
     const loadAllTeachingPlans = async () => {
@@ -125,31 +97,28 @@ export default function TeachingPlanDashboard() {
         try {
             const userProfile = JSON.parse(localStorage.getItem("userProfile") || "{}");
             const collegeId = userProfile.college_id;
+            const teacher_id = userProfile.teacher_id;
 
             let response = [];
 
-            // If we have the 4 required parameters, use the filter API
-            if (filters.academicYearId && filters.semesterId && filters.subjectId && filters.teacherId) {
-                console.log("Fetching with filters:", filters);
-                response = await teachingPlanService.FilterTeachingPlans({
-                    academicYearId: filters.academicYearId,
-                    semesterId: filters.semesterId,
-                    subjectId: filters.subjectId,
-                    teacherId: filters.teacherId
-                });
-            } else if (collegeId) {
-                const teacher_id = userProfile.teacher_id;
+            if (collegeId && teacher_id) {
                 response = await teachingPlanService.GetTeachingPlanByTeacherId(teacher_id, collegeId);
             }
 
-
             const normalizedResponse = Array.isArray(response) ? response.map(item => ({
                 ...item,
-                id: item.id || item.teaching_plan_id || item._id // Handle potential ID field variations
+                id: item.id || item.teaching_plan_id || item._id, // Handle potential ID field variations
+                // Normalize fields for filtering
+                program_name: item.academic_year?.program_name,
+                batch_name: item.academic_year?.batch_name,
+                academic_year_name: item.academic_year?.name,
+                semester_name: item.semester?.name,
+                division_name: item.division?.division_name || item.division_name,
+                paper_name: item.subject?.name
             })) : [];
 
             setAllTeachingPlans(normalizedResponse);
-            setTeachingPlans(normalizedResponse);
+            setTeachingPlans(normalizedResponse); // Initial set, will be filtered by useMemo
             setError(null);
         } catch (err) {
             console.error('Error loading teaching plans:', err);
@@ -161,34 +130,77 @@ export default function TeachingPlanDashboard() {
 
     // Initial load
     useEffect(() => {
-        loadAllocations();
         loadAllTeachingPlans();
     }, []);
-
-
-    useEffect(() => {
-        if (filters.academicYearId && filters.semesterId && filters.subjectId && filters.teacherId) {
-            loadAllTeachingPlans();
-        }
-    }, [filters.academicYearId, filters.semesterId, filters.subjectId, filters.teacherId]);
 
     // Clear all filters
     const clearFilters = () => {
         setFilters({
-            programId: '',
-            academicYearId: '',
-            semesterId: '',
-            subjectId: '',
-            teacherId: '',
-            batchId: '',
+            program: '',
+            batch: '',
+            academicYear: '',
+            semester: '',
+            division: '',
+            paper: '',
         });
-        loadAllTeachingPlans();
     };
+
+    // Derived Data for Filters (Unique Options from currently loaded data)
+    // We compute options based on ALL data, but potentially dependent on other selected filters
+    const filterOptions = useMemo(() => {
+        const data = allTeachingPlans; // Use all data to generate options, or use filtered data to cascade? 
+        // Typically cascade: Filter A selected -> Filter B shows only options available within A.
+
+        let filteredForOptions = data;
+
+        // Helper to get unique values
+        const getUnique = (key) => [...new Set(filteredForOptions.map(item => item[key]).filter(Boolean))];
+
+        // This is a simplified cascade where we filter options based on what's currently valid
+        // But for the dropdown contents themselves, we might want to respect the hierarchy:
+        // Program -> Batch -> Year -> Semester -> Division -> Paper
+
+        const programOptions = [...new Set(data.map(item => item.program_name).filter(Boolean))];
+
+        const batchData = filters.program ? data.filter(i => i.program_name === filters.program) : data;
+        const batchOptions = [...new Set(batchData.map(item => item.batch_name).filter(Boolean))];
+
+        const yearData = filters.batch ? batchData.filter(i => i.batch_name === filters.batch) : batchData;
+        const yearOptions = [...new Set(yearData.map(item => item.academic_year_name).filter(Boolean))];
+
+        const semesterData = filters.academicYear ? yearData.filter(i => i.academic_year_name === filters.academicYear) : yearData;
+        const semesterOptions = [...new Set(semesterData.map(item => item.semester_name).filter(Boolean))];
+
+        const divisionData = filters.semester ? semesterData.filter(i => i.semester_name === filters.semester) : semesterData;
+        const divisionOptions = [...new Set(divisionData.map(item => item.division_name).filter(Boolean))];
+
+        const paperData = filters.division ? divisionData.filter(i => i.division_name === filters.division) : divisionData;
+        const paperOptions = [...new Set(paperData.map(item => item.paper_name).filter(Boolean))];
+
+
+        return {
+            program: programOptions,
+            batch: batchOptions,
+            academicYear: yearOptions,
+            semester: semesterOptions,
+            division: divisionOptions,
+            paper: paperOptions
+        };
+    }, [allTeachingPlans, filters]);
 
 
     const paginatedData = useMemo(() => {
-        let list = teachingPlans;
+        let list = allTeachingPlans;
 
+        // Apply Filters
+        if (filters.program) list = list.filter(item => item.program_name === filters.program);
+        if (filters.batch) list = list.filter(item => item.batch_name === filters.batch);
+        if (filters.academicYear) list = list.filter(item => item.academic_year_name === filters.academicYear);
+        if (filters.semester) list = list.filter(item => item.semester_name === filters.semester);
+        if (filters.division) list = list.filter(item => item.division_name === filters.division);
+        if (filters.paper) list = list.filter(item => item.paper_name === filters.paper);
+
+        // Apply Search
         if (searchTerm) {
             const q = searchTerm.toLowerCase();
             list = list.filter(item => {
@@ -214,7 +226,7 @@ export default function TeachingPlanDashboard() {
         const currentEntries = list.slice(start, end);
 
         return { currentEntries, totalEntries, totalPages, start, end };
-    }, [teachingPlans, searchTerm, currentPage]);
+    }, [allTeachingPlans, searchTerm, currentPage, filters]);
 
     const { currentEntries, totalEntries, totalPages } = paginatedData;
 
@@ -225,7 +237,7 @@ export default function TeachingPlanDashboard() {
 
     // Delete functionality
     const handleDeleteConfirm = (id) => {
-        const plan = teachingPlans.find(p => p.id === id);
+        const plan = allTeachingPlans.find(p => p.id === id);
         setAlert(
             <SweetAlert
                 warning
@@ -247,7 +259,6 @@ export default function TeachingPlanDashboard() {
         try {
             await teachingPlanService.DeleteTeachingPlan(planId);
             setAllTeachingPlans(prev => prev.filter(p => p.id !== planId));
-            setTeachingPlans(prev => prev.filter(p => p.id !== planId));
             setAlert(
                 <SweetAlert
                     success
@@ -304,7 +315,7 @@ export default function TeachingPlanDashboard() {
         );
     }
 
-    const hasActiveFilters = filters.programId || filters.teacherId || filters.batchId || filters.semesterId || filters.academicYearId || filters.subjectId;
+    const hasActiveFilters = Object.values(filters).some(Boolean);
 
     return (
         <div className="p-0 md:p-0">
@@ -332,100 +343,52 @@ export default function TeachingPlanDashboard() {
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
                         <CustomSelect
                             label="Program"
-                            value={allocations.find(a => a.program_id === filters.programId)?.program_name || ''}
-                            onChange={(e) => {
-                                const alloc = allocations.find(a => a.program_name === e.target.value);
-                                setFilters(prev => ({ ...prev, programId: alloc?.program_id || '', batchId: '', academicYearId: '', semesterId: '', subjectId: '' }));
-                            }}
-                            options={[...new Set(allocations.map(a => a.program_name))]}
+                            value={filters.program}
+                            onChange={(e) => setFilters(prev => ({ ...prev, program: e.target.value, batch: '', academicYear: '', semester: '', division: '', paper: '' }))}
+                            options={filterOptions.program}
                             placeholder="All Programs"
                         />
                         <CustomSelect
                             label="Batch"
-                            value={allocations.find(a => a.batch_id === filters.batchId)?.batch_name || ''}
-                            onChange={(e) => {
-                                const alloc = allocations.find(a => a.batch_name === e.target.value && a.program_id === filters.programId);
-                                setFilters(prev => ({ ...prev, batchId: alloc?.batch_id || '', academicYearId: '', semesterId: '', subjectId: '' }));
-                            }}
-                            options={[...new Set(allocations.filter(a => !filters.programId || a.program_id === filters.programId).map(a => a.batch_name))]}
+                            value={filters.batch}
+                            onChange={(e) => setFilters(prev => ({ ...prev, batch: e.target.value, academicYear: '', semester: '', division: '', paper: '' }))}
+                            options={filterOptions.batch}
                             placeholder="All Batches"
-                            disabled={!filters.programId}
+                            disabled={!filters.program}
                         />
                         <CustomSelect
                             label="Academic Year"
-                            value={allocations.find(a => a.academic_year_id === filters.academicYearId)?.academic_year_name || ''}
-                            onChange={(e) => {
-                                const alloc = allocations.find(a => a.academic_year_name === e.target.value && a.batch_id === filters.batchId);
-                                setFilters(prev => ({ ...prev, academicYearId: alloc?.academic_year_id || '', semesterId: '', subjectId: '' }));
-                            }}
-                            options={[...new Set(allocations.filter(a => !filters.batchId || a.batch_id === filters.batchId).map(a => a.academic_year_name))]}
+                            value={filters.academicYear}
+                            onChange={(e) => setFilters(prev => ({ ...prev, academicYear: e.target.value, semester: '', division: '', paper: '' }))}
+                            options={filterOptions.academicYear}
                             placeholder="All Years"
-                            disabled={!filters.batchId}
+                            disabled={!filters.batch}
                         />
                         <CustomSelect
                             label="Semester"
-                            value={allocations.find(a => a.semester_id === filters.semesterId)?.semester_name || ''}
-                            onChange={(e) => {
-                                const alloc = allocations.find(a => a.semester_name === e.target.value && a.academic_year_id === filters.academicYearId);
-                                setFilters(prev => ({ ...prev, semesterId: alloc?.semester_id || '', subjectId: '' }));
-                            }}
-                            options={[...new Set(allocations.filter(a => !filters.academicYearId || a.academic_year_id === filters.academicYearId).map(a => a.semester_name))]}
+                            value={filters.semester}
+                            onChange={(e) => setFilters(prev => ({ ...prev, semester: e.target.value, division: '', paper: '' }))}
+                            options={filterOptions.semester}
                             placeholder="All Semesters"
-                            disabled={!filters.academicYearId}
+                            disabled={!filters.academicYear}
                         />
                         <CustomSelect
-                            label="Subject"
-                            value={allocations.find(a => a.subject_id === filters.subjectId)?.subject_name || ''}
-                            onChange={(e) => {
-                                const alloc = allocations.find(a => a.subject_name === e.target.value && a.semester_id === filters.semesterId);
-                                setFilters(prev => ({ ...prev, subjectId: alloc?.subject_id || '' }));
-                            }}
-                            options={[...new Set(allocations.filter(a => !filters.semesterId || a.semester_id === filters.semesterId).map(a => a.subject_name))]}
-                            placeholder="All Subjects"
-                            disabled={!filters.semesterId}
+                            label="Division"
+                            value={filters.division}
+                            onChange={(e) => setFilters(prev => ({ ...prev, division: e.target.value, paper: '' }))}
+                            options={filterOptions.division}
+                            placeholder="All Divisions"
+                            disabled={!filters.semester}
                         />
                         <CustomSelect
-                            label="Teacher"
-                            value={filters.teacherId ? "Current Teacher" : ""}
-                            onChange={(e) => {
-                                const userProfile = JSON.parse(localStorage.getItem("userProfile") || "{}");
-                                setFilters(prev => ({ ...prev, teacherId: userProfile.teacher_id }));
-                            }}
-                            options={["Current Teacher"]}
-                            placeholder="Select Teacher"
+                            label="Paper"
+                            value={filters.paper}
+                            onChange={(e) => setFilters(prev => ({ ...prev, paper: e.target.value }))}
+                            options={filterOptions.paper}
+                            placeholder="All Papers"
+                        // disabled={!filters.division}
                         />
                     </div>
-
-                    {/* Active Filters Display */}
-                    {(filters.programId || filters.batchId || filters.academicYearId || filters.semesterId || filters.subjectId) && (
-                        <div className="mt-4 flex flex-wrap gap-2">
-                            <span className="text-sm text-gray-600 font-medium">Active Filters:</span>
-                            {filters.programId && (
-                                <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm font-medium flex items-center gap-1">
-                                    Program: {allocations.find(a => a.program_id === filters.programId)?.program_name}
-                                    <button onClick={() => setFilters(prev => ({ ...prev, programId: '', batchId: '', academicYearId: '', semesterId: '', subjectId: '' }))} className="hover:bg-blue-200 rounded-full p-0.5">
-                                        <X className="w-3 h-3" />
-                                    </button>
-                                </span>
-                            )}
-                            {filters.academicYearId && (
-                                <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm font-medium flex items-center gap-1">
-                                    Year: {allocations.find(a => a.academic_year_id === filters.academicYearId)?.academic_year_name}
-                                    <button onClick={() => setFilters(prev => ({ ...prev, academicYearId: '', semesterId: '', subjectId: '' }))} className="hover:bg-green-200 rounded-full p-0.5">
-                                        <X className="w-3 h-3" />
-                                    </button>
-                                </span>
-                            )}
-                            {filters.subjectId && (
-                                <span className="px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-sm font-medium flex items-center gap-1">
-                                    Subject: {allocations.find(a => a.subject_id === filters.subjectId)?.subject_name}
-                                    <button onClick={() => setFilters(prev => ({ ...prev, subjectId: '' }))} className="hover:bg-purple-200 rounded-full p-0.5">
-                                        <X className="w-3 h-3" />
-                                    </button>
-                                </span>
-                            )}
-                        </div>
-                    )}
                 </div>
             )}
 
@@ -477,31 +440,39 @@ export default function TeachingPlanDashboard() {
             <div className="hidden lg:block bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
                 <div className="overflow-x-auto">
                     <div className="h-[500px] overflow-y-auto blue-scrollbar">
-                        <table className="w-full border-collapse min-w-[600px]">
+                        <table className="w-full border-collapse min-w-[1200px]">
                             <thead className="bg-primary-600">
                                 <tr>
-                                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-50  tracking-wider whitespace-nowrap" style={{ minWidth: '180px' }}>Paper</th>
-                                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-50  tracking-wider whitespace-nowrap" style={{ minWidth: '120px' }}>Academic Year</th>
-                                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-50  tracking-wider whitespace-nowrap" style={{ minWidth: '100px' }}>Semester</th>
-                                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-50  tracking-wider whitespace-nowrap" style={{ minWidth: '100px' }}>Division</th>
-                                    <th className="px-4 py-3 text-center text-xs font-medium text-gray-50  tracking-wider whitespace-nowrap" style={{ minWidth: '120px' }}>Actions</th>
+                                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-50 tracking-wider whitespace-nowrap" style={{ minWidth: '200px' }}>Program</th>
+                                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-50 tracking-wider whitespace-nowrap" style={{ minWidth: '150px' }}>Batch</th>
+                                    <th className="px-4 py-3 text-center text-xs font-medium text-gray-50 tracking-wider whitespace-nowrap" style={{ minWidth: '120px' }}>Academic Year</th>
+                                    <th className="px-4 py-3 text-center text-xs font-medium text-gray-50 tracking-wider whitespace-nowrap" style={{ minWidth: '100px' }}>Semester</th>
+                                    <th className="px-4 py-3 text-center text-xs font-medium text-gray-50 tracking-wider whitespace-nowrap" style={{ minWidth: '100px' }}>Division</th>
+                                    <th className="px-4 py-3 text-center text-xs font-medium text-gray-50 tracking-wider whitespace-nowrap" style={{ minWidth: '180px' }}>Paper</th>
+                                    <th className="px-4 py-3 text-center text-xs font-medium text-gray-50 tracking-wider whitespace-nowrap" style={{ minWidth: '120px' }}>Actions</th>
                                 </tr>
                             </thead>
                             <tbody className="bg-white">
                                 {currentEntries.length > 0 ? (
                                     currentEntries.map((item) => (
                                         <tr key={item.id} className="hover:bg-gray-50 border-b border-gray-100">
-                                            <td className="px-4 py-4 text-sm font-medium text-gray-900 whitespace-nowrap">
-                                                {item.subject?.name || 'N/A'}
+                                            <td className="px-4 py-4 text-sm text-gray-700 whitespace-nowrap">
+                                                {item.academic_year?.program_name || 'N/A'}
                                             </td>
                                             <td className="px-4 py-4 text-sm text-gray-700 whitespace-nowrap">
+                                                {item.academic_year?.batch_name || 'N/A'}
+                                            </td>
+                                            <td className="px-4 py-4 text-sm text-gray-700 whitespace-nowrap text-center">
                                                 {item.academic_year?.name || 'N/A'}
                                             </td>
-                                            <td className="px-4 py-4 text-sm text-gray-600 whitespace-nowrap">
+                                            <td className="px-4 py-4 text-sm text-gray-600 whitespace-nowrap text-center">
                                                 {item.semester?.name || 'N/A'}
                                             </td>
-                                            <td className="px-4 py-4 text-sm text-gray-600 whitespace-nowrap">
-                                                {item.division_name || 'N/A'}
+                                            <td className="px-4 py-4 text-sm text-gray-600 whitespace-nowrap text-center">
+                                                {item.division?.division_name || item.division_name || 'N/A'}
+                                            </td>
+                                            <td className="px-4 py-4 text-sm font-medium text-gray-900 whitespace-nowrap text-center">
+                                                {item.subject?.name || 'N/A'}
                                             </td>
                                             <td className="px-4 py-4 text-center">
                                                 <div className="flex justify-center space-x-2">
@@ -532,7 +503,7 @@ export default function TeachingPlanDashboard() {
                                     ))
                                 ) : (
                                     <tr>
-                                        <td colSpan="5" className="px-6 py-8 text-center text-gray-500">
+                                        <td colSpan="7" className="px-6 py-8 text-center text-gray-500">
                                             No teaching plans found
                                         </td>
                                     </tr>
@@ -659,4 +630,4 @@ export default function TeachingPlanDashboard() {
             )}
         </div>
     );
-} 
+}

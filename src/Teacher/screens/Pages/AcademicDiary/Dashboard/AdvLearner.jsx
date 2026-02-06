@@ -588,8 +588,8 @@ export default function AdvLearner() {
           onClick={handlePrevPage}
           disabled={currentPage === 0}
           className={`p-1 md:p-2 rounded ${currentPage === 0
-              ? 'text-gray-400 cursor-not-allowed'
-              : 'text-gray-700 hover:bg-gray-100'
+            ? 'text-gray-400 cursor-not-allowed'
+            : 'text-gray-700 hover:bg-gray-100'
             }`}
         >
           <ChevronLeft className="w-4 h-4 md:w-5 md:h-5" />
@@ -603,8 +603,8 @@ export default function AdvLearner() {
           onClick={handleNextPage}
           disabled={currentPage >= totalPages - 1}
           className={`p-1 md:p-2 rounded ${currentPage >= totalPages - 1
-              ? 'text-gray-400 cursor-not-allowed'
-              : 'text-gray-700 hover:bg-gray-100'
+            ? 'text-gray-400 cursor-not-allowed'
+            : 'text-gray-700 hover:bg-gray-100'
             }`}
         >
           <ChevronRight className="w-4 h-4 md:w-5 md:h-5" />
@@ -698,7 +698,7 @@ export default function AdvLearner() {
                         }`}
                     >
                       <Edit className="w-4 h-4" />
-                      {existingData ? 'Edit Record' : 'Create Record'}
+                      'Add/Edit table'
                     </button>
                   )}
 
@@ -774,7 +774,7 @@ export default function AdvLearner() {
                   >
                     <Edit className="w-4 h-4" />
                     <span className="hidden sm:inline">
-                      {existingData ? 'Edit Record' : 'Create Record'}
+                      'Add/Edit table'
                     </span>
                   </button>
 
@@ -991,8 +991,8 @@ export default function AdvLearner() {
                 onClick={handleSaveData}
                 disabled={isSaving || rows.length === 0}
                 className={`px-6 py-2 rounded-lg flex items-center justify-center gap-2 text-sm ${isSaving || rows.length === 0
-                    ? 'bg-gray-400 cursor-not-allowed'
-                    : 'bg-green-600 hover:bg-green-700 text-white'
+                  ? 'bg-gray-400 cursor-not-allowed'
+                  : 'bg-green-600 hover:bg-green-700 text-white'
                   }`}
               >
                 {isSaving ? (
