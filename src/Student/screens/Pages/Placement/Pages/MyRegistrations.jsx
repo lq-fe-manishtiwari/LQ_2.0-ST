@@ -180,34 +180,43 @@ export default function MyRegistrations() {
       </div>
 
       {/* Search + Filter */}
-      <div className="flex gap-4 mb-6">
-        <input
-          type="search"
-          placeholder="Search applications"
-          value={searchTerm}
-          onChange={e => {
-            setSearchTerm(e.target.value);
-            setCurrentPage(1);
-          }}
-          className="border px-4 py-2 rounded w-full"
-        />
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
+        <div className="relative w-full sm:w-80">
+          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+            <Search className="w-5 h-5 text-gray-400" />
+          </div>
+          <input
+            type="search"
+            placeholder="Search applications..."
+            value={searchTerm}
+            onChange={e => {
+              setSearchTerm(e.target.value);
+              setCurrentPage(1);
+            }}
+            className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 placeholder-gray-400 text-gray-900 bg-white shadow-sm"
+          />
+        </div>
 
         <button
           onClick={() => setFilters(f => ({ ...f, filterOpen: !f.filterOpen }))}
-          className="border px-4 py-2 rounded"
+          className="flex items-center justify-center gap-2 bg-white border border-gray-300 hover:bg-gray-50 px-4 py-3 rounded-xl shadow-sm transition-all"
         >
-          Filter
+          <Filter className="w-4 h-4 text-blue-600" />
+          <span className="text-blue-600 font-medium">Filter</span>
+          <ChevronDown className={`w-4 h-4 text-blue-600 transition-transform ${filters.filterOpen ? 'rotate-180' : 'rotate-0'}`} />
         </button>
       </div>
 
       {filters.filterOpen && (
-        <CustomSelect
-          label="Status"
-          value={filters.status}
-          onChange={e => handleStatusChange(e.target.value)}
-          options={['pending', 'approved', 'rejected']}
-          placeholder="Select Status"
-        />
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-5 mb-6">
+          <CustomSelect
+            label="Status"
+            value={filters.status}
+            onChange={e => handleStatusChange(e.target.value)}
+            options={['pending', 'approved', 'rejected']}
+            placeholder="Select Status"
+          />
+        </div>
       )}
 
       {/* Table */}
@@ -216,27 +225,23 @@ export default function MyRegistrations() {
           <table className="w-full">
           <thead className="bg-primary-600">
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-50   tracking-wider">Application ID</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-50   tracking-wider">Placement ID</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-50   tracking-wider">Drive ID</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-50   tracking-wider">Job Role IDs</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-50   tracking-wider">Email</th>
-              <th className="px-6 py-3 text-center text-xs font-medium text-gray-50   tracking-wider">Status</th>
+              <th className="px-6 py-3 text-center text-xs font-medium text-gray-50 tracking-wider">Placement ID</th>
+              <th className="px-6 py-3 text-center text-xs font-medium text-gray-50 tracking-wider">Job Role</th>
+              <th className="px-6 py-3 text-center text-xs font-medium text-gray-50 tracking-wider">Email</th>
+              <th className="px-6 py-3 text-center text-xs font-medium text-gray-50 tracking-wider">Status</th>
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
             {currentEntries.length ? currentEntries.map(item => (
               <tr key={item.application_id} className="hover:bg-gray-50">
-                <td className="px-6 py-4 text-sm text-gray-900">{item.application_id}</td>
-                <td className="px-6 py-4 text-sm text-gray-500">{item.placement_id || 'N/A'}</td>
-                <td className="px-6 py-4 text-sm text-gray-500">{item.drive_id}</td>
-                <td className="px-6 py-4 text-sm text-gray-500">{item.job_role_ids?.join(', ') || 'N/A'}</td>
-                <td className="px-6 py-4 text-sm text-gray-500">{item.application_data?.email || 'N/A'}</td>
+                <td className="px-6 py-4 text-sm text-center text-gray-900">{item.placement_id || 'N/A'}</td>
+                <td className="px-6 py-4 text-sm text-center text-gray-500">{item.job_role_ids?.join(', ') || 'N/A'}</td>
+                <td className="px-6 py-4 text-sm text-center text-gray-500">{item.application_data?.email || 'N/A'}</td>
                 <td className="px-6 py-4 text-center">{getStatusBadge(item.application_status)}</td>
               </tr>
             )) : (
               <tr>
-                <td colSpan="6" className="px-6 py-8 text-center text-gray-500">
+                <td colSpan="4" className="px-6 py-8 text-center text-gray-500">
                   No applications found
                 </td>
               </tr>

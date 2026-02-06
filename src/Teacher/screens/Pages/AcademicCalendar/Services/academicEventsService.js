@@ -20,17 +20,22 @@ function createEvent(eventData, collegeId) {
       academic_year_id: 1
     })
   };
-  return fetch(`${AcademicAPI}/admin/academic/academic-events/college/${collegeId}`, requestOptions)
+  return fetch(`${AcademicAPI}/academic-events/college/${collegeId}`, requestOptions)
     .then(handleResponse);
 }
 
 function getEventsByCollegeAndMonth(collegeId, year, month) {
+  console.log('Fetching events for college:', collegeId, 'year:', year, 'month:', month);
   const requestOptions = {
     method: 'GET',
     headers: authHeader()
   };
-  return fetch(`${AcademicAPI}/admin/academic/academic-events/college/${collegeId}/month?year=${year}&month=${month}`, requestOptions)
-    .then(handleResponse);
+  return fetch(`${AcademicAPI}/academic-events/college/${collegeId}/month?year=${year}&month=${month}`, requestOptions)
+    .then(handleResponse)
+    .catch(error => {
+      console.error('API Error:', error);
+      throw error;
+    });
 }
 
 function getEventsByDay(year, month, day) {
@@ -38,7 +43,7 @@ function getEventsByDay(year, month, day) {
     method: 'GET',
     headers: authHeader()
   };
-  return fetch(`${AcademicAPI}/admin/academic/academic-events/day?year=${year}&month=${month}&day=${day}`, requestOptions)
+  return fetch(`${AcademicAPI}/academic-events/day?year=${year}&month=${month}&day=${day}`, requestOptions)
     .then(handleResponse);
 }
 
@@ -52,7 +57,7 @@ function updateEvent(id, eventData) {
       event_date: eventData.event_date
     })
   };
-  return fetch(`${AcademicAPI}/admin/academic/academic-events/${id}`, requestOptions)
+  return fetch(`${AcademicAPI}/academic-events/${id}`, requestOptions)
     .then(handleResponse);
 }
 
@@ -61,6 +66,6 @@ function deleteEvent(id) {
     method: 'DELETE',
     headers: authHeader()
   };
-  return fetch(`${AcademicAPI}/admin/academic/academic-events/${id}`, requestOptions)
+  return fetch(`${AcademicAPI}/academic-events/${id}`, requestOptions)
     .then(handleResponse);
 }

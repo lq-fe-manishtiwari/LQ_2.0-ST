@@ -13,7 +13,7 @@ import EligibilityChecker from "../Pages/EligibilityChecker";
 const StudentPlacementRoutes = () => (
   <Routes>
     <Route element={<StudentPlacementLayout />}>
-      <Route index element={<StudentPlacementDashboard />} />
+      <Route index element={<JobOpeningsList/>} />
       <Route path="job-openings" element={<JobOpeningsList />} />
       <Route path="my-registrations" element={<MyRegistrations />} />
       <Route path="my-interviews" element={<MyInterviews />} />
