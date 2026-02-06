@@ -5,7 +5,7 @@ import { Plus, Search, CheckCircle, XCircle, AlertCircle,Trash2,Edit } from 'luc
 import { Formik, Field, Form } from 'formik';
 import * as Yup from 'yup';
 import SweetAlert from 'react-bootstrap-sweetalert';
-// import { QuestionsService } from '../Services/questions.service';
+import { QuestionsService } from '../Services/questions.service';
 
 // Dummy initial data
 
