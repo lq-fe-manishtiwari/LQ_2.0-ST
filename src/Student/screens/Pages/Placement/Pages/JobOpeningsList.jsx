@@ -53,6 +53,7 @@ export default function JobList() {
 
           application_deadline: job.application_deadline,
           venue: job.venue,
+
           status:
             sourceType === 'CAMPUS' && job.status === 'SCHEDULED'
               ? 'OPEN'
@@ -60,7 +61,6 @@ export default function JobList() {
 
           college_id: job.college_id,
 
-          // 🔑 keep full object for registration form
           originalJobData: {
             ...job,
             vacancy_details: [vacancy]
@@ -99,9 +99,7 @@ export default function JobList() {
       }
 
       if (results[1].status === 'fulfilled') {
-        const campusDrives =
-          results[1].value?.campusDrives || [];
-
+        const campusDrives = results[1].value?.campusDrives || [];
         combined = combined.concat(
           flattenVacancies(campusDrives, 'CAMPUS')
         );
@@ -138,13 +136,17 @@ export default function JobList() {
     return {
       currentEntries: list.slice(start, end),
       totalEntries,
-      totalPages,
-      start,
-      end
+      totalPages
     };
   }, [rows, searchTerm, currentPage]);
 
   const { currentEntries, totalEntries, totalPages } = paginatedData;
+
+  const handlePageChange = page => {
+    if (page >= 1 && page <= totalPages) {
+      setCurrentPage(page);
+    }
+  };
 
   const handleApply = row => {
     setSelectedJob({
@@ -233,6 +235,51 @@ export default function JobList() {
           </tbody>
         </table>
       </div>
+
+      {/* PAGINATION */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between mt-6">
+          <p className="text-sm text-gray-600">
+            Showing {(currentPage - 1) * entriesPerPage + 1}–
+            {Math.min(currentPage * entriesPerPage, totalEntries)} of {totalEntries}
+          </p>
+
+          <div className="flex gap-2">
+            <button
+              onClick={() => handlePageChange(currentPage - 1)}
+              disabled={currentPage === 1}
+              className="px-3 py-1 border rounded-lg disabled:opacity-50"
+            >
+              Prev
+            </button>
+
+            {[...Array(totalPages)].map((_, i) => {
+              const page = i + 1;
+              return (
+                <button
+                  key={page}
+                  onClick={() => handlePageChange(page)}
+                  className={`px-3 py-1 border rounded-lg ${
+                    currentPage === page
+                      ? 'bg-blue-600 text-white'
+                      : 'hover:bg-gray-100'
+                  }`}
+                >
+                  {page}
+                </button>
+              );
+            })}
+
+            <button
+              onClick={() => handlePageChange(currentPage + 1)}
+              disabled={currentPage === totalPages}
+              className="px-3 py-1 border rounded-lg disabled:opacity-50"
+            >
+              Next
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* REGISTRATION FORM */}
       {showRegistration && selectedJob && (
