@@ -1,38 +1,86 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { Clock, FileText, AlertCircle, Play, BookOpen, Target, Timer, CheckCircle2, ArrowLeft } from 'lucide-react';
+import { assessmentService } from '../Services/assessment.service';
 
 const StartAssessment = () => {
   const navigate = useNavigate();
   const { id } = useParams();
+  const location = useLocation();
+  const assessmentFromNav = location.state || {};
+
   const [assessment, setAssessment] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Mock assessment data - replace with API call
-    const mockAssessment = {
-      id: id,
-      title: 'Unit Test 1 - Algebra & Geometry',
-      subject: 'Mathematics',
-      duration: 90,
-      totalQuestions: 25,
-      instructions: [
-        'Read all questions carefully before answering',
-        'Each question carries equal marks',
-        'There is no negative marking',
-        'You can navigate between questions using Next/Previous buttons',
-        'Submit the assessment before time expires'
-      ],
-      timeLimit: '90 minutes',
-      totalMarks: 100
+    const fetchAssessmentData = async () => {
+      try {
+        setLoading(true);
+
+        // Fetch assessment questions to get metadata
+        const response = await assessmentService.getAssessmentQuestions(id);
+
+        if (response) {
+          // Calculate total marks from questions
+          const totalMarks = response.questions?.reduce((sum, q) => sum + (q.default_marks || 0), 0) || 0;
+
+          const assessmentData = {
+            id: id,
+            title: assessmentFromNav.title || response.assessment_title || 'Assessment',
+            subject: assessmentFromNav.subject || response.subject_name || 'General',
+            duration: response.time_limit_minutes || assessmentFromNav.duration || 90,
+            totalQuestions: response.questions?.length || 0,
+            totalMarks: totalMarks,
+            mode: response.mode,
+            category: response.category,
+            type: response.type,
+            instructions: [
+              'Read all questions carefully before answering',
+              response.category === 'SUBJECTIVE' ? 'Write detailed answers for subjective questions' : 'Each question carries equal marks',
+              'There is no negative marking',
+              'You can navigate between questions using Next/Previous buttons',
+              'Submit the assessment before time expires'
+            ]
+          };
+
+          setAssessment(assessmentData);
+        }
+      } catch (error) {
+        console.error('Error fetching assessment:', error);
+        // Fallback to navigation state if API fails
+        setAssessment({
+          id: id,
+          title: assessmentFromNav.title || 'Assessment',
+          subject: assessmentFromNav.subject || 'General',
+          duration: assessmentFromNav.duration || 90,
+          totalQuestions: 0,
+          totalMarks: 0,
+          instructions: [
+            'Read all questions carefully before answering',
+            'Each question carries equal marks',
+            'There is no negative marking',
+            'You can navigate between questions using Next/Previous buttons',
+            'Submit the assessment before time expires'
+          ]
+        });
+      } finally {
+        setLoading(false);
+      }
     };
-    
-    setAssessment(mockAssessment);
-    setLoading(false);
+
+    fetchAssessmentData();
   }, [id]);
 
   const handleStartAssessment = () => {
-    navigate(`/my-assessment/assessment/take/${id}`);
+    // Pass assessment data to TakeAssessment page
+    navigate(`/my-assessment/assessment/take/${id}`, {
+      state: {
+        title: assessment.title,
+        subject: assessment.subject,
+        duration: assessment.duration,
+        category: assessment.category
+      }
+    });
   };
 
   if (loading) {
@@ -59,7 +107,7 @@ const StartAssessment = () => {
               <ArrowLeft className="w-4 h-4" />
               Back to Assessments
             </button>
-            
+
             <div className="text-center">
               <div className="w-16 h-16 sm:w-20 sm:h-20 bg-blue-100 rounded-xl sm:rounded-2xl flex items-center justify-center mx-auto mb-4 sm:mb-6 shadow-lg">
                 <BookOpen className="w-8 h-8 sm:w-10 sm:h-10 text-blue-600" />
@@ -121,7 +169,7 @@ const StartAssessment = () => {
             <div className="bg-slate-50 rounded-xl sm:rounded-2xl p-6 sm:p-8 text-center">
               <h3 className="text-lg sm:text-xl font-bold text-slate-900 mb-2 sm:mb-3">Ready to Begin?</h3>
               <p className="text-slate-600 mb-6 text-sm sm:text-base">Once you start, the timer will begin and you cannot pause the assessment.</p>
-              
+
               <div className="flex flex-col sm:flex-row justify-center gap-3 sm:gap-4">
                 <button
                   onClick={() => navigate(-1)}

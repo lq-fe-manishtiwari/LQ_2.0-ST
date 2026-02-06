@@ -71,6 +71,38 @@ const Assessment = () => {
     }, [profile]);
 
 
+    // Helper function to determine assessment status based on time
+    const getAssessmentStatus = (item) => {
+        // If there's a submission status, use it
+        if (item.submission_status) {
+            return item.submission_status;
+        }
+
+        // If offline mode, return "Not Attempted" for DRAFT
+        if (item.mode === 'OFFLINE') {
+            return item.status === 'DRAFT' ? 'Not Attempted' : item.status;
+        }
+
+        // For online assessments, check time windows
+        if (item.test_start_datetime && item.test_end_datetime) {
+            const now = new Date();
+            const startTime = new Date(item.test_start_datetime);
+            const endTime = new Date(item.test_end_datetime);
+
+            if (now < startTime) {
+                return 'Upcoming';
+            } else if (now > endTime) {
+                return 'Expired';
+            } else {
+                // Current time is between start and end
+                return 'Not Attempted';
+            }
+        }
+
+        // Fallback to original logic
+        return item.status === 'DRAFT' ? 'Not Attempted' : item.status;
+    };
+
     const loadAssessments = async () => {
         setLoading(true);
         try {
@@ -99,7 +131,7 @@ const Assessment = () => {
                         endDate: item.test_end_datetime ? new Date(item.test_end_datetime).toLocaleString() : "N/A",
                         attempted: 0,
                         total: 0,
-                        status: item.submission_status || (item.status === 'DRAFT' ? 'Not Attempted' : item.status),
+                        status: getAssessmentStatus(item),
                         proctoring: false,
                         offline: item.mode === 'OFFLINE',
                         type: item.mode || 'Online',
@@ -404,7 +436,10 @@ const Assessment = () => {
                                             <td className="px-6 py-4 text-sm text-gray-500">{a.endDate}</td>
                                             <td className="px-6 py-4">
                                                 <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${a.status === 'Attempted' || a.status === 'Completed' ? 'bg-green-100 text-green-700' :
-                                                    a.status === 'In Progress' ? 'bg-blue-100 text-blue-700' : 'bg-yellow-100 text-yellow-700'
+                                                    a.status === 'In Progress' ? 'bg-blue-100 text-blue-700' :
+                                                        a.status === 'Upcoming' ? 'bg-purple-100 text-purple-700' :
+                                                            a.status === 'Expired' ? 'bg-red-100 text-red-700' :
+                                                                'bg-yellow-100 text-yellow-700'
                                                     }`}>
                                                     {a.status}
                                                 </span>
@@ -413,7 +448,14 @@ const Assessment = () => {
                                                 <div className="flex justify-center gap-2">
                                                     {a.status === 'Not Attempted' ? (
                                                         <button
-                                                            onClick={() => navigate(`/my-assessment/assessment/start/${a.id}`)}
+                                                            onClick={() => navigate(`/my-assessment/assessment/start/${a.id}`, {
+                                                                state: {
+                                                                    title: a.title,
+                                                                    subject: a.subject.name,
+                                                                    duration: a.duration,
+                                                                    category: a.category
+                                                                }
+                                                            })}
                                                             className="p-2 bg-blue-100 text-blue-600 rounded-lg hover:bg-blue-200 transition-all duration-200 shadow-sm hover:shadow-md group relative"
                                                             title="Start Assessment"
                                                         >
@@ -426,6 +468,22 @@ const Assessment = () => {
                                                             title="Continue Assessment"
                                                         >
                                                             <Edit className="w-5 h-5" />
+                                                        </button>
+                                                    ) : a.status === 'Upcoming' ? (
+                                                        <button
+                                                            disabled
+                                                            className="p-2 bg-gray-100 text-gray-400 rounded-lg cursor-not-allowed transition-all duration-200 shadow-sm"
+                                                            title="Assessment not yet started"
+                                                        >
+                                                            <Clipboard className="w-5 h-5" />
+                                                        </button>
+                                                    ) : a.status === 'Expired' ? (
+                                                        <button
+                                                            disabled
+                                                            className="p-2 bg-gray-100 text-gray-400 rounded-lg cursor-not-allowed transition-all duration-200 shadow-sm"
+                                                            title="Assessment has expired"
+                                                        >
+                                                            <Clipboard className="w-5 h-5" />
                                                         </button>
                                                     ) : (
                                                         <button
@@ -504,7 +562,10 @@ const Assessment = () => {
                                     </div>
                                 </div>
                                 <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${a.status === 'Attempted' || a.status === 'Completed' ? 'bg-green-100 text-green-700' :
-                                    a.status === 'In Progress' ? 'bg-blue-100 text-blue-700' : 'bg-yellow-100 text-yellow-700'
+                                    a.status === 'In Progress' ? 'bg-blue-100 text-blue-700' :
+                                        a.status === 'Upcoming' ? 'bg-purple-100 text-purple-700' :
+                                            a.status === 'Expired' ? 'bg-red-100 text-red-700' :
+                                                'bg-yellow-100 text-yellow-700'
                                     }`}>
                                     {a.status}
                                 </span>
@@ -532,12 +593,27 @@ const Assessment = () => {
 
                             <div className="flex justify-center flex-wrap gap-2">
                                 {a.status === 'Not Attempted' ? (
-                                    <button onClick={() => navigate(`/my-assessment/assessment/start/${a.id}`)} className="p-3 bg-blue-100 text-blue-600 rounded-lg hover:bg-blue-200 shadow-sm" title="Start Assessment">
+                                    <button onClick={() => navigate(`/my-assessment/assessment/start/${a.id}`, {
+                                        state: {
+                                            title: a.title,
+                                            subject: a.subject.name,
+                                            duration: a.duration,
+                                            category: a.category
+                                        }
+                                    })} className="p-3 bg-blue-100 text-blue-600 rounded-lg hover:bg-blue-200 shadow-sm" title="Start Assessment">
                                         <Clipboard className="w-6 h-6" />
                                     </button>
                                 ) : a.status === 'In Progress' ? (
                                     <button onClick={() => navigate(`/my-assessment/assessment/take/${a.id}`)} className="p-3 bg-orange-100 text-orange-600 rounded-lg hover:bg-orange-200 shadow-sm" title="Continue Assessment">
                                         <Edit className="w-6 h-6" />
+                                    </button>
+                                ) : a.status === 'Upcoming' ? (
+                                    <button disabled className="p-3 bg-gray-100 text-gray-400 rounded-lg cursor-not-allowed shadow-sm" title="Assessment not yet started">
+                                        <Clipboard className="w-6 h-6" />
+                                    </button>
+                                ) : a.status === 'Expired' ? (
+                                    <button disabled className="p-3 bg-gray-100 text-gray-400 rounded-lg cursor-not-allowed shadow-sm" title="Assessment has expired">
+                                        <Clipboard className="w-6 h-6" />
                                     </button>
                                 ) : (
                                     <button onClick={() => navigate(`/my-assessment/assessment/result/${a.id}`)} className="p-3 bg-green-100 text-green-600 rounded-lg hover:bg-green-200 shadow-sm" title="View Result">
