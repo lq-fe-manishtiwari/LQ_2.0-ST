@@ -16,12 +16,13 @@ const TakeAssessment = () => {
 
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [answers, setAnswers] = useState({});
-  const [timeLeft, setTimeLeft] = useState(5400); // 90 minutes in seconds
+  const [timeLeft, setTimeLeft] = useState(0);
   const [alert, setAlert] = useState(null);
   const [flagged, setFlagged] = useState(new Set());
 
   const [questions, setQuestions] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [assessmentMetadata, setAssessmentMetadata] = useState(null);
 
   // Assessment attempt tracking
   const [attemptId, setAttemptId] = useState(null);
@@ -70,9 +71,14 @@ const TakeAssessment = () => {
   const loadQuestions = async () => {
     try {
       setLoading(true);
+      console.log('Fetching questions for assessment ID:', id);
       const response = await assessmentService.getAssessmentQuestions(id);
 
+      console.log('Questions API Response:', response);
+
       if (response && response.questions) {
+        console.log('Questions found:', response.questions.length);
+
         // Store assessment metadata
         setAssessmentMetadata({
           mode: response.mode,
@@ -105,8 +111,10 @@ const TakeAssessment = () => {
             q.question_type === 'LONG_ANSWER'
         }));
 
+        console.log('Mapped questions:', mappedQuestions.length);
         setQuestions(mappedQuestions);
       } else if (Array.isArray(response)) {
+        console.log('Response is array, questions found:', response.length);
         // Fallback for old response format
         const mappedQuestions = response.map((q, index) => ({
           id: q.question_id || q.id || index + 1,
@@ -116,9 +124,14 @@ const TakeAssessment = () => {
           isTextInput: false
         }));
         setQuestions(mappedQuestions);
+      } else {
+        console.error('Unexpected response format:', response);
+        console.log('Response has questions property?', response?.hasOwnProperty('questions'));
+        console.log('Response type:', typeof response);
       }
     } catch (error) {
       console.error('Error fetching questions:', error);
+      console.error('Error details:', error.message, error.stack);
       // Show user-friendly error for backend 500 errors
       if (error.message?.includes('500')) {
         alert('Unable to load questions. The server is experiencing issues. Please contact support.');
@@ -175,8 +188,9 @@ const TakeAssessment = () => {
   useEffect(() => {
     const timer = setInterval(() => {
       setTimeLeft(prev => {
+        if (prev === 0) return 0; // Don't start until initialized
         if (prev <= 1) {
-          handleSubmitAssessment();
+          submitAssessment(true); // Auto-submit on timeout
           return 0;
         }
         return prev - 1;
@@ -244,19 +258,27 @@ const TakeAssessment = () => {
         confirmBtnCssClass="btn-confirm"
         cancelBtnCssClass="btn-cancel"
         title="Submit Assessment?"
-        onConfirm={() => submitAssessment()}
+        onConfirm={() => submitAssessment(false)}
         onCancel={() => setAlert(null)}
       >
-        Are you sure you want to submit your assessment? You cannot change answers after submission.
+        Are you sure you want to submit your assessment?
       </SweetAlert>
     );
   };
 
-  const submitAssessment = async () => {
-    setAlert(null);
+  const submitAssessment = async (isAutoSubmit = false) => {
+    setAlert(
+      <SweetAlert
+        loading
+        title={isAutoSubmit ? "Submitting (Time up)..." : "Submitting..."}
+        showConfirm={false}
+      >
+        Please wait while we secure your responses.
+      </SweetAlert>
+    );
 
     try {
-      // Save any unsaved responses first
+      // Save any remaining unsaved responses first
       await saveUnsavedResponses();
 
       // Submit the assessment
@@ -269,14 +291,37 @@ const TakeAssessment = () => {
           clearInterval(autoSaveIntervalRef.current);
         }
 
-        // Navigate to results
-        navigate(`/my-assessment/assessment/result/${id}`);
+        setAlert(
+          <SweetAlert
+            success
+            title="Assessment Submitted!"
+            onConfirm={() => navigate('/my-assessment/assessment')}
+          >
+            Your assessment has been successfully submitted.
+          </SweetAlert>
+        );
       } else {
-        alert('No active attempt found. Please try again.');
+        setAlert(
+          <SweetAlert
+            danger
+            title="Error"
+            onConfirm={() => setAlert(null)}
+          >
+            No active attempt found.
+          </SweetAlert>
+        );
       }
     } catch (error) {
       console.error('Error submitting assessment:', error);
-      alert('Failed to submit assessment. Please try again.');
+      setAlert(
+        <SweetAlert
+          danger
+          title="Submission Failed"
+          onConfirm={() => setAlert(null)}
+        >
+          Failed to submit assessment. Please try again or contact support.
+        </SweetAlert>
+      );
     }
   };
 
@@ -302,9 +347,14 @@ const TakeAssessment = () => {
               <BookOpen className="w-8 h-8 text-red-500" />
             </div>
             <h2 className="text-xl font-bold text-gray-900 mb-2">No questions found</h2>
-            <p className="text-gray-600 mb-6">We couldn't find any questions for this assessment. Please contact your coordinator.</p>
+            <p className="text-gray-600 mb-4">We couldn't find any questions for this assessment.</p>
+            <p className="text-sm text-gray-500 mb-6">Please check browser console (F12) for details or contact your coordinator.</p>
             <button
-              onClick={() => navigate(-1)}
+              onClick={() => {
+                console.log('Current questions state:', questions);
+                console.log('Current loading state:', loading);
+                navigate(-1);
+              }}
               className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold transition-all"
             >
               Go Back
@@ -432,8 +482,8 @@ const TakeAssessment = () => {
                     <div className="space-y-3 sm:space-y-4 mb-8 sm:mb-10">
                       {currentQ.options.map((option, index) => (
                         <label
-                          key={index}
-                          className={`flex items-center gap-3 sm:gap-4 p-4 sm:p-5 border-2 rounded-lg sm:rounded-xl cursor-pointer transition-all duration-200 ${answers[currentQ.id] === option
+                          key={option.option_id || index}
+                          className={`flex items-center gap-3 sm:gap-4 p-4 sm:p-5 border-2 rounded-lg sm:rounded-xl cursor-pointer transition-all duration-200 ${answers[currentQ.id] === option.option_id
                             ? 'border-blue-500 bg-blue-50 shadow-md'
                             : 'border-slate-200 hover:border-slate-300 hover:bg-slate-50'
                             }`}
@@ -442,22 +492,22 @@ const TakeAssessment = () => {
                             <input
                               type="radio"
                               name={`question-${currentQ.id}`}
-                              value={option}
-                              checked={answers[currentQ.id] === option}
-                              onChange={(e) => handleAnswerChange(currentQ.id, e.target.value)}
+                              value={option.option_id}
+                              checked={answers[currentQ.id] === option.option_id}
+                              onChange={(e) => handleAnswerChange(currentQ.id, parseInt(e.target.value))}
                               className="sr-only"
                             />
-                            <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${answers[currentQ.id] === option
+                            <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${answers[currentQ.id] === option.option_id
                               ? 'border-blue-500 bg-blue-500'
                               : 'border-slate-300'
                               }`}>
-                              {answers[currentQ.id] === option && (
+                              {answers[currentQ.id] === option.option_id && (
                                 <div className="w-2 h-2 bg-white rounded-full"></div>
                               )}
                             </div>
                           </div>
-                          <span className="text-slate-900 text-base sm:text-lg font-medium flex-1">{option}</span>
-                          {answers[currentQ.id] === option && (
+                          <span className="text-slate-900 text-base sm:text-lg font-medium flex-1">{option.option_text}</span>
+                          {answers[currentQ.id] === option.option_id && (
                             <CheckCircle2 className="w-5 h-5 text-blue-500" />
                           )}
                         </label>

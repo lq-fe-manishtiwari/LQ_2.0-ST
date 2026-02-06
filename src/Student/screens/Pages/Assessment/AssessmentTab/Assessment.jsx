@@ -301,7 +301,7 @@ const Assessment = () => {
     };
 
     return (
-        <div className="p-0 md:p-0">
+        <div className="max-w-[1600px] mx-auto p-4 sm:p-6 w-full overflow-x-hidden">
             {/* Search and Header Section */}
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4 sm:gap-0">
                 <div className="relative w-full sm:w-80">
@@ -317,13 +317,13 @@ const Assessment = () => {
                     />
                 </div>
 
-                <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+                <div className="flex flex-row gap-2 w-full sm:w-auto">
                     <button
                         onClick={() => setFilters(prev => ({ ...prev, filterOpen: !prev.filterOpen }))}
-                        className="flex items-center justify-center gap-2 bg-white border border-gray-300 hover:bg-gray-50 px-4 py-3 rounded-xl shadow-sm transition-all flex-1 sm:flex-none sm:w-auto"
+                        className="flex items-center justify-center gap-2 bg-white border border-gray-300 hover:bg-gray-50 px-3 py-2.5 rounded-lg shadow-sm transition-all flex-1 sm:flex-none"
                     >
                         <Filter className="w-4 h-4 text-blue-600" />
-                        <span className="text-blue-600 font-medium">Filter</span>
+                        <span className="text-blue-600 font-medium text-sm">Filter</span>
                         <ChevronDown
                             className={`w-4 h-4 text-blue-600 transition-transform ${filters.filterOpen ? 'rotate-180' : 'rotate-0'}`}
                         />
@@ -366,22 +366,22 @@ const Assessment = () => {
                 </div>
             )}
 
-            {/* Desktop Table */}
-            <div className="hidden lg:block bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-                <div className="overflow-x-auto">
-                    <div className="h-[500px] overflow-y-auto blue-scrollbar">
-                        <table className="w-full">
-                            <thead className="bg-[#2162C1]">
+            {/* Desktop & Tablet Table View */}
+            <div className="w-full bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
+                <div className="w-full overflow-x-auto blue-scrollbar border-b border-gray-100">
+                    <div className="max-h-[550px] overflow-y-auto blue-scrollbar">
+                        <table className="w-full min-w-[1200px] divide-y divide-gray-200">
+                            <thead className="table-header">
                                 <tr>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider bg-[#2162C1]">Assessment</th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider bg-[#2162C1]">Subject</th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider bg-[#2162C1]">Duration</th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider bg-[#2162C1]">Questions</th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider bg-[#2162C1]">Category</th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider bg-[#2162C1]">Rubric Type</th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider bg-[#2162C1]">Due Date</th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider bg-[#2162C1]">Status</th>
-                                    <th className="px-6 py-3 text-center text-xs font-medium text-white uppercase tracking-wider bg-[#2162C1]">Action</th>
+                                    <th className="table-th whitespace-nowrap">Assessment</th>
+                                    <th className="table-th whitespace-nowrap">Subject</th>
+                                    <th className="table-th whitespace-nowrap">Duration</th>
+                                    <th className="table-th whitespace-nowrap">Questions</th>
+                                    <th className="table-th whitespace-nowrap">Category</th>
+                                    <th className="table-th whitespace-nowrap text-center">Rubric Type</th>
+                                    <th className="table-th whitespace-nowrap">Due Date</th>
+                                    <th className="table-th whitespace-nowrap">Status</th>
+                                    <th className="table-th whitespace-nowrap text-center">Action</th>
                                 </tr>
                             </thead>
                             <tbody className="bg-white divide-y divide-gray-200">
@@ -397,30 +397,30 @@ const Assessment = () => {
                                 ) : filteredAssessments.length > 0 ? (
                                     filteredAssessments.map((a) => (
                                         <tr key={a.id} className="hover:bg-gray-50">
-                                            <td className="px-6 py-4">
+                                            <td className="table-td whitespace-nowrap py-1">
                                                 <div className="flex items-center gap-3">
                                                     <div className="w-8 h-8 rounded-full flex items-center justify-center text-white"
                                                         style={{ backgroundColor: a.subject.color }}>
                                                         {a.proctoring ? <Video className="w-4 h-4" /> : <Clipboard className="w-4 h-4" />}
                                                     </div>
                                                     <div>
-                                                        <div className="text-sm font-medium text-gray-900">{a.title}</div>
-                                                        <div className="text-xs text-gray-500">{a.type} Assessment</div>
+                                                        <div className="text-sm font-semibold text-gray-900 whitespace-nowrap">{a.title}</div>
+                                                        <div className="text-[10px] text-gray-500 whitespace-nowrap">{a.type} Assessment</div>
                                                     </div>
                                                 </div>
                                             </td>
-                                            <td className="px-6 py-4 text-sm text-gray-500">{a.subject.name}</td>
-                                            <td className="px-6 py-4 text-sm text-gray-500">{a.duration} mins</td>
-                                            <td className="px-6 py-4 text-sm text-gray-500">{a.questionCount} Questions</td>
+                                            <td className="table-td text-sm text-gray-500">{a.subject.name}</td>
+                                            <td className="table-td text-sm text-gray-500">{a.duration} mins</td>
+                                            <td className="table-td text-sm text-gray-500">{a.questionCount} Questions</td>
 
-                                            <td className="px-6 py-4 text-sm text-gray-500">
+                                            <td className="table-td text-sm text-gray-500 whitespace-nowrap py-1">
                                                 <span className={`inline-flex px-2 py-0.5 rounded border text-[10px] font-bold uppercase tracking-wide
                             ${a.category?.includes('Rubric') ? 'bg-purple-50 text-purple-700 border-purple-100' : 'bg-gray-50 text-gray-600 border-gray-100'}`}>
                                                     {a.category || 'General'}
                                                 </span>
                                             </td>
 
-                                            <td className="px-6 py-4 text-sm text-gray-500">
+                                            <td className="table-td text-sm text-gray-500 whitespace-nowrap py-1">
                                                 {a.rubricType ? (
                                                     <span className={`inline-flex px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide border
                                 ${a.rubricType.includes('ANALYTIC') ? 'bg-indigo-50 text-indigo-700 border-indigo-100' :
@@ -433,8 +433,8 @@ const Assessment = () => {
                                                 )}
                                             </td>
 
-                                            <td className="px-6 py-4 text-sm text-gray-500">{a.endDate}</td>
-                                            <td className="px-6 py-4">
+                                            <td className="table-td whitespace-nowrap py-1 text-sm text-gray-500">{a.endDate}</td>
+                                            <td className="table-td whitespace-nowrap py-1">
                                                 <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${a.status === 'Attempted' || a.status === 'Completed' ? 'bg-green-100 text-green-700' :
                                                     a.status === 'In Progress' ? 'bg-blue-100 text-blue-700' :
                                                         a.status === 'Upcoming' ? 'bg-purple-100 text-purple-700' :
@@ -444,7 +444,7 @@ const Assessment = () => {
                                                     {a.status}
                                                 </span>
                                             </td>
-                                            <td className="px-6 py-4 text-center">
+                                            <td className="table-td text-center">
                                                 <div className="flex justify-center gap-2">
                                                     {a.status === 'Not Attempted' ? (
                                                         <button
@@ -520,116 +520,28 @@ const Assessment = () => {
                     </div>
                 </div>
 
-                <div className="flex justify-between items-center px-6 py-4 border-t border-gray-200 text-sm text-gray-600">
-                    <button disabled className="px-4 py-2 rounded-md bg-gray-200 text-gray-400 cursor-not-allowed">
-                        Previous
-                    </button>
-                    <span className="text-gray-700 font-medium">
-                        Showing 1–{assessments.length} of {assessments.length} entries
-                    </span>
-                    <button disabled className="px-4 py-2 rounded-md bg-gray-200 text-gray-400 cursor-not-allowed">
-                        Next
-                    </button>
-                </div>
-            </div>
-
-            <div className="lg:hidden space-y-4">
-                {loading ? (
-                    <div className="bg-white rounded-xl shadow-md p-12 text-center border border-gray-200">
-                        <div className="flex flex-col items-center justify-center">
-                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mb-2"></div>
-                            <p className="text-gray-500">Loading assessments...</p>
-                        </div>
+                {/* Pagination Row - Pattern from reference */}
+                {!loading && filteredAssessments.length > 0 && (
+                    <div className="flex justify-between items-center px-6 py-4 border-t border-gray-200 bg-white">
+                        <button
+                            disabled
+                            className="flex items-center gap-2 px-4 py-2 rounded-md font-medium text-gray-400 bg-gray-100 cursor-not-allowed transition-all"
+                        >
+                            Previous
+                        </button>
+                        <span className="text-sm font-medium text-gray-700 hidden sm:inline">
+                            Showing <strong>1</strong>–<strong>{filteredAssessments.length}</strong> of <strong>{filteredAssessments.length}</strong> entries
+                        </span>
+                        <button
+                            disabled
+                            className="flex items-center gap-2 px-4 py-2 rounded-md font-medium text-gray-400 bg-gray-100 cursor-not-allowed transition-all"
+                        >
+                            Next
+                        </button>
                     </div>
-                ) : filteredAssessments.length === 0 ? (
-                    <div className="bg-white rounded-xl shadow-md p-8 text-center border border-gray-200">
-                        <div className="text-gray-500">
-                            <p className="text-lg font-medium mb-2">No assessments found</p>
-                            <p className="text-sm">No assessments were found for the current selection.</p>
-                        </div>
-                    </div>
-                ) : (
-                    filteredAssessments.map((a) => (
-                        <div key={a.id} className="bg-white rounded-xl shadow-md border border-gray-200 p-5 hover:shadow-lg transition-all">
-                            <div className="flex justify-between items-start mb-3">
-                                <div className="flex items-center gap-3">
-                                    <div className="w-8 h-8 rounded-full flex items-center justify-center text-white" style={{ backgroundColor: a.subject.color }}>
-                                        {a.proctoring ? <Video className="w-4 h-4" /> : <Clipboard className="w-4 h-4" />}
-                                    </div>
-                                    <div>
-                                        <p className="font-semibold text-gray-900">{a.title}</p>
-                                        <p className="text-sm text-gray-500">{a.subject.name}</p>
-                                    </div>
-                                </div>
-                                <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${a.status === 'Attempted' || a.status === 'Completed' ? 'bg-green-100 text-green-700' :
-                                    a.status === 'In Progress' ? 'bg-blue-100 text-blue-700' :
-                                        a.status === 'Upcoming' ? 'bg-purple-100 text-purple-700' :
-                                            a.status === 'Expired' ? 'bg-red-100 text-red-700' :
-                                                'bg-yellow-100 text-yellow-700'
-                                    }`}>
-                                    {a.status}
-                                </span>
-                            </div>
-
-                            <div className="space-y-2 text-sm text-gray-700 mb-4">
-                                <div className="grid grid-cols-2 gap-2">
-                                    <div className="col-span-2"><span className="font-medium">Date:</span> {a.endDate}</div>
-                                    <div><span className="font-medium">Type:</span> {a.type}</div>
-                                    <div><span className="font-medium">Duration:</span> {a.duration}m</div>
-                                    <div><span className="font-medium">Questions:</span> {a.questionCount}</div>
-                                </div>
-                                {a.percentage > 0 && (
-                                    <div className="mt-3">
-                                        <div className="flex items-center justify-between text-xs mb-1">
-                                            <span>Score/Progress</span>
-                                            <span>{a.percentage}%</span>
-                                        </div>
-                                        <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
-                                            <div className="h-full bg-blue-500 rounded-full" style={{ width: `${a.percentage}%` }}></div>
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
-
-                            <div className="flex justify-center flex-wrap gap-2">
-                                {a.status === 'Not Attempted' ? (
-                                    <button onClick={() => navigate(`/my-assessment/assessment/start/${a.id}`, {
-                                        state: {
-                                            title: a.title,
-                                            subject: a.subject.name,
-                                            duration: a.duration,
-                                            category: a.category
-                                        }
-                                    })} className="p-3 bg-blue-100 text-blue-600 rounded-lg hover:bg-blue-200 shadow-sm" title="Start Assessment">
-                                        <Clipboard className="w-6 h-6" />
-                                    </button>
-                                ) : a.status === 'In Progress' ? (
-                                    <button onClick={() => navigate(`/my-assessment/assessment/take/${a.id}`)} className="p-3 bg-orange-100 text-orange-600 rounded-lg hover:bg-orange-200 shadow-sm" title="Continue Assessment">
-                                        <Edit className="w-6 h-6" />
-                                    </button>
-                                ) : a.status === 'Upcoming' ? (
-                                    <button disabled className="p-3 bg-gray-100 text-gray-400 rounded-lg cursor-not-allowed shadow-sm" title="Assessment not yet started">
-                                        <Clipboard className="w-6 h-6" />
-                                    </button>
-                                ) : a.status === 'Expired' ? (
-                                    <button disabled className="p-3 bg-gray-100 text-gray-400 rounded-lg cursor-not-allowed shadow-sm" title="Assessment has expired">
-                                        <Clipboard className="w-6 h-6" />
-                                    </button>
-                                ) : (
-                                    <button onClick={() => navigate(`/my-assessment/assessment/result/${a.id}`)} className="p-3 bg-green-100 text-green-600 rounded-lg hover:bg-green-200 shadow-sm" title="View Result">
-                                        <Eye className="w-6 h-6" />
-                                    </button>
-                                )}
-                                {a.category?.includes('Rubric') && (
-                                    <button onClick={() => handleOpenRubric(a.rubricType, a.status)} className="p-3 bg-purple-100 text-purple-600 rounded-lg hover:bg-purple-200 shadow-sm" title="View Rubric details">
-                                        <BookOpen className="w-6 h-6" />
-                                    </button>
-                                )}
-                            </div>
-                        </div>
-                    ))
                 )}
             </div>
+
 
             <RubricAssessmentView
                 isOpen={showRubricView}
@@ -637,7 +549,7 @@ const Assessment = () => {
                 assessmentType={selectedRubricDetails.type}
                 status={selectedRubricDetails.status}
             />
-        </div>
+        </div >
     );
 };
 

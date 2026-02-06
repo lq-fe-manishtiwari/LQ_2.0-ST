@@ -6,7 +6,7 @@ export const assessmentService = {
     startAssessmentAttempt,
     recordQuestionResponse,
     recordBatchResponses,
-    submitAssessmentAttempt
+    submitAssessmentAttempt,
 };
 
 async function getStudentAssessments(data) {
@@ -76,3 +76,4 @@ async function submitAssessmentAttempt(attemptId) {
     return fetch(`${ContentAPI}/student/assessment/attempt/${attemptId}/submit`, requestOptions)
         .then(handleResponse);
 }
+
