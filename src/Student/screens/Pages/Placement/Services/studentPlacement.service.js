@@ -130,21 +130,21 @@ export const studentPlacementService = {
       throw error;
     }
   },
-    getRegistrationFormsByCollege: async (collegeId) => {
-        try {
-          const requestOptions = {
-            method: 'GET',
-            headers: authHeader()
-          };
-          const response = await fetch(`${API_BASE_URL}/registration-forms/college/${collegeId}`, requestOptions);
-          return handleResponse(response);
-        } catch (error) {
-          console.error('Error fetching student drive applications:', error);
-          throw error;
-        }
-      },
+  getRegistrationFormsByCollege: async (collegeId) => {
+    try {
+      const requestOptions = {
+        method: 'GET',
+        headers: authHeader()
+      };
+      const response = await fetch(`${API_BASE_URL}/registration-forms/college/${collegeId}`, requestOptions);
+      return handleResponse(response);
+    } catch (error) {
+      console.error('Error fetching student drive applications:', error);
+      throw error;
+    }
+  },
 
- getStudentInterviews: async (prnId) => {
+  getStudentInterviews: async (prnId) => {
     try {
       const requestOptions = {
         method: 'GET',
@@ -158,7 +158,7 @@ export const studentPlacementService = {
     }
   },
 
-   getStudentOfferLetters: async (prnId) => {
+  getStudentOfferLetters: async (prnId) => {
     try {
       const requestOptions = {
         method: 'GET',
@@ -172,19 +172,38 @@ export const studentPlacementService = {
     }
   },
 
-   updateStudentOfferLetters: async (prnId,placementId,status) => {
+  updateStudentOfferLetters: async (prnId, placementId, status) => {
     try {
-       const requestOptions = {
-      method: 'PUT',
-      headers: authHeaderToPost(),
-      body: JSON.stringify({ offer_status: status })
-    };
+      const requestOptions = {
+        method: 'PUT',
+        headers: authHeaderToPost(),
+        body: JSON.stringify({ offer_status: status })
+      };
       const response = await fetch(`${API_BASE_URL}/student/offers/${prnId}/${placementId}/status`, requestOptions);
       return handleResponse(response);
     } catch (error) {
       console.error('Error fetching student drive applications:', error);
       throw error;
     }
+  },
+
+  submitStudentConsent: async (consentData) => {
+    const requestOptions = {
+      method: 'POST',
+      headers: authHeaderToPost(),
+      body: JSON.stringify(consentData)
+    };
+    const response = await fetch(`${API_BASE_URL}/student-consent`, requestOptions);
+    return handleResponse(response);
+  },
+
+  getStudentConsent: async (studentId, policyId) => {
+    const requestOptions = {
+      method: 'GET',
+      headers: authHeader()
+    };
+    const response = await fetch(`${API_BASE_URL}/student-consent/get/${studentId}?policyId=${policyId}`, requestOptions);
+    return handleResponse(response);
   },
 
 };

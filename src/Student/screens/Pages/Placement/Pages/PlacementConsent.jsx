@@ -1,7 +1,9 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { FileText, CheckCircle, AlertCircle, Download, X } from 'lucide-react';
+import { studentPlacementService } from '../Services/studentPlacement.service';
+import { api } from '../../../../../_services/api';
 
 export default function PlacementConsent() {
   const [consentGiven, setConsentGiven] = useState(false);
@@ -10,6 +12,50 @@ export default function PlacementConsent() {
   const [optOut, setOptOut] = useState(false);
   const [optOutReason, setOptOutReason] = useState('');
   const [showOptOutForm, setShowOptOutForm] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [studentData, setStudentData] = useState(null);
+
+  const policyId = 1;
+
+  useEffect(() => {
+    const loadStudentData = async () => {
+      try {
+        const res = await api.getUserProfile();
+        const studentInfo = res.data || {};
+        
+        const studentId = studentInfo.student_id || studentInfo.id;
+        const collegeId = studentInfo.college_id;
+        const prnNo = studentInfo.prn_no || studentInfo.prnNo || studentInfo.PRN;
+        const studentName = studentInfo.student_name || studentInfo.name || studentInfo.fullName;
+        
+        console.log('Student Data:', { studentId, collegeId, prnNo, studentName });
+        
+        if (!collegeId) {
+          console.error('College ID not found');
+          alert('College information not found. Please login again.');
+          setLoading(false);
+          return;
+        }
+        
+        setStudentData({ ...studentInfo, studentId, collegeId, prnNo, studentName });
+        
+        if (studentId) {
+          const consent = await studentPlacementService.getStudentConsent(studentId, policyId);
+          if (consent) {
+            setConsentGiven(consent.is_acknowledged && !consent.is_opt_out);
+            setOptOut(consent.is_opt_out);
+            setSignature(consent.student_name || '');
+            if (consent.is_opt_out) setOptOutReason(consent.opt_out_reason || '');
+          }
+        }
+      } catch (err) {
+        console.error('Error loading consent:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadStudentData();
+  }, []);
 
   const placementPolicy = {
     title: "Placement Assistance Policy 2025-26",
@@ -64,7 +110,7 @@ export default function PlacementConsent() {
     ]
   };
 
-  const handleConsentSubmit = () => {
+  const handleConsentSubmit = async () => {
     if (!hasReadPolicy) {
       alert('Please read the complete policy document');
       return;
@@ -74,22 +120,64 @@ export default function PlacementConsent() {
       return;
     }
     
-    // Simulate API call
-    alert('Consent recorded successfully!');
-    setConsentGiven(true);
+    try {
+      const payload = {
+        college_id: studentData.collegeId,
+        policy_id: policyId,
+        student_id: studentData.studentId,
+        student_name: signature,
+        prn_no: studentData.prnNo,
+        is_acknowledged: true,
+        is_opt_out: false,
+        opt_out_reason: null
+      };
+      
+      console.log('Submitting consent:', payload);
+      await studentPlacementService.submitStudentConsent(payload);
+      alert('Consent recorded successfully!');
+      setConsentGiven(true);
+    } catch (err) {
+      console.error('Error submitting consent:', err);
+      alert('Failed to submit consent. Please try again.');
+    }
   };
 
-  const handleOptOut = () => {
+  const handleOptOut = async () => {
     if (!optOutReason.trim()) {
       alert('Please provide a reason for opting out');
       return;
     }
     
-    // Simulate API call
-    alert('Opt-out request submitted successfully');
-    setOptOut(true);
-    setShowOptOutForm(false);
+    try {
+      const payload = {
+        college_id: studentData.collegeId,
+        policy_id: policyId,
+        student_id: studentData.studentId,
+        student_name: studentData.studentName,
+        prn_no: studentData.prnNo,
+        is_acknowledged: false,
+        is_opt_out: true,
+        opt_out_reason: optOutReason
+      };
+      
+      console.log('Submitting opt-out:', payload);
+      await studentPlacementService.submitStudentConsent(payload);
+      alert('Opt-out request submitted successfully');
+      setOptOut(true);
+      setShowOptOutForm(false);
+    } catch (err) {
+      console.error('Error submitting opt-out:', err);
+      alert('Failed to submit opt-out. Please try again.');
+    }
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-4 border-blue-600"></div>
+      </div>
+    );
+  }
 
   if (optOut) {
     return (
