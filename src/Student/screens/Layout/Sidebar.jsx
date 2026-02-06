@@ -179,7 +179,7 @@ const StudentSidebar = ({ isOpen, toggle }) => {
         iconInactive: classInactive,
       },
       {
-        to: "/student-placement",
+        to: "/student-placement/job-openings",
         label: "Placement",
         iconActive: classActive,
         iconInactive: classInactive,

@@ -22,17 +22,6 @@ export default function JobList() {
 
   useEffect(() => {
     loadJobs();
-    
-    // Load applied IDs from localStorage on mount
-    try {
-      const stored = localStorage.getItem('appliedPlacementIds');
-      if (stored) {
-        const storedIds = JSON.parse(stored);
-        setAppliedPlacementIds(new Set(storedIds));
-      }
-    } catch (err) {
-      console.error('Failed to load applied IDs:', err);
-    }
   }, []);
 
   /* ===================== NORMALIZATION ===================== */
@@ -54,7 +43,7 @@ export default function JobList() {
               ? job.company
               : job.companies?.[0] || {},
 
-          role_name: vacancy.role,
+          role_name: vacancy.role || vacancy.role_name,
           min_ctc: vacancy.min_ctc,
           max_ctc: vacancy.max_ctc,
 
@@ -138,18 +127,6 @@ export default function JobList() {
       }
 
       setRows(combined);
-      
-      // Load from localStorage and merge with API data
-      try {
-        const stored = localStorage.getItem('appliedPlacementIds');
-        if (stored) {
-          const storedIds = JSON.parse(stored);
-          storedIds.forEach(id => appliedIds.add(id));
-        }
-      } catch (err) {
-        console.error('Failed to load applied IDs:', err);
-      }
-      
       setAppliedPlacementIds(appliedIds);
     } catch (err) {
       console.error(err);
@@ -162,13 +139,22 @@ export default function JobList() {
   /* ===================== FILTER + PAGINATION ===================== */
 
   const paginatedData = useMemo(() => {
-    let list = rows;
+    // Create a copy to avoid mutating original array
+    let list = [...rows];
 
     // Sort by date - latest first
-    list = list.sort((a, b) => {
+    list.sort((a, b) => {
       const dateA = new Date(a.job_opening_date || 0);
       const dateB = new Date(b.job_opening_date || 0);
       return dateB - dateA;
+    });
+
+    // Remove duplicates by placement_id
+    const seen = new Set();
+    list = list.filter(item => {
+      if (seen.has(item.placement_id)) return false;
+      seen.add(item.placement_id);
+      return true;
     });
 
     if (searchTerm) {
@@ -212,19 +198,9 @@ export default function JobList() {
   };
 
   const handleApplicationSuccess = () => {
-    if (selectedJob?.placementId) {
-      const newAppliedIds = new Set([...appliedPlacementIds, selectedJob.placementId]);
-      setAppliedPlacementIds(newAppliedIds);
-      
-      // Persist to localStorage
-      try {
-        localStorage.setItem('appliedPlacementIds', JSON.stringify([...newAppliedIds]));
-      } catch (err) {
-        console.error('Failed to save applied IDs:', err);
-      }
-    }
     setShowRegistration(false);
     setSelectedJob(null);
+    loadJobs(); // Reload to get updated applied status from API
   };
 
   /* ===================== UI ===================== */
