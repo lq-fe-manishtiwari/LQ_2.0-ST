@@ -205,5 +205,13 @@ export const studentPlacementService = {
     const response = await fetch(`${API_BASE_URL}/student-consent/get/${studentId}?policyId=${policyId}`, requestOptions);
     return handleResponse(response);
   },
+   getCollegeConsent: async (collegeId) => {
+    const requestOptions = {
+      method: 'GET',
+      headers: authHeader()
+    };
+    const response = await fetch(`${API_BASE_URL}/placement-policies/college/${collegeId}`, requestOptions);
+    return handleResponse(response);
+  },
 
 };
