@@ -139,10 +139,8 @@ const AttendanceFilters = ({
   };
 
   const handleFilterChange = (field, value) => {
-    console.log(`DEBUG: AttendanceFilters handleFilterChange - Field: ${field}, Value: ${value}`);
     if (onFilterChange) {
       const newFilters = { ...filters, [field]: value };
-      console.log("DEBUG: AttendanceFilters calling onFilterChange with:", newFilters);
 
       // Reset subsequent filters
       if (field === 'program') {
@@ -310,7 +308,6 @@ const AttendanceFilters = ({
                     }
                   });
                   const options = Array.from(map.values());
-                  console.log("DEBUG: AttendanceFilters generated TimeSlot options:", options);
                   return options;
                 })()}
                 placeholder="Select Time Slot"

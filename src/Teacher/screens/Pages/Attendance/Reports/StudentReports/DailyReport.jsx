@@ -1,17 +1,51 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
+import * as XLSX from 'xlsx';
+import DatePicker from 'react-datepicker';
+import "react-datepicker/dist/react-datepicker.css";
+import moment from 'moment';
+import { Download, Search, Loader2, FileSpreadsheet, FileText, FileJson, ChevronDown, Filter, ChevronUp, Calendar } from 'lucide-react';
 import AttendanceFilters from "../../../Attendance/Components/AttendanceFilters";
 import { timetableService } from "../../../TimeTable/Services/timetable.service";
 import { api } from '../../../../../../_services/api';
-
+import { TeacherAttendanceManagement } from '../../Services/attendance.service';
 
 const StudentDailyReport = () => {
 
     const [currentTeacherId, setCurrentTeacherId] = useState(null);
 
 
-    const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+    const [selectedDate, setSelectedDate] = useState(new Date());
     const [selectedSubject, setSelectedSubject] = useState('all');
     const [filterType, setFilterType] = useState('all'); // 'all', 'present', 'absent'
+    const [searchTerm, setSearchTerm] = useState('');
+    const [isMobileView, setIsMobileView] = useState(window.innerWidth < 768);
+
+    // Export Dropdown State
+    const [showExportMenu, setShowExportMenu] = useState(false);
+    const exportMenuRef = useRef(null);
+
+    // Close export menu when clicking outside
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (exportMenuRef.current && !exportMenuRef.current.contains(event.target)) {
+                setShowExportMenu(false);
+            }
+        };
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => document.removeEventListener("mousedown", handleClickOutside);
+    }, []);
+
+    // Check screen size
+    useEffect(() => {
+        const checkScreenSize = () => {
+            setIsMobileView(window.innerWidth < 768);
+        };
+        checkScreenSize();
+        window.addEventListener('resize', checkScreenSize);
+        return () => window.removeEventListener('resize', checkScreenSize);
+    }, []);
 
 
 
@@ -33,6 +67,7 @@ const StudentDailyReport = () => {
         academicYearId: null,
         semesterId: null,
         divisionId: null,
+        programId: null,
         collegeId: null
     });
 
@@ -62,9 +97,10 @@ const StudentDailyReport = () => {
             ...prev,
             academicYearId: extractNumericId(filters.academicYear),
             semesterId: extractNumericId(filters.semester),
-            divisionId: extractNumericId(filters.division)
+            divisionId: extractNumericId(filters.division),
+            programId: extractNumericId(filters.program)
         }));
-    }, [filters.academicYear, filters.semester, filters.division]);
+    }, [filters.academicYear, filters.semester, filters.division, filters.program]);
 
     // Initialize collegeId
     useEffect(() => {
@@ -177,19 +213,73 @@ const StudentDailyReport = () => {
         fetchPapers();
     }, [apiIds.academicYearId, apiIds.semesterId]);
 
-    // Mock student data (replace with actual API call)
-    useEffect(() => {
-        // Simulate API call
-        const mockStudents = Array(50).fill().map((_, i) => ({
-            id: i + 1,
-            rollNo: `2024${String(i + 1).padStart(3, '0')}`,
-            name: `Student ${i + 1}`,
-            status: i % 3 === 0 ? 'A' : i % 5 === 0 ? 'OL' : i % 7 === 0 ? 'ML' : 'P',
-            reason: i % 3 === 0 ? 'Not Specified' : i % 5 === 0 ? 'Family Function' : i % 7 === 0 ? 'Sick Leave' : '-'
-        }));
 
-        setAllStudents(mockStudents);
-    }, [selectedDate, selectedSubject, filters]);
+    useEffect(() => {
+        const fetchTeacherDailyReport = async () => {
+            if (
+                !currentTeacherId ||
+                !apiIds.collegeId ||
+                !apiIds.academicYearId ||
+                !apiIds.semesterId ||
+                !apiIds.divisionId ||
+                !selectedDate
+            ) {
+                setAllStudents([]);
+                return;
+            }
+
+            try {
+                setLoading(true);
+                const formattedDate = moment(selectedDate).format('YYYY-MM-DD');
+
+                const params = {
+                    teacherId: currentTeacherId,
+                    collegeId: apiIds.collegeId,
+                    academicYearId: apiIds.academicYearId,
+                    semesterId: apiIds.semesterId,
+                    divisionId: apiIds.divisionId,
+                    programId: apiIds.programId,
+                    date: formattedDate
+                };
+
+                if (selectedSubject !== 'all') {
+                    params.paperId = selectedSubject;
+                }
+
+                const response = await TeacherAttendanceManagement.getDailyReport(params);
+
+                if (response?.success && response.data) {
+                    const students = response.data.attendance_records.map(record => ({
+                        id: record.student_id,
+                        rollNo: record.roll_number || '-',
+                        name: record.student_name,
+                        status: (record.status_code || 'P'),
+                        reason: record.remarks || '-'
+                    }));
+
+                    setAllStudents(students);
+                } else {
+                    setAllStudents([]);
+                }
+            } catch (error) {
+                console.error("Teacher report error:", error);
+                setAllStudents([]);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchTeacherDailyReport();
+    }, [
+        currentTeacherId,
+        selectedDate,
+        selectedSubject,
+        apiIds.collegeId,
+        apiIds.academicYearId,
+        apiIds.semesterId,
+        apiIds.divisionId
+    ]);
+
 
     // Calculate statistics
     const stats = {
@@ -200,22 +290,119 @@ const StudentDailyReport = () => {
     };
     stats.percentage = stats.total > 0 ? ((stats.present / stats.total) * 100).toFixed(2) : 0;
 
-    // Filter students based on filterType
+    // Filter students based on filterType and searchTerm
     const filteredStudents = allStudents.filter(student => {
-        if (filterType === 'all') return true;
-        if (filterType === 'present') return student.status === 'P';
-        if (filterType === 'absent') return student.status === 'A' || student.status === 'OL' || student.status === 'ML';
-        return true;
+        const matchesFilterType = () => {
+            if (filterType === 'all') return true;
+            if (filterType === 'present') return student.status === 'P';
+            if (filterType === 'absent') return student.status === 'A' || student.status === 'OL' || student.status === 'ML';
+            return true;
+        };
+
+        const matchesSearch = () => {
+            if (!searchTerm) return true;
+            const lower = searchTerm.toLowerCase();
+            return (
+                student.name?.toLowerCase().includes(lower) ||
+                student.rollNo?.toLowerCase().includes(lower)
+            );
+        };
+
+        return matchesFilterType() && matchesSearch();
     });
 
-    const handleExport = () => {
-        console.log('Exporting to Excel...');
-        // Implement Excel export logic
+    const formattedSelectedDate = moment(selectedDate).format('DD-MM-YYYY');
+
+    // Download PDF
+    const downloadPDF = () => {
+        const doc = new jsPDF('landscape');
+        doc.setFontSize(20);
+        doc.text('Student Daily Attendance Report', 140, 15, { align: 'center' });
+        doc.setFontSize(10);
+        doc.text(`Date: ${formattedSelectedDate}`, 14, 22);
+
+        const paperLabel = paperOptions.find(p => p.value === selectedSubject)?.label || 'All';
+        doc.text(`Paper: ${paperLabel}`, 14, 27);
+
+        autoTable(doc, {
+            head: [['Roll No', 'Student Name', 'Status', 'Reason']],
+            body: filteredStudents.map(student => [
+                student.rollNo,
+                student.name,
+                student.status === 'P' ? 'Present' : student.status === 'ML' ? 'Medical Leave' : student.status === 'OL' ? 'On Leave' : 'Absent',
+                student.reason
+            ]),
+            startY: 32,
+            theme: 'grid',
+            styles: { fontSize: 8 },
+            headStyles: { fillColor: [41, 128, 185] }
+        });
+
+        doc.save(`Daily_Attendance_Report_${formattedSelectedDate}.pdf`);
+        setShowExportMenu(false);
+    };
+
+    // Download Excel
+    const downloadExcel = () => {
+        const worksheet = XLSX.utils.json_to_sheet(filteredStudents.map(s => ({
+            'Roll No': s.rollNo,
+            'Student Name': s.name,
+            'Status': s.status === 'P' ? 'Present' : s.status === 'ML' ? 'Medical Leave' : s.status === 'OL' ? 'On Leave' : 'Absent',
+            'Reason': s.reason
+        })));
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, "Attendance");
+        XLSX.writeFile(workbook, `Daily_Attendance_Report_${formattedSelectedDate}.xlsx`);
+        setShowExportMenu(false);
+    };
+
+    // Download CSV
+    const downloadCSV = () => {
+        if (!filteredStudents.length) return;
+
+        const headers = ["Roll No,Student Name,Status,Reason"];
+        const rows = filteredStudents.map(s =>
+            `"${s.rollNo}","${s.name}","${s.status === 'P' ? 'Present' : s.status === 'ML' ? 'Medical Leave' : s.status === 'OL' ? 'On Leave' : 'Absent'}","${s.reason}"`
+        );
+
+        const csvContent = [headers, ...rows].join("\n");
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.setAttribute("href", url);
+        link.setAttribute("download", `Daily_Attendance_Report_${formattedSelectedDate}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        setShowExportMenu(false);
     };
 
     const handleCardClick = (type) => {
         setFilterType(type);
     };
+
+    // Mobile card view
+    const MobileAttendanceCard = ({ student }) => (
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 mb-3 hover:shadow-md transition-shadow">
+            <div className="flex justify-between items-start mb-2">
+                <div className="flex-1">
+                    <h3 className="font-bold text-gray-800 leading-snug">{student.name}</h3>
+                    <p className="text-[10px] text-gray-400  font-bold tracking-wider mt-0.5">Roll No: {student.rollNo}</p>
+                </div>
+                <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${student.status === 'P' ? 'bg-green-50 text-green-700' :
+                    student.status === 'ML' ? 'bg-blue-50 text-blue-700' :
+                        student.status === 'OL' ? 'bg-yellow-50 text-yellow-700' :
+                            'bg-red-50 text-red-700'
+                    }`}>
+                    {student.status === 'P' ? 'Present' : student.status === 'ML' ? 'Medical Leave' : student.status === 'OL' ? 'On Leave' : 'Absent'}
+                </span>
+            </div>
+            <div className="mt-2 pt-2 border-t border-gray-50">
+                <p className="text-[10px] text-gray-400  font-bold tracking-wider mb-1">Reason</p>
+                <p className="text-xs text-gray-600 italic">{student.reason}</p>
+            </div>
+        </div>
+    );
 
     return (
         <div className="space-y-6">
@@ -237,20 +424,23 @@ const StudentDailyReport = () => {
             </div>
 
 
-            {/* Date, Subject and Export */}
-            <div className="flex flex-col md:flex-row gap-4">
-                <div className="flex-1">
+            {/* Date, Subject, Search and Export */}
+            <div className="flex flex-col lg:flex-row items-end gap-4 bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
+                <div className="w-full lg:flex-1">
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                         Select Date
                     </label>
-                    <input
-                        type="date"
-                        value={selectedDate}
-                        onChange={(e) => setSelectedDate(e.target.value)}
-                        className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    />
+                    <div className="relative">
+                        <DatePicker
+                            selected={selectedDate}
+                            onChange={(date) => setSelectedDate(date)}
+                            dateFormat="dd-MM-yyyy"
+                            className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                        />
+                        <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                    </div>
                 </div>
-                <div className="flex-1">
+                <div className="w-full lg:flex-1">
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                         Paper
                     </label>
@@ -258,7 +448,7 @@ const StudentDailyReport = () => {
                         value={selectedSubject}
                         onChange={(e) => setSelectedSubject(e.target.value)}
                         disabled={!apiIds.academicYearId || !apiIds.semesterId || loadingPapers}
-                        className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
+                        className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 text-sm"
                     >
                         <option value="all">Select Paper</option>
                         {loadingPapers ? (
@@ -272,16 +462,54 @@ const StudentDailyReport = () => {
                         )}
                     </select>
                 </div>
-                <div className="flex items-end">
+
+                {/* Search */}
+                <div className="w-full lg:flex-1 relative">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Search Student
+                    </label>
+                    <div className="relative">
+                        <input
+                            type="text"
+                            placeholder="Search by name or roll no..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                        />
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    </div>
+                </div>
+
+                {/* Export Button */}
+                <div className="relative" ref={exportMenuRef}>
                     <button
-                        onClick={handleExport}
-                        className="px-6 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2 font-medium"
+                        onClick={() => setShowExportMenu(!showExportMenu)}
+                        disabled={loading || filteredStudents.length === 0}
+                        className={`flex items-center gap-2 px-6 py-2.5 text-sm font-medium bg-green-600 border border-green-700 rounded-lg text-white hover:bg-green-700 shadow-md transition-all ${(loading || filteredStudents.length === 0) ? 'opacity-50 cursor-not-allowed' : ''}`}
                     >
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10"></path>
-                        </svg>
-                        Export Excel
+                        <Download className="w-4 h-4" />
+                        <span>Export</span>
+                        <ChevronDown className={`w-4 h-4 transition-transform ${showExportMenu ? 'rotate-180' : ''}`} />
                     </button>
+
+                    {showExportMenu && (
+                        <div className="absolute right-0 mt-2 w-48 bg-white border border-gray-200 rounded-lg shadow-xl z-50 animate-in fade-in slide-in-from-top-2 duration-200">
+                            <div className="py-1">
+                                <button onClick={downloadExcel} className="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-green-50 hover:text-green-700 flex items-center gap-3 transition-colors">
+                                    <FileSpreadsheet className="w-4 h-4 text-green-600" />
+                                    <span>Excel (.xlsx)</span>
+                                </button>
+                                <button onClick={downloadCSV} className="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-700 flex items-center gap-3 transition-colors">
+                                    <FileText className="w-4 h-4 text-blue-600" />
+                                    <span>CSV (.csv)</span>
+                                </button>
+                                <button onClick={downloadPDF} className="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-red-50 hover:text-red-700 flex items-center gap-3 transition-colors">
+                                    <FileJson className="w-4 h-4 text-red-600" />
+                                    <span>PDF (.pdf)</span>
+                                </button>
+                            </div>
+                        </div>
+                    )}
                 </div>
             </div>
 
@@ -373,60 +601,73 @@ const StudentDailyReport = () => {
                 </div>
             )}
 
-            {/* Student List Table - TimeTableList.jsx Style */}
+            {/* Student List View */}
             <div className="rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-                <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+                <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 bg-white">
                     <h3 className="text-lg font-bold text-gray-800">
                         {filterType === 'all' ? 'All Students' : filterType === 'present' ? 'Present Students' : 'Absent Students'}
                     </h3>
                     <div className="text-sm text-gray-600">
-                        Showing <span className="font-bold text-blue-600">{filteredStudents.length}</span> {filterType === 'all' ? 'students' : filterType === 'present' ? 'present' : 'absent'}
+                        Showing <span className="font-bold text-blue-600">{filteredStudents.length}</span> students
                     </div>
                 </div>
-                <div className="overflow-x-auto">
-                      <div className="h-[500px] overflow-y-auto blue-scrollbar">
-                    <table className="w-full min-w-max">
-                        <thead className="bg-blue-800 text-white">
-                            <tr>
-                                <th className="px-4 py-3 sm:px-6 sm:py-4  text-xs font-medium tracking-wider">Roll No</th>
-                                <th className="px-4 py-3 sm:px-6 sm:py-4  text-xs font-medium tracking-wider">Student Name</th>
-                                <th className="px-4 py-3 sm:px-6 sm:py-4  text-xs font-medium tracking-wider">Status</th>
-                                <th className="px-4 py-3 sm:px-6 sm:py-4  text-xs font-medium tracking-wider">Reason</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-gray-200">
-                            {filteredStudents.length === 0 ? (
-                                <tr>
-                                    <td colSpan="4" className="px-6 py-12 text-center text-gray-500">
-                                        <div className="flex flex-col items-center justify-center">
-                                            <div>No students found</div>
-                                        </div>
-                                    </td>
-                                </tr>
-                            ) : (
-                                filteredStudents.map((student) => (
-                                    <tr key={student.id} className="hover:bg-gray-50">
-                                        <td className="px-4 py-3 sm:px-6 sm:py-4 text-sm text-gray-700">{student.rollNo}</td>
-                                        <td className="px-4 py-3 sm:px-6 sm:py-4 text-sm font-medium text-gray-900">{student.name}</td>
-                                        <td className="px-4 py-3 sm:px-6 sm:py-4 text-center">
-                                            <span className={`px-3 py-1 rounded-full text-xs font-semibold ${student.status === 'P' ? 'bg-green-100 text-green-700' :
-                                                student.status === 'ML' ? 'bg-blue-100 text-blue-700' :
-                                                    student.status === 'OL' ? 'bg-yellow-100 text-yellow-700' :
-                                                        'bg-red-100 text-red-700'
-                                                }`}>
-                                                {student.status === 'P' ? 'Present' :
-                                                    student.status === 'ML' ? 'Medical Leave' :
-                                                        student.status === 'OL' ? 'On Leave' : 'Absent'}
-                                            </span>
-                                        </td>
-                                        <td className="px-4 py-3 sm:px-6 sm:py-4 text-sm text-gray-600">{student.reason}</td>
+
+                {isMobileView ? (
+                    <div className="p-4 bg-gray-50 max-h-[600px] overflow-y-auto">
+                        {filteredStudents.length === 0 ? (
+                            <div className="text-center py-12 text-gray-500 bg-white rounded-xl border border-dashed border-gray-300">
+                                No students found matching your criteria.
+                            </div>
+                        ) : (
+                            filteredStudents.map((student) => (
+                                <MobileAttendanceCard key={student.id} student={student} />
+                            ))
+                        )}
+                    </div>
+                ) : (
+                    <div className="overflow-x-auto">
+                        <div className="max-h-[500px] overflow-y-auto blue-scrollbar">
+                            <table className="w-full min-w-max">
+                                <thead className="bg-blue-800 text-white sticky top-0 z-10">
+                                    <tr>
+                                        <th className="px-4 py-3 sm:px-6 sm:py-4 text-left text-xs font-bold  tracking-wider">Roll No</th>
+                                        <th className="px-4 py-3 sm:px-6 sm:py-4 text-left text-xs font-bold  tracking-wider">Student Name</th>
+                                        <th className="px-4 py-3 sm:px-6 sm:py-4 text-center text-xs font-bold  tracking-wider">Status</th>
+                                        <th className="px-4 py-3 sm:px-6 sm:py-4 text-left text-xs font-bold  tracking-wider">Reason</th>
                                     </tr>
-                                ))
-                            )}
-                        </tbody>
-                    </table>
+                                </thead>
+                                <tbody className="divide-y divide-gray-200 bg-white">
+                                    {filteredStudents.length === 0 ? (
+                                        <tr>
+                                            <td colSpan="4" className="px-6 py-12 text-center text-gray-500">
+                                                No students found matching the selected criteria.
+                                            </td>
+                                        </tr>
+                                    ) : (
+                                        filteredStudents.map((student) => (
+                                            <tr key={student.id} className="hover:bg-blue-50 transition-colors duration-150">
+                                                <td className="px-4 py-3 sm:px-6 sm:py-4 text-sm text-gray-700">{student.rollNo}</td>
+                                                <td className="px-4 py-3 sm:px-6 sm:py-4 text-sm font-semibold text-gray-900">{student.name}</td>
+                                                <td className="px-4 py-3 sm:px-6 sm:py-4 text-center">
+                                                    <span className={`px-4 py-1 rounded-full text-[11px] font-bold  tracking-wide ${student.status === 'P' ? 'bg-green-100 text-green-700' :
+                                                        student.status === 'ML' ? 'bg-blue-100 text-blue-700' :
+                                                            student.status === 'OL' ? 'bg-yellow-100 text-yellow-700' :
+                                                                'bg-red-100 text-red-700'
+                                                        }`}>
+                                                        {student.status === 'P' ? 'Present' :
+                                                            student.status === 'ML' ? 'Medical Leave' :
+                                                                student.status === 'OL' ? 'On Leave' : 'Absent'}
+                                                    </span>
+                                                </td>
+                                                <td className="px-4 py-3 sm:px-6 sm:py-4 text-sm text-gray-600">{student.reason}</td>
+                                            </tr>
+                                        ))
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
-                </div>
+                )}
             </div>
         </div>
     );
