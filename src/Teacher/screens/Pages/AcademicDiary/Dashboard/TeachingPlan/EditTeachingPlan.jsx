@@ -343,18 +343,18 @@ export default function EditTeachingPlanTeacher() {
     if (fetching) return <div className="p-6 text-center">Loading plan data...</div>;
 
     return (
-        <div className="p-6">
+        <div className="p-4 md:p-6">
             {alert}
-            <div className="flex items-center justify-between mb-6">
+            <div className="flex flex-row items-center justify-between gap-4 mb-6">
                 <h2 className="text-2xl font-bold text-blue-700">Edit Teaching Plan</h2>
                 <button onClick={() => navigate('/teacher/academic-diary/teaching-plan')} className="w-10 h-10 bg-blue-600 text-white rounded-full flex items-center justify-center hover:bg-blue-700 transition">✕</button>
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-6">
                 {/* Fixed Academic Selection */}
-                <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
+                <div className="bg-white p-4 md:p-6 rounded-xl border border-gray-200 shadow-sm">
                     <h3 className="text-lg font-semibold mb-4 text-gray-800 border-b pb-2">Academic Selection</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
                         {/* <ReadOnlyField label="Teacher" value={formData.teacherName} /> */}
                         <ReadOnlyField label="Academic Year" value={formData.academicYear} />
                         <ReadOnlyField label="Semester" value={formData.semester} />
@@ -364,9 +364,9 @@ export default function EditTeachingPlanTeacher() {
                 </div>
 
                 {/* Basic Info */}
-                <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
+                <div className="bg-white p-4 md:p-6 rounded-xl border border-gray-200 shadow-sm">
                     <h3 className="text-lg font-semibold mb-4 text-gray-800 border-b pb-2">Basic Information</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
                         <ReadOnlyField label="Department" value={formData.department} />
                         <div>
                             <label className="block text-sm font-semibold text-gray-700 mb-2">Level of Paper</label>
@@ -385,7 +385,7 @@ export default function EditTeachingPlanTeacher() {
                 </div>
 
                 {/* Objectives */}
-                <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
+                <div className="bg-white p-4 md:p-6 rounded-xl border border-gray-200 shadow-sm">
                     <h3 className="text-lg font-semibold mb-4 text-gray-800 border-b pb-2">Objectives</h3>
                     <div className="space-y-2 max-h-48 overflow-y-auto pr-2 custom-scrollbar">
                         {objectives.map(obj => (
@@ -404,18 +404,18 @@ export default function EditTeachingPlanTeacher() {
                 </div>
 
                 {/* Course Outcomes */}
-                <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
-                    <div className="flex justify-between items-center mb-4 border-b pb-2">
+                <div className="bg-white p-4 md:p-6 rounded-xl border border-gray-200 shadow-sm">
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4 border-b pb-2">
                         <h3 className="text-lg font-semibold text-gray-800">Course Outcomes</h3>
-                        <button type="button" onClick={addCourseOutcome} className="bg-blue-600 text-white px-4 py-1.5 rounded-lg flex items-center gap-2 text-sm font-bold hover:bg-blue-700 transition shadow-sm"><Plus size={16} /> Add CO</button>
+                        <button type="button" onClick={addCourseOutcome} className="bg-blue-600 text-white px-4 py-1.5 rounded-lg flex items-center gap-2 text-sm font-bold hover:bg-blue-700 transition shadow-sm w-full sm:w-auto justify-center"><Plus size={16} /> Add CO</button>
                     </div>
                     <div className="space-y-3">
                         {formData.courseOutcomes.map((co, idx) => (
-                            <div key={idx} className="flex gap-3 items-center">
-                                <div className="w-20">
+                            <div key={idx} className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
+                                <div className="w-full sm:w-20">
                                     <input type="text" value={co.coNumber} readOnly className="w-full p-2 border border-gray-200 rounded-lg bg-gray-50 text-sm font-bold text-blue-600 text-center" />
                                 </div>
-                                <div className="flex-1">
+                                <div className="flex-1 w-full">
                                     <input
                                         type="text"
                                         value={co.coDescription}
@@ -425,7 +425,7 @@ export default function EditTeachingPlanTeacher() {
                                     />
                                 </div>
                                 {formData.courseOutcomes.length > 1 && (
-                                    <button type="button" onClick={() => setFormData(prev => ({ ...prev, courseOutcomes: prev.courseOutcomes.filter((_, i) => i !== idx) }))} className="text-red-500 hover:text-red-700 p-2 transition">
+                                    <button type="button" onClick={() => setFormData(prev => ({ ...prev, courseOutcomes: prev.courseOutcomes.filter((_, i) => i !== idx) }))} className="text-red-500 hover:text-red-700 p-2 transition self-end sm:self-center">
                                         <Trash2 size={18} />
                                     </button>
                                 )}
@@ -435,126 +435,128 @@ export default function EditTeachingPlanTeacher() {
                 </div>
 
                 {/* Teaching Plan Table */}
-                <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm overflow-x-auto">
-                    <div className="flex justify-between items-center mb-4 min-w-max border-b pb-2">
+                <div className="bg-white p-4 md:p-6 rounded-xl border border-gray-200 shadow-sm">
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4 min-w-max sm:min-w-0 border-b pb-2">
                         <h3 className="text-lg font-semibold text-gray-800">Teaching Plan Details</h3>
-                        <button type="button" onClick={addTableRow} className="bg-blue-600 text-white px-5 py-2 rounded-lg flex items-center gap-2 font-bold hover:bg-blue-700 transition shadow-sm"><Plus size={18} /> Add Row</button>
+                        <button type="button" onClick={addTableRow} className="bg-blue-600 text-white px-5 py-2 rounded-lg flex items-center gap-2 font-bold hover:bg-blue-700 transition shadow-sm w-full sm:w-auto justify-center"><Plus size={18} /> Add Row</button>
                     </div>
-                    <table className="w-full border-collapse min-w-[1600px]">
-                        <thead>
-                            <tr className="bg-blue-600 text-white text-xs uppercase tracking-wider">
-                                <th className="p-3 text-left w-48">Module</th>
-                                <th className="p-3 text-left w-48">Unit</th>
-                                <th className="p-3 text-left w-40">CO</th>
-                                <th className="p-3 text-left w-32">Month</th>
-                                <th className="p-3 text-left w-20">Week</th>
-                                <th className="p-3 text-left w-20">Hours</th>
-                                <th className="p-3 text-left w-48">Pre-Class</th>
-                                <th className="p-3 text-left w-48">Technique</th>
-                                <th className="p-3 text-left w-48">Post-Class</th>
-                                <th className="p-3 text-center w-20">Action</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-gray-100">
-                            {formData.tableRows.map((row, idx) => {
-                                const moduleOptions = modules.map(m => ({ value: m.id, label: m.name }));
-                                const unitOptions = (selectedModuleUnits[row.id] || units.filter(u => u.moduleId === row.moduleId) || []).map(u => ({ value: u.id, label: u.name }));
-                                const coOptions = formData.courseOutcomes.map(co => ({ value: co.coNumber, label: co.coNumber }));
-                                const selectedModule = row.module ? { value: row.moduleId, label: row.module } : null;
-                                const selectedUnit = row.unit ? { value: row.unitId, label: row.unit } : null;
-                                const selectedCOs = row.co.map(c => ({ value: c, label: c }));
+                    <div className="overflow-x-auto">
+                        <table className="w-full border-collapse min-w-[1600px]">
+                            <thead>
+                                <tr className="bg-blue-600 text-white text-xs uppercase tracking-wider">
+                                    <th className="p-3 text-left w-48">Module</th>
+                                    <th className="p-3 text-left w-48">Unit</th>
+                                    <th className="p-3 text-left w-40">CO</th>
+                                    <th className="p-3 text-left w-32">Month</th>
+                                    <th className="p-3 text-left w-20">Week</th>
+                                    <th className="p-3 text-left w-20">Hours</th>
+                                    <th className="p-3 text-left w-48">Pre-Class</th>
+                                    <th className="p-3 text-left w-48">Technique</th>
+                                    <th className="p-3 text-left w-48">Post-Class</th>
+                                    <th className="p-3 text-center w-20">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-100">
+                                {formData.tableRows.map((row, idx) => {
+                                    const moduleOptions = modules.map(m => ({ value: m.id, label: m.name }));
+                                    const unitOptions = (selectedModuleUnits[row.id] || units.filter(u => u.moduleId === row.moduleId) || []).map(u => ({ value: u.id, label: u.name }));
+                                    const coOptions = formData.courseOutcomes.map(co => ({ value: co.coNumber, label: co.coNumber }));
+                                    const selectedModule = row.module ? { value: row.moduleId, label: row.module } : null;
+                                    const selectedUnit = row.unit ? { value: row.unitId, label: row.unit } : null;
+                                    const selectedCOs = row.co.map(c => ({ value: c, label: c }));
 
-                                return (
-                                    <tr key={row.id} className="hover:bg-blue-50 transition-colors">
-                                        <td className="p-2">
-                                            <Select
-                                                value={selectedModule}
-                                                onChange={(opt) => handleModuleChange(row.id, opt)}
-                                                options={moduleOptions}
-                                                styles={selectStyles}
-                                                placeholder="Select Module"
-                                                isClearable
-                                            />
-                                        </td>
-                                        <td className="p-2">
-                                            <Select
-                                                value={selectedUnit}
-                                                onChange={(opt) => handleUnitChange(row.id, opt)}
-                                                options={unitOptions}
-                                                styles={selectStyles}
-                                                placeholder="Select Unit"
-                                                isDisabled={!row.module}
-                                                isClearable
-                                            />
-                                        </td>
-                                        <td className="p-2">
-                                            <Select
-                                                isMulti
-                                                value={selectedCOs}
-                                                onChange={(opts) => handleRowCOChange(row.id, opts)}
-                                                options={coOptions}
-                                                styles={selectStyles}
-                                                placeholder="Select CO"
-                                            />
-                                        </td>
-                                        <td className="p-2">
-                                            <select value={row.moduleStartingMonth} onChange={e => handleTableRowChange(row.id, 'moduleStartingMonth', e.target.value)} className="w-full p-2 border border-gray-300 rounded text-xs focus:ring-1 ring-blue-500 outline-none">
-                                                <option value="">Month</option>
-                                                {months.map(m => <option key={m} value={m}>{m}</option>)}
-                                            </select>
-                                        </td>
-                                        <td className="p-2"><input type="number" min="1" max="52" value={row.week} onChange={e => handleTableRowChange(row.id, 'week', e.target.value)} className="w-full p-2 border border-gray-300 rounded text-xs text-center focus:ring-1 ring-blue-500 outline-none" /></td>
-                                        <td className="p-2"><input type="number" min="1" value={row.noOfLectureHours} onChange={e => handleTableRowChange(row.id, 'noOfLectureHours', e.target.value)} className="w-full p-2 border border-gray-300 rounded text-xs text-center focus:ring-1 ring-blue-500 outline-none" /></td>
-                                        <td className="p-2">
-                                            <input
-                                                type="text"
-                                                value={row.preClassActivity}
-                                                onChange={e => handleTableRowChange(row.id, 'preClassActivity', e.target.value)}
-                                                className="w-full p-2 border border-gray-300 rounded text-xs focus:ring-1 ring-blue-500 outline-none"
-                                                placeholder="Pre-class activity"
-                                            />
-                                        </td>
-                                        <td className="p-2">
-                                            <input
-                                                type="text"
-                                                value={row.instructionalTechniques}
-                                                onChange={e => handleTableRowChange(row.id, 'instructionalTechniques', e.target.value)}
-                                                className="w-full p-2 border border-gray-300 rounded text-xs focus:ring-1 ring-blue-500 outline-none"
-                                                placeholder="Instructional technique"
-                                            />
-                                        </td>
-                                        <td className="p-2">
-                                            <input
-                                                type="text"
-                                                value={row.postClassActivity}
-                                                onChange={e => handleTableRowChange(row.id, 'postClassActivity', e.target.value)}
-                                                className="w-full p-2 border border-gray-300 rounded text-xs focus:ring-1 ring-blue-500 outline-none"
-                                                placeholder="Post-class activity"
-                                            />
-                                        </td>
-                                        <td className="p-2 text-center">
-                                            <button type="button" onClick={() => removeTableRow(row.id)} className="text-red-500 hover:text-red-700 transition-colors p-2" title="Remove row"><Trash2 size={18} /></button>
-                                        </td>
-                                    </tr>
-                                );
-                            })}
-                        </tbody>
-                    </table>
+                                    return (
+                                        <tr key={row.id} className="hover:bg-blue-50 transition-colors">
+                                            <td className="p-2">
+                                                <Select
+                                                    value={selectedModule}
+                                                    onChange={(opt) => handleModuleChange(row.id, opt)}
+                                                    options={moduleOptions}
+                                                    styles={selectStyles}
+                                                    placeholder="Select Module"
+                                                    isClearable
+                                                />
+                                            </td>
+                                            <td className="p-2">
+                                                <Select
+                                                    value={selectedUnit}
+                                                    onChange={(opt) => handleUnitChange(row.id, opt)}
+                                                    options={unitOptions}
+                                                    styles={selectStyles}
+                                                    placeholder="Select Unit"
+                                                    isDisabled={!row.module}
+                                                    isClearable
+                                                />
+                                            </td>
+                                            <td className="p-2">
+                                                <Select
+                                                    isMulti
+                                                    value={selectedCOs}
+                                                    onChange={(opts) => handleRowCOChange(row.id, opts)}
+                                                    options={coOptions}
+                                                    styles={selectStyles}
+                                                    placeholder="Select CO"
+                                                />
+                                            </td>
+                                            <td className="p-2">
+                                                <select value={row.moduleStartingMonth} onChange={e => handleTableRowChange(row.id, 'moduleStartingMonth', e.target.value)} className="w-full p-2 border border-gray-300 rounded text-xs focus:ring-1 ring-blue-500 outline-none">
+                                                    <option value="">Month</option>
+                                                    {months.map(m => <option key={m} value={m}>{m}</option>)}
+                                                </select>
+                                            </td>
+                                            <td className="p-2"><input type="number" min="1" max="52" value={row.week} onChange={e => handleTableRowChange(row.id, 'week', e.target.value)} className="w-full p-2 border border-gray-300 rounded text-xs text-center focus:ring-1 ring-blue-500 outline-none" /></td>
+                                            <td className="p-2"><input type="number" min="1" value={row.noOfLectureHours} onChange={e => handleTableRowChange(row.id, 'noOfLectureHours', e.target.value)} className="w-full p-2 border border-gray-300 rounded text-xs text-center focus:ring-1 ring-blue-500 outline-none" /></td>
+                                            <td className="p-2">
+                                                <input
+                                                    type="text"
+                                                    value={row.preClassActivity}
+                                                    onChange={e => handleTableRowChange(row.id, 'preClassActivity', e.target.value)}
+                                                    className="w-full p-2 border border-gray-300 rounded text-xs focus:ring-1 ring-blue-500 outline-none"
+                                                    placeholder="Pre-class activity"
+                                                />
+                                            </td>
+                                            <td className="p-2">
+                                                <input
+                                                    type="text"
+                                                    value={row.instructionalTechniques}
+                                                    onChange={e => handleTableRowChange(row.id, 'instructionalTechniques', e.target.value)}
+                                                    className="w-full p-2 border border-gray-300 rounded text-xs focus:ring-1 ring-blue-500 outline-none"
+                                                    placeholder="Instructional technique"
+                                                />
+                                            </td>
+                                            <td className="p-2">
+                                                <input
+                                                    type="text"
+                                                    value={row.postClassActivity}
+                                                    onChange={e => handleTableRowChange(row.id, 'postClassActivity', e.target.value)}
+                                                    className="w-full p-2 border border-gray-300 rounded text-xs focus:ring-1 ring-blue-500 outline-none"
+                                                    placeholder="Post-class activity"
+                                                />
+                                            </td>
+                                            <td className="p-2 text-center">
+                                                <button type="button" onClick={() => removeTableRow(row.id)} className="text-red-500 hover:text-red-700 transition-colors p-2" title="Remove row"><Trash2 size={18} /></button>
+                                            </td>
+                                        </tr>
+                                    );
+                                })}
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
 
                 {/* Action Buttons */}
-                <div className="flex justify-end gap-4 pt-8 border-t mt-12 mb-6">
+                <div className="flex flex-col sm:flex-row justify-end gap-3 sm:gap-4 pt-8 border-t mt-12 mb-6">
                     <button
                         type="button"
                         onClick={() => navigate('/teacher/academic-diary/teaching-plan')}
-                        className="px-8 py-2.5 border border-gray-300 rounded-xl text-gray-700 font-bold hover:bg-gray-50 transition shadow-sm"
+                        className="w-full sm:w-auto px-8 py-2.5 border border-gray-300 rounded-xl text-gray-700 font-bold hover:bg-gray-50 transition shadow-sm text-center"
                     >
                         Cancel
                     </button>
                     <button
                         type="submit"
                         disabled={loading}
-                        className="px-10 py-2.5 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition shadow-md disabled:opacity-50 flex items-center gap-2"
+                        className="w-full sm:w-auto px-10 py-2.5 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition shadow-md disabled:opacity-50 flex items-center justify-center gap-2"
                     >
                         {loading ? <div className="w-5 h-5 border-2 border-white border-t-transparent animate-spin rounded-full"></div> : <Save size={20} />}
                         Update Teaching Plan
