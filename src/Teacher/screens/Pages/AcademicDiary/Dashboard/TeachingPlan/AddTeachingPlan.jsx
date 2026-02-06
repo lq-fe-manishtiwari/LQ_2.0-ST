@@ -6,7 +6,7 @@ import { api } from "@/_services/api";
 import AttendanceFilters from "../../../Attendance/Components/AttendanceFilters";
 import { teachingPlanService } from "../../Services/teachingPlan.service";
 import { settingsService } from "../../Services/settings.service";
-import { contentService } from "../../../Content/Services/content.service";
+import { contentService } from "../../../Content/services/content.service";
 
 export default function AddTeachingPlan() {
     const navigate = useNavigate();
@@ -114,47 +114,33 @@ export default function AddTeachingPlan() {
         setLoadingModules(true);
         try {
             const subjectId = parseInt(filters.paper);
-            
+
             if (!subjectId) {
                 setModules([]);
                 setUnits([]);
                 setSelectedModuleUnits({});
                 return;
             }
-            
+
             const response = await contentService.getModulesbySubject(subjectId);
-            
+
             if (!response) {
                 setModules([]);
                 setUnits([]);
                 setSelectedModuleUnits({});
                 return;
             }
-            
+
             let modulesData = [];
             let allUnits = [];
-            
+
             if (response && response.modules && Array.isArray(response.modules)) {
                 modulesData = response.modules.map(item => ({
                     id: item.module_id,
                     name: item.module_name
                 }));
-                
-                allUnits = response.modules.flatMap(module => 
-                    (module.units || []).map(unit => ({
-                        id: unit.unit_id,
-                        name: unit.unit_name,
-                        moduleId: module.module_id
-                    }))
-                );
-            } 
-            else if (Array.isArray(response)) {
-                modulesData = response.map(item => ({
-                    id: item.module_id,
-                    name: item.module_name
-                }));
-                
-                allUnits = response.flatMap(module => 
+
+                allUnits = response.modules.flatMap(module =>
                     (module.units || []).map(unit => ({
                         id: unit.unit_id,
                         name: unit.unit_name,
@@ -162,16 +148,30 @@ export default function AddTeachingPlan() {
                     }))
                 );
             }
-            
+            else if (Array.isArray(response)) {
+                modulesData = response.map(item => ({
+                    id: item.module_id,
+                    name: item.module_name
+                }));
+
+                allUnits = response.flatMap(module =>
+                    (module.units || []).map(unit => ({
+                        id: unit.unit_id,
+                        name: unit.unit_name,
+                        moduleId: module.module_id
+                    }))
+                );
+            }
+
             setModules(modulesData);
             setUnits(allUnits);
-            
+
             const resetUnits = {};
             formData.teachingModules.forEach(row => {
                 resetUnits[row.id] = [];
             });
             setSelectedModuleUnits(resetUnits);
-            
+
         } catch (error) {
             console.error('Error loading modules and units:', error);
             setModules([]);
@@ -220,9 +220,9 @@ export default function AddTeachingPlan() {
                 m.id === id ? { ...m, [field]: value, unitName: '' } : m
             );
             setFormData(prev => ({ ...prev, teachingModules: newModules }));
-            
+
             const selectedModule = modules.find(m => m.name === value);
-            
+
             if (selectedModule) {
                 const moduleUnits = units.filter(u => u.moduleId === selectedModule.id);
                 setSelectedModuleUnits(prev => ({
@@ -275,7 +275,7 @@ export default function AddTeachingPlan() {
                 }
             ]
         }));
-        
+
         setSelectedModuleUnits(prev => ({
             ...prev,
             [Date.now()]: []
@@ -285,7 +285,7 @@ export default function AddTeachingPlan() {
     const removeModule = (id) => {
         const newModules = formData.teachingModules.filter(m => m.id !== id);
         setFormData(prev => ({ ...prev, teachingModules: newModules.length ? newModules : [formData.teachingModules[0]] }));
-        
+
         setSelectedModuleUnits(prev => {
             const updated = { ...prev };
             delete updated[id];
@@ -347,7 +347,7 @@ export default function AddTeachingPlan() {
                 modules: formData.teachingModules.map(m => {
                     const selectedModule = modules.find(mod => mod.name === m.moduleName);
                     const selectedUnit = units.find(unit => unit.name === m.unitName);
-                    
+
                     return {
                         module_id: selectedModule?.id || 0,
                         topic_id: selectedUnit?.id || 0,

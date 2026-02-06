@@ -6,7 +6,7 @@ import Select from 'react-select';
 import { api } from "@/_services/api";
 import { teachingPlanService } from "../../Services/teachingPlan.service";
 import { settingsService } from "../../Services/settings.service";
-import { contentService } from "../../../Content/Services/content.service";
+import { contentService } from "../../../Content/services/content.service";
 
 // Helper component for read-only fields
 const ReadOnlyField = ({ label, value }) => (
@@ -136,7 +136,7 @@ export default function EditTeachingPlanTeacher() {
                     })) || []
                 };
                 setFormData(mappedData);
-                
+
                 // After plan is loaded, fetch modules using the subjectId
                 if (mappedData.subjectId) {
                     await loadModulesAndUnits(mappedData.subjectId);
@@ -183,7 +183,7 @@ export default function EditTeachingPlanTeacher() {
             const mods = response.modules || (Array.isArray(response) ? response : []);
             const formattedModules = mods.map(m => ({ id: m.module_id, name: m.module_name }));
             const formattedUnits = mods.flatMap(m => (m.units || []).map(u => ({ id: u.unit_id, name: u.unit_name, moduleId: m.module_id })));
-            
+
             setModules(formattedModules);
             setUnits(formattedUnits);
         } catch (error) {
@@ -227,12 +227,12 @@ export default function EditTeachingPlanTeacher() {
     const handleModuleChange = (rowId, selectedOption) => {
         const moduleName = selectedOption?.label || '';
         const moduleId = selectedOption?.value || '';
-        
+
         handleTableRowChange(rowId, 'module', moduleName);
         handleTableRowChange(rowId, 'moduleId', moduleId);
         handleTableRowChange(rowId, 'unit', '');
         handleTableRowChange(rowId, 'unitId', '');
-        
+
         if (moduleId) {
             const modUnits = units.filter(u => u.moduleId === moduleId);
             setSelectedModuleUnits(prev => ({ ...prev, [rowId]: modUnits }));
@@ -244,7 +244,7 @@ export default function EditTeachingPlanTeacher() {
     const handleUnitChange = (rowId, selectedOption) => {
         const unitName = selectedOption?.label || '';
         const unitId = selectedOption?.value || '';
-        
+
         handleTableRowChange(rowId, 'unit', unitName);
         handleTableRowChange(rowId, 'unitId', unitId);
     };
@@ -258,19 +258,19 @@ export default function EditTeachingPlanTeacher() {
         const newId = Date.now();
         setFormData(prev => ({
             ...prev,
-            tableRows: [...prev.tableRows, { 
-                id: newId, 
-                module: '', 
+            tableRows: [...prev.tableRows, {
+                id: newId,
+                module: '',
                 moduleId: '',
-                unit: '', 
+                unit: '',
                 unitId: '',
-                co: [], 
-                moduleStartingMonth: '', 
-                week: '', 
-                noOfLectureHours: '', 
-                preClassActivity: '', 
-                instructionalTechniques: '', 
-                postClassActivity: '' 
+                co: [],
+                moduleStartingMonth: '',
+                week: '',
+                noOfLectureHours: '',
+                preClassActivity: '',
+                instructionalTechniques: '',
+                postClassActivity: ''
             }]
         }));
     };
@@ -287,7 +287,7 @@ export default function EditTeachingPlanTeacher() {
         try {
             const userProfile = JSON.parse(localStorage.getItem("userProfile") || "{}");
             const collegeId = userProfile.college_id;
-            
+
             const payload = {
                 academic_year_id: formData.academicYearId,
                 semester_id: formData.semesterId,
@@ -370,9 +370,9 @@ export default function EditTeachingPlanTeacher() {
                         <ReadOnlyField label="Department" value={formData.department} />
                         <div>
                             <label className="block text-sm font-semibold text-gray-700 mb-2">Level of Paper</label>
-                            <select 
-                                value={formData.levelOfSubject} 
-                                onChange={e => handleInputChange('levelOfSubject', e.target.value)} 
+                            <select
+                                value={formData.levelOfSubject}
+                                onChange={e => handleInputChange('levelOfSubject', e.target.value)}
                                 className="w-full p-2.5 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-500 outline-none transition"
                             >
                                 <option value="">Select Level</option>
@@ -390,11 +390,11 @@ export default function EditTeachingPlanTeacher() {
                     <div className="space-y-2 max-h-48 overflow-y-auto pr-2 custom-scrollbar">
                         {objectives.map(obj => (
                             <label key={obj.teaching_plan_objective_id} className="flex items-center gap-3 p-3 border rounded-lg hover:bg-blue-50 cursor-pointer transition">
-                                <input 
-                                    type="checkbox" 
+                                <input
+                                    type="checkbox"
                                     className="w-4 h-4 text-blue-600 rounded"
-                                    checked={formData.selectedObjectives.includes(obj.teaching_plan_objective_id)} 
-                                    onChange={() => handleObjectiveToggle(obj.teaching_plan_objective_id)} 
+                                    checked={formData.selectedObjectives.includes(obj.teaching_plan_objective_id)}
+                                    onChange={() => handleObjectiveToggle(obj.teaching_plan_objective_id)}
                                 />
                                 <span className="text-sm font-medium text-gray-700">{obj.objective}</span>
                             </label>
@@ -407,26 +407,26 @@ export default function EditTeachingPlanTeacher() {
                 <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
                     <div className="flex justify-between items-center mb-4 border-b pb-2">
                         <h3 className="text-lg font-semibold text-gray-800">Course Outcomes</h3>
-                        <button type="button" onClick={addCourseOutcome} className="bg-blue-600 text-white px-4 py-1.5 rounded-lg flex items-center gap-2 text-sm font-bold hover:bg-blue-700 transition shadow-sm"><Plus size={16}/> Add CO</button>
+                        <button type="button" onClick={addCourseOutcome} className="bg-blue-600 text-white px-4 py-1.5 rounded-lg flex items-center gap-2 text-sm font-bold hover:bg-blue-700 transition shadow-sm"><Plus size={16} /> Add CO</button>
                     </div>
                     <div className="space-y-3">
                         {formData.courseOutcomes.map((co, idx) => (
                             <div key={idx} className="flex gap-3 items-center">
                                 <div className="w-20">
-                                    <input type="text" value={co.coNumber} readOnly className="w-full p-2 border border-gray-200 rounded-lg bg-gray-50 text-sm font-bold text-blue-600 text-center"/>
+                                    <input type="text" value={co.coNumber} readOnly className="w-full p-2 border border-gray-200 rounded-lg bg-gray-50 text-sm font-bold text-blue-600 text-center" />
                                 </div>
                                 <div className="flex-1">
-                                    <input 
+                                    <input
                                         type="text"
-                                        value={co.coDescription} 
-                                        onChange={e => handleCOChange(idx, 'coDescription', e.target.value)} 
-                                        className="w-full p-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none transition" 
+                                        value={co.coDescription}
+                                        onChange={e => handleCOChange(idx, 'coDescription', e.target.value)}
+                                        className="w-full p-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none transition"
                                         placeholder="Describe the course outcome..."
                                     />
                                 </div>
                                 {formData.courseOutcomes.length > 1 && (
                                     <button type="button" onClick={() => setFormData(prev => ({ ...prev, courseOutcomes: prev.courseOutcomes.filter((_, i) => i !== idx) }))} className="text-red-500 hover:text-red-700 p-2 transition">
-                                        <Trash2 size={18}/>
+                                        <Trash2 size={18} />
                                     </button>
                                 )}
                             </div>
@@ -438,7 +438,7 @@ export default function EditTeachingPlanTeacher() {
                 <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm overflow-x-auto">
                     <div className="flex justify-between items-center mb-4 min-w-max border-b pb-2">
                         <h3 className="text-lg font-semibold text-gray-800">Teaching Plan Details</h3>
-                        <button type="button" onClick={addTableRow} className="bg-blue-600 text-white px-5 py-2 rounded-lg flex items-center gap-2 font-bold hover:bg-blue-700 transition shadow-sm"><Plus size={18}/> Add Row</button>
+                        <button type="button" onClick={addTableRow} className="bg-blue-600 text-white px-5 py-2 rounded-lg flex items-center gap-2 font-bold hover:bg-blue-700 transition shadow-sm"><Plus size={18} /> Add Row</button>
                     </div>
                     <table className="w-full border-collapse min-w-[1600px]">
                         <thead>
@@ -506,34 +506,34 @@ export default function EditTeachingPlanTeacher() {
                                         <td className="p-2"><input type="number" min="1" max="52" value={row.week} onChange={e => handleTableRowChange(row.id, 'week', e.target.value)} className="w-full p-2 border border-gray-300 rounded text-xs text-center focus:ring-1 ring-blue-500 outline-none" /></td>
                                         <td className="p-2"><input type="number" min="1" value={row.noOfLectureHours} onChange={e => handleTableRowChange(row.id, 'noOfLectureHours', e.target.value)} className="w-full p-2 border border-gray-300 rounded text-xs text-center focus:ring-1 ring-blue-500 outline-none" /></td>
                                         <td className="p-2">
-                                            <input 
+                                            <input
                                                 type="text"
-                                                value={row.preClassActivity} 
-                                                onChange={e => handleTableRowChange(row.id, 'preClassActivity', e.target.value)} 
-                                                className="w-full p-2 border border-gray-300 rounded text-xs focus:ring-1 ring-blue-500 outline-none" 
+                                                value={row.preClassActivity}
+                                                onChange={e => handleTableRowChange(row.id, 'preClassActivity', e.target.value)}
+                                                className="w-full p-2 border border-gray-300 rounded text-xs focus:ring-1 ring-blue-500 outline-none"
                                                 placeholder="Pre-class activity"
                                             />
                                         </td>
                                         <td className="p-2">
-                                            <input 
+                                            <input
                                                 type="text"
-                                                value={row.instructionalTechniques} 
-                                                onChange={e => handleTableRowChange(row.id, 'instructionalTechniques', e.target.value)} 
-                                                className="w-full p-2 border border-gray-300 rounded text-xs focus:ring-1 ring-blue-500 outline-none" 
+                                                value={row.instructionalTechniques}
+                                                onChange={e => handleTableRowChange(row.id, 'instructionalTechniques', e.target.value)}
+                                                className="w-full p-2 border border-gray-300 rounded text-xs focus:ring-1 ring-blue-500 outline-none"
                                                 placeholder="Instructional technique"
                                             />
                                         </td>
                                         <td className="p-2">
-                                            <input 
+                                            <input
                                                 type="text"
-                                                value={row.postClassActivity} 
-                                                onChange={e => handleTableRowChange(row.id, 'postClassActivity', e.target.value)} 
-                                                className="w-full p-2 border border-gray-300 rounded text-xs focus:ring-1 ring-blue-500 outline-none" 
+                                                value={row.postClassActivity}
+                                                onChange={e => handleTableRowChange(row.id, 'postClassActivity', e.target.value)}
+                                                className="w-full p-2 border border-gray-300 rounded text-xs focus:ring-1 ring-blue-500 outline-none"
                                                 placeholder="Post-class activity"
                                             />
                                         </td>
                                         <td className="p-2 text-center">
-                                            <button type="button" onClick={() => removeTableRow(row.id)} className="text-red-500 hover:text-red-700 transition-colors p-2" title="Remove row"><Trash2 size={18}/></button>
+                                            <button type="button" onClick={() => removeTableRow(row.id)} className="text-red-500 hover:text-red-700 transition-colors p-2" title="Remove row"><Trash2 size={18} /></button>
                                         </td>
                                     </tr>
                                 );
@@ -544,19 +544,19 @@ export default function EditTeachingPlanTeacher() {
 
                 {/* Action Buttons */}
                 <div className="flex justify-end gap-4 pt-8 border-t mt-12 mb-6">
-                    <button 
-                        type="button" 
-                        onClick={() => navigate('/teacher/academic-diary/teaching-plan')} 
+                    <button
+                        type="button"
+                        onClick={() => navigate('/teacher/academic-diary/teaching-plan')}
                         className="px-8 py-2.5 border border-gray-300 rounded-xl text-gray-700 font-bold hover:bg-gray-50 transition shadow-sm"
                     >
                         Cancel
                     </button>
-                    <button 
-                        type="submit" 
-                        disabled={loading} 
+                    <button
+                        type="submit"
+                        disabled={loading}
                         className="px-10 py-2.5 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition shadow-md disabled:opacity-50 flex items-center gap-2"
                     >
-                        {loading ? <div className="w-5 h-5 border-2 border-white border-t-transparent animate-spin rounded-full"></div> : <Save size={20}/>}
+                        {loading ? <div className="w-5 h-5 border-2 border-white border-t-transparent animate-spin rounded-full"></div> : <Save size={20} />}
                         Update Teaching Plan
                     </button>
                 </div>
