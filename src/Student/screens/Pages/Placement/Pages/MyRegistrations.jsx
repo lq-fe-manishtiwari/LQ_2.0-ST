@@ -235,7 +235,7 @@ export default function MyRegistrations() {
             {currentEntries.length ? currentEntries.map(item => (
               <tr key={item.application_id} className="hover:bg-gray-50">
                 <td className="px-6 py-4 text-sm text-center text-gray-900">{item.placement_id || 'N/A'}</td>
-                <td className="px-6 py-4 text-sm text-center text-gray-500">{item.job_role_ids?.join(', ') || 'N/A'}</td>
+                <td className="px-6 py-4 text-sm text-center text-gray-500">{item.job_role_names?.join(', ') || 'N/A'}</td>
                 <td className="px-6 py-4 text-sm text-center text-gray-500">{item.application_data?.email || 'N/A'}</td>
                 <td className="px-6 py-4 text-center">{getStatusBadge(item.application_status)}</td>
               </tr>
