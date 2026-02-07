@@ -5,18 +5,31 @@ import { Search, Download, CheckCircle, Clock, XCircle } from 'lucide-react';
 import { studentPlacementService } from '../Services/studentPlacement.service';
 import { api } from '../../../../../_services/api';
 
+/* ===================== HELPERS ===================== */
+const formatDate = (date) => {
+  if (!date) return '-';
+  const d = new Date(date);
+  const day = String(d.getDate()).padStart(2, '0');
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const year = d.getFullYear();
+  return `${day}/${month}/${year}`;
+};
+
+const formatCTC = (amount) => {
+  if (!amount || isNaN(amount)) return '-';
+  return `${(amount / 100000).toFixed(1)} LPA`;
+};
+
 /* ===================== MAPPER ===================== */
 const mapOffersResponseToUI = (offers = []) =>
   offers.map((offer) => ({
     placement_id: offer.placement_id,
     organisation: offer.company?.company_name || '-',
     job_role: offer.job_roles?.[0]?.role_name || '-',
-    ctc: offer.ctc_amount || '-',
+    ctc: formatCTC(offer.ctc_amount),
     offer_letter_url: offer.offer_letter_url,
     location: offer.drive?.location || offer.drive?.venue || '-',
-    offer_date: offer.created_at
-      ? new Date(offer.created_at).toLocaleDateString()
-      : '-',
+    offer_date: formatDate(offer.created_at),
     status:
       offer.offer_status === 'ACCEPTED'
         ? 'accepted'
@@ -76,12 +89,9 @@ export default function MyOffers() {
         status.toUpperCase()
       );
 
-      // optimistic UI update
       setOffers((prev) =>
         prev.map((o) =>
-          o.placement_id === placementId
-            ? { ...o, status }
-            : o
+          o.placement_id === placementId ? { ...o, status } : o
         )
       );
     } catch (err) {
@@ -113,12 +123,12 @@ export default function MyOffers() {
       }
     };
 
-    const cfg = config[status] || config.pending;
+    const cfg = config[status];
     const Icon = cfg.icon;
 
     return (
       <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold ${cfg.bg} ${cfg.text}`}>
-        <Icon className="w-3 h-3" />
+        <Icon className="w-3.5 h-3.5" />
         {cfg.label}
       </span>
     );
@@ -162,66 +172,68 @@ export default function MyOffers() {
   }
 
   return (
-    <div className="p-0">
+    <div>
 
-      {/* ===================== STATS ===================== */}
+      {/* STATS */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
         <StatCard label="Total Offers" value={stats.total} />
         <StatCard label="Accepted" value={stats.accepted} />
         <StatCard label="Pending" value={stats.pending} />
       </div>
 
-      {/* ===================== SEARCH ===================== */}
-      <div className="mb-6">
-        <div className="relative w-full sm:w-80">
-          <Search className="absolute left-3 top-3 w-5 h-5 text-gray-400" />
-          <input
-            type="search"
-            placeholder="Search offers..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-3 border rounded-xl"
-          />
-        </div>
+      {/* SEARCH */}
+      <div className="mb-6 w-full sm:w-80 relative">
+        <Search className="absolute left-3 top-3 w-5 h-5 text-gray-400" />
+        <input
+          type="search"
+          placeholder="Search offers..."
+          value={searchTerm}
+          onChange={(e) => {
+            setSearchTerm(e.target.value);
+            setCurrentPage(1);
+          }}
+          className="w-full pl-10 pr-4 py-3 border rounded-xl"
+        />
       </div>
 
-      {/* ===================== TABLE ===================== */}
+      {/* TABLE */}
       <div className="bg-white border rounded-lg overflow-x-auto">
-        <table className="w-full">
+        <table className="w-full border-collapse">
           <thead className="table-header">
             <tr>
-              <th className="p-3 text-left">Placement ID</th>
-              <th className="p-3 text-left">Company</th>
-              <th className="p-3 text-left">Role</th>
-              <th className="p-3 text-left">CTC</th>
-              <th className="p-3 text-left">Offer Date</th>
-              <th className="p-3 text-left">Location</th>
-              <th className="p-3 text-left">Status</th>
-              <th className="p-3 text-center">Actions</th>
+              <th className="px-4 py-3 text-left text-sm">Placement ID</th>
+              <th className="px-4 py-3 text-left text-sm">Company</th>
+              <th className="px-4 py-3 text-left text-sm">Role</th>
+              <th className="px-4 py-3 text-left text-sm">CTC</th>
+              <th className="px-4 py-3 text-left text-sm">Offer Date</th>
+              <th className="px-4 py-3 text-left text-sm">Location</th>
+              <th className="px-4 py-3 text-left text-sm">Status</th>
+              <th className="px-4 py-3 text-center text-sm">Actions</th>
             </tr>
           </thead>
-          <tbody>
+
+          <tbody className="divide-y">
             {currentEntries.length === 0 ? (
               <tr>
-                <td colSpan="8" className="p-6 text-center text-gray-500">
+                <td colSpan="8" className="px-6 py-8 text-center text-gray-500">
                   No offers found
                 </td>
               </tr>
             ) : (
               currentEntries.map((item) => (
-                <tr key={item.placement_id} className="border-t">
-                  <td className="p-3">{item.placement_id}</td>
-                  <td className="p-3">{item.organisation}</td>
-                  <td className="p-3">{item.job_role}</td>
-                  <td className="p-3 text-green-600 font-semibold">{item.ctc}</td>
-                  <td className="p-3">{item.offer_date}</td>
-                  <td className="p-3">{item.location}</td>
-                  <td className="p-3">{getStatusBadge(item.status)}</td>
-                  <td className="p-3 text-center">
+                <tr key={item.placement_id} className="hover:bg-gray-50">
+                  <td className="px-4 py-3 text-sm">{item.placement_id}</td>
+                  <td className="px-4 py-3 text-sm">{item.organisation}</td>
+                  <td className="px-4 py-3 text-sm">{item.job_role}</td>
+                  <td className="px-4 py-3 text-sm font-semibold text-green-600">{item.ctc}</td>
+                  <td className="px-4 py-3 text-sm">{item.offer_date}</td>
+                  <td className="px-4 py-3 text-sm">{item.location}</td>
+                  <td className="px-4 py-3 text-sm">{getStatusBadge(item.status)}</td>
+                  <td className="px-4 py-3 text-center">
                     <div className="flex justify-center gap-2">
                       <button
                         onClick={() => window.open(item.offer_letter_url, '_blank')}
-                        className="p-2 bg-blue-50 text-blue-600 rounded"
+                        className="p-2 bg-blue-50 text-blue-600 rounded hover:bg-blue-100"
                       >
                         <Download className="w-4 h-4" />
                       </button>
@@ -251,7 +263,7 @@ export default function MyOffers() {
         </table>
       </div>
 
-      {/* ===================== PAGINATION ===================== */}
+      {/* PAGINATION */}
       {totalEntries > 0 && (
         <div className="flex justify-between items-center mt-4">
           <button
