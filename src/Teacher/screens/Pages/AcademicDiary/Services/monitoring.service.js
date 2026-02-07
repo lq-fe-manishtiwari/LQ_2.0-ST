@@ -6,18 +6,18 @@ export const monitoringService = {
   updateActivity,
   deleteActivity,
   getResponses,
-  saveResponse,
+  saveBulkResponses,
 };
 
 /**
  * Get all activities for a college and term
  * @param {number} collegeId - College ID
- * @param {string} term - "term1" or "term2"
+ * @param {string} term - "Term 1" or "Term 2"
  * @returns {Promise<Array>} List of activities
  */
 function getActivities(collegeId, term) {
   const requestOptions = { method: 'GET', headers: authHeader() };
-  return fetch(`${PMSAPI}/monitoring/activities?college_id=${collegeId}&term=${term}`, requestOptions)
+  return fetch(`${PMSAPI}/academic-diary/internal-monitoring/activity/all?collegeId=${collegeId}&term=${term}`, requestOptions)
     .then(handleResponse);
 }
 
@@ -25,9 +25,8 @@ function getActivities(collegeId, term) {
  * Add a new activity
  * @param {Object} data - Activity data
  * @param {number} data.college_id - College ID
- * @param {string} data.term - "term1" or "term2"
- * @param {string} data.activity - Activity name/description
- * @param {number} data.created_by - User ID of creator
+ * @param {string} data.term - "Term 1" or "Term 2"
+ * @param {string} data.activity_name - Activity name
  * @returns {Promise<Object>} Created activity
  */
 function addActivity(data) {
@@ -36,65 +35,60 @@ function addActivity(data) {
     headers: authHeaderToPost(),
     body: JSON.stringify(data),
   };
-  return fetch(`${PMSAPI}/monitoring/activities`, requestOptions)
+  return fetch(`${PMSAPI}/academic-diary/internal-monitoring/activity`, requestOptions)
     .then(handleResponse);
 }
 
 /**
- * Update an existing activity
- * @param {number} activityId - Activity ID
- * @param {Object} data - Updated activity data
- * @param {string} data.activity - Updated activity name/description
- * @returns {Promise<Object>} Updated activity
- */
-function updateActivity(activityId, data) {
-  const requestOptions = {
-    method: 'PUT',
-    headers: authHeaderToPost(),
-    body: JSON.stringify(data),
-  };
-  return fetch(`${PMSAPI}/monitoring/activities/${activityId}`, requestOptions)
-    .then(handleResponse);
-}
-
-/**
- * Delete an activity (soft delete)
- * @param {number} activityId - Activity ID
- * @returns {Promise<Object>} Deletion result
- */
-function deleteActivity(activityId) {
-  const requestOptions = { method: 'DELETE', headers: authHeader() };
-  return fetch(`${PMSAPI}/monitoring/activities/${activityId}`, requestOptions)
-    .then(handleResponse);
-}
-
-/**
- * Get teacher's responses for a term
+ * Get teacher's responses/checklist for a term
+ * @param {number} collegeId - College ID
  * @param {number} userId - Teacher's user ID
- * @param {string} term - "term1" or "term2"
+ * @param {string} term - "Term 1" or "Term 2"
  * @returns {Promise<Array>} List of responses
  */
-function getResponses(userId, term) {
+function getResponses(collegeId, userId, term) {
   const requestOptions = { method: 'GET', headers: authHeader() };
-  return fetch(`${PMSAPI}/monitoring/responses?user_id=${userId}&term=${term}`, requestOptions)
+  return fetch(`${PMSAPI}/academic-diary/internal-monitoring/checklist?collegeId=${collegeId}&userId=${userId}&term=${term}`, requestOptions)
     .then(handleResponse);
 }
 
 /**
- * Save or update a teacher's response (UPSERT)
- * @param {Object} data - Response data
- * @param {number} data.user_id - Teacher's user ID
- * @param {number} data.activity_id - Activity ID
- * @param {string} data.term - "term1" or "term2"
- * @param {string} data.rating - "excellent", "satisfactory", or "can_do_better"
- * @returns {Promise<Object>} Saved response
+ * Save responses in bulk
+ * @param {Array} data - List of response objects
+ * @returns {Promise<Object>} Response from server
  */
-function saveResponse(data) {
+function saveBulkResponses(data) {
   const requestOptions = {
     method: 'POST',
     headers: authHeaderToPost(),
     body: JSON.stringify(data),
   };
-  return fetch(`${PMSAPI}/monitoring/responses`, requestOptions)
+  return fetch(`${PMSAPI}/academic-diary/internal-monitoring/response/bulk`, requestOptions)
+    .then(handleResponse);
+}
+
+/**
+ * Update an existing activity
+ * @param {Object} data - Activity data including activity_id
+ * @returns {Promise<Object>} Updated activity
+ */
+function updateActivity(data) {
+  const requestOptions = {
+    method: 'PUT',
+    headers: authHeaderToPost(),
+    body: JSON.stringify(data),
+  };
+  return fetch(`${PMSAPI}/academic-diary/internal-monitoring/activity`, requestOptions)
+    .then(handleResponse);
+}
+
+/**
+ * Delete an activity
+ * @param {number} activityId - Activity ID
+ * @returns {Promise<Object>} Deletion result
+ */
+function deleteActivity(activityId) {
+  const requestOptions = { method: 'DELETE', headers: authHeader() };
+  return fetch(`${PMSAPI}/academic-diary/internal-monitoring/activity/${activityId}`, requestOptions)
     .then(handleResponse);
 }
