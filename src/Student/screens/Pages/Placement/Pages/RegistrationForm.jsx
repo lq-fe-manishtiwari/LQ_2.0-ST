@@ -10,9 +10,10 @@ const PROFILE_FIELD_MAP = {
   'Full Name': user => `${user.firstname} ${user.middlename || ''} ${user.lastname}`.trim(),
   email: user => user.email,
   mobile: user => user.mobile,
-  marks: user => user.education_details?.find(e => e.qualification === '10th')?.percentage,
-  '10th_percentage': user => user.education_details?.find(e => e.qualification === '10th')?.percentage,
-  '12th_percentage': user => user.education_details?.find(e => e.qualification === '12th')?.percentage
+  roll_number: user => user.roll_number,
+  marks: user => user.education_details?.find(e => e.qualification === '10th')?.percentage?.replace('%', ''),
+  '10th_percentage': user => user.education_details?.find(e => e.qualification === '10th')?.percentage?.replace('%', ''),
+  '12th_percentage': user => user.education_details?.find(e => e.qualification === '12th')?.percentage?.replace('%', '')
 };
 
 export default function RegistrationForm({
@@ -159,6 +160,7 @@ export default function RegistrationForm({
       );
     }
 
+    setAlert(null);
     setResumeFile(file);
   };
 
@@ -212,7 +214,7 @@ const handleSubmit = async e => {
     );
 
   if (eligibility.length) {
-    const accepted = eligibility.some(c => acceptedEligibility[c.criteria_id]);
+    const accepted = eligibility.every(c => acceptedEligibility[c.criteria_id]);
     if (!accepted) {
       return setAlert(
         <SweetAlert
@@ -221,7 +223,7 @@ const handleSubmit = async e => {
           confirmBtnCssClass="btn-confirm"
           onConfirm={() => setAlert(null)}
         >
-          Please accept at least one eligibility criteria
+          Please accept all eligibility criteria
         </SweetAlert>
       );
     }
@@ -245,7 +247,7 @@ const handleSubmit = async e => {
     }
 
     // 🔹 2. Submit applications
-    await Promise.all(
+    const results = await Promise.allSettled(
       selectedJobIndexes.map(i => {
         const role = jobRoles[i];
 
@@ -257,18 +259,20 @@ const handleSubmit = async e => {
           job_role_ids: [role.job_role_id],
           eligibility_criteria_ids: eligibilityIds,
 
-          application_data: {
-            ...formValues,
-            resume_name: resumeFile.name,
-            resume_type: resumeFile.type,
-            resume_size: resumeFile.size
-          },
+          application_data: Object.fromEntries(
+            Object.entries(formValues).map(([k, v]) => [k, typeof v === 'string' ? v.trim() : v])
+          ),
 
-          resume_url: resumeUrl, // ✅ S3 URL
+          resume_url: resumeUrl,
           application_status: 'PENDING'
         });
       })
     );
+
+    const failures = results.filter(r => r.status === 'rejected');
+    if (failures.length === results.length) {
+      throw new Error(failures[0].reason?.response?.message || 'All applications failed');
+    }
 
     setAlert(
       <SweetAlert
@@ -281,7 +285,9 @@ const handleSubmit = async e => {
           onSuccess?.();
         }}
       >
-        Application submitted successfully!
+        {failures.length > 0 
+          ? `${results.length - failures.length} of ${results.length} applications submitted successfully!`
+          : 'Application submitted successfully!'}
       </SweetAlert>
     );
 
@@ -329,6 +335,11 @@ const handleSubmit = async e => {
 
 
   const renderField = f => {
+    // Block unsupported field types
+    if (['checkbox', 'file'].includes(f.field_type)) {
+      return null;
+    }
+
     const common = {
       value: formValues[f.field_name] || '',
       required: f.required,
@@ -500,8 +511,8 @@ const handleSubmit = async e => {
 
                     {/* Dynamic Form Fields */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      {formConfig.fields.map((f, i) => (
-                        <div key={i}>
+                      {formConfig.fields.map((f) => (
+                        <div key={f.field_name}>
                           <label className="block text-sm font-medium text-gray-700 mb-2">
                             {f.label} {f.required && <span className="text-red-500">*</span>}
                           </label>
