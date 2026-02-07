@@ -111,14 +111,12 @@ const Section = ({ title, items, onChange, onAdd, onRemove }) => (
             className="flex-1 border rounded-lg px-3 py-2 text-sm"
             placeholder="Enter committee name"
           />
-          {items.length > 1 && (
-            <button
-              onClick={() => onRemove(index)}
-              className="p-2 rounded-lg bg-red-50 text-red-600 hover:bg-red-100"
-            >
-              <Trash2 className="w-4 h-4" />
-            </button>
-          )}
+          <button
+            onClick={() => onRemove(index)}
+            className="p-2 rounded-lg bg-red-50 text-red-600 hover:bg-red-100"
+          >
+            <Trash2 className="w-4 h-4" />
+          </button>
         </div>
       ))}
     </div>
