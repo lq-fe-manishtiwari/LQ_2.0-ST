@@ -34,9 +34,8 @@ export default function TabsNav() {
             return (
               <div
                 key={t.label}
-                className={`tab-link whitespace-nowrap w-auto flex-shrink-0 cursor-default px-4 py-2 text-sm ${
-                  active ? "tab-active" : "tab-inactive"
-                }`}
+                className={`tab-link whitespace-nowrap w-auto flex-shrink-0 cursor-default px-4 py-2 text-sm ${active ? "tab-active" : "tab-inactive"
+                  }`}
               >
                 {t.label}
               </div>
@@ -48,8 +47,7 @@ export default function TabsNav() {
               key={t.to}
               to={t.to}
               className={({ isActive }) =>
-                `tab-link whitespace-nowrap w-auto flex-shrink-0 px-4 py-2 text-sm ${
-                  isActive ? "tab-active" : "tab-inactive"
+                `tab-link whitespace-nowrap w-auto flex-shrink-0 px-4 py-2 text-sm ${isActive ? "tab-active" : "tab-inactive"
                 }`
               }
             >
@@ -69,8 +67,7 @@ export default function TabsNav() {
                 key={c.to}
                 to={c.to}
                 className={({ isActive }) =>
-                  `tab-link whitespace-nowrap w-auto flex-shrink-0 px-4 py-2 text-sm flex items-center gap-2 ${
-                    isActive ? "tab-active" : "tab-inactive"
+                  `tab-link whitespace-nowrap w-auto flex-shrink-0 px-4 py-2 text-sm flex items-center gap-2 ${isActive ? "tab-active" : "tab-inactive"
                   }`
                 }
               >

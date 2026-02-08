@@ -21,6 +21,7 @@ export const teacherProfileService = {
     createOtherActivity,
     updateOtherActivity,
     deleteOtherActivity,
+    downloadAcademicDiaryByTeacher,
 
 };
 
@@ -242,4 +243,24 @@ function deleteOtherActivity(id) {
     const requestOptions = { method: 'DELETE', headers: authHeader() };
     return fetch(`${PMSAPI}/other-activities/${id}`, requestOptions)
         .then(handleResponse);
+}
+
+// ========================= ACADEMIC DIARY DOWNLOAD =========================
+// GET /api/academic-diary/download?collegeId={collegeId}&teacherId={teacherId}
+async function downloadAcademicDiaryByTeacher(teacherId, collegeId) {
+    const response = await fetch(
+        `${TimetableAPI}/academic-diary/download?collegeId=${collegeId}&teacherId=${teacherId}`,
+        {
+            method: 'GET',
+            headers: {
+                ...authHeader(), // 🔥 MUST (Bearer token)
+            }
+        }
+    );
+
+    if (!response.ok) {
+        throw new Error(`Download failed : ${response.status}`);
+    }
+
+    return response.blob(); 
 }
