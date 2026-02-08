@@ -1,16 +1,17 @@
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { Search, Calendar, Clock, Video, CheckCircle } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { Search, X, CheckCircle, Clock, Calendar } from 'lucide-react';
+import { studentPlacementService } from '../Services/studentPlacement.service';
+import { api } from '../../../../../_services/api';
 
 export default function MyInterviews() {
   const [interviews, setInterviews] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(false);
-  const [filterType, setFilterType] = useState('all');
+  const [selectedInterview, setSelectedInterview] = useState(null);
+  const [showModal, setShowModal] = useState(false);
 
-  const navigate = useNavigate();
   const entriesPerPage = 10;
   const [currentPage, setCurrentPage] = useState(1);
 
@@ -19,250 +20,136 @@ export default function MyInterviews() {
   }, []);
 
   const loadInterviews = async () => {
-    setLoading(true);
-    const mockData = [
-      {
-        interview_id: 201,
-        placement_id: 'PL20260453',
-        organisation: 'Test',
-        job_opening_date: '19/01/2026',
-        job_role: 'Test',
-        interview_date: '20/01/2026',
-        interview_time: '12:01',
-        round: 'HR Interview',
-        outcome: '',
-        tpo_remark: '',
-        student_registration: 'Yes',
-        status: 'scheduled',
-        interview_type: 'online',
-        location: 'Google Meet',
-        meeting_link: 'https://meet.google.com/abc-defg-hij',
-        instructions: 'Please join 5 minutes early. Keep your ID card ready.'
-      },
-      {
-        interview_id: 202,
-        placement_id: 'PL20260454',
-        organisation: 'Infosys',
-        job_opening_date: '19/01/2026',
-        job_role: 'System Engineer',
-        interview_date: '28/01/2026',
-        interview_time: '02:00 PM',
-        round: 'Technical Round',
-        outcome: 'Selected',
-        tpo_remark: 'Good performance',
-        student_registration: 'Yes',
-        status: 'completed',
-        interview_type: 'offline',
-        location: 'Campus - Room 301',
-        instructions: 'Bring resume copies and original certificates.'
-      },
-      {
-        interview_id: 203,
-        placement_id: 'PL20260455',
-        organisation: 'Wipro',
-        job_opening_date: '10/01/2026',
-        job_role: 'Frontend Developer',
-        interview_date: '15/01/2026',
-        interview_time: '11:00 AM',
-        round: 'Coding Round',
-        outcome: 'Rejected',
-        tpo_remark: 'Try again next time',
-        student_registration: 'Yes',
-        status: 'completed',
-        interview_type: 'online',
-        location: 'Zoom',
-        result: 'Not Selected',
-        instructions: 'Coding round - prepare data structures.'
+    try {
+      setLoading(true);
+      const res = await api.getUserProfile();
+      const prnNo = res?.data?.permanent_registration_number;
+
+      if (!prnNo) {
+        setInterviews([]);
+        return;
       }
-    ];
-    setInterviews(mockData);
-    setLoading(false);
+
+      const data = await studentPlacementService.getStudentInterviews(prnNo);
+      setInterviews(data?.interviews || []);
+    } catch (error) {
+      console.error('Error loading interviews:', error);
+      setInterviews([]);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const getStatusBadge = (status, result) => {
-    if (status === 'completed') {
-      if (result === 'Selected') {
-        return (
-          <span className="inline-flex items-center gap-1 px-3 py-1 bg-green-100 text-green-700 text-xs font-semibold rounded-full">
-            <CheckCircle className="w-3 h-3" />
-            Selected
-          </span>
-        );
-      }
-      return (
-        <span className="inline-flex items-center gap-1 px-3 py-1 bg-gray-100 text-gray-700 text-xs font-semibold rounded-full">
-          Completed
-        </span>
-      );
-    }
-    return (
-      <span className="inline-flex items-center gap-1 px-3 py-1 bg-blue-100 text-blue-700 text-xs font-semibold rounded-full">
-        <Clock className="w-3 h-3" />
-        Scheduled
-      </span>
-    );
+  const handleViewDetails = (interview) => {
+    setSelectedInterview(interview);
+    setShowModal(true);
   };
 
   const paginatedData = useMemo(() => {
-    let list = interviews.filter(interview => {
-      const matchesSearch = interview.organisation?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           interview.job_role?.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchesType = filterType === 'all' || 
-                         (filterType === 'upcoming' && interview.status === 'scheduled') ||
-                         (filterType === 'completed' && interview.status === 'completed');
-      return matchesSearch && matchesType;
-    });
+    let list = interviews.filter((i) =>
+      i.company_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      i.job_role?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      i.placement_id?.toLowerCase().includes(searchTerm.toLowerCase())
+    );
 
     const totalEntries = list.length;
     const totalPages = Math.ceil(totalEntries / entriesPerPage);
     const start = (currentPage - 1) * entriesPerPage;
-    const end = start + entriesPerPage;
-    const currentEntries = list.slice(start, end);
 
-    return { currentEntries, totalEntries, totalPages, start, end };
-  }, [interviews, searchTerm, currentPage, filterType]);
+    return {
+      currentEntries: list.slice(start, start + entriesPerPage),
+      totalEntries,
+      totalPages,
+      start
+    };
+  }, [interviews, searchTerm, currentPage]);
 
-  const { currentEntries, totalEntries, totalPages } = paginatedData;
-
-  const handlePrev = () => currentPage > 1 && setCurrentPage(p => p - 1);
-  const handleNext = () => currentPage < totalPages && setCurrentPage(p => p + 1);
+  const { currentEntries, totalEntries, totalPages, start } = paginatedData;
 
   if (loading) {
     return (
-      <div className="p-6 bg-gray-100 min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-4 border-blue-600"></div>
+      <div className="min-h-screen flex justify-center items-center">
+        <div className="animate-spin h-12 w-12 border-t-4 border-blue-600 rounded-full" />
       </div>
     );
   }
 
   return (
     <div className="p-0 md:p-0">
-      {/* Stats Summary */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-              <Calendar className="w-5 h-5 text-blue-600" />
-            </div>
-            <div>
-              <p className="text-sm text-gray-600">Upcoming Interviews</p>
-              <p className="text-xl font-bold text-gray-900">
-                {interviews.filter(i => i.status === 'scheduled').length}
-              </p>
-            </div>
-          </div>
+      {/* Search */}
+      <div className="mb-6 relative w-full sm:w-80">
+        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+          <Search className="w-5 h-5 text-gray-400" />
         </div>
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
-              <CheckCircle className="w-5 h-5 text-green-600" />
-            </div>
-            <div>
-              <p className="text-sm text-gray-600">Completed</p>
-              <p className="text-xl font-bold text-gray-900">
-                {interviews.filter(i => i.status === 'completed').length}
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Search and Filter */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
-        <div className="relative w-full sm:w-80">
-          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-            <Search className="w-5 h-5 text-gray-400" />
-          </div>
-          <input
-            type="search"
-            placeholder="Search interviews..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-          />
-        </div>
-
-        <div className="flex gap-2">
-          {['all', 'upcoming', 'completed'].map(type => (
-            <button
-              key={type}
-              onClick={() => setFilterType(type)}
-              className={'px-4 py-2 rounded-lg font-medium transition-all ' + (
-                filterType === type
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
-              )}
-            >
-              {type.charAt(0).toUpperCase() + type.slice(1)}
-            </button>
-          ))}
-        </div>
+        <input
+          type="search"
+          placeholder="Search interviews..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 placeholder-gray-400 text-gray-900 bg-white shadow-sm"
+        />
       </div>
 
       {/* Desktop Table */}
       <div className="hidden lg:block bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
         <div className="overflow-x-auto">
-            <div className="h-[500px] overflow-y-auto blue-scrollbar">
           <table className="w-full">
             <thead className="bg-primary-600">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-50  tracking-wider">Placement ID</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-50  tracking-wider">Organisation</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-50  tracking-wider">Job Opening Date</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-50  tracking-wider">Job Role</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-50  tracking-wider">Date</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-50  tracking-wider">Time</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-50  tracking-wider">Round</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-50  tracking-wider">Outcome</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-50  tracking-wider">TPO Remark</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-50  tracking-wider">Student Registration</th>
+                <th className="px-6 py-3 text-center text-xs font-medium text-gray-50 tracking-wider">Placement ID</th>
+                <th className="px-6 py-3 text-center text-xs font-medium text-gray-50 tracking-wider">Company</th>
+                <th className="px-6 py-3 text-center text-xs font-medium text-gray-50 tracking-wider">Role</th>
+                <th className="px-6 py-3 text-center text-xs font-medium text-gray-50 tracking-wider">Total Rounds</th>
+                <th className="px-6 py-3 text-center text-xs font-medium text-gray-50 tracking-wider">Actions</th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {currentEntries.length > 0 ? (
-                currentEntries.map((item) => (
-                  <tr key={item.interview_id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 text-sm font-medium text-gray-900">{item.placement_id}</td>
-                    <td className="px-6 py-4 text-sm text-gray-500">{item.organisation}</td>
-                    <td className="px-6 py-4 text-sm text-gray-500">{item.job_opening_date}</td>
-                    <td className="px-6 py-4 text-sm text-gray-500">{item.job_role}</td>
-                    <td className="px-6 py-4 text-sm text-gray-500">{item.interview_date}</td>
-                    <td className="px-6 py-4 text-sm text-gray-500">{item.interview_time}</td>
-                    <td className="px-6 py-4 text-sm text-gray-500">{item.round}</td>
-                    <td className="px-6 py-4 text-sm">
-                      <span className={'px-2 py-1 rounded text-xs font-medium ' + (
-                        item.outcome === 'Selected' ? 'bg-green-100 text-green-700' :
-                        item.outcome === 'Rejected' ? 'bg-red-100 text-red-700' :
-                        'bg-gray-100 text-gray-700'
-                      )}>
-                        {item.outcome || '-'}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-sm text-gray-500">{item.tpo_remark || '-'}</td>
-                    <td className="px-6 py-4 text-sm text-gray-500">{item.student_registration}</td>
-                  </tr>
-                ))
-              ) : (
+              {currentEntries.length === 0 ? (
                 <tr>
-                  <td colSpan="10" className="px-6 py-8 text-center text-gray-500">
+                  <td colSpan="5" className="px-6 py-8 text-center text-gray-500">
                     No interviews found
                   </td>
                 </tr>
+              ) : (
+                currentEntries.map((item) => (
+                  <tr key={item.application_id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 text-sm text-center text-gray-900">{item.placement_id}</td>
+                    <td className="px-6 py-4 text-sm text-center text-gray-500">{item.company_name}</td>
+                    <td className="px-6 py-4 text-sm text-center text-gray-500">{item.job_role}</td>
+                    <td className="px-6 py-4 text-sm text-center text-gray-500">{item.interview_rounds?.length || 0}</td>
+                    <td className="px-6 py-4 text-center">
+                      <button
+                        onClick={() => handleViewDetails(item)}
+                        className="px-4 py-1.5 bg-blue-100 text-blue-600 rounded-full hover:bg-blue-200 transition-colors font-medium text-xs"
+                      >
+                        View
+                      </button>
+                    </td>
+                  </tr>
+                ))
               )}
             </tbody>
           </table>
-          </div>
         </div>
 
+        {/* Pagination */}
         {totalEntries > 0 && (
           <div className="flex justify-between items-center px-6 py-4 border-t border-gray-200 text-sm text-gray-600">
-            <button onClick={handlePrev} disabled={currentPage === 1} className={`px-4 py-2 rounded-md ${currentPage === 1 ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700 text-white'}`}>
+            <button
+              onClick={() => setCurrentPage(p => p - 1)}
+              disabled={currentPage === 1}
+              className={`px-4 py-2 rounded-md ${currentPage === 1 ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700 text-white'}`}
+            >
               Previous
             </button>
             <span className="text-gray-700 font-medium">
-              Showing {paginatedData.start + 1}–{Math.min(paginatedData.end, totalEntries)} of {totalEntries} entries
+              Showing {start + 1}–{Math.min(start + entriesPerPage, totalEntries)} of {totalEntries} entries
             </span>
-            <button onClick={handleNext} disabled={currentPage === totalPages} className={`px-4 py-2 rounded-md ${currentPage === totalPages ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700 text-white'}`}>
+            <button
+              onClick={() => setCurrentPage(p => p + 1)}
+              disabled={currentPage === totalPages}
+              className={`px-4 py-2 rounded-md ${currentPage === totalPages ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700 text-white'}`}
+            >
               Next
             </button>
           </div>
@@ -277,42 +164,24 @@ export default function MyInterviews() {
             <p className="text-lg font-medium text-gray-500">No interviews found</p>
           </div>
         ) : (
-          currentEntries.map((interview) => (
-            <div key={interview.interview_id} className="bg-white rounded-xl shadow-md border border-gray-200 p-5 hover:shadow-lg transition-all">
+          currentEntries.map((item) => (
+            <div key={item.application_id} className="bg-white rounded-xl shadow-md border border-gray-200 p-5 hover:shadow-lg transition-all">
               <div className="flex justify-between items-start mb-3">
                 <div>
-                  <p className="font-semibold text-gray-900">{interview.placement_id}</p>
-                  <p className="text-sm text-gray-500">{interview.organisation}</p>
-                  <p className="text-xs text-gray-400">{interview.job_role}</p>
+                  <p className="font-semibold text-gray-900">{item.placement_id}</p>
+                  <p className="text-sm text-gray-500">{item.company_name}</p>
+                  <p className="text-xs text-gray-400">{item.job_role}</p>
                 </div>
-                {getStatusBadge(interview.status, interview.result)}
               </div>
-
-              <div className="space-y-2 text-sm text-gray-700 mb-4">
-                <div className="grid grid-cols-2 gap-2">
-                  <div><span className="font-medium">Opening:</span> {interview.job_opening_date}</div>
-                  <div><span className="font-medium">Date:</span> {interview.interview_date}</div>
-                  <div><span className="font-medium">Time:</span> {interview.interview_time}</div>
-                  <div><span className="font-medium">Round:</span> {interview.round}</div>
-                  <div><span className="font-medium">Outcome:</span> {interview.outcome || '-'}</div>
-                  <div><span className="font-medium">Registration:</span> {interview.student_registration}</div>
-                </div>
-                {interview.tpo_remark && (
-                  <p className="text-xs text-gray-600 italic mt-2">TPO: "{interview.tpo_remark}"</p>
-                )}
+              <div className="text-sm text-gray-700 mb-3">
+                <span className="font-medium">Total Rounds:</span> {item.interview_rounds?.length || 0}
               </div>
-
-              {interview.meeting_link && interview.status === 'scheduled' && (
-                <a
-                  href={interview.meeting_link}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-all text-sm"
-                >
-                  <Video className="w-4 h-4" />
-                  Join Meeting
-                </a>
-              )}
+              <button
+                onClick={() => handleViewDetails(item)}
+                className="w-full px-4 py-2 bg-blue-100 text-blue-600 rounded-lg hover:bg-blue-200 transition-colors font-medium text-sm"
+              >
+                View Details
+              </button>
             </div>
           ))
         )}
@@ -321,15 +190,185 @@ export default function MyInterviews() {
       {/* Mobile Pagination */}
       {totalEntries > 0 && (
         <div className="lg:hidden flex justify-between items-center px-4 py-4 bg-white rounded-lg shadow-sm border border-gray-200 mt-4 text-sm text-gray-600">
-          <button onClick={handlePrev} disabled={currentPage === 1} className={`px-4 py-2 rounded-md ${currentPage === 1 ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700 text-white'}`}>
+          <button
+            onClick={() => setCurrentPage(p => p - 1)}
+            disabled={currentPage === 1}
+            className={`px-4 py-2 rounded-md ${currentPage === 1 ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700 text-white'}`}
+          >
             Previous
           </button>
           <span className="text-gray-700 font-medium text-xs">
-            {paginatedData.start + 1}–{Math.min(paginatedData.end, totalEntries)} of {totalEntries}
+            {start + 1}–{Math.min(start + entriesPerPage, totalEntries)} of {totalEntries}
           </span>
-          <button onClick={handleNext} disabled={currentPage === totalPages} className={`px-4 py-2 rounded-md ${currentPage === totalPages ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700 text-white'}`}>
+          <button
+            onClick={() => setCurrentPage(p => p + 1)}
+            disabled={currentPage === totalPages}
+            className={`px-4 py-2 rounded-md ${currentPage === totalPages ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700 text-white'}`}
+          >
             Next
           </button>
+        </div>
+      )}
+
+      {/* Modal */}
+      {showModal && selectedInterview && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
+            {/* Modal Header */}
+            <div className="bg-primary-600 text-white px-6 py-4 flex justify-between items-center">
+              <div>
+                <h2 className="text-xl font-bold">{selectedInterview.placement_id}</h2>
+                <p className="text-sm opacity-90">{selectedInterview.company_name} - {selectedInterview.job_role}</p>
+              </div>
+              <button onClick={() => setShowModal(false)} className="text-white hover:bg-white hover:bg-opacity-20 rounded-full p-2">
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Interview Rounds Tracking</h3>
+
+              {/* Rounds Table */}
+              <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead className="bg-primary-600">
+                      <tr>
+                        <th className="px-6 py-3 text-center text-xs font-medium text-gray-50 tracking-wider">Round</th>
+                        <th className="px-6 py-3 text-center text-xs font-medium text-gray-50 tracking-wider">Type</th>
+                        <th className="px-6 py-3 text-center text-xs font-medium text-gray-50 tracking-wider">Date</th>
+                        <th className="px-6 py-3 text-center text-xs font-medium text-gray-50 tracking-wider">Time</th>
+                        <th className="px-6 py-3 text-center text-xs font-medium text-gray-50 tracking-wider">Status</th>
+                        <th className="px-6 py-3 text-center text-xs font-medium text-gray-50 tracking-wider">Rating</th>
+                        <th className="px-6 py-3 text-center text-xs font-medium text-gray-50 tracking-wider">Comment</th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {selectedInterview.interview_applications?.map((app, idx) => (
+                        <tr key={app.interview_round_application_id} className="hover:bg-gray-50">
+                          <td className="px-6 py-4 text-sm text-center text-gray-900">{app.round_name}</td>
+                          <td className="px-6 py-4 text-sm text-center text-gray-500">{app.round_type}</td>
+                          <td className="px-6 py-4 text-sm text-center text-gray-500">{app.scheduled_date || '-'}</td>
+                          <td className="px-6 py-4 text-sm text-center text-gray-500">{app.scheduled_time || '-'}</td>
+                          <td className="px-6 py-4 text-sm text-center">
+                            {app.attendance_status === 'PRESENT' ? (
+                              <span className="inline-flex items-center gap-1 px-2 py-1 bg-green-100 text-green-700 text-xs font-semibold rounded-full">
+                                <CheckCircle className="w-3 h-3" />
+                                Completed
+                              </span>
+                            ) : app.scheduled_date ? (
+                              <span className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-700 text-xs font-semibold rounded-full">
+                                <Clock className="w-3 h-3" />
+                                Scheduled
+                              </span>
+                            ) : (
+                              <span className="px-2 py-1 bg-gray-100 text-gray-700 text-xs font-semibold rounded-full">Pending</span>
+                            )}
+                          </td>
+                          <td className="px-6 py-4 text-sm text-center text-gray-500">{app.rating || '-'}</td>
+                          <td className="px-6 py-4 text-sm text-center text-gray-500">{app.comment || '-'}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* Round Details - Grid Style */}
+              <div className="mt-6">
+                <h4 className="font-semibold text-gray-900 mb-4">Interview Process Timeline</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {selectedInterview.interview_rounds?.map((round, idx) => {
+                    const application = selectedInterview.interview_applications?.find(app => app.round_id === round.round_id);
+                    const isCompleted = application?.attendance_status === 'PRESENT';
+                    const isScheduled = application?.scheduled_date;
+
+                    return (
+                      <div key={round.round_id} className={`relative rounded-lg border-2 p-4 shadow-sm ${
+                        isCompleted ? 'border-green-200 bg-green-50' :
+                        isScheduled ? 'border-blue-200 bg-blue-50' :
+                        'border-gray-200 bg-white'
+                      }`}>
+                        {/* Round Number Badge */}
+                        <div className="absolute -top-3 -left-3">
+                          <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm shadow-md ${
+                            isCompleted ? 'bg-green-500 text-white' :
+                            isScheduled ? 'bg-blue-500 text-white' :
+                            'bg-gray-400 text-white'
+                          }`}>
+                            {round.round_order}
+                          </div>
+                        </div>
+
+                        {/* Status Badge */}
+                        <div className="flex justify-end mb-2">
+                          {isCompleted && (
+                            <span className="inline-flex items-center gap-1 px-2 py-1 bg-green-100 text-green-700 text-xs font-semibold rounded-full">
+                              <CheckCircle className="w-3 h-3" />
+                              Completed
+                            </span>
+                          )}
+                          {!isCompleted && isScheduled && (
+                            <span className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-700 text-xs font-semibold rounded-full">
+                              <Clock className="w-3 h-3" />
+                              Scheduled
+                            </span>
+                          )}
+                          {!isCompleted && !isScheduled && (
+                            <span className="px-2 py-1 bg-gray-100 text-gray-700 text-xs font-semibold rounded-full">Pending</span>
+                          )}
+                        </div>
+
+                        {/* Round Info */}
+                        <div className="mb-3">
+                          <h5 className="font-semibold text-gray-900 text-base">{round.round_name}</h5>
+                          <p className="text-sm text-gray-600">{round.round_type}</p>
+                        </div>
+
+                        {round.description && (
+                          <p className="text-sm text-gray-700 mb-3 line-clamp-2">{round.description}</p>
+                        )}
+
+                        {/* Details Grid */}
+                        <div className="space-y-2 text-sm">
+                          {application?.scheduled_date && (
+                            <div className="flex items-center gap-2 text-gray-600">
+                              <Calendar className="w-4 h-4 text-blue-500" />
+                              <span>{application.scheduled_date}</span>
+                            </div>
+                          )}
+                          {application?.scheduled_time && (
+                            <div className="flex items-center gap-2 text-gray-600">
+                              <Clock className="w-4 h-4 text-blue-500" />
+                              <span>{application.scheduled_time}</span>
+                            </div>
+                          )}
+                          {application?.rating && (
+                            <div className="text-gray-600">
+                              <span className="font-medium">Rating:</span> <span className="text-green-600 font-semibold">{application.rating}/10</span>
+                            </div>
+                          )}
+                          {round.duration_minutes && (
+                            <div className="text-gray-600">
+                              <span className="font-medium">Duration:</span> {round.duration_minutes} min
+                            </div>
+                          )}
+                        </div>
+
+                        {application?.comment && (
+                          <div className="mt-3 pt-3 border-t border-gray-200">
+                            <p className="text-xs text-gray-500 font-medium mb-1">TPO Comment:</p>
+                            <p className="text-sm text-gray-700 italic line-clamp-2">"{application.comment}"</p>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>
