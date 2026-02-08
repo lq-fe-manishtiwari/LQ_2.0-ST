@@ -4,26 +4,28 @@ import React, { useState, useEffect } from 'react';
 import SweetAlert from 'react-bootstrap-sweetalert';
 import { Loader2, X } from 'lucide-react';
 import { studentPlacementService, createStudentDriveApplication } from '../Services/studentPlacement.service';
-import { api } from '../../../../../_services/api';
+import { api,uploadFileToS3 } from '../../../../../_services/api';
 
 const PROFILE_FIELD_MAP = {
   'Full Name': user => `${user.firstname} ${user.middlename || ''} ${user.lastname}`.trim(),
   email: user => user.email,
   mobile: user => user.mobile,
-  marks: user => user.education_details?.find(e => e.qualification === '10th')?.percentage,
-  '10th_percentage': user => user.education_details?.find(e => e.qualification === '10th')?.percentage,
-  '12th_percentage': user => user.education_details?.find(e => e.qualification === '12th')?.percentage
+  roll_number: user => user.roll_number,
+  marks: user => user.education_details?.find(e => e.qualification === '10th')?.percentage?.replace('%', ''),
+  '10th_percentage': user => user.education_details?.find(e => e.qualification === '10th')?.percentage?.replace('%', ''),
+  '12th_percentage': user => user.education_details?.find(e => e.qualification === '12th')?.percentage?.replace('%', '')
 };
 
 export default function RegistrationForm({
   job,
   collegeId,
+  placementId,
   onClose,
   onSuccess
 }) {
   if (!job) return null;
 
-  const driveId = job.job_opening_id;
+  const driveId = job.drive_id || job.job_opening_id;
 
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -36,15 +38,23 @@ export default function RegistrationForm({
   const [selectedJobIndexes, setSelectedJobIndexes] = useState([]);
   const [acceptedEligibility, setAcceptedEligibility] = useState({});
 
-  const jobRoles = job.job_roles || [];
+  // Filter to show only the role matching the clicked placement_id
+  const jobRoles = (job.job_roles || []).filter(role => {
+    const vacancy = (job.vacancy_details || []).find(
+      v => v.placement_id === placementId
+    );
+    return vacancy && role.role_name?.trim().toLowerCase() === vacancy.role?.trim().toLowerCase();
+  });
+  
   const vacancyDetails = job.vacancy_details || [];
   const eligibility = job.eligibility_criteria || [];
 
-  useEffect(() => {
-    if (!collegeId || !job?.job_opening_id) return;
-    loadForm();
-    initEligibility();
-  }, [collegeId, job?.job_opening_id]);
+ useEffect(() => {
+  if (!collegeId || !driveId) return;
+
+  loadForm();
+  initEligibility();
+}, [collegeId, driveId]);
 
   const loadForm = async () => {
     try {
@@ -150,6 +160,7 @@ export default function RegistrationForm({
       );
     }
 
+    setAlert(null);
     setResumeFile(file);
   };
 
@@ -163,10 +174,48 @@ export default function RegistrationForm({
       )
       .join(' | ');
 
-  const handleSubmit = async e => {
-    e.preventDefault();
+const handleSubmit = async e => {
+  e.preventDefault();
 
-    if (!selectedJobIndexes.length)
+  if (!selectedJobIndexes.length)
+    return setAlert(
+      <SweetAlert
+        warning
+        title="Required"
+        confirmBtnCssClass="btn-confirm"
+        onConfirm={() => setAlert(null)}
+      >
+        Select at least one role
+      </SweetAlert>
+    );
+
+  if (!resumeFile)
+    return setAlert(
+      <SweetAlert
+        warning
+        title="Required"
+        confirmBtnCssClass="btn-confirm"
+        onConfirm={() => setAlert(null)}
+      >
+        Upload resume
+      </SweetAlert>
+    );
+
+  if (!formValues.prn_id?.trim())
+    return setAlert(
+      <SweetAlert
+        warning
+        title="Required"
+        confirmBtnCssClass="btn-confirm"
+        onConfirm={() => setAlert(null)}
+      >
+        Enter PRN number
+      </SweetAlert>
+    );
+
+  if (eligibility.length) {
+    const accepted = eligibility.every(c => acceptedEligibility[c.criteria_id]);
+    if (!accepted) {
       return setAlert(
         <SweetAlert
           warning
@@ -174,128 +223,123 @@ export default function RegistrationForm({
           confirmBtnCssClass="btn-confirm"
           onConfirm={() => setAlert(null)}
         >
-          Select at least one role
+          Please accept all eligibility criteria
         </SweetAlert>
       );
+    }
+  }
 
-    if (!resumeFile)
-      return setAlert(
-        <SweetAlert
-          warning
-          title="Required"
-          confirmBtnCssClass="btn-confirm"
-          onConfirm={() => setAlert(null)}
-        >
-          Upload resume
-        </SweetAlert>
-      );
+  setSubmitting(true);
 
-    if (!formValues.prn_id?.trim())
-      return setAlert(
-        <SweetAlert
-          warning
-          title="Required"
-          confirmBtnCssClass="btn-confirm"
-          onConfirm={() => setAlert(null)}
-        >
-          Enter PRN number
-        </SweetAlert>
-      );
+  const eligibilityIds = eligibility
+    .filter(c => acceptedEligibility[c.criteria_id])
+    .map(c => c.criteria_id);
 
-    // Check eligibility acceptance
-    if (eligibility.length) {
-      const accepted = eligibility.some(c => acceptedEligibility[c.criteria_id]);
-      if (!accepted) {
-        return setAlert(
-          <SweetAlert
-            warning
-            title="Required"
-            confirmBtnCssClass="btn-confirm"
-            onConfirm={() => setAlert(null)}
-          >
-            Please accept at least one eligibility criteria
-          </SweetAlert>
-        );
-      }
+  try {
+    // 🔹 1. Upload resume to S3
+    const s3Response = await uploadFileToS3(resumeFile);
+
+    const resumeUrl =
+      s3Response
+
+    if (!resumeUrl) {
+      throw new Error('Resume upload failed');
     }
 
-    setSubmitting(true);
+    // 🔹 2. Submit applications
+    const results = await Promise.allSettled(
+      selectedJobIndexes.map(i => {
+        const role = jobRoles[i];
 
-    const eligibilityIds = eligibility
-      .filter(c => acceptedEligibility[c.criteria_id])
-      .map(c => c.criteria_id);
+        return createStudentDriveApplication({
+          prn_id: formValues.prn_id.trim(),
+          college_id: collegeId,
+          drive_id: driveId,
+          placement_id: getPlacementIdForRole(role.role_name),
+          job_role_ids: [role.job_role_id],
+          eligibility_criteria_ids: eligibilityIds,
 
-    try {
-      await Promise.all(
-        selectedJobIndexes.map(i => {
-          const role = jobRoles[i];
+          application_data: Object.fromEntries(
+            Object.entries(formValues).map(([k, v]) => [k, typeof v === 'string' ? v.trim() : v])
+          ),
 
-          return createStudentDriveApplication({
-            prn_id: formValues.prn_id.trim(),
-            college_id: collegeId,
-            drive_id: driveId,
-            placement_id: getPlacementIdForRole(role.role_name),
-            job_role_ids: [role.job_role_id],
-            eligibility_criteria_ids: eligibilityIds,
-            application_data: {
-              ...formValues,
-              resume_name: resumeFile.name,
-              resume_type: resumeFile.type,
-              resume_size: resumeFile.size
-            },
-            resume_url: '', // TODO: Upload resume and set resume_url before submission
-            application_status: 'PENDING'
-          });
-        })
-      );
+          resume_url: resumeUrl,
+          application_status: 'PENDING'
+        });
+      })
+    );
 
+    const failures = results.filter(r => r.status === 'rejected');
+    if (failures.length === results.length) {
+      throw new Error(failures[0].reason?.response?.message || 'All applications failed');
+    }
+
+    setAlert(
+      <SweetAlert
+        success
+        title="Success"
+        confirmBtnCssClass="btn-confirm"
+        onConfirm={() => {
+          setAlert(null);
+          onClose?.();
+          onSuccess?.();
+        }}
+      >
+        {failures.length > 0 
+          ? `${results.length - failures.length} of ${results.length} applications submitted successfully!`
+          : 'Application submitted successfully!'}
+      </SweetAlert>
+    );
+
+  } catch (err) {
+    console.error(err);
+
+    if (err.message === 'Resume upload failed') {
       setAlert(
         <SweetAlert
-          success
-          title="Success"
+          error
+          title="Upload Failed"
           confirmBtnCssClass="btn-confirm"
-          onConfirm={() => {
-            setAlert(null);
-            onSuccess?.();
-          }}
+          onConfirm={() => setAlert(null)}
         >
-          Application submitted successfully!
+          Resume upload failed. Please try again.
         </SweetAlert>
       );
-
-    } catch (err) {
-      console.error(err);
-      
-      // Handle duplicate application error
-      if (err.response?.data?.message?.includes('Application already exists')) {
-        setAlert(
-          <SweetAlert
-            warning
-            title="Already Applied"
-            confirmBtnCssClass="btn-confirm"
-            onConfirm={() => setAlert(null)}
-          >
-            You have already applied for this drive. Please check your applications.
-          </SweetAlert>
-        );
-      } else {
-        setAlert(
-          <SweetAlert
-            error
-            title="Error"
-            confirmBtnCssClass="btn-confirm"
-            onConfirm={() => setAlert(null)}
-          >
-            {err.response?.data?.message || 'Submission failed'}
-          </SweetAlert>
-        );
-      }
-    } finally {
-      setSubmitting(false);
+    } else if (err.response?.message?.includes('Application already exists')) {
+      setAlert(
+        <SweetAlert
+          warning
+          title="Already Applied"
+          confirmBtnCssClass="btn-confirm"
+          onConfirm={() => setAlert(null)}
+        >
+          You have already applied for this drive.
+        </SweetAlert>
+      );
+    } else {
+      setAlert(
+        <SweetAlert
+          error
+          title="Error"
+          confirmBtnCssClass="btn-confirm"
+          onConfirm={() => setAlert(null)}
+        >
+          {err.response?.message || 'Already Applied'}
+        </SweetAlert>
+      );
     }
-  };
+  } finally {
+    setSubmitting(false);
+  }
+};
+
 
   const renderField = f => {
+    // Block unsupported field types
+    if (['checkbox', 'file'].includes(f.field_type)) {
+      return null;
+    }
+
     const common = {
       value: formValues[f.field_name] || '',
       required: f.required,
@@ -322,6 +366,10 @@ export default function RegistrationForm({
       />
     );
   };
+    const companyName =
+  job?.company?.company_name ||
+  job?.companies?.[0]?.company_name ||
+  'Company';
 
   if (loading) {
     return (
@@ -339,7 +387,10 @@ export default function RegistrationForm({
           {/* Header */}
           <div className="flex items-center justify-between p-6 bg-blue-600 rounded-t-2xl">
             <div>
-              <h1 className="text-2xl font-bold text-white">{job.company.company_name}</h1>
+
+                <h1 className="text-2xl font-bold text-white">
+                {companyName}
+                </h1>
               <p className="text-blue-100 mt-1">{job.location} • Apply before: <span className="font-semibold text-white">{job.application_deadline}</span></p>
             </div>
             <button 
@@ -460,8 +511,8 @@ export default function RegistrationForm({
 
                     {/* Dynamic Form Fields */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      {formConfig.fields.map((f, i) => (
-                        <div key={i}>
+                      {formConfig.fields.map((f) => (
+                        <div key={f.field_name}>
                           <label className="block text-sm font-medium text-gray-700 mb-2">
                             {f.label} {f.required && <span className="text-red-500">*</span>}
                           </label>
