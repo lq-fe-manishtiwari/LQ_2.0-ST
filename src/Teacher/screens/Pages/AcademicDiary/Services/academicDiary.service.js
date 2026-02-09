@@ -1,5 +1,5 @@
 // User Profile Service
-import { authHeader, handleResponse, authHeaderToPost, PMSNEWAPI,PMSAPI,AcademicAPI } from '@/_services/api';
+import { authHeader, handleResponse, authHeaderToPost, PMSNEWAPI,PMSAPI,AcademicAPI, TimetableAPI } from '@/_services/api';
 
 
 export const teacherProfileService = {
@@ -16,6 +16,12 @@ export const teacherProfileService = {
     getSlowLearnerById,
     updateSlowLearner,
     softDeleteSlowLearner,
+    getTeacherDailyReport,
+    getOtherActivities,
+    createOtherActivity,
+    updateOtherActivity,
+    deleteOtherActivity,
+    downloadAcademicDiaryByTeacher,
 
 };
 
@@ -192,4 +198,69 @@ function softDeleteSlowLearner(slowLearnerId) {
     const requestOptions = { method: 'DELETE', headers: authHeader() };
     return fetch(`${PMSAPI}/slow-learner/soft/${slowLearnerId}`, requestOptions)
         .then(handleResponse);
+}
+
+// ========================= DAILY WORK REPORT APIs =========================
+
+// GET /api/academic-diary/teacher?teacherId={teacherId}&collegeId={collegeId}&date={date}
+function getTeacherDailyReport(teacherId, collegeId, date) {
+    const requestOptions = { method: 'GET', headers: authHeader() };
+    return fetch(`${TimetableAPI}/academic-diary/teacher?teacherId=${teacherId}&collegeId=${collegeId}&date=${date}`, requestOptions)
+        .then(handleResponse);
+}
+
+// GET /api/other-activities?teacherId={teacherId}&date={date}
+function getOtherActivities(teacherId, date) {
+    const requestOptions = { method: 'GET', headers: authHeader() };
+    return fetch(`${PMSAPI}/other-activities?teacherId=${teacherId}&date=${date}`, requestOptions)
+        .then(handleResponse);
+}
+
+// POST /api/other-activities
+function createOtherActivity(values) {
+    const requestOptions = {
+        method: 'POST',
+        headers: authHeaderToPost(),
+        body: JSON.stringify(values)
+    };
+    return fetch(`${PMSAPI}/other-activities`, requestOptions)
+        .then(handleResponse);
+}
+
+// PUT /api/other-activities/{id}
+function updateOtherActivity(id, values) {
+    const requestOptions = {
+        method: 'PUT',
+        headers: authHeaderToPost(),
+        body: JSON.stringify(values)
+    };
+    return fetch(`${PMSAPI}/other-activities/${id}`, requestOptions)
+        .then(handleResponse);
+}
+
+// DELETE /api/other-activities/{id}
+function deleteOtherActivity(id) {
+    const requestOptions = { method: 'DELETE', headers: authHeader() };
+    return fetch(`${PMSAPI}/other-activities/${id}`, requestOptions)
+        .then(handleResponse);
+}
+
+// ========================= ACADEMIC DIARY DOWNLOAD =========================
+// GET /api/academic-diary/download?collegeId={collegeId}&teacherId={teacherId}
+async function downloadAcademicDiaryByTeacher(teacherId, collegeId) {
+    const response = await fetch(
+        `${TimetableAPI}/academic-diary/download?collegeId=${collegeId}&teacherId=${teacherId}`,
+        {
+            method: 'GET',
+            headers: {
+                ...authHeader(), // 🔥 MUST (Bearer token)
+            }
+        }
+    );
+
+    if (!response.ok) {
+        throw new Error(`Download failed : ${response.status}`);
+    }
+
+    return response.blob(); 
 }

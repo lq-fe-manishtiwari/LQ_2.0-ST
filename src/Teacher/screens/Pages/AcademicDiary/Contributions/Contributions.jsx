@@ -5,6 +5,7 @@ import Publications from "./Publications";
 import Counseling from "./Counseling";
 import Societal from "./Societal";
 import OtherContributions from "./OtherContributions";
+import LecturesObserved from "./LecturesObserved";
 import { ChevronDown, ChevronUp } from "lucide-react";
 
 const contributionsList = [
@@ -21,6 +22,11 @@ const contributionsList = [
   { key: "publications", title: "List of Publications", component: <Publications /> },
   { key: "counseling", title: "Counseling of Students", component: <Counseling /> },
   { key: "societal", title: "Societal Contributions", component: <Societal /> },
+  {
+    key: "lectures",
+    title: "Lectures Observed",
+    component: <LecturesObserved />,
+  },
   { key: "other", title: "Any Other Contributions", component: <OtherContributions /> },
 ];
 
@@ -32,7 +38,7 @@ const Contributions = () => {
   };
 
   return (
-    <div className="p-6 bg-gray-50 min-h-screen flex justify-center">
+    <div className=" bg-gray-50 min-h-screen flex justify-center">
       <div className="w-full max-w-6xl bg-white rounded-xl shadow-md p-6">
         {/* Header */}
         <div className="mb-8 text-center">

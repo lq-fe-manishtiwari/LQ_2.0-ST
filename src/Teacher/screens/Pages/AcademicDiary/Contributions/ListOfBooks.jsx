@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Plus, Trash2 } from "lucide-react";
 import { listOfBooksService } from "../Services/listOfBooks.service";
 import { useUserProfile } from "../../../../../contexts/UserProfileContext";
+import Swal from 'sweetalert2';
 
 /* ----------------------------------
    Input Field Component
@@ -139,9 +140,9 @@ const BooksForm = ({ onClose, onSave, initialData }) => {
    Main Component
 ----------------------------------- */
 const ListOfBooks = () => {
-  
+
   const userProfile = useUserProfile();
-  
+
   const [books, setBooks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -163,7 +164,7 @@ const ListOfBooks = () => {
     try {
       console.log("Fetching books for userId:", userId);
       const response = await listOfBooksService.getListOfBooksByUserId(userId);
-      
+
       console.log("API Response:", response);
       if (response && response.content && Array.isArray(response.content)) {
         setBooks(response.content);
@@ -190,7 +191,7 @@ const ListOfBooks = () => {
   const handleSave = async (formData) => {
     try {
       if (!userId) {
-        alert("User information not available");
+        Swal.fire("Error", "User information not available", "error");
         return;
       }
 
@@ -198,9 +199,10 @@ const ListOfBooks = () => {
         const bookId = editBook.books_reffered_id || editBook.list_of_books_id;
         await listOfBooksService.updateListOfBooks(
           bookId,
-          userId, 
+          userId,
           formData
         );
+        Swal.fire("Success", "Data updated successfully!", "success");
       } else {
         await listOfBooksService.saveListOfBooks({
           user_id: userId,
@@ -209,28 +211,38 @@ const ListOfBooks = () => {
           department_id: departmentId,
           ...formData,
         });
+        Swal.fire("Success", "Data saved successfully!", "success");
       }
 
       setShowForm(false);
       setEditBook(null);
       fetchBooks();
-      alert("Data saved successfully!");
     } catch (err) {
       console.error(err);
-      alert("Error saving data. Please try again.");
+      Swal.fire("Error", "Error saving data. Please try again.", "error");
     }
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm("Are you sure you want to delete this record?")) return;
+    const result = await Swal.fire({
+      title: 'Are you sure?',
+      text: "You won't be able to revert this!",
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#3085d6',
+      cancelButtonColor: '#d33',
+      confirmButtonText: 'Yes, delete it!'
+    });
+
+    if (!result.isConfirmed) return;
 
     try {
       await listOfBooksService.hardDeleteListOfBooks(id);
       fetchBooks();
-      alert("Record deleted successfully!");
+      Swal.fire("Deleted!", "Record deleted successfully!", "success");
     } catch (err) {
       console.error(err);
-      alert("Error deleting record. Please try again.");
+      Swal.fire("Error", "Error deleting record. Please try again.", "error");
     }
   };
 
@@ -272,9 +284,9 @@ const ListOfBooks = () => {
             <tbody>
               {books.map((book) => {
                 const bookId = book.books_reffered_id || book.list_of_books_id;
-              
+
                 const bookTable = book.list_of_books_table || [];
-                
+
                 return bookTable.map((row, idx) => (
                   <tr
                     key={`${bookId}-${idx}`}
@@ -314,11 +326,10 @@ const ListOfBooks = () => {
       <button
         onClick={() => setShowForm(true)}
         disabled={!userId}
-        className={`mt-4 inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm transition-colors ${
-          !userId 
-            ? 'bg-gray-400 text-gray-700 cursor-not-allowed' 
+        className={`mt-4 inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm transition-colors ${!userId
+            ? 'bg-gray-400 text-gray-700 cursor-not-allowed'
             : 'bg-blue-600 text-white hover:bg-blue-700'
-        }`}
+          }`}
       >
         <Plus size={16} /> Add Book
       </button>

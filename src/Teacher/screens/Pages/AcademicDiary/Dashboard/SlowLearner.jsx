@@ -19,12 +19,12 @@ import { useUserProfile } from "../../../../../contexts/UserProfileContext";
 
 export default function SlowLearner() {
   const userProfile = useUserProfile();
-  
+
   /* ================= STATE FOR TEACHER ID ================= */
   const [teacherId, setTeacherId] = useState(null);
   const [userId, setUserId] = useState(null);
   const [isLoadingProfile, setIsLoadingProfile] = useState(true);
-  
+
   /* ================= TABLE STATES ================= */
   const [columns, setColumns] = useState([]);
   const [rows, setRows] = useState([]);
@@ -34,29 +34,29 @@ export default function SlowLearner() {
   const [page, setPage] = useState(0);
   const [size] = useState(10);
   const [totalItems, setTotalItems] = useState(0);
-  
+
   /* ================= UI STATES ================= */
   const [editMode, setEditMode] = useState(false);
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [isExcelMode, setIsExcelMode] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  
+
   /* ================= SUPPORTING DOCS ================= */
   const [supportDocs, setSupportDocs] = useState([]);
   const [docTitle, setDocTitle] = useState("");
   const [uploading, setUploading] = useState(false);
-  
+
   /* ================= ALERT STATE ================= */
   const [alertConfig, setAlertConfig] = useState(null);
-  
+
   /* ================= SCREEN SIZE STATE ================= */
   const [screenSize, setScreenSize] = useState({
     isMobile: false,
     isTablet: false,
     isDesktop: true
   });
-  
+
   /* ================= DETECT SCREEN SIZE ================= */
   useEffect(() => {
     const handleResize = () => {
@@ -67,12 +67,12 @@ export default function SlowLearner() {
         isDesktop: width >= 1024   // lg and above
       });
     };
-    
+
     handleResize();
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
   }, []);
-  
+
   /* ================= SHOW ALERT HELPER ================= */
   const showAlert = (title, message, type = "success") => {
     setAlertConfig({
@@ -81,18 +81,18 @@ export default function SlowLearner() {
       type
     });
   };
-  
+
   /* ================= FETCH TEACHER ID FROM PROFILE ================= */
   useEffect(() => {
     const fetchTeacherIdFromProfile = async () => {
       try {
         setIsLoadingProfile(true);
-        
+
         if (userProfile) {
           const profileTeacherId = userProfile.getTeacherId ? userProfile.getTeacherId() : null;
           console.log("Profile Teacher ID:", profileTeacherId);
           setTeacherId(profileTeacherId);
-          
+
           const profileUserId = userProfile.getUserId ? userProfile.getUserId() : null;
           console.log("User ID:", profileUserId);
           setUserId(profileUserId);
@@ -105,64 +105,64 @@ export default function SlowLearner() {
         setIsLoadingProfile(false);
       }
     };
-    
+
     fetchTeacherIdFromProfile();
   }, [userProfile]);
-  
+
   /* ================= LOAD INITIAL DATA ================= */
   useEffect(() => {
     if (userId) {
       loadTeacherData();
     }
   }, [userId, page]);
-  
+
   const loadTeacherData = async () => {
     try {
       setIsLoading(true);
       console.log("Loading data for User ID:", userId);
-      
+
       if (userId) {
         const response = await teacherProfileService.getSlowLearnersByUserId(userId, page, size);
         console.log("API Response for Slow Learners:", response);
-        
+
         if (response && response.content && response.content.length > 0) {
           setSlowLearnerData(response.content);
           setTotalItems(response.total_elements || response.totalElements || response.content.length);
-          
-          const firstRecordWithData = response.content.find(record => 
+
+          const firstRecordWithData = response.content.find(record =>
             record.slow_learner_table && record.slow_learner_table.length > 0
           ) || response.content[0];
-          
+
           if (firstRecordWithData) {
             setCurrentSlowLearnerId(firstRecordWithData.slow_learner_id);
-            
+
             if (firstRecordWithData.slow_learner_table && firstRecordWithData.slow_learner_table.length > 0) {
               const tableRows = firstRecordWithData.slow_learner_table;
               console.log("Table rows from API:", tableRows);
-              
+
               setRows(tableRows);
-              
+
               if (tableRows.length > 0) {
                 const firstRow = tableRows[0];
                 console.log("First row keys:", Object.keys(firstRow));
-                
+
                 const generatedColumns = Object.keys(firstRow).map((key) => {
                   let label = key;
-                  
+
                   if (label.endsWith('*')) {
                     label = label.replace('*', '');
                   }
-                  
+
                   label = label.replace(/_/g, ' ');
                   label = label.replace(/\b\w/g, l => l.toUpperCase());
-                  
+
                   return {
                     key: key,
                     label: label,
                     hasAsterisk: key.endsWith('*')
                   };
                 });
-                
+
                 console.log("Generated columns:", generatedColumns);
                 setColumns(generatedColumns);
               } else {
@@ -173,7 +173,7 @@ export default function SlowLearner() {
               setColumns(getDefaultColumns());
               setRows([]);
             }
-            
+
             if (firstRecordWithData.slow_learner_document && firstRecordWithData.slow_learner_document.length > 0) {
               const transformedDocs = firstRecordWithData.slow_learner_document.map(doc => ({
                 title: doc.title || doc.document_name || 'Document',
@@ -204,7 +204,7 @@ export default function SlowLearner() {
           setSlowLearnerData([]);
         }
       }
-      
+
     } catch (error) {
       console.error("Error loading teacher data:", error);
       setColumns(getDefaultColumns());
@@ -214,7 +214,7 @@ export default function SlowLearner() {
       setIsLoading(false);
     }
   };
-  
+
   // Helper function for default columns
   const getDefaultColumns = () => [
     { key: "date", label: "Date", hasAsterisk: false },
@@ -223,12 +223,12 @@ export default function SlowLearner() {
     { key: "students", label: "No. of Students Present", hasAsterisk: false },
     { key: "hod", label: "Sign of HOD with Date", hasAsterisk: false },
   ];
-  
+
   /* ================= TABLE HANDLERS ================= */
-  
+
   const handleExcelConfirm = (excelData) => {
     if (!excelData.length) return;
-    
+
     const dynamicColumns = Object.keys(excelData[0]).map((key) => {
       let label = key;
       if (label.endsWith('*')) {
@@ -236,55 +236,55 @@ export default function SlowLearner() {
       }
       label = label.replace(/_/g, ' ');
       label = label.replace(/\b\w/g, l => l.toUpperCase());
-      
+
       return {
         key: key,
         label: label,
         hasAsterisk: key.endsWith('*')
       };
     });
-    
+
     setColumns(dynamicColumns);
     setRows(excelData);
     setIsExcelMode(true);
     setShowUploadModal(false);
   };
-  
+
   const handleAddRow = () => {
     if (columns.length === 0) {
       showAlert("Warning", "Please set columns first by uploading Excel or wait for data to load.", "warning");
       return;
     }
-    
+
     const emptyRow = {};
     columns.forEach((c) => (emptyRow[c.key] = ""));
     setRows((prev) => [...prev, emptyRow]);
   };
-  
+
   const handleDeleteRow = (index) => {
     setRows((prev) => prev.filter((_, i) => i !== index));
   };
-  
+
   const handleCellChange = (rowIndex, key, value) => {
     const updated = [...rows];
     updated[rowIndex][key] = value;
     setRows(updated);
   };
-  
+
   /* ================= SUPPORTING DOC UPLOAD ================= */
-  
+
   const handleSupportUpload = async (e) => {
     const file = e.target.files[0];
     if (!file || !docTitle) {
       showAlert("Warning", "Please provide both document title and select a file.", "warning");
       return;
     }
-    
+
     try {
       setUploading(true);
-      
+
       const fileUrl = await teacherProfileService.uploadFileToS3(file);
-      
+
       const newDoc = {
         title: docTitle,
         document_name: file.name,
@@ -294,7 +294,7 @@ export default function SlowLearner() {
         teacher_id: teacherId,
         user_id: userId
       };
-      
+
       const newSupportDoc = {
         title: docTitle,
         fileName: file.name,
@@ -304,10 +304,10 @@ export default function SlowLearner() {
         documentType: file.type || 'Unknown',
         apiFormat: newDoc
       };
-      
+
       const updatedDocs = [...supportDocs, newSupportDoc];
       setSupportDocs(updatedDocs);
-      
+
       setDocTitle("");
       showAlert("Success", "Document uploaded successfully!");
     } catch (err) {
@@ -318,18 +318,18 @@ export default function SlowLearner() {
       e.target.value = "";
     }
   };
-  
+
   /* ================= SAVE TABLE DATA ================= */
-  
+
   const handleSaveData = async () => {
     if (!teacherId || !userId) {
       showAlert("Error", "Teacher ID and User ID are required to save data.", "danger");
       return;
     }
-    
+
     try {
       setIsLoading(true);
-      
+
       const slowLearnerTable = rows.map(row => {
         const formattedRow = {};
         columns.forEach(col => {
@@ -337,9 +337,9 @@ export default function SlowLearner() {
         });
         return formattedRow;
       });
-      
+
       console.log("Prepared table data for API:", slowLearnerTable);
-      
+
       const slowLearnerDocument = supportDocs.map(doc => ({
         title: doc.title,
         document_name: doc.fileName,
@@ -349,7 +349,7 @@ export default function SlowLearner() {
         teacher_id: teacherId,
         user_id: userId
       }));
-      
+
       const payload = {
         user_id: userId,
         teacher_id: teacherId,
@@ -360,14 +360,14 @@ export default function SlowLearner() {
         status: "ACTIVE",
         last_updated: new Date().toISOString()
       };
-      
+
       console.log("Saving data with payload:", payload);
-      
+
       let response;
       if (currentSlowLearnerId) {
         response = await teacherProfileService.updateSlowLearner(
-          currentSlowLearnerId, 
-          userId, 
+          currentSlowLearnerId,
+          userId,
           payload
         );
       } else {
@@ -376,13 +376,13 @@ export default function SlowLearner() {
           setCurrentSlowLearnerId(response.id || response.slow_learner_id);
         }
       }
-      
+
       console.log("Save response:", response);
-      
+
       showAlert("Success", "Data saved successfully!");
       setEditMode(false);
       loadTeacherData();
-      
+
     } catch (error) {
       console.error("Error saving data:", error);
       showAlert("Error", `Failed to save data: ${error.message || 'Please try again.'}`, "danger");
@@ -390,9 +390,9 @@ export default function SlowLearner() {
       setIsLoading(false);
     }
   };
-  
+
   /* ================= DELETE SUPPORT DOC ================= */
-  
+
   const handleDeleteDoc = async (index) => {
     setAlertConfig({
       title: "Confirm Delete",
@@ -413,11 +413,11 @@ export default function SlowLearner() {
       onCancel: () => setAlertConfig(null)
     });
   };
-  
+
   /* ================= DELETE SLOW LEARNER RECORD ================= */
   const handleDeleteRecord = async () => {
     if (!currentSlowLearnerId) return;
-    
+
     setAlertConfig({
       title: "Confirm Delete",
       message: "Are you sure you want to delete this record?",
@@ -430,7 +430,7 @@ export default function SlowLearner() {
           setIsLoading(true);
           await teacherProfileService.softDeleteSlowLearner(currentSlowLearnerId);
           showAlert("Success", "Record deleted successfully!");
-          
+
           setCurrentSlowLearnerId(null);
           setRows([]);
           setSupportDocs([]);
@@ -447,16 +447,16 @@ export default function SlowLearner() {
       onCancel: () => setAlertConfig(null)
     });
   };
-  
+
   // Function to switch between different slow learner records
   const handleSelectRecord = (recordId) => {
     console.log("Selecting record:", recordId);
     const selectedRecord = slowLearnerData.find(record => record.slow_learner_id === recordId);
     console.log("Selected record:", selectedRecord);
-    
+
     if (selectedRecord) {
       setCurrentSlowLearnerId(recordId);
-      
+
       if (selectedRecord.slow_learner_table && selectedRecord.slow_learner_table.length > 0) {
         setRows(selectedRecord.slow_learner_table);
         const firstRow = selectedRecord.slow_learner_table[0];
@@ -467,7 +467,7 @@ export default function SlowLearner() {
           }
           label = label.replace(/_/g, ' ');
           label = label.replace(/\b\w/g, l => l.toUpperCase());
-          
+
           return {
             key: key,
             label: label,
@@ -479,7 +479,7 @@ export default function SlowLearner() {
         setRows([]);
         setColumns(getDefaultColumns());
       }
-      
+
       if (selectedRecord.slow_learner_document && selectedRecord.slow_learner_document.length > 0) {
         const transformedDocs = selectedRecord.slow_learner_document.map(doc => ({
           title: doc.title || doc.document_name || 'Document',
@@ -495,7 +495,7 @@ export default function SlowLearner() {
       }
     }
   };
-  
+
   /* ================= MOBILE HEADER ================= */
   const MobileHeader = () => (
     <div className="sm:hidden bg-white border-b py-3 px-4">
@@ -512,13 +512,11 @@ export default function SlowLearner() {
               <BookOpen className="w-4 h-4" />
               Slow Learners
             </h2>
-            <div className="text-xs text-gray-500">
-              Teacher ID: <span className="font-semibold">{teacherId}</span>
-            </div>
+
           </div>
         </div>
       </div>
-      
+
       {/* Mobile Menu Dropdown */}
       {isMobileMenuOpen && (
         <div className="mt-3 pt-3 border-t space-y-2">
@@ -534,7 +532,7 @@ export default function SlowLearner() {
             <Upload className="w-4 h-4" />
             Upload Format
           </button>
-          
+
           {!editMode && (
             <>
               <button
@@ -548,7 +546,7 @@ export default function SlowLearner() {
                 <Edit className="w-4 h-4" />
                 Add/Edit Table
               </button>
-              
+
               {currentSlowLearnerId && (
                 <button
                   onClick={handleDeleteRecord}
@@ -564,7 +562,7 @@ export default function SlowLearner() {
       )}
     </div>
   );
-  
+
   /* ================= TABLET HEADER ================= */
   const TabletHeader = () => (
     <div className="hidden sm:flex lg:hidden flex-col gap-3 p-4 bg-white border-b">
@@ -579,7 +577,7 @@ export default function SlowLearner() {
           </div>
         </div>
       </div>
-      
+
       <div className="flex flex-wrap gap-2">
         <button
           disabled={editMode}
@@ -590,7 +588,7 @@ export default function SlowLearner() {
           <Upload className="w-4 h-4" />
           Upload
         </button>
-        
+
         {!editMode && (
           <>
             <button
@@ -603,7 +601,7 @@ export default function SlowLearner() {
               <Edit className="w-4 h-4" />
               Edit Table
             </button>
-            
+
             {currentSlowLearnerId && (
               <button
                 onClick={handleDeleteRecord}
@@ -618,7 +616,7 @@ export default function SlowLearner() {
       </div>
     </div>
   );
-  
+
   // Loading state
   if (isLoadingProfile) {
     return (
@@ -628,7 +626,7 @@ export default function SlowLearner() {
       </div>
     );
   }
-  
+
   // Data loading state
   if (isLoading && teacherId) {
     return (
@@ -638,7 +636,7 @@ export default function SlowLearner() {
       </div>
     );
   }
-  
+
   /* ================= CASE 1: TEACHER ID FOUND ================ */
   if (teacherId && userId) {
     return (
@@ -652,7 +650,7 @@ export default function SlowLearner() {
             title={alertConfig.title}
             showCancel={alertConfig.showCancel || false}
             confirmBtnText={alertConfig.confirmBtnText || "OK"}
-             confirmBtnCssClass="btn-confirm"
+            confirmBtnCssClass="btn-confirm"
             cancelBtnText={alertConfig.cancelBtnText}
             cancelBtnCssClass="btn-cancel"
             onConfirm={alertConfig.onConfirm || (() => setAlertConfig(null))}
@@ -661,13 +659,13 @@ export default function SlowLearner() {
             {alertConfig.message}
           </SweetAlert>
         )}
-        
+
         {/* Mobile Header (only on small screens) */}
         <MobileHeader />
-        
+
         {/* Tablet Header (640px - 1023px) */}
         <TabletHeader />
-        
+
         <div className="p-3 sm:p-4 lg:p-6 space-y-4 lg:space-y-6">
           {/* ================= DESKTOP HEADER (1024px and above) ================= */}
           <div className="hidden lg:flex justify-between items-start lg:items-center">
@@ -677,7 +675,7 @@ export default function SlowLearner() {
                 Details of Classes conducted for Slow Learners
               </h2>
             </div>
-            
+
             <div className="flex gap-2 lg:gap-3 flex-wrap">
               <button
                 disabled={editMode}
@@ -689,7 +687,7 @@ export default function SlowLearner() {
                 <span className="hidden lg:inline">Upload Format</span>
                 <span className="lg:hidden">Upload</span>
               </button>
-              
+
               {!editMode && (
                 <>
                   <button
@@ -703,7 +701,7 @@ export default function SlowLearner() {
                     <span className="hidden lg:inline">Add/Edit Table</span>
                     <span className="lg:hidden">Edit</span>
                   </button>
-                  
+
                   {/* {currentSlowLearnerId && (
                     <button
                       onClick={handleDeleteRecord}
@@ -718,7 +716,7 @@ export default function SlowLearner() {
               )}
             </div>
           </div>
-          
+
           {/* ================= RECORD SELECTOR ================= */}
           {slowLearnerData.length > 1 && !editMode && (
             <div className="bg-white p-3 rounded-lg border">
@@ -728,20 +726,19 @@ export default function SlowLearner() {
                   <button
                     key={record.slow_learner_id}
                     onClick={() => handleSelectRecord(record.slow_learner_id)}
-                    className={`px-2 py-1 sm:px-3 sm:py-1 rounded text-xs ${
-                      currentSlowLearnerId === record.slow_learner_id
+                    className={`px-2 py-1 sm:px-3 sm:py-1 rounded text-xs ${currentSlowLearnerId === record.slow_learner_id
                         ? 'bg-blue-600 text-white'
                         : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                    }`}
+                      }`}
                   >
-                    #{record.slow_learner_id} 
+                    #{record.slow_learner_id}
                     <span className="hidden sm:inline"> ({record.slow_learner_table?.length || 0})</span>
                   </button>
                 ))}
               </div>
             </div>
           )}
-          
+
           {/* ================= TABLE CONTAINER ================= */}
           <div className="border rounded-lg overflow-hidden bg-white">
             <div className="overflow-x-auto">
@@ -753,8 +750,8 @@ export default function SlowLearner() {
                     </th>
                     {columns.length > 0 ? (
                       columns.map((c) => (
-                        <th 
-                          key={c.key} 
+                        <th
+                          key={c.key}
                           className="p-2 sm:p-3 text-left font-semibold text-gray-700 text-xs sm:text-sm min-w-[100px] lg:min-w-[120px]"
                         >
                           <div className="truncate" title={c.label}>
@@ -778,7 +775,7 @@ export default function SlowLearner() {
                     )}
                   </tr>
                 </thead>
-                
+
                 <tbody>
                   {rows.length === 0 ? (
                     <tr>
@@ -792,7 +789,7 @@ export default function SlowLearner() {
                         <td className="p-2 sm:p-3 text-xs sm:text-sm font-medium text-center">
                           {i + 1}
                         </td>
-                        
+
                         {columns.map((c) => (
                           <td key={c.key} className="p-2 sm:p-3">
                             {editMode ? (
@@ -806,15 +803,15 @@ export default function SlowLearner() {
                               />
                             ) : (
                               <div className="min-h-[32px] flex items-center">
-                                <div className={`truncate ${screenSize.isMobile ? 'max-w-[80px]' : 'max-w-full'}`} 
-                                     title={String(row[c.key])}>
+                                <div className={`truncate ${screenSize.isMobile ? 'max-w-[80px]' : 'max-w-full'}`}
+                                  title={String(row[c.key])}>
                                   {row[c.key] || <span className="text-gray-400">-</span>}
                                 </div>
                               </div>
                             )}
                           </td>
                         ))}
-                        
+
                         {editMode && columns.length > 0 && (
                           <td className="p-2 sm:p-3">
                             <button
@@ -833,7 +830,7 @@ export default function SlowLearner() {
               </table>
             </div>
           </div>
-          
+
           {/* ================= ADD ROW BUTTON ================= */}
           {editMode && columns.length > 0 && (
             <div className="flex justify-center lg:justify-start">
@@ -846,19 +843,19 @@ export default function SlowLearner() {
               </button>
             </div>
           )}
-          
+
           {/* ================= SUPPORTING DOCS SECTION ================= */}
           <div className="border rounded-lg p-3 sm:p-4 lg:p-6 space-y-3 lg:space-y-4 bg-white">
             <div className="flex items-center justify-between">
               <h4 className="flex items-center gap-2 font-semibold text-sm sm:text-base lg:text-lg">
-                <FileText className="w-4 h-4 sm:w-5 sm:h-5" /> 
+                <FileText className="w-4 h-4 sm:w-5 sm:h-5" />
                 <span>Supporting Documents</span>
               </h4>
               <span className="text-xs sm:text-sm text-gray-500">
                 {supportDocs.length} document(s)
               </span>
             </div>
-            
+
             {editMode && (
               <div className="flex flex-col gap-3 p-3 bg-gray-50 rounded-lg">
                 <div>
@@ -894,7 +891,7 @@ export default function SlowLearner() {
                 </div>
               </div>
             )}
-            
+
             {supportDocs.length > 0 ? (
               <ul className="space-y-2">
                 {supportDocs.map((d, i) => (
@@ -936,7 +933,7 @@ export default function SlowLearner() {
               </div>
             )}
           </div>
-          
+
           {/* ================= SAVE / CANCEL BUTTONS ================= */}
           {editMode && (
             <div className="flex flex-col sm:flex-row justify-center gap-3 lg:gap-4 pt-4 border-t">
@@ -949,7 +946,7 @@ export default function SlowLearner() {
               >
                 <XCircle className="w-4 h-4" /> Cancel
               </button>
-              
+
               <button
                 onClick={handleSaveData}
                 disabled={isLoading}
@@ -968,7 +965,7 @@ export default function SlowLearner() {
               </button>
             </div>
           )}
-          
+
           {/* ================= PAGINATION ================= */}
           {!editMode && slowLearnerData.length > 0 && (
             <div className="flex flex-col sm:flex-row justify-between items-center gap-3 pt-4 border-t">
@@ -993,21 +990,21 @@ export default function SlowLearner() {
               </div>
             </div>
           )}
-          
+
           {/* ================= EXCEL UPLOAD MODAL ================= */}
           {showUploadModal && (
             <ExcelUploadModal
               title="Upload Slow Learners Format"
               onClose={() => setShowUploadModal(false)}
               onConfirm={handleExcelConfirm}
-               confirmBtnCssClass="btn-confirm"
+              confirmBtnCssClass="btn-confirm"
             />
           )}
         </div>
       </div>
     );
   }
-  
+
   /* ================= CASE 2: TEACHER ID NOT FOUND ================= */
   return (
     <div className="flex flex-col items-center justify-center min-h-[60vh] text-center text-gray-500 px-4">

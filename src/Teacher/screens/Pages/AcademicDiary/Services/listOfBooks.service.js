@@ -1,5 +1,5 @@
 // ListOfBooks & ParticipationInSeminar Service
-import { authHeader, handleResponse, authHeaderToPost, PMSAPI } from '@/_services/api';
+import { authHeader, handleResponse, authHeaderToPost, PMSAPI, AcademicAPI } from '@/_services/api';
 
 export const listOfBooksService = {
     // --- List of Books ---
@@ -27,6 +27,40 @@ export const listOfBooksService = {
     updatePublication,
     softDeletePublication,
     hardDeletePublication,
+
+    //-------COUNSELING OF STUDENTS-------
+    saveCounseling,
+    getCounselingById,
+    getCounselingByCollegeId,
+    getCounselingByUserId,
+    updateCounseling,
+    softDeleteCounseling,
+    hardDeleteCounseling,
+
+    //-------SOCIETAL CONTRIBUTION-------
+    saveSocietalContribution,
+    getSocietalContributionById,
+    getSocietalContributionByUserId,
+    updateSocietalContribution,
+    deleteSocietalContribution,
+
+    // ------- ANY OTHER CONTRIBUTIONS -------
+    saveAnyOtherContribution,
+    getAnyOtherContributionById,
+    getAnyOtherContributionByUserId,
+    updateAnyOtherContribution,
+    deleteAnyOtherContribution,
+
+     // --- Lectures Observed ---
+    saveLectureObserved,
+    getLectureObservedById,
+    getLectureObservedByUserId,
+    updateLectureObserved,
+    deleteLectureObserved,
+    getProgramByCollegeId,
+    getBatchByProgramId,
+    getSubjectsByAcademicYearAndSemester,
+
 };
 
 /* =========================
@@ -177,4 +211,261 @@ function hardDeletePublication(publicationId) {
     const requestOptions = { method: 'DELETE', headers: authHeader() };
     return fetch(`${PMSAPI}/academic-diary/list-of-publication/hard/${publicationId}`, requestOptions)
         .then(handleResponse);
+}
+
+/* =========================
+   COUNSELING OF STUDENTS
+========================= */
+function saveCounseling(values) {
+    const requestOptions = {
+        method: 'POST',
+        headers: authHeaderToPost(),
+        body: JSON.stringify(values)
+    };
+    return fetch(`${PMSAPI}/academic-diary/counseling-of-students`, requestOptions).then(handleResponse);
+}
+
+function getCounselingById(counselingId) {
+    const requestOptions = { method: 'GET', headers: authHeader() };
+    return fetch(`${PMSAPI}/academic-diary/counseling-of-students/${counselingId}`, requestOptions)
+        .then(handleResponse);
+}
+
+function getCounselingByUserId(userId, page = 0, size = 10) {
+    const requestOptions = { method: 'GET', headers: authHeader() };
+    return fetch(`${PMSAPI}/academic-diary/counseling-of-students/user/${userId}?page=${page}&size=${size}`, requestOptions)
+        .then(handleResponse);
+}
+
+function getCounselingByCollegeId(collegeId, page = 0, size = 10) {
+    const requestOptions = { method: 'GET', headers: authHeader() };
+    return fetch(`${PMSAPI}/academic-diary/counseling-of-students/college/${collegeId}?page=${page}&size=${size}`, requestOptions)
+        .then(handleResponse);
+}
+
+function updateCounseling(counselingId, values) {
+    const requestOptions = {
+        method: 'PUT',
+        headers: authHeaderToPost(),
+        body: JSON.stringify(values)
+    };
+    return fetch(`${PMSAPI}/academic-diary/counseling-of-students/${counselingId}`, requestOptions)
+        .then(handleResponse);
+}
+
+function softDeleteCounseling(counselingId) {
+    const requestOptions = { method: 'DELETE', headers: authHeader() };
+    return fetch(`${PMSAPI}/academic-diary/counseling-of-students/soft/${counselingId}`, requestOptions)
+        .then(handleResponse);
+}
+
+function hardDeleteCounseling(counselingId) {
+    const requestOptions = { method: 'DELETE', headers: authHeader() };
+    return fetch(`${PMSAPI}/academic-diary/counseling-of-students/hard/${counselingId}`, requestOptions)
+        .then(handleResponse);
+}
+
+
+// 1. SAVE (POST)
+function saveSocietalContribution(values) {
+    const requestOptions = {
+        method: 'POST',
+        headers: authHeaderToPost(),
+        body: JSON.stringify(values),
+    };
+    return fetch(
+        `${PMSAPI}/academic-diary/societal-contribution`,
+        requestOptions
+    ).then(handleResponse);
+}
+
+// 2. GET BY ID
+function getSocietalContributionById(id) {
+    const requestOptions = {
+        method: 'GET',
+        headers: authHeader(),
+    };
+    return fetch(
+        `${PMSAPI}/academic-diary/societal-contribution/${id}`,
+        requestOptions
+    ).then(handleResponse);
+}
+
+// 3. GET BY USER ID
+function getSocietalContributionByUserId(userId, page = 0, size = 10) {
+    const requestOptions = {
+        method: 'GET',
+        headers: authHeader(),
+    };
+    return fetch(
+        `${PMSAPI}/academic-diary/societal-contribution/user/${userId}?page=${page}&size=${size}`,
+        requestOptions
+    ).then(handleResponse);
+}
+
+
+// 5. UPDATE (PUT)
+function updateSocietalContribution(id, values) {
+    const requestOptions = {
+        method: 'PUT',
+        headers: authHeaderToPost(),
+        body: JSON.stringify(values),
+    };
+    return fetch(
+        `${PMSAPI}/academic-diary/societal-contribution/${id}`,
+        requestOptions
+    ).then(handleResponse);
+}
+
+// 6. DELETE
+function deleteSocietalContribution(id) {
+    const requestOptions = {
+        method: 'DELETE',
+        headers: authHeader(),
+    };
+    return fetch(
+        `${PMSAPI}/academic-diary/societal-contribution/${id}`,
+        requestOptions
+    ).then(handleResponse);
+}
+
+
+// 1. SAVE (POST)
+function saveAnyOtherContribution(values) {
+    const requestOptions = {
+        method: 'POST',
+        headers: authHeaderToPost(),
+        body: JSON.stringify(values),
+    };
+
+    return fetch(
+        `${PMSAPI}/academic-diary/any-other-contributions`,
+        requestOptions
+    ).then(handleResponse);
+}
+
+// 2. UPDATE (PUT)
+function updateAnyOtherContribution(id, values) {
+    const requestOptions = {
+        method: 'PUT',
+        headers: authHeaderToPost(),
+        body: JSON.stringify(values),
+    };
+
+    return fetch(
+        `${PMSAPI}/academic-diary/any-other-contributions/${id}`,
+        requestOptions
+    ).then(handleResponse);
+}
+
+// 3. GET BY ID
+function getAnyOtherContributionById(id) {
+    const requestOptions = {
+        method: 'GET',
+        headers: authHeader(),
+    };
+
+    return fetch(
+        `${PMSAPI}/academic-diary/any-other-contributions/${id}`,
+        requestOptions
+    ).then(handleResponse);
+}
+
+// 5. GET BY USER ID
+function getAnyOtherContributionByUserId(userId, page = 0, size = 10) {
+    const requestOptions = {
+        method: 'GET',
+        headers: authHeader(),
+    };
+
+    return fetch(
+        `${PMSAPI}/academic-diary/any-other-contributions/user/${userId}?page=${page}&size=${size}`,
+        requestOptions
+    ).then(handleResponse);
+}
+
+// 6. DELETE
+function deleteAnyOtherContribution(id) {
+    const requestOptions = {
+        method: 'DELETE',
+        headers: authHeader(),
+    };
+
+    return fetch(
+        `${PMSAPI}/academic-diary/any-other-contributions/${id}`,
+        requestOptions
+    ).then(handleResponse);
+}
+
+// ------- LECTURES OBSERVED -------
+function saveLectureObserved(values) {
+    const requestOptions = {
+        method: 'POST',
+        headers: authHeaderToPost(),
+        body: JSON.stringify(values),
+    };
+    return fetch(`${PMSAPI}/academic-diary/lecture-observed`, requestOptions).then(handleResponse);
+}
+
+function getLectureObservedById(id) {
+    const requestOptions = { method: 'GET', headers: authHeader() };
+    return fetch(`${PMSAPI}/academic-diary/lecture-observed/${id}`, requestOptions).then(handleResponse);
+}
+
+function getLectureObservedByUserId(userId, page = 0, size = 10) {
+    const requestOptions = { method: 'GET', headers: authHeader() };
+    return fetch(`${PMSAPI}/academic-diary/lecture-observed/user/${userId}?page=${page}&size=${size}`, requestOptions)
+        .then(handleResponse);
+}
+
+function updateLectureObserved(id, values) {
+    const requestOptions = {
+        method: 'PUT',
+        headers: authHeaderToPost(),
+        body: JSON.stringify(values),
+    };
+    return fetch(`${PMSAPI}/academic-diary/lecture-observed/${id}`, requestOptions).then(handleResponse);
+}
+
+function deleteLectureObserved(id) {
+    const requestOptions = { method: 'DELETE', headers: authHeader() };
+    return fetch(`${PMSAPI}/academic-diary/lecture-observed/${id}`, requestOptions).then(handleResponse);
+}
+
+
+function getProgramByCollegeId(collegeId) {
+  const requestOptions = { method: 'GET', headers: authHeader() };
+  return fetch(`${AcademicAPI}/programs/by-college/${collegeId}`, requestOptions)
+    .then(handleResponse);
+}
+function getBatchByProgramId(program_is) {
+	// /: /api/batches/{id}
+	const requestOptions = { method: 'GET', headers: authHeader() };
+	return fetch(`${AcademicAPI}/batches/${program_is}`, requestOptions)
+		.then(handleResponse);
+}
+
+function getSubjectsByAcademicYearAndSemester(academicYearId, semesterId) {
+    const requestOptions = {
+        method: 'GET',
+        headers: authHeader()
+    };
+
+    return fetch(
+        `${AcademicAPI}/subject-allocation/subjects-by-academic-year-semester?academicYearId=${academicYearId}&semesterId=${semesterId}`,
+        requestOptions
+    )
+        .then(async response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            return { success: true, data: data };
+        })
+        .catch(error => {
+            console.error('Error fetching subjects by academic year and semester:', error);
+            throw error;
+        });
 }
