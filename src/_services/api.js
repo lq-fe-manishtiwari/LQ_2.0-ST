@@ -501,6 +501,18 @@ export function getTeacherDashboard() {
     }));
 }
 
+export function apiNBARequest(url, options = {}) {
+  const config = {
+    ...options,
+    headers: {
+      ...authHeader(),
+      ...options.headers,
+    },
+  };
+
+  return fetch(`${OBEAPI}${url}`, config);
+}
+
 // Enhanced API object with user profile methods
 export const api = {
   getUserProfile,
