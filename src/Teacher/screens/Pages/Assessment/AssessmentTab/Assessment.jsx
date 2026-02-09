@@ -29,7 +29,7 @@ const Assessment = () => {
   const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
   const [searchTerm, setSearchTerm] = useState('');
   const [alert, setAlert] = useState(null);
-  
+
   const [filters, setFilters] = useState({
     filterOpen: false,
     program: '',
@@ -54,7 +54,7 @@ const Assessment = () => {
   const semesterOptions = ['Semester 1', 'Semester 2', 'Semester 3', 'Semester 4'];
   const subjectOptions = ['Mathematics', 'Science', 'English', 'Computer Science'];
   const statusOptions = ['All', 'Active', 'Inactive', 'Completed'];
-  
+
   const grades = [
     { id: '1', name: 'Grade 1' },
     { id: '2', name: 'Grade 2' },
@@ -226,57 +226,57 @@ const Assessment = () => {
   const CustomSelect = ({ label, value, onChange, options, placeholder, disabled = false }) => {
     const [isOpen, setIsOpen] = useState(false);
     const dropdownRef = useRef(null);
-    
+
     const handleSelect = (option) => {
-        onChange({ target: { value: option } });
-        setIsOpen(false);
+      onChange({ target: { value: option } });
+      setIsOpen(false);
     };
 
     useEffect(() => {
-        const handleClickOutside = (event) => {
-            if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
-                setIsOpen(false);
-            }
-        };
-        document.addEventListener('mousedown', handleClickOutside);
-        return () => document.removeEventListener('mousedown', handleClickOutside);
+      const handleClickOutside = (event) => {
+        if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+          setIsOpen(false);
+        }
+      };
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
     return (
-        <div ref={dropdownRef}>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">{label}</label>
-            <div className="relative">
+      <div ref={dropdownRef}>
+        <label className="block text-sm font-semibold text-gray-700 mb-2">{label}</label>
+        <div className="relative">
+          <div
+            className={`w-full px-3 py-2 border ${disabled ? 'bg-gray-100 text-gray-500 border-gray-200 cursor-not-allowed' : 'bg-white border-gray-300 cursor-pointer hover:border-blue-400'} rounded-lg min-h-[44px] flex items-center justify-between transition-all duration-150`}
+            onClick={() => !disabled && setIsOpen(!isOpen)}
+          >
+            <span className={value ? 'text-gray-900' : 'text-gray-400'}>
+              {value || placeholder}
+            </span>
+            <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${isOpen ? 'rotate-180' : 'rotate-0'}`} />
+          </div>
+
+          {isOpen && !disabled && (
+            <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+              <div
+                className="px-4 py-2 text-sm text-gray-700 cursor-pointer hover:bg-blue-50 transition-colors"
+                onClick={() => handleSelect('')}
+              >
+                {placeholder}
+              </div>
+              {options.map(option => (
                 <div
-                    className={`w-full px-3 py-2 border ${disabled ? 'bg-gray-100 text-gray-500 border-gray-200 cursor-not-allowed' : 'bg-white border-gray-300 cursor-pointer hover:border-blue-400'} rounded-lg min-h-[44px] flex items-center justify-between transition-all duration-150`}
-                    onClick={() => !disabled && setIsOpen(!isOpen)}
+                  key={option}
+                  className="px-4 py-2 text-sm text-gray-700 cursor-pointer hover:bg-blue-50 transition-colors"
+                  onClick={() => handleSelect(option)}
                 >
-                    <span className={value ? 'text-gray-900' : 'text-gray-400'}>
-                        {value || placeholder}
-                    </span>
-                    <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${isOpen ? 'rotate-180' : 'rotate-0'}`} />
+                  {option}
                 </div>
-                
-                {isOpen && !disabled && (
-                    <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
-                        <div
-                            className="px-4 py-2 text-sm text-gray-700 cursor-pointer hover:bg-blue-50 transition-colors"
-                            onClick={() => handleSelect('')}
-                        >
-                            {placeholder}
-                        </div>
-                        {options.map(option => (
-                            <div
-                                key={option}
-                                className="px-4 py-2 text-sm text-gray-700 cursor-pointer hover:bg-blue-50 transition-colors"
-                                onClick={() => handleSelect(option)}
-                            >
-                                {option}
-                            </div>
-                        ))}
-                    </div>
-                )}
+              ))}
             </div>
+          )}
         </div>
+      </div>
     );
   };
 
@@ -396,105 +396,104 @@ const Assessment = () => {
       {/* ────────────────────── Desktop Table ────────────────────── */}
       <div className="hidden lg:block bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
         <div className="overflow-x-auto">
-            <div className="max-h-[500px] overflow-y-auto blue-scrollbar">
-          <table className="w-full">
-            <thead className="table-header">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-50 uppercase tracking-wider bg-[#2162C1]">Assessment</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-50 uppercase tracking-wider bg-[#2162C1]">Subject</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-50 uppercase tracking-wider bg-[#2162C1]">Start Date</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-50 uppercase tracking-wider bg-[#2162C1]">End Date</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-50 uppercase tracking-wider bg-[#2162C1]">Status</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-50 uppercase tracking-wider bg-[#2162C1]">Progress</th>
-                <th className="px-6 py-3 text-center text-xs font-medium text-gray-50 uppercase tracking-wider bg-[#2162C1]">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {assessments.length > 0 ? (
-                assessments.map((a) => (
-                  <tr key={a.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full flex items-center justify-center text-white"
-                          style={{ backgroundColor: a.subject.color }}>
-                          {a.proctoring ? <Video className="w-4 h-4" /> : <Clipboard className="w-4 h-4" />}
+          <div className="max-h-[500px] overflow-y-auto blue-scrollbar">
+            <table className="w-full">
+              <thead className="table-header">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-50 uppercase tracking-wider bg-[#2162C1]">Assessment</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-50 uppercase tracking-wider bg-[#2162C1]">Subject</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-50 uppercase tracking-wider bg-[#2162C1]">Start Date</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-50 uppercase tracking-wider bg-[#2162C1]">End Date</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-50 uppercase tracking-wider bg-[#2162C1]">Status</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-50 uppercase tracking-wider bg-[#2162C1]">Progress</th>
+                  <th className="px-6 py-3 text-center text-xs font-medium text-gray-50 uppercase tracking-wider bg-[#2162C1]">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {assessments.length > 0 ? (
+                  assessments.map((a) => (
+                    <tr key={a.id} className="hover:bg-gray-50">
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-full flex items-center justify-center text-white"
+                            style={{ backgroundColor: a.subject.color }}>
+                            {a.proctoring ? <Video className="w-4 h-4" /> : <Clipboard className="w-4 h-4" />}
+                          </div>
+                          <div>
+                            <div className="text-sm font-medium text-gray-900">{a.title}</div>
+                            <div className="text-xs text-gray-500">{a.type}</div>
+                          </div>
                         </div>
-                        <div>
-                          <div className="text-sm font-medium text-gray-900">{a.title}</div>
-                          <div className="text-xs text-gray-500">{a.type}</div>
+                      </td>
+                      <td className="px-6 py-4 text-sm text-gray-500">{a.subject.name}</td>
+                      <td className="px-6 py-4 text-sm text-gray-500">{a.startDate}</td>
+                      <td className="px-6 py-4 text-sm text-gray-500">{a.endDate}</td>
+                      <td className="px-6 py-4">
+                        <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${a.status === 'Attempted' ? 'bg-green-100 text-green-700' :
+                            a.status === 'In Progress' ? 'bg-blue-100 text-blue-700' : 'bg-yellow-100 text-yellow-700'
+                          }`}>
+                          {a.status}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-2">
+                          <div className="h-2 bg-gray-200 rounded-full overflow-hidden flex-1">
+                            <div
+                              className="h-full bg-blue-500 rounded-full"
+                              style={{ width: `${a.percentage}%` }}
+                            ></div>
+                          </div>
+                          <span className="text-sm font-medium text-gray-600">{a.attempted}/{a.total}</span>
                         </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 text-sm text-gray-500">{a.subject.name}</td>
-                    <td className="px-6 py-4 text-sm text-gray-500">{a.startDate}</td>
-                    <td className="px-6 py-4 text-sm text-gray-500">{a.endDate}</td>
-                    <td className="px-6 py-4">
-                      <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${
-                        a.status === 'Attempted' ? 'bg-green-100 text-green-700' : 
-                        a.status === 'In Progress' ? 'bg-blue-100 text-blue-700' : 'bg-yellow-100 text-yellow-700'
-                      }`}>
-                        {a.status}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-2">
-                        <div className="h-2 bg-gray-200 rounded-full overflow-hidden flex-1">
-                          <div
-                            className="h-full bg-blue-500 rounded-full"
-                            style={{ width: `${a.percentage}%` }}
-                          ></div>
-                        </div>
-                        <span className="text-sm font-medium text-gray-600">{a.attempted}/{a.total}</span>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 text-center">
-                      <div className="flex items-center justify-center gap-2">
-                        <button 
-                          onClick={() => navigate(`/teacher/assessments/assessment/view/${a.id}`)}
-                          className="p-1 text-blue-600 hover:bg-blue-50 rounded"
-                          title="View Assessment"
-                        >
-                          <Eye className="w-4 h-4" />
-                        </button>
-                        <button 
-                          onClick={() => navigate(`/teacher/assessments/assessment/edit/${a.id}`)}
-                          className="p-1 text-green-600 hover:bg-green-50 rounded"
-                          title="Edit Assessment"
-                        >
-                          <Edit className="w-4 h-4" />
-                        </button>
-                        <button
-  onClick={() =>
-    navigate(`/teacher/assessments/check-papers/${a.id}`, {
-      state: { assessmentData: a },
-    })
-  }
-  className="p-1 text-purple-600 hover:bg-purple-50 rounded"
-  title="Check Papers"
->
-  <Clipboard className="w-4 h-4" />
-</button>
+                      </td>
+                      <td className="px-6 py-4 text-center">
+                        <div className="flex items-center justify-center gap-2">
+                          <button
+                            onClick={() => navigate(`/teacher/assessments/assessment/view/${a.id}`)}
+                            className="p-1 text-blue-600 hover:bg-blue-50 rounded"
+                            title="View Assessment"
+                          >
+                            <Eye className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => navigate(`/teacher/assessments/assessment/edit/${a.id}`)}
+                            className="p-1 text-green-600 hover:bg-green-50 rounded"
+                            title="Edit Assessment"
+                          >
+                            <Edit className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() =>
+                              navigate(`/teacher/assessments/check-papers/${a.id}`, {
+                                state: { assessmentData: a },
+                              })
+                            }
+                            className="p-1 text-purple-600 hover:bg-purple-50 rounded"
+                            title="Check Papers"
+                          >
+                            <Clipboard className="w-4 h-4" />
+                          </button>
 
-                        <button 
-                          onClick={() => handleDeleteConfirm(a.id)}
-                          className="p-1 text-red-600 hover:bg-red-50 rounded"
-                          title="Delete Assessment"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
+                          <button
+                            onClick={() => handleDeleteConfirm(a.id)}
+                            className="p-1 text-red-600 hover:bg-red-50 rounded"
+                            title="Delete Assessment"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan="7" className="px-6 py-8 text-center text-gray-500">
+                      No assessments found
                     </td>
                   </tr>
-                ))
-              ) : (
-                <tr>
-                  <td colSpan="7" className="px-6 py-8 text-center text-gray-500">
-                    No assessments found
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+                )}
+              </tbody>
+            </table>
           </div>
         </div>
 
@@ -544,10 +543,9 @@ const Assessment = () => {
                     <p className="text-sm text-gray-500">{a.subject.name}</p>
                   </div>
                 </div>
-                <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${
-                  a.status === 'Attempted' ? 'bg-green-100 text-green-700' : 
-                  a.status === 'In Progress' ? 'bg-blue-100 text-blue-700' : 'bg-yellow-100 text-yellow-700'
-                }`}>
+                <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${a.status === 'Attempted' ? 'bg-green-100 text-green-700' :
+                    a.status === 'In Progress' ? 'bg-blue-100 text-blue-700' : 'bg-yellow-100 text-yellow-700'
+                  }`}>
                   {a.status}
                 </span>
               </div>
@@ -574,28 +572,28 @@ const Assessment = () => {
               </div>
 
               <div className="flex justify-end items-center gap-2">
-                <button 
+                <button
                   onClick={() => navigate(`/teacher/assessments/assessment/view/${a.id}`)}
                   className="p-2 text-blue-600 hover:bg-blue-50 rounded"
                   title="View Assessment"
                 >
                   <Eye className="w-4 h-4" />
                 </button>
-                <button 
+                <button
                   onClick={() => navigate(`/teacher/assessments/assessment/edit/${a.id}`)}
                   className="p-2 text-green-600 hover:bg-green-50 rounded"
                   title="Edit Assessment"
                 >
                   <Edit className="w-4 h-4" />
                 </button>
-                <button 
+                <button
                   onClick={() => navigate('/admin-assessment/assessment/check-papers', { state: { assessmentData: a } })}
                   className="p-2 text-purple-600 hover:bg-purple-50 rounded"
                   title="Check Papers"
                 >
                   <Clipboard className="w-4 h-4" />
                 </button>
-                <button 
+                <button
                   onClick={() => handleDeleteConfirm(a.id)}
                   className="p-2 text-red-600 hover:bg-red-50 rounded"
                   title="Delete Assessment"

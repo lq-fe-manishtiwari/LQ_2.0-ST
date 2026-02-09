@@ -37,7 +37,7 @@ const Assessment = () => {
 
     // State for Rubric Modal (Added)
     const [showRubricView, setShowRubricView] = useState(false);
-    const [selectedRubricDetails, setSelectedRubricDetails] = useState({ type: 'ANALYTIC', status: 'Pending' });
+    const [selectedAssessmentData, setSelectedAssessmentData] = useState(null);
 
     const [filters, setFilters] = useState({
         filterOpen: false,
@@ -140,7 +140,8 @@ const Assessment = () => {
                         category: item.type === 'RUBRIC' ? 'Rubric' : (item.category || 'General'),
                         rubricType: item.rubric ? item.rubric.rubric_type : null,
                         duration: item.time_limit_minutes || 0,
-                        questionCount: 0
+                        questionCount: 0,
+                        originalData: item
                     }));
                     setAssessments(mappedData);
                 }
@@ -206,8 +207,8 @@ const Assessment = () => {
     };
 
     // Added Handler for Rubric
-    const handleOpenRubric = (type, status) => {
-        setSelectedRubricDetails({ type: type || 'ANALYTIC', status: status });
+    const handleOpenRubric = (assessmentData) => {
+        setSelectedAssessmentData(assessmentData);
         setShowRubricView(true);
     };
 
@@ -507,9 +508,9 @@ const Assessment = () => {
                                                         </button>
                                                     )}
 
-                                                    {a.category?.includes('Rubric') && (
+                                                    {a.category?.includes('Rubric') && a.originalData && (
                                                         <button
-                                                            onClick={() => handleOpenRubric(a.rubricType, a.status)}
+                                                            onClick={() => handleOpenRubric(a.originalData)}
                                                             className="p-2 rounded-lg bg-purple-50 text-purple-600 hover:bg-purple-100 hover:text-purple-700 transition-all font-medium text-xs flex items-center gap-1 border border-purple-100 transform hover:scale-105"
                                                             title="View Rubric details"
                                                         >
@@ -558,8 +559,7 @@ const Assessment = () => {
             <RubricAssessmentView
                 isOpen={showRubricView}
                 onClose={() => setShowRubricView(false)}
-                assessmentType={selectedRubricDetails.type}
-                status={selectedRubricDetails.status}
+                assessmentData={selectedAssessmentData}
             />
         </div >
     );
