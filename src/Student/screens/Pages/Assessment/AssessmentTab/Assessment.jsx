@@ -303,7 +303,7 @@ const Assessment = () => {
     };
 
     return (
-        <div className="max-w-[1600px] mx-auto p-4 sm:p-6 w-full overflow-x-hidden">
+        <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-6 w-full">
             {/* Search and Header Section */}
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4 sm:gap-0">
                 <div className="relative w-full sm:w-80">
@@ -368,17 +368,132 @@ const Assessment = () => {
                 </div>
             )}
 
+            {/* Mobile View (Cards) */}
+            <div className="lg:hidden space-y-4 mb-6">
+                {loading ? (
+                    <div className="bg-white rounded-xl p-8 text-center shadow-sm border border-gray-200">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
+                        <p className="text-gray-500">Loading assessments...</p>
+                    </div>
+                ) : filteredAssessments.length > 0 ? (
+                    filteredAssessments.map((a) => (
+                        <div key={a.id} className="bg-white rounded-xl shadow-md border border-gray-200 p-4 hover:shadow-lg transition-shadow">
+                            <div className="flex justify-between items-start mb-3">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-10 h-10 rounded-full flex items-center justify-center text-white flex-shrink-0"
+                                        style={{ backgroundColor: a.subject.color }}>
+                                        {a.proctoring ? <Video className="w-5 h-5" /> : <Clipboard className="w-5 h-5" />}
+                                    </div>
+                                    <div>
+                                        <div className="text-sm font-bold text-gray-900 leading-tight">{a.title}</div>
+                                        <div className="text-[10px] text-gray-500">{a.subject.name} • {a.type}</div>
+                                    </div>
+                                </div>
+                                <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase
+                                    ${a.status === 'Attempted' || a.status === 'Completed' ? 'bg-green-100 text-green-700' :
+                                        a.status === 'In Progress' ? 'bg-blue-100 text-blue-700' :
+                                            a.status === 'Upcoming' ? 'bg-purple-100 text-purple-700' :
+                                                a.status === 'Expired' ? 'bg-red-100 text-red-700' :
+                                                    'bg-yellow-100 text-yellow-700'
+                                    }`}>
+                                    {a.status}
+                                </span>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-y-2 gap-x-4 text-xs mb-4">
+                                <div>
+                                    <div className="text-gray-400 mb-0.5 uppercase tracking-wider font-semibold" style={{ fontSize: '9px' }}>Category</div>
+                                    <div className="text-gray-700 font-medium">
+                                        <span className={`inline-block px-1.5 py-0.5 rounded border text-[9px] font-bold
+                                            ${a.category?.includes('Rubric') ? 'bg-purple-50 text-purple-700 border-purple-100' : 'bg-gray-50 text-gray-600 border-gray-100'}`}>
+                                            {a.category || 'General'}
+                                        </span>
+                                    </div>
+                                </div>
+                                <div>
+                                    <div className="text-gray-400 mb-0.5 uppercase tracking-wider font-semibold" style={{ fontSize: '9px' }}>Duration</div>
+                                    <div className="text-gray-700 font-medium">{a.duration} mins</div>
+                                </div>
+                                <div>
+                                    <div className="text-gray-400 mb-0.5 uppercase tracking-wider font-semibold" style={{ fontSize: '9px' }}>Due Date</div>
+                                    <div className="text-gray-700 font-medium">{a.endDate}</div>
+                                </div>
+                                <div>
+                                    <div className="text-gray-400 mb-0.5 uppercase tracking-wider font-semibold" style={{ fontSize: '9px' }}>Type</div>
+                                    <div className="text-gray-700 font-medium italic">{a.rubricType || '-'}</div>
+                                </div>
+                            </div>
+
+                            <div className="flex gap-2 border-t pt-3">
+                                {a.status === 'Not Attempted' ? (
+                                    <button
+                                        onClick={() => navigate(`/my-assessment/assessment/start/${a.id}`, { state: { title: a.title, subject: a.subject.name, duration: a.duration, category: a.category } })}
+                                        className="flex-1 flex items-center justify-center gap-2 bg-blue-600 text-white py-2 rounded-lg text-xs font-semibold hover:bg-blue-700 transition-colors"
+                                    >
+                                        <Clipboard className="w-4 h-4" /> Start
+                                    </button>
+                                ) : a.status === 'In Progress' ? (
+                                    <button
+                                        onClick={() => navigate(`/my-assessment/assessment/take/${a.id}`)}
+                                        className="flex-1 flex items-center justify-center gap-2 bg-orange-500 text-white py-2 rounded-lg text-xs font-semibold hover:bg-orange-600 transition-colors"
+                                    >
+                                        <Edit className="w-4 h-4" /> Continue
+                                    </button>
+                                ) : (
+                                    <button
+                                        onClick={() => navigate(`/my-assessment/assessment/result/${a.id}`)}
+                                        disabled={a.status !== 'Expired'}
+                                        className={`flex-1 flex items-center justify-center gap-2 p-2 rounded-lg transition-all duration-200 shadow-sm ${a.status === 'Expired'
+                                            ? 'bg-green-100 text-green-600 hover:bg-green-200 hover:shadow-md'
+                                            : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                                            }`}
+                                        title={a.status === 'Expired' ? "View Result" : "Result available after assessment expires"}
+                                    >
+                                        <Eye className="w-4 h-4" /> Result
+                                    </button>
+                                )}
+
+                                <button
+                                    onClick={() => navigate(`/my-assessment/assessment/responses/${a.id}`)}
+                                    disabled={a.status !== 'Expired'}
+                                    className={`p-2 rounded-lg transition-colors ${a.status === 'Expired'
+                                        ? 'bg-purple-100 text-purple-600 hover:bg-purple-200'
+                                        : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                                        }`}
+                                    title={a.status === 'Expired' ? "View Responses" : "Responses available after assessment expires"}
+                                >
+                                    <Eye className="w-4 h-4" />
+                                </button>
+
+                                {a.category?.includes('Rubric') && a.originalData && (
+                                    <button
+                                        onClick={() => handleOpenRubric(a.originalData)}
+                                        className="p-2 bg-yellow-50 text-yellow-600 border border-yellow-200 rounded-lg hover:bg-yellow-100 transition-colors"
+                                        title="Rubric"
+                                    >
+                                        <BookOpen className="w-4 h-4" />
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+                    ))
+                ) : (
+                    <div className="bg-white rounded-xl p-8 text-center shadow-sm border border-gray-200">
+                        <p className="text-gray-500">No assessments found</p>
+                    </div>
+                )}
+            </div>
+
             {/* Desktop & Tablet Table View */}
-            <div className="w-full bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
+            <div className="hidden lg:block w-full bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
                 <div className="w-full overflow-x-auto blue-scrollbar border-b border-gray-100">
                     <div className="max-h-[550px] overflow-y-auto blue-scrollbar">
-                        <table className="w-full min-w-[1200px] divide-y divide-gray-200">
+                        <table className="w-full min-w-[1000px] divide-y divide-gray-200">
                             <thead className="table-header">
                                 <tr>
                                     <th className="table-th whitespace-nowrap">Assessment</th>
                                     <th className="table-th whitespace-nowrap">Subject</th>
                                     <th className="table-th whitespace-nowrap">Duration</th>
-                                    <th className="table-th whitespace-nowrap">Questions</th>
                                     <th className="table-th whitespace-nowrap">Category</th>
                                     <th className="table-th whitespace-nowrap text-center">Rubric Type</th>
                                     <th className="table-th whitespace-nowrap">Due Date</th>
@@ -389,7 +504,7 @@ const Assessment = () => {
                             <tbody className="bg-white divide-y divide-gray-200">
                                 {loading ? (
                                     <tr>
-                                        <td colSpan="9" className="px-6 py-12 text-center text-gray-500">
+                                        <td colSpan="8" className="px-6 py-12 text-center text-gray-500">
                                             <div className="flex flex-col items-center justify-center">
                                                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mb-2"></div>
                                                 <p>Loading assessments...</p>
@@ -413,7 +528,6 @@ const Assessment = () => {
                                             </td>
                                             <td className="table-td text-sm text-gray-500">{a.subject.name}</td>
                                             <td className="table-td text-sm text-gray-500">{a.duration} mins</td>
-                                            <td className="table-td text-sm text-gray-500">{a.questionCount} Questions</td>
 
                                             <td className="table-td text-sm text-gray-500 whitespace-nowrap py-1">
                                                 <span className={`inline-flex px-2 py-0.5 rounded border text-[10px] font-bold uppercase tracking-wide
@@ -490,23 +604,29 @@ const Assessment = () => {
                                                     ) : (
                                                         <button
                                                             onClick={() => navigate(`/my-assessment/assessment/result/${a.id}`)}
-                                                            className="p-2 bg-green-100 text-green-600 rounded-lg hover:bg-green-200 transition-all duration-200 shadow-sm hover:shadow-md group relative"
-                                                            title="View Result"
+                                                            disabled={a.status !== 'Expired'}
+                                                            className={`p-2 rounded-lg transition-all duration-200 shadow-sm ${a.status === 'Expired'
+                                                                ? 'bg-green-100 text-green-600 hover:bg-green-200 hover:shadow-md'
+                                                                : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                                                                }`}
+                                                            title={a.status === 'Expired' ? "View Result" : "Result available after assessment expires"}
                                                         >
                                                             <Eye className="w-5 h-5" />
                                                         </button>
                                                     )}
 
-                                                    {/* View Responses Button - Available for review */}
-                                                    {a.status !== 'Upcoming' && (
-                                                        <button
-                                                            onClick={() => navigate(`/my-assessment/assessment/responses/${a.id}`)}
-                                                            className="p-2 bg-purple-100 text-purple-600 rounded-lg hover:bg-purple-200 transition-all duration-200 shadow-sm hover:shadow-md group relative"
-                                                            title="View Responses"
-                                                        >
-                                                            <Eye className="w-5 h-5" />
-                                                        </button>
-                                                    )}
+                                                    {/* View Responses Button */}
+                                                    <button
+                                                        onClick={() => navigate(`/my-assessment/assessment/responses/${a.id}`)}
+                                                        disabled={a.status !== 'Expired'}
+                                                        className={`p-2 rounded-lg transition-all duration-200 shadow-sm ${a.status === 'Expired'
+                                                            ? 'bg-purple-100 text-purple-600 hover:bg-purple-200 hover:shadow-md'
+                                                            : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                                                            }`}
+                                                        title={a.status === 'Expired' ? "View Responses" : "Responses available after assessment expires"}
+                                                    >
+                                                        <Eye className="w-5 h-5" />
+                                                    </button>
 
                                                     {a.category?.includes('Rubric') && a.originalData && (
                                                         <button
@@ -523,7 +643,7 @@ const Assessment = () => {
                                     ))
                                 ) : (
                                     <tr>
-                                        <td colSpan="9" className="px-6 py-8 text-center text-gray-500">
+                                        <td colSpan="8" className="px-6 py-8 text-center text-gray-500">
                                             No assessments found
                                         </td>
                                     </tr>
