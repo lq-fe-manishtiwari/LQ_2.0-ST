@@ -15,6 +15,7 @@ import {
     Trash2,
     Search,
     BookOpen, // Added for Rubric View
+    ClipboardList, // Added for Responses View
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useUserProfile } from '@/contexts/UserProfileContext';
@@ -490,6 +491,17 @@ const Assessment = () => {
                                                             onClick={() => navigate(`/my-assessment/assessment/result/${a.id}`)}
                                                             className="p-2 bg-green-100 text-green-600 rounded-lg hover:bg-green-200 transition-all duration-200 shadow-sm hover:shadow-md group relative"
                                                             title="View Result"
+                                                        >
+                                                            <Eye className="w-5 h-5" />
+                                                        </button>
+                                                    )}
+
+                                                    {/* View Responses Button - Available for review */}
+                                                    {a.status !== 'Upcoming' && (
+                                                        <button
+                                                            onClick={() => navigate(`/my-assessment/assessment/responses/${a.id}`)}
+                                                            className="p-2 bg-purple-100 text-purple-600 rounded-lg hover:bg-purple-200 transition-all duration-200 shadow-sm hover:shadow-md group relative"
+                                                            title="View Responses"
                                                         >
                                                             <Eye className="w-5 h-5" />
                                                         </button>

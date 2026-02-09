@@ -7,7 +7,19 @@ export const assessmentService = {
     recordQuestionResponse,
     recordBatchResponses,
     submitAssessmentAttempt,
+    getAssessmentResponses,
 };
+
+// Fetch student responses for an assessment
+async function getAssessmentResponses(assessmentId) {
+    const requestOptions = {
+        method: 'GET',
+        headers: authHeaderToPost(),
+    };
+
+    return fetch(`${ContentAPI}/student/assessment/attempt/${assessmentId}/responses`, requestOptions)
+        .then(handleResponse);
+}
 
 async function getStudentAssessments(data) {
     const requestOptions = {
