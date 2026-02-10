@@ -13,6 +13,7 @@ import EditQuestion from "../AddQuestions/EditQuestion";
 import ViewQuestion from "../AddQuestions/ViewQuestion";
 import CheckPapers from "../AssessmentTab/CheckPapers";
 import StudentResults from "../AssessmentTab/StudentResults";
+import Report from "../Reports/Report";
 
 import QuestionLevel from "../QuestionLevelSetting/QuestionLevel";
 import SettingsLayout from "../Settings/SettingsLayout";
@@ -33,6 +34,7 @@ export default function AssessmentRoutes() {
         <Route path="assessment" element={<Assessment />} />
         <Route path="questions" element={<Questions />} />
         <Route path="dashboard" element={<Dashboard />} />
+        <Route path="report" element={<Report />} />
 
         {/* Assessment actions */}
         <Route path="assessment/view/:id" element={<ViewAssessment />} />

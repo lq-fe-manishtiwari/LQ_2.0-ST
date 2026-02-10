@@ -1,11 +1,12 @@
 import React from "react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
-import { FileText, HelpCircle, Settings, X } from "lucide-react";
+import { FileText, HelpCircle, Settings, X, BarChart } from "lucide-react";
 
 const academicTabs = [
   { label: "Dashboard", to: "/teacher/assessments/dashboard", icon: HelpCircle },
   { label: "Assessment", to: "/teacher/assessments/assessment", icon: FileText },
   { label: "Questions", to: "/teacher/assessments/questions", icon: HelpCircle },
+  { label: "Report", to: "/teacher/assessments/report", icon: BarChart },
 ];
 
 export default function TabsNav({ customTabs = [] }) {
