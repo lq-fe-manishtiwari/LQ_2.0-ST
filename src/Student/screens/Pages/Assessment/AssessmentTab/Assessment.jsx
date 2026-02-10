@@ -74,6 +74,11 @@ const Assessment = () => {
 
     // Helper function to determine assessment status based on time
     const getAssessmentStatus = (item) => {
+        // Check submission count first - if > 0, it's completed/submitted
+        if (item.submission_count > 0) {
+            return 'Completed';
+        }
+
         // If there's a submission status, use it
         if (item.submission_status) {
             return item.submission_status;
