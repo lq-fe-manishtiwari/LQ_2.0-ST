@@ -9,6 +9,8 @@ import AddNewAssessment from "../AssessmentTab/AddNewAssessment";
 import EditAssessment from "../AssessmentTab/EditAssessment";
 import ViewAssessment from "../AssessmentTab/ViewAssessment";
 import AddNewQuestion from "../AddQuestions/AddNewQuestions";
+import EditQuestion from "../AddQuestions/EditQuestion";
+import ViewQuestion from "../AddQuestions/ViewQuestion";
 import CheckPapers from "../AssessmentTab/CheckPapers";
 import StudentResults from "../AssessmentTab/StudentResults";
 
@@ -36,6 +38,8 @@ export default function AssessmentRoutes() {
         <Route path="assessment/view/:id" element={<ViewAssessment />} />
         <Route path="assessment/edit/:id" element={<EditAssessment />} />
         <Route path="add-question" element={<AddNewQuestion />} />
+        <Route path="edit-question/:id" element={<EditQuestion />} />
+        <Route path="view-question/:id" element={<ViewQuestion />} />
 
         {/* Extra routes */}
         <Route path="check-papers/:id" element={<CheckPapers />} />

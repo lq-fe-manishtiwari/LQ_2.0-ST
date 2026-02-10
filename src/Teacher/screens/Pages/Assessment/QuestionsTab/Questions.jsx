@@ -1,502 +1,328 @@
 'use client';
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import BulkUploadAssessmentModal from '../Components/BulkUploadAssessmentModal';
-import { Plus, Filter, ChevronDown, ChevronLeft, ChevronRight, X, Upload, Edit, Trash2 } from 'lucide-react';
+import { Plus, Filter, ChevronDown, ChevronLeft, ChevronRight, X, Upload, Edit, Trash2, Eye } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { QuestionsService } from '../Services/questions.service';
+import { contentService as addContentService } from '../../Content/services/AddContent.service.js';
+import { getTeacherAllocatedPrograms } from '../../../../../_services/api.js';
+import { useUserProfile } from "../../../../../contexts/UserProfileContext.jsx";
 
 const Questions = () => {
   const navigate = useNavigate();
+  const { getTeacherId } = useUserProfile();
+  const teacherId = getTeacherId();
+
+  const [questionsData, setQuestionsData] = useState([]);
+  const [loadingQuestions, setLoadingQuestions] = useState(false);
+
+  // ==== Filter States ====
   const [filters, setFilters] = useState({
     filterOpen: false,
-    program: [],
-    classDataId: [],
-    gradeDivisionId: [],
+    selectedProgramId: '',
+    program: '',
+    selectedBatchId: '',
+    batch: '',
+    selectedAcademicYearId: '',
+    selectedSemesterId: '',
+    academicYearSemester: '',
+    selectedDivisionId: '',
+    division: '',
+    selectedPaperId: '',
     paper: '',
+    selectedModuleId: '',
     module: '',
+    selectedUnitId: '',
     unit: '',
   });
+
+  const [options, setOptions] = useState({
+    programs: [],
+    batches: [],
+    academicSemesters: [],
+    divisions: [],
+    subjects: [],
+    modules: [],
+    units: [],
+  });
+
+  const [allocationData, setAllocationData] = useState(null);
+  const [allBatches, setAllBatches] = useState([]);
 
   const [showBulkUpload, setShowBulkUpload] = useState(false);
   const [currentMonth, setCurrentMonth] = useState(new Date().getMonth());
   const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
 
   const customBlue = 'rgb(33 98 193 / var(--tw-bg-opacity, 1))';
+  const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 
-  const months = [
-    'January', 'February', 'March', 'April', 'May', 'June',
-    'July', 'August', 'September', 'October', 'November', 'December'
-  ];
-
-  // Mock filter options
-  const programOptions = ['MCA-BTech-Graduation', 'BCA', 'BBA', 'M.Tech'];
-  const classOptions = ['Class 7A', 'Class 7C', 'Class 8A', 'Class 8B', 'Class 9B', 'Class 10A'];
-  const divisionOptions = ['A', 'B', 'C'];
-  const paperOptions = ['Mathematics', 'Science', 'English', 'History'];
-  const moduleOptions = ['Module 1', 'Module 2', 'Module 3'];
-  const unitOptions = ['Unit 1', 'Unit 2', 'Unit 3', 'Unit 4'];
-
-  // Handle Program Selection (Multi)
-  const handleProgramChange = (e) => {
-    const value = e.target.value;
-    if (value && !filters.program.includes(value)) {
-      setFilters((prev) => ({ ...prev, program: [...prev.program, value] }));
-    }
-  };
-
-  const removeProgram = (prog) => {
-    setFilters((prev) => ({
-      ...prev,
-      program: prev.program.filter((p) => p !== prog),
-    }));
-  };
-
-  const handlePrevMonth = () => {
-    if (currentMonth === 0) {
-      setCurrentMonth(11);
-      setCurrentYear(currentYear - 1);
-    } else {
-      setCurrentMonth(currentMonth - 1);
-    }
-  };
-
-  const handleNextMonth = () => {
-    const today = new Date();
-    const nextMonth = currentMonth === 11 ? 0 : currentMonth + 1;
-    const nextYear = currentMonth === 11 ? currentYear + 1 : currentYear;
-    if (nextYear < today.getFullYear() || (nextYear === today.getFullYear() && nextMonth <= today.getMonth())) {
-      setCurrentMonth(nextMonth);
-      setCurrentYear(nextYear);
-    }
-  };
-
-  const isNextDisabled = () => {
-    const today = new Date();
-    const nextMonth = currentMonth === 11 ? 0 : currentMonth + 1;
-    const nextYear = currentMonth === 11 ? currentYear + 1 : currentYear;
-    return nextYear > today.getFullYear() || (nextYear === today.getFullYear() && nextMonth > today.getMonth());
-  };
-
-  // Custom Select Component from TeacherList
-  const CustomSelect = ({ label, value, onChange, options, placeholder, disabled = false }) => {
-    const [isOpen, setIsOpen] = useState(false);
-    const dropdownRef = useRef(null);
-    
-    const handleSelect = (option) => {
-        onChange({ target: { value: option } });
-        setIsOpen(false);
+  // Load Programs
+  useEffect(() => {
+    const fetchPrograms = async () => {
+      if (!teacherId) return;
+      try {
+        const res = await getTeacherAllocatedPrograms(teacherId);
+        if (res.success && res.data) {
+          setAllocationData(res.data);
+          const allAllocations = [...(res.data.class_teacher_allocation || []), ...(res.data.normal_allocation || [])];
+          const programMap = new Map();
+          allAllocations.forEach(a => {
+            if (a.program) programMap.set(a.program.program_id, { value: a.program.program_id, label: a.program.program_name });
+          });
+          setOptions(prev => ({ ...prev, programs: Array.from(programMap.values()) }));
+        }
+      } catch (err) { console.error(err); }
     };
+    fetchPrograms();
+  }, [teacherId]);
 
-    useEffect(() => {
-        const handleClickOutside = (event) => {
-            if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
-                setIsOpen(false);
-            }
-        };
-        document.addEventListener('mousedown', handleClickOutside);
-        return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, []);
+  // Load Dependent Data (Hierarchy: Program -> Batch -> Academic Year / Semester -> Division)
+  useEffect(() => {
+    if (!filters.selectedProgramId || !allocationData) return;
+    const progId = parseInt(filters.selectedProgramId);
+    const allAllocations = [...(allocationData.class_teacher_allocation || []), ...(allocationData.normal_allocation || [])];
+    const allocations = allAllocations.filter(a => (a.program?.program_id || a.program_id) === progId);
 
-    return (
-        <div ref={dropdownRef}>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">{label}</label>
-            <div className="relative">
-                <div
-                    className={`w-full px-3 py-2 border ${disabled ? 'bg-gray-100 text-gray-500 border-gray-200 cursor-not-allowed' : 'bg-white border-gray-300 cursor-pointer hover:border-blue-400'} rounded-lg min-h-[44px] flex items-center justify-between transition-all duration-150`}
-                    onClick={() => !disabled && setIsOpen(!isOpen)}
-                >
-                    <span className={value ? 'text-gray-900' : 'text-gray-400'}>
-                        {value || placeholder}
-                    </span>
-                    <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${isOpen ? 'rotate-180' : 'rotate-0'}`} />
-                </div>
-                
-                {isOpen && !disabled && (
-                    <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
-                        <div
-                            className="px-4 py-2 text-sm text-gray-700 cursor-pointer hover:bg-blue-50 transition-colors"
-                            onClick={() => handleSelect('')}
-                        >
-                            {placeholder}
-                        </div>
-                        {options.map(option => (
-                            <div
-                                key={option}
-                                className="px-4 py-2 text-sm text-gray-700 cursor-pointer hover:bg-blue-50 transition-colors"
-                                onClick={() => handleSelect(option)}
-                            >
-                                {option}
-                            </div>
-                        ))}
-                    </div>
-                )}
-            </div>
-        </div>
+    // Extract Unique Batches for the selected Program
+    const batchMap = new Map();
+    allocations.forEach(a => {
+      if (a.batch) batchMap.set(a.batch.batch_id, { value: a.batch.batch_id, label: a.batch.batch_name });
+    });
+    setOptions(prev => ({ ...prev, batches: Array.from(batchMap.values()) }));
+  }, [filters.selectedProgramId, allocationData]);
+
+  // Load Semesters Based on Program + Batch
+  useEffect(() => {
+    if (!filters.selectedProgramId || !filters.selectedBatchId || !allocationData) return;
+    const progId = parseInt(filters.selectedProgramId);
+    const batchId = parseInt(filters.selectedBatchId);
+    const allAllocations = [...(allocationData.class_teacher_allocation || []), ...(allocationData.normal_allocation || [])];
+    const allocations = allAllocations.filter(a =>
+      (a.program?.program_id || a.program_id) === progId &&
+      (a.batch?.batch_id || a.batch_id) === batchId
     );
+
+    const semesterMap = new Map();
+    allocations.forEach(a => {
+      if (a.academic_year && a.semester) {
+        const key = `${a.academic_year_id}-${a.semester_id}`;
+        if (!semesterMap.has(key)) {
+          semesterMap.set(key, { value: key, label: `${a.academic_year.name} - ${a.semester.name}`, yearId: a.academic_year_id, semId: a.semester_id });
+        }
+      }
+    });
+    setOptions(prev => ({ ...prev, academicSemesters: Array.from(semesterMap.values()) }));
+  }, [filters.selectedProgramId, filters.selectedBatchId, allocationData]);
+
+  // Load Divisions Based on Program + Batch + Academic Year/Semester
+  useEffect(() => {
+    if (!filters.selectedProgramId || !filters.selectedBatchId || !filters.selectedSemesterId || !allocationData) return;
+    const progId = parseInt(filters.selectedProgramId);
+    const batchId = parseInt(filters.selectedBatchId);
+    const semId = parseInt(filters.selectedSemesterId);
+    const allAllocations = [...(allocationData.class_teacher_allocation || []), ...(allocationData.normal_allocation || [])];
+    const allocations = allAllocations.filter(a =>
+      (a.program?.program_id || a.program_id) === progId &&
+      (a.batch?.batch_id || a.batch_id) === batchId &&
+      (a.semester?.semester_id || a.semester_id) === semId
+    );
+
+    const divisionMap = new Map();
+    allocations.forEach(a => {
+      if (a.division) {
+        divisionMap.set(a.division.division_id, { value: a.division.division_id, label: a.division.division_name });
+      }
+    });
+    setOptions(prev => ({ ...prev, divisions: Array.from(divisionMap.values()) }));
+  }, [filters.selectedProgramId, filters.selectedBatchId, filters.selectedSemesterId, allocationData]);
+
+  // Handle Selections
+  const handleFilterChange = async (name, item) => {
+    const newFilters = { ...filters };
+    if (name === 'program') {
+      newFilters.program = item.label;
+      newFilters.selectedProgramId = item.value;
+      newFilters.batch = ''; newFilters.selectedBatchId = '';
+      newFilters.academicYearSemester = ''; newFilters.selectedAcademicYearId = ''; newFilters.selectedSemesterId = '';
+      newFilters.division = ''; newFilters.selectedDivisionId = '';
+      newFilters.paper = ''; newFilters.selectedPaperId = '';
+      newFilters.module = ''; newFilters.selectedModuleId = '';
+      newFilters.unit = ''; newFilters.selectedUnitId = '';
+    } else if (name === 'batch') {
+      newFilters.batch = item.label;
+      newFilters.selectedBatchId = item.value;
+      newFilters.academicYearSemester = ''; newFilters.selectedAcademicYearId = ''; newFilters.selectedSemesterId = '';
+      newFilters.division = ''; newFilters.selectedDivisionId = '';
+      newFilters.paper = ''; newFilters.selectedPaperId = '';
+      newFilters.module = ''; newFilters.selectedModuleId = '';
+      newFilters.unit = ''; newFilters.selectedUnitId = '';
+    } else if (name === 'academicSemester') {
+      newFilters.academicYearSemester = item.label;
+      newFilters.selectedAcademicYearId = item.yearId;
+      newFilters.selectedSemesterId = item.semId;
+      newFilters.division = ''; newFilters.selectedDivisionId = '';
+      newFilters.paper = ''; newFilters.selectedPaperId = '';
+      newFilters.module = ''; newFilters.selectedModuleId = '';
+      newFilters.unit = ''; newFilters.selectedUnitId = '';
+
+      try {
+        const res = await addContentService.getTeacherSubjectsAllocated(teacherId, item.yearId, item.semId);
+        setOptions(prev => ({ ...prev, subjects: (res || []).map(s => ({ value: s.subject_id, label: s.subject_name || s.name })) }));
+      } catch (err) { console.error(err); }
+    } else if (name === 'division') {
+      newFilters.division = item.label;
+      newFilters.selectedDivisionId = item.value;
+    } else if (name === 'paper') {
+      newFilters.paper = item.label;
+      newFilters.selectedPaperId = item.value;
+      newFilters.module = ''; newFilters.selectedModuleId = '';
+      newFilters.unit = ''; newFilters.selectedUnitId = '';
+      try {
+        const res = await addContentService.getModulesAndUnits(item.value);
+        setOptions(prev => ({ ...prev, modules: (res?.modules || []).map(m => ({ value: m.id || m.module_id, label: m.name || m.module_name, units: m.units || [] })) }));
+      } catch (err) { console.error(err); }
+    } else if (name === 'module') {
+      newFilters.module = item.label;
+      newFilters.selectedModuleId = item.value;
+      newFilters.unit = ''; newFilters.selectedUnitId = '';
+      const mod = options.modules.find(m => m.value === item.value);
+      setOptions(prev => ({ ...prev, units: (mod?.units || []).map(u => ({ value: u.id || u.unit_id, label: u.name || u.unit_name })) }));
+    } else if (name === 'unit') {
+      newFilters.unit = item.label;
+      newFilters.selectedUnitId = item.value;
+    }
+    setFilters(newFilters);
   };
 
-  // Multi Select Program Component from TeacherList
-  const MultiSelectProgram = ({ label, selectedPrograms, programOptions, onProgramChange, onProgramRemove }) => {
+  const getQuestions = async () => {
+    setLoadingQuestions(true);
+    try {
+      let res;
+      // Use most specific filter available
+      if (filters.selectedUnitId) {
+        // No unit-specific API, so use module
+        res = await QuestionsService.getQuestionsByModule(filters.selectedModuleId);
+        // Filter by unit client-side if needed
+        if (Array.isArray(res)) {
+          res = res.filter(q => q.unit_id == filters.selectedUnitId);
+        }
+      } else if (filters.selectedModuleId) {
+        res = await QuestionsService.getQuestionsByModule(filters.selectedModuleId);
+      } else if (filters.selectedPaperId) {
+        res = await QuestionsService.getQuestionsBySubject(filters.selectedPaperId);
+      } else if (filters.selectedProgramId) {
+        res = await QuestionsService.getQuestionsByProgram(filters.selectedProgramId);
+      } else {
+        alert("Please select at least a program to fetch questions.");
+        setLoadingQuestions(false);
+        return;
+      }
+      setQuestionsData(Array.isArray(res) ? res : (res?.data || []));
+    } catch (err) {
+      console.error('Error fetching questions:', err);
+      alert('Error fetching questions. Please try again.');
+      setQuestionsData([]);
+    }
+    finally { setLoadingQuestions(false); }
+  };
+
+  const handleDelete = async (id) => {
+    if (!window.confirm("Are you sure you want to delete this question?")) return;
+    try {
+      await QuestionsService.deleteQuestion(id);
+      setQuestionsData(prev => prev.filter(q => (q.question_id || q.id) !== id));
+    } catch (err) { console.error(err); }
+  };
+
+  // Custom Select Components...
+  const CustomSelect = ({ label, value, options, placeholder, onSelect, disabled, loading }) => {
     const [isOpen, setIsOpen] = useState(false);
-    const dropdownRef = useRef(null);
-    const availableOptions = programOptions.filter(p => !selectedPrograms.includes(p));
-
-    const handleSelect = (program) => {
-        onProgramChange({ target: { value: program } });
-    };
-
-    useEffect(() => {
-        const handleClickOutside = (event) => {
-            if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
-                setIsOpen(false);
-            }
-        };
-        document.addEventListener('mousedown', handleClickOutside);
-        return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, []);
-
     return (
-        <div ref={dropdownRef}>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">{label}</label>
-            <div className="relative">
-                <div
-                    className="flex flex-wrap items-center gap-1 p-2 border border-gray-300 rounded-lg min-h-[44px] bg-white cursor-pointer hover:border-blue-400 transition-all duration-150"
-                    onClick={() => setIsOpen(!isOpen)}
-                >
-                    {selectedPrograms.length > 0 ? (
-                        selectedPrograms.map(prog => (
-                            <span
-                                key={prog}
-                                className="inline-flex items-center gap-1 bg-blue-100 text-blue-700 px-2 py-1 rounded-full text-xs font-medium"
-                                onClick={(e) => e.stopPropagation()}
-                            >
-                                {prog}
-                                <button
-                                    onClick={() => onProgramRemove(prog)}
-                                    className="hover:bg-blue-200 rounded-full p-0.5 ml-0.5 transition-colors"
-                                    title="Remove Program"
-                                >
-                                    <X className="w-3 h-3" />
-                                </button>
-                            </span>
-                        ))
-                    ) : (
-                        <span className="text-gray-400 text-sm ml-1">Select Program(s)</span>
-                    )}
-                    <ChevronDown className={`w-4 h-4 text-gray-400 absolute right-3 top-1/2 -translate-y-1/2 transition-transform ${isOpen ? 'rotate-180' : 'rotate-0'}`} />
-                </div>
-                
-                {isOpen && (
-                    <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
-                        {availableOptions.length > 0 ? (
-                            availableOptions.map(prog => (
-                                <div
-                                    key={prog}
-                                    className="px-4 py-2 text-sm text-gray-700 cursor-pointer hover:bg-blue-50 transition-colors"
-                                    onClick={() => handleSelect(prog)}
-                                >
-                                    {prog}
-                                </div>
-                            ))
-                        ) : (
-                            <div className="px-4 py-3 text-sm text-gray-500">All programs selected.</div>
-                        )}
-                    </div>
-                )}
+      <div>
+        <label className="block text-sm font-semibold text-gray-700 mb-2">{label}</label>
+        <div className="relative">
+          <div className={`w-full px-3 py-2 border rounded-lg min-h-[44px] flex items-center justify-between cursor-pointer ${disabled ? 'bg-gray-100' : 'bg-white'}`} onClick={() => !disabled && setIsOpen(!isOpen)}>
+            <span className={value ? 'text-gray-900' : 'text-gray-400'}>{loading ? 'Loading...' : value || placeholder}</span>
+            <ChevronDown className="w-4 h-4 text-gray-400" />
+          </div>
+          {isOpen && (
+            <div className="absolute z-50 w-full mt-1 bg-white border rounded-lg shadow-lg max-h-60 overflow-y-auto">
+              {options.map((opt, i) => (
+                <div key={i} className="px-4 py-2 hover:bg-blue-50 cursor-pointer" onClick={() => { onSelect(opt); setIsOpen(false); }}>{opt.label}</div>
+              ))}
             </div>
+          )}
         </div>
+      </div>
     );
   };
 
   return (
     <div className="p-4 sm:p-6 bg-gray-50 min-h-screen">
-      {/* Month Navigation */}
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-2">
-          <span className="text-lg font-medium" style={{ color: customBlue }}>
-            {months[currentMonth]} / {currentYear}
-          </span>
-          <button onClick={handlePrevMonth} className="p-2" style={{ color: customBlue }}>
-            <ChevronLeft className="h-5 w-5" />
-          </button>
-          <button
-            onClick={handleNextMonth}
-            className="p-2 disabled:opacity-50"
-            style={{ color: customBlue }}
-            disabled={isNextDisabled()}
-          >
-            <ChevronRight className="h-5 w-5" />
-          </button>
-        </div>
-      </div>
-
-      {/* 🔹 Header Section */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
-        {/* Left: Filter Button */}
-        <button
-          onClick={() =>
-            setFilters((prev) => ({ ...prev, filterOpen: !prev.filterOpen }))
-          }
-          className="flex items-center gap-2 bg-white border border-gray-300 hover:bg-gray-50 px-4 py-3 rounded-xl shadow-sm transition-all"
-        >
-          <Filter className="w-5 h-5 text-[rgb(33,98,193)]" />
-          <span className="text-[rgb(33,98,193)] font-medium">Filter</span>
-          <ChevronDown
-            className={`w-4 h-4 text-[rgb(33,98,193)] transition-transform ${
-              filters.filterOpen ? 'rotate-180' : 'rotate-0'
-            }`}
-          />
+        <button onClick={() => setFilters(p => ({ ...p, filterOpen: !p.filterOpen }))} className="flex items-center gap-2 bg-white border px-4 py-3 rounded-xl shadow-sm">
+          <Filter className="w-5 h-5 text-blue-600" />
+          <span className="text-blue-600 font-medium">Filter</span>
+          <ChevronDown className={`w-4 h-4 text-blue-600 transition-transform ${filters.filterOpen ? 'rotate-180' : ''}`} />
         </button>
-
-        {/* Right: Buttons */}
-        <div className="flex flex-col sm:flex-row gap-3">
-          <button
-            onClick={() => navigate('/teacher/assessments/add-question')}
-            className="flex items-center justify-center gap-2 bg-[rgb(33,98,193)] hover:bg-[rgb(28,78,153)] text-white font-medium px-4 py-3 rounded-lg shadow-md transition-all hover:shadow-lg"
-          >
-            <Plus className="w-5 h-5" />
-            Add New Question
-          </button>
-
-          <button
-            onClick={() => setShowBulkUpload(true)}
-            className="flex items-center justify-center gap-2 bg-[rgb(33,98,193)] hover:bg-[rgb(28,78,153)] text-white font-medium px-4 py-3 rounded-lg shadow-md transition-all hover:shadow-lg"
-          >
-            <Upload className="w-5 h-5" />
-            Bulk Upload
-          </button>
+        <div className="flex gap-3">
+          <button onClick={() => navigate('/teacher/assessments/add-question')} className="flex items-center gap-2 bg-blue-600 text-white px-4 py-3 rounded-lg"><Plus className="w-5 h-5" /> Add New Question</button>
+          <button onClick={() => setShowBulkUpload(true)} className="flex items-center gap-2 bg-blue-600 text-white px-4 py-3 rounded-lg"><Upload className="w-5 h-5" /> Bulk Upload</button>
         </div>
       </div>
 
-      {/* Filter Panel */}
       {filters.filterOpen && (
-        <div className="bg-white rounded-xl shadow-md p-5 mb-6 border border-gray-200">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-
-            {/* 1. Program - Multi Select with Chips (Custom Component) */}
-            <MultiSelectProgram
-                label="Program"
-                selectedPrograms={filters.program}
-                programOptions={programOptions}
-                onProgramChange={handleProgramChange}
-                onProgramRemove={removeProgram}
-            />
-
-            {/* 2. Select Class */}
-            <CustomSelect
-                label="Select Class"
-                value={filters.classDataId[0] || ''}
-                onChange={(e) => setFilters(prev => ({
-                  ...prev,
-                  classDataId: e.target.value ? [e.target.value] : [],
-                  gradeDivisionId: []
-                }))}
-                options={classOptions}
-                placeholder="Select Class"
-                disabled={filters.program.length === 0}
-            />
-
-            {/* 3. Division */}
-            <CustomSelect
-                label="Division"
-                value={filters.gradeDivisionId[0] || ''}
-                onChange={(e) => setFilters(prev => ({
-                  ...prev,
-                  gradeDivisionId: e.target.value ? [e.target.value] : []
-                }))}
-                options={divisionOptions}
-                placeholder="Select Division"
-                disabled={!filters.classDataId.length}
-            />
-
-            {/* 4. Select Paper */}
-            <CustomSelect
-                label="Select Paper"
-                value={filters.paper || ''}
-                onChange={(e) => setFilters(prev => ({
-                    ...prev,
-                    paper: e.target.value || ''
-                }))}
-                options={paperOptions}
-                placeholder="Select Paper"
-                disabled={!filters.gradeDivisionId.length}
-            />
-
-            {/* 5. Module */}
-            <CustomSelect
-                label="Module"
-                value={filters.module || ''}
-                onChange={(e) => setFilters(prev => ({
-                    ...prev,
-                    module: e.target.value || ''
-                }))}
-                options={moduleOptions}
-                placeholder="Select Module"
-                disabled={!filters.paper}
-            />
-
-            {/* 6. Unit */}
-            <CustomSelect
-                label="Unit"
-                value={filters.unit || ''}
-                onChange={(e) => setFilters(prev => ({
-                    ...prev,
-                    unit: e.target.value || ''
-                }))}
-                options={unitOptions}
-                placeholder="Select Unit"
-                disabled={!filters.module}
-            />
-
+        <div className="bg-white rounded-xl shadow-md p-5 mb-6 border">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <CustomSelect label="Program" value={filters.program} options={options.programs} onSelect={v => handleFilterChange('program', v)} placeholder="Select Program" />
+            <CustomSelect label="Batch" value={filters.batch} options={options.batches} onSelect={v => handleFilterChange('batch', v)} placeholder="Select Batch" disabled={!filters.selectedProgramId} />
+            <CustomSelect label="Academic Year - Semester" value={filters.academicYearSemester} options={options.academicSemesters} onSelect={v => handleFilterChange('academicSemester', v)} placeholder="Select Semester" disabled={!filters.selectedBatchId} />
+            <CustomSelect label="Division" value={filters.division} options={options.divisions} onSelect={v => handleFilterChange('division', v)} placeholder="Select Division" disabled={!filters.selectedSemesterId || options.divisions.length === 0} />
+            <CustomSelect label="Paper" value={filters.paper} options={options.subjects} onSelect={v => handleFilterChange('paper', v)} placeholder="Select Paper" disabled={!filters.selectedSemesterId} />
+            <CustomSelect label="Module" value={filters.module} options={options.modules} onSelect={v => handleFilterChange('module', v)} placeholder="Select Module" disabled={!filters.selectedPaperId} />
+            <CustomSelect label="Unit" value={filters.unit} options={options.units} onSelect={v => handleFilterChange('unit', v)} placeholder="Select Unit" disabled={!filters.selectedModuleId} />
           </div>
-
-          {/* Get Questions Button */}
-          <div className="mt-4 flex justify-end">
-            <button className="bg-[rgb(33,98,193)] hover:bg-[rgb(28,78,153)] text-white font-semibold px-6 py-3 rounded-lg text-sm transition">
-              Get Q's
-            </button>
-          </div>
+          <div className="mt-4 flex justify-end"><button onClick={getQuestions} className="bg-blue-600 text-white px-8 py-3 rounded-lg">Get Q's</button></div>
         </div>
       )}
 
-      {/* 🔹 Questions List */}
-      <div className="bg-white rounded-xl shadow-md border border-gray-200">
-        {/* Header */}
-        <div className="px-6 py-4 border-b border-gray-200">
-          <h2 className="text-lg font-semibold text-gray-900">Questions</h2>
-          <p className="text-sm text-gray-500 mt-1">Manage your assessment questions</p>
-        </div>
-
-        {/* Questions Grid */}
+      <div className="bg-white rounded-xl shadow-md border overflow-hidden">
+        <div className="px-6 py-4 border-b"><h2 className="text-lg font-semibold">Questions</h2></div>
         <div className="p-6">
-            <div className="max-h-[500px] overflow-y-auto pr-2 blue-scrollbar">
-          <div className="grid gap-4">
-            {/* Question Card 1 */}
-            <div className="border border-gray-200 rounded-lg p-5 hover:shadow-md transition-shadow">
-              <div className="flex items-start justify-between mb-3">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-sm font-semibold">
-                    Q1
+          {loadingQuestions ? <div className="text-center py-10">Loading questions...</div> : (
+            <div className="grid gap-4">
+              {questionsData.length === 0 ? <p className="text-center text-gray-500 py-10">No questions found. Use filters to search.</p> : questionsData.map((q, i) => (
+                <div key={q.id || q.question_id} className="border rounded-lg p-5 hover:shadow-md transition-shadow">
+                  <div className="flex justify-between items-start mb-3">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-sm font-bold">Q{i + 1}</div>
+                      <div className="flex gap-2">
+                        <span className="bg-blue-100 text-blue-700 px-2 py-1 rounded-full text-xs font-medium uppercase">{q.question_category}</span>
+                        <span className="bg-gray-100 text-gray-700 px-2 py-1 rounded-full text-xs font-medium uppercase">{q.question_level_name}</span>
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <button onClick={() => navigate(`/teacher/assessments/view-question/${q.question_id || q.id}`, { state: { question: q } })} className="p-2 text-blue-600 hover:bg-blue-50 rounded" title="View"><Eye size={18} /></button>
+                      <button onClick={() => navigate(`/teacher/assessments/edit-question/${q.question_id || q.id}`, { state: { question: q } })} className="p-2 text-amber-600 hover:bg-amber-50 rounded" title="Edit"><Edit size={18} /></button>
+                      <button onClick={() => handleDelete(q.question_id || q.id)} className="p-2 text-red-600 hover:bg-red-50 rounded" title="Delete"><Trash2 size={18} /></button>
+                    </div>
                   </div>
-                  <div className="flex gap-2">
-                    <span className="inline-block bg-green-100 text-green-700 px-2 py-1 rounded-full text-xs font-medium">Multiple Choice</span>
-                    <span className="inline-block bg-blue-100 text-blue-700 px-2 py-1 rounded-full text-xs font-medium">Objective</span>
+                  <h3 className="font-medium text-gray-900 line-clamp-2 mb-2">{q.question}</h3>
+                  <div className="flex items-center justify-between text-xs text-gray-500 mt-4">
+                    <div className="flex gap-4">
+                      <span>Subject: {q.subject_name}</span>
+                      <span>Marks: {q.default_marks}</span>
+                    </div>
+                    <span>{q.module_name}</span>
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <button className="btn-icon btn-edit"><Edit className="w-4 h-4" /></button>
-                  <button className="btn-icon btn-delete"><Trash2 className="w-4 h-4" /></button>
-                </div>
-              </div>
-              <h3 className="font-medium text-gray-900 mb-2">What is the capital of France?</h3>
-              <div className="text-sm text-gray-600 mb-3">
-                <div className="grid grid-cols-2 gap-2">
-                  <div>A) London</div>
-                  <div>B) Berlin</div>
-                  <div className="text-green-600 font-medium">C) Paris ✓</div>
-                  <div>D) Madrid</div>
-                </div>
-              </div>
-              <div className="flex items-center justify-between text-xs text-gray-500">
-                <div className="flex items-center gap-4">
-                  <span>Program: BCA</span>
-                  <span>Class: 1st Year</span>
-                  <span>Paper: General Knowledge</span>
-                </div>
-                <span>Created: 2 days ago</span>
-              </div>
+              ))}
             </div>
-
-            {/* Question Card 2 */}
-            <div className="border border-gray-200 rounded-lg p-5 hover:shadow-md transition-shadow">
-              <div className="flex items-start justify-between mb-3">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-sm font-semibold">
-                    Q2
-                  </div>
-                  <div className="flex gap-2">
-                    <span className="inline-block bg-purple-100 text-purple-700 px-2 py-1 rounded-full text-xs font-medium">True/False</span>
-                    <span className="inline-block bg-blue-100 text-blue-700 px-2 py-1 rounded-full text-xs font-medium">Objective</span>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <button className="btn-icon btn-edit"><Edit className="w-4 h-4" /></button>
-                  <button className="btn-icon btn-delete"><Trash2 className="w-4 h-4" /></button>
-                </div>
-              </div>
-              <h3 className="font-medium text-gray-900 mb-2">JavaScript is a compiled programming language.</h3>
-              <div className="text-sm text-gray-600 mb-3">
-                <div className="flex gap-4">
-                  <div>A) True</div>
-                  <div className="text-green-600 font-medium">B) False ✓</div>
-                </div>
-              </div>
-              <div className="flex items-center justify-between text-xs text-gray-500">
-                <div className="flex items-center gap-4">
-                  <span>Program: MCA</span>
-                  <span>Class: 2nd Year</span>
-                  <span>Paper: Web Development</span>
-                </div>
-                <span>Created: 1 week ago</span>
-              </div>
-            </div>
-
-            {/* Question Card 3 */}
-            <div className="border border-gray-200 rounded-lg p-5 hover:shadow-md transition-shadow">
-              <div className="flex items-start justify-between mb-3">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-sm font-semibold">
-                    Q3
-                  </div>
-                  <div className="flex gap-2">
-                    <span className="inline-block bg-orange-100 text-orange-700 px-2 py-1 rounded-full text-xs font-medium">Short Answer</span>
-                    <span className="inline-block bg-red-100 text-red-700 px-2 py-1 rounded-full text-xs font-medium">Subjective</span>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <button className="btn-icon btn-edit"><Edit className="w-4 h-4" /></button>
-                  <button className="btn-icon btn-delete"><Trash2 className="w-4 h-4" /></button>
-                </div>
-              </div>
-              <h3 className="font-medium text-gray-900 mb-2">Explain the difference between let, const, and var in JavaScript.</h3>
-              <div className="text-sm text-gray-600 mb-3">
-                <p className="italic">Expected answer: Explanation of scope, hoisting, and reassignment differences...</p>
-              </div>
-              <div className="flex items-center justify-between text-xs text-gray-500">
-                <div className="flex items-center gap-4">
-                  <span>Program: BCA</span>
-                  <span>Class: 3rd Year</span>
-                  <span>Paper: Advanced JavaScript</span>
-                </div>
-                <span>Created: 3 days ago</span>
-              </div>
-            </div>
-          </div>
-          </div>
-
-          {/* Pagination */}
-          <div className="flex items-center justify-between mt-6 pt-4 border-t border-gray-200">
-            <div className="text-sm text-gray-500">
-              Showing 1 to 3 of 25 questions
-            </div>
-            <div className="flex items-center gap-2">
-              <button className="px-3 py-1 text-sm border border-gray-300 rounded hover:bg-gray-50 disabled:opacity-50" disabled>
-                Previous
-              </button>
-              <button className="px-3 py-1 text-sm bg-blue-600 text-white rounded">1</button>
-              <button className="px-3 py-1 text-sm border border-gray-300 rounded hover:bg-gray-50">2</button>
-              <button className="px-3 py-1 text-sm border border-gray-300 rounded hover:bg-gray-50">3</button>
-              <button className="px-3 py-1 text-sm border border-gray-300 rounded hover:bg-gray-50">
-                Next
-              </button>
-            </div>
-          </div>
+          )}
         </div>
       </div>
 
-      {/* 🔹 Bulk Upload Modal */}
-      {showBulkUpload && (
-        <BulkUploadAssessmentModal onClose={() => setShowBulkUpload(false)} />
-      )}
+      {showBulkUpload && <BulkUploadAssessmentModal onClose={() => setShowBulkUpload(false)} />}
     </div>
   );
 };
