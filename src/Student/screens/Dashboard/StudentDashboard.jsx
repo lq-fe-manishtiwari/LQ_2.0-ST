@@ -71,7 +71,7 @@ const StudentDashboard = () => {
   const shortcuts = [
     { name: 'Academics', icon: BookOpen, path: '/academics', color: 'text-blue-600', bg: 'bg-blue-100' },
     { name: 'Time Table', icon: Calendar, path: '/timetable', color: 'text-emerald-600', bg: 'bg-emerald-100' },
-    { name: 'Resources', icon: BookMarked, path: '/library', color: 'text-orange-600', bg: 'bg-orange-100' },
+    { name: 'My Profile', icon: Users, path: '/my-profile', color: 'text-orange-600', bg: 'bg-orange-100' },
     { name: 'Settings', icon: Settings, path: '/settings', color: 'text-gray-600', bg: 'bg-gray-100' },
   ];
 
@@ -82,8 +82,11 @@ const StudentDashboard = () => {
         {/* Header Section */}
         <section className="flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div className="space-y-2">
-            <h1 className="text-3xl font-bold text-slate-900">
-              {profileLoading ? 'Loading Dashboard...' : `Welcome, ${getFullName() || user?.sub || 'Student'}!`}
+            <h1 className="text-3xl font-bold text-slate-900 hover:text-blue-600 transition-colors">
+              <Link to="/my-profile" className="flex items-center gap-2">
+                {profileLoading ? 'Loading Dashboard...' : `Welcome, ${getFullName() || user?.sub || 'Student'}!`}
+                <ArrowRight className="w-6 h-6 opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all" />
+              </Link>
             </h1>
             <p className="text-slate-500 font-medium">
               Explore your academic summary and daily highlights.
