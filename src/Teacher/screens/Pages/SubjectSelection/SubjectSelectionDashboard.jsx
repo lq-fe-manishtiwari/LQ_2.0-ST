@@ -131,7 +131,7 @@ export default function SubjectSelectionDashboard() {
     useEffect(() => {
         if (filters.batchId && classTeacherAllocations.length > 0) {
             console.log("Extracting academic years and semesters from teacher allocations");
-            
+
             // Filter allocations by selected batch
             const batchAllocations = classTeacherAllocations.filter(
                 allocation => allocation.batch && allocation.batch.batch_id === parseInt(filters.batchId)
@@ -140,7 +140,7 @@ export default function SubjectSelectionDashboard() {
             // Extract unique academic years
             const uniqueAcademicYears = [];
             const academicYearIds = new Set();
-            
+
             batchAllocations.forEach(allocation => {
                 if (allocation.academic_year && !academicYearIds.has(allocation.academic_year_id)) {
                     academicYearIds.add(allocation.academic_year_id);
@@ -158,7 +158,7 @@ export default function SubjectSelectionDashboard() {
             // Extract unique semesters
             const uniqueSemesters = [];
             const semesterIds = new Set();
-            
+
             batchAllocations.forEach(allocation => {
                 if (allocation.semester && !semesterIds.has(allocation.semester_id)) {
                     semesterIds.add(allocation.semester_id);
@@ -175,7 +175,7 @@ export default function SubjectSelectionDashboard() {
 
             console.log("Extracted academic years:", uniqueAcademicYears);
             console.log("Extracted semesters:", uniqueSemesters);
-            
+
             setAcademicYears(uniqueAcademicYears);
             setSemesters(uniqueSemesters);
 
@@ -231,7 +231,7 @@ export default function SubjectSelectionDashboard() {
 
             // Fetch teacher allocated programs
             const response = await getTeacherAllocatedPrograms(teacherId);
-            
+
             if (!response.success) {
                 throw new Error(response.message || 'Failed to fetch teacher allocations');
             }
@@ -242,7 +242,7 @@ export default function SubjectSelectionDashboard() {
             // Extract from both class teacher and normal allocations
             const classAllocations = allocationsData.class_teacher_allocation || [];
             const normalAllocations = allocationsData.normal_allocation || [];
-            
+
             // Combine both allocation types
             const allAllocations = [...classAllocations, ...normalAllocations];
             setClassTeacherAllocations(allAllocations);
@@ -250,7 +250,7 @@ export default function SubjectSelectionDashboard() {
             // Extract unique programs from all allocations
             const uniquePrograms = [];
             const programIds = new Set();
-            
+
             allAllocations.forEach(allocation => {
                 if (allocation.program && !programIds.has(allocation.program.program_id)) {
                     programIds.add(allocation.program.program_id);
@@ -300,7 +300,7 @@ export default function SubjectSelectionDashboard() {
             // Extract unique batches
             const uniqueBatches = [];
             const batchIds = new Set();
-            
+
             programAllocations.forEach(allocation => {
                 if (allocation.batch && !batchIds.has(allocation.batch.batch_id)) {
                     batchIds.add(allocation.batch.batch_id);
@@ -445,11 +445,11 @@ export default function SubjectSelectionDashboard() {
             );
         } catch (error) {
             console.error("Error creating configuration:", error);
-            
+
             // Check if it's a duplicate error
             const errorMessage = error.response?.data?.message || error.message || "Failed to create configuration";
             const isDuplicate = errorMessage.includes("Duplicate") || errorMessage.includes("already exists");
-            
+
             setModalAlert(
                 <SweetAlert
                     warning={isDuplicate}
@@ -637,10 +637,10 @@ export default function SubjectSelectionDashboard() {
             subjectType,
             vertical
         };
-        
+
         setFullScreenData(fullScreenData);
         setShowFullScreenView(true);
-        
+
         // Save to localStorage and update URL hash
         localStorage.setItem('subjectSelection_fullScreenData', JSON.stringify(fullScreenData));
         window.location.hash = 'fullscreen';
@@ -653,7 +653,7 @@ export default function SubjectSelectionDashboard() {
             subjectType: null,
             vertical: null
         });
-        
+
         // Clear localStorage and URL hash
         localStorage.removeItem('subjectSelection_fullScreenData');
         window.location.hash = '';
@@ -759,7 +759,7 @@ export default function SubjectSelectionDashboard() {
     }
 
     return (
-        <div className="p-0 md:p-0">
+        <div className="px-4 sm:px-6 py-6 font-sans">
             {/* Header with Search and Add Button */}
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
                 {/* Search */}
@@ -776,13 +776,15 @@ export default function SubjectSelectionDashboard() {
                     />
                 </div>
 
-                <button
-                    onClick={() => setShowAddNewPage(true)}
-                    className="w-full sm:w-auto flex items-center justify-center gap-2 bg-[rgb(33,98,193)] hover:bg-[rgb(28,78,153)] text-white font-medium px-4 py-3 rounded-lg shadow-md transition-all"
-                >
-                    <Plus size={20} />
-                    <span>Add New</span>
-                </button>
+                <div className="w-full sm:w-auto">
+                    <button
+                        onClick={() => setShowAddNewPage(true)}
+                        className="w-full sm:w-auto flex items-center justify-center gap-2 bg-[rgb(33,98,193)] hover:bg-[rgb(28,78,153)] text-white font-medium px-4 py-3 rounded-lg shadow-md transition-all"
+                    >
+                        <Plus size={20} />
+                        <span>Add New</span>
+                    </button>
+                </div>
             </div>
 
             {/* Filters */}
@@ -854,7 +856,7 @@ export default function SubjectSelectionDashboard() {
                 />
             )}
 
-{/* Delete Confirmation */}
+            {/* Delete Confirmation */}
             {deleteConfirm && (
                 <SweetAlert
                     warning

@@ -1,11 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { CreditCard, Calendar, CheckCircle, AlertCircle, TrendingUp, DollarSign, FileText } from 'lucide-react';
-// import studentFeesService from '../../../../../_services/studentFees.service';
+import SweetAlert from 'react-bootstrap-sweetalert';
 import studentFeesService from '../../../.././../../_services/studentFees.service';
 const StudentFeesDetails = ({ studentId }) => {
     const [allocations, setAllocations] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [selectedInstallments, setSelectedInstallments] = useState({});
+    const [successAlert, setSuccessAlert] = useState(null);
+    const [errorAlert, setErrorAlert] = useState(null);
+    const [warningAlert, setWarningAlert] = useState(null);
 
     useEffect(() => {
         const fetchFees = async () => {
@@ -23,12 +27,16 @@ const StudentFeesDetails = ({ studentId }) => {
         };
 
         fetchFees();
+        setSelectedInstallments({});
     }, [studentId]);
 
     const getOverdueStatus = (dueDate) => {
         if (!dueDate) return false;
-        const currentISTDate = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" }));
-        return new Date(dueDate) < currentISTDate;
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const due = new Date(dueDate);
+        due.setHours(0, 0, 0, 0);
+        return due < today;
     };
 
     if (loading) {
@@ -67,7 +75,38 @@ const StudentFeesDetails = ({ studentId }) => {
     }
 
     return (
-        <div className="space-y-8">
+        <>
+            {successAlert && (
+                <SweetAlert
+                    success
+                    title={successAlert.title}
+                    onConfirm={() => setSuccessAlert(null)}
+                    confirmBtnCssClass="btn-confirm"
+                >
+                    {successAlert.message}
+                </SweetAlert>
+            )}
+            {errorAlert && (
+                <SweetAlert
+                    error
+                    title={errorAlert.title}
+                    onConfirm={() => setErrorAlert(null)}
+                    confirmBtnCssClass="btn-confirm"
+                >
+                    {errorAlert.message}
+                </SweetAlert>
+            )}
+            {warningAlert && (
+                <SweetAlert
+                    warning
+                    title={warningAlert.title}
+                    onConfirm={() => setWarningAlert(null)}
+                    confirmBtnCssClass="btn-confirm"
+                >
+                    {warningAlert.message}
+                </SweetAlert>
+            )}
+            <div className="space-y-8">
             {allocations.map((allocation) => (
                 <div key={allocation.fee_allocation_id} className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
                     {/* Semester Header */}
@@ -113,45 +152,98 @@ const StudentFeesDetails = ({ studentId }) => {
                                     <Calendar className="w-4 h-4" />
                                     Installment Breakdown
                                 </h3>
-                                <div className="grid grid-cols-1 xs:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                                     {allocation.installments.map((inst) => {
                                         const isOverdue = inst.balance > 0 && getOverdueStatus(inst.due_date);
+                                        const isSelected = selectedInstallments[allocation.fee_allocation_id]?.includes(inst.installment_id);
                                         return (
-                                            <div key={inst.installment_id} className={`p-4 rounded-xl border transition-all ${inst.balance === 0 ? 'bg-green-50/30 border-green-100' :
-                                                isOverdue ? 'bg-red-50/30 border-red-100 ring-1 ring-red-100' : 'bg-white border-gray-100'
-                                                }`}>
-                                                <div className="flex justify-between items-start mb-3">
-                                                    <span className="text-xs font-bold text-gray-500 px-2 py-0.5 bg-gray-100 rounded">
-                                                        Inst #{inst.installment_number}
-                                                    </span>
-                                                    {inst.balance === 0 ? (
-                                                        <CheckCircle className="w-4 h-4 text-green-500" />
-                                                    ) : isOverdue ? (
-                                                        <span className="text-[10px] font-black text-red-600 uppercase bg-red-100 px-1.5 py-0.5 rounded">Overdue</span>
-                                                    ) : (
-                                                        <span className="text-[10px] font-bold text-amber-600 uppercase bg-amber-50 px-1.5 py-0.5 rounded">Upcoming</span>
-                                                    )}
-                                                </div>
-                                                <div className="flex justify-between items-end">
-                                                    <div>
-                                                        <p className="text-gray-500 text-[10px] font-bold uppercase">Balance</p>
-                                                        <p className={`text-lg font-black ${inst.balance === 0 ? 'text-green-600' : 'text-gray-800'}`}>
-                                                            ₹{inst.balance.toLocaleString('en-IN')}
-                                                        </p>
+                                            <div
+                                                key={inst.installment_id}
+                                                className={`relative p-4 rounded-lg border-2 transition-all cursor-pointer ${
+                                                    inst.balance === 0
+                                                        ? 'bg-green-50 border-green-200'
+                                                        : isSelected
+                                                        ? 'bg-blue-50 border-blue-500 shadow-md'
+                                                        : 'bg-white border-gray-200 hover:border-blue-300 hover:shadow-sm'
+                                                }`}
+                                                onClick={() => {
+                                                    if (inst.balance > 0) {
+                                                        setSelectedInstallments(prev => {
+                                                            const current = prev[allocation.fee_allocation_id] || [];
+                                                            const updated = current.includes(inst.installment_id)
+                                                                ? current.filter(id => id !== inst.installment_id)
+                                                                : [...current, inst.installment_id];
+                                                            return { ...prev, [allocation.fee_allocation_id]: updated };
+                                                        });
+                                                    }
+                                                }}
+                                            >
+                                                {inst.balance > 0 && (
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={isSelected}
+                                                        onChange={() => {}}
+                                                        className="absolute top-3 left-3 w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-2 focus:ring-blue-500 pointer-events-none"
+                                                    />
+                                                )}
+                                                <div className={`flex justify-between items-start ${inst.balance > 0 ? 'ml-6' : ''}`}>
+                                                    <div className="flex-1">
+                                                        <div className="flex items-center gap-2 mb-2">
+                                                            <span className="text-sm font-bold text-gray-700">
+                                                                Installment #{inst.installment_number}
+                                                            </span>
+                                                            {inst.balance === 0 && (
+                                                                <CheckCircle className="w-4 h-4 text-green-600" />
+                                                            )}
+                                                        </div>
+                                                        <div className="space-y-1">
+                                                            <div className="flex justify-between text-xs">
+                                                                <span className="text-gray-500">Amount:</span>
+                                                                <span className="font-semibold text-gray-700">₹{(inst.amount || 0).toLocaleString('en-IN')}</span>
+                                                            </div>
+                                                            <div className="flex justify-between text-xs">
+                                                                <span className="text-gray-500">Paid:</span>
+                                                                <span className="font-semibold text-green-600">₹{(inst.paid_amount || 0).toLocaleString('en-IN')}</span>
+                                                            </div>
+                                                            <div className="flex justify-between text-xs">
+                                                                <span className="text-gray-500">Balance:</span>
+                                                                <span className={`font-bold ${inst.balance === 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                                                    ₹{inst.balance.toLocaleString('en-IN')}
+                                                                </span>
+                                                            </div>
+                                                        </div>
                                                     </div>
-                                                    {inst.balance > 0 && (
-                                                        <button
-                                                            className="bg-blue-600 hover:bg-blue-700 text-white text-[11px] font-bold px-4 py-1.5 rounded-lg shadow-sm transition-all active:scale-95"
-                                                            onClick={() => alert(`Redirecting to payment for Inst #${inst.installment_number}`)}
-                                                        >
-                                                            Pay
-                                                        </button>
-                                                    )}
                                                 </div>
+                                                {isOverdue && inst.balance > 0 && (
+                                                    <div className="mt-2 pt-2 border-t border-red-200">
+                                                        <span className="text-[10px] font-bold text-red-600 uppercase bg-red-100 px-2 py-0.5 rounded">Overdue</span>
+                                                    </div>
+                                                )}
                                             </div>
                                         );
                                     })}
                                 </div>
+                                {(selectedInstallments[allocation.fee_allocation_id]?.length || 0) > 0 && (
+                                    <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-xl flex flex-col sm:flex-row justify-between items-center gap-3">
+                                        <div>
+                                            <p className="text-sm font-bold text-blue-900">{selectedInstallments[allocation.fee_allocation_id].length} Installment(s) Selected</p>
+                                            <p className="text-xs text-blue-700">Total: ₹{allocation.installments.filter(i => selectedInstallments[allocation.fee_allocation_id]?.includes(i.installment_id)).reduce((sum, i) => sum + i.balance, 0).toLocaleString('en-IN')}</p>
+                                        </div>
+                                        <button
+                                            className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold px-6 py-2.5 rounded-lg shadow-sm transition-all active:scale-95 flex items-center justify-center gap-2"
+                                            onClick={() => {
+                                                const total = allocation.installments.filter(i => selectedInstallments[allocation.fee_allocation_id]?.includes(i.installment_id)).reduce((sum, i) => sum + i.balance, 0);
+                                                setSuccessAlert({
+                                                    title: 'Payment Initiated',
+                                                    message: `Proceeding to payment gateway for ${selectedInstallments[allocation.fee_allocation_id].length} installment(s). Total Amount: ₹${total.toLocaleString('en-IN')}`
+                                                });
+                                            }}
+                                        >
+                                            <CreditCard size={16} />
+                                            Pay Selected
+                                        </button>
+                                    </div>
+                                )}
                             </div>
                         ) : (
                             /* Simple Fee Line Items for non-installment */
@@ -180,7 +272,12 @@ const StudentFeesDetails = ({ studentId }) => {
                                     <div className="pt-4 flex justify-end">
                                         <button
                                             className="w-full sm:w-auto bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-6 sm:px-8 py-3 rounded-xl shadow-lg shadow-indigo-200 transition-all active:scale-95 flex items-center justify-center gap-2"
-                                            onClick={() => alert('Proceeding to Full Payment Gateway...')}
+                                            onClick={() => {
+                                                setSuccessAlert({
+                                                    title: 'Payment Initiated',
+                                                    message: `Proceeding to payment gateway. Total Amount: ₹${allocation.pending_amount.toLocaleString('en-IN')}`
+                                                });
+                                            }}
                                         >
                                             <CreditCard size={18} />
                                             <span className="text-sm sm:text-base">Pay Semester Balance (₹{allocation.pending_amount.toLocaleString('en-IN')})</span>
@@ -192,7 +289,8 @@ const StudentFeesDetails = ({ studentId }) => {
                     </div>
                 </div>
             ))}
-        </div>
+            </div>
+        </>
     );
 };
 

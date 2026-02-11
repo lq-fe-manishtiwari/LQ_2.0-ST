@@ -22,14 +22,14 @@ import { TeacherAttendanceManagement } from "../Services/attendance.service";
 // --- Reusable Components ---
 const StatCard = ({ title, value, subtext, icon, color, delay }) => (
     <div
-        className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex items-center gap-4 hover:shadow-md transition-shadow duration-300"
+        className="bg-white p-4 sm:p-6 rounded-xl shadow-sm border border-gray-100 flex items-center gap-3 sm:gap-4 hover:shadow-md transition-shadow duration-300"
         style={{ animation: `fadeIn 0.5s ease-out ${delay}ms backwards` }}
     >
-        <div className={`p-4 rounded-full ${color}`}>{icon}</div>
+        <div className={`p-3 sm:p-4 rounded-full ${color}`}>{icon}</div>
         <div>
-            <p className="text-sm text-gray-500 font-medium">{title}</p>
-            <h3 className="text-2xl font-bold text-gray-800">{value}</h3>
-            {subtext && <p className="text-xs text-gray-400 mt-1">{subtext}</p>}
+            <p className="text-xs sm:text-sm text-gray-500 font-medium">{title}</p>
+            <h3 className="text-xl sm:text-2xl font-bold text-gray-800">{value}</h3>
+            {subtext && <p className="text-[10px] sm:text-xs text-gray-400 mt-1">{subtext}</p>}
         </div>
     </div>
 );
@@ -83,29 +83,13 @@ const CircularProgress = ({ value, label, subLabel, color, delay }) => {
 const SectionHeader = ({ title, icon }) => (
     <div className="flex items-center gap-2 mb-4">
         {icon}
-        <h2 className="text-lg font-bold text-gray-800">{title}</h2>
+        <h2 className="text-base sm:text-lg font-bold text-gray-800">{title}</h2>
     </div>
 );
 
-// --- Mock Data ---
-const classData = [
-    { name: "1st Year", present: 86, total: 90 },
-    { name: "2nd Year", present: 20, total: 60 }, // Low
-    { name: "3rd Year", present: 70, total: 84 }, // Med
-    { name: "4th Year", present: 86, total: 90 }, // High
-];
+// --- Mock Data Removed ---
+// Data will be sourced from dashboardData
 
-const absenceData = [
-    { name: "With Permission", value: 40, color: "#22c55e" },
-    { name: "Without Permission", value: 25, color: "#ef4444" },
-    { name: "On Duty (OD)", value: 20, color: "#22c55e" },
-    { name: "Medical Leave", value: 15, color: "#f97316" },
-];
-
-const facultyAttendance = [
-    { name: "Present", value: 65, color: "#22c55e" },
-    { name: "Absent", value: 15, color: "#ef4444" },
-];
 
 // --- Sub-Component for Class Card ---
 const ClassAttendanceCard = ({ data, delay }) => {
@@ -261,7 +245,7 @@ const Attendencedashboard = () => {
 
             console.log('[Dashboard] fetchTimetableData called with:', collegeId, teacherId);
             const [dashboardRes, holidaysRes] = await Promise.all([
-                TeacherAttendanceManagement.getTimetableDashboardDetails(collegeId, formattedDate),
+                TeacherAttendanceManagement.getTimetableDashboardDetails(teacherId, collegeId, formattedDate),
                 TeacherAttendanceManagement.getDashboardHolidays(teacherId, collegeId, formattedDate)
             ]);
             console.log('[Dashboard] Holidays API Response:', holidaysRes);
@@ -324,9 +308,9 @@ const Attendencedashboard = () => {
         }
     };
 
-    const totalAbsences = absenceData.reduce((sum, item) => sum + item.value, 0);
+    // const totalAbsences = absenceData.reduce((sum, item) => sum + item.value, 0);
     return (
-        <div className="min-h-screen bg-gray-50 font-sans p-6 pb-20">
+        <div className="min-h-screen bg-gray-50 font-sans p-4 sm:p-6 lg:p-8 pb-20">
             {/* Custom Animations */}
             <style>{`
         @keyframes fadeIn {
@@ -344,12 +328,12 @@ const Attendencedashboard = () => {
       `}</style>
 
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
-                <h1 className="text-2xl font-bold text-gray-800">
+                <h1 className="text-xl sm:text-2xl font-bold text-gray-800">
                     Attendance Summary
                 </h1>
 
-                <div className="relative">
-                    <div className="flex items-center bg-white border border-gray-200 rounded-lg px-3 py-1.5 shadow-sm hover:border-blue-400 transition-colors cursor-pointer group">
+                <div className="relative w-full sm:w-auto">
+                    <div className="flex items-center justify-between sm:justify-start bg-white border border-gray-200 rounded-lg px-3 py-1.5 shadow-sm hover:border-blue-400 transition-colors cursor-pointer group">
                         <Calendar className="w-4 h-4 text-gray-500 mr-2 group-hover:text-blue-500" />
                         <DatePicker
                             selected={selectedDate}
@@ -402,16 +386,31 @@ const Attendencedashboard = () => {
                 {/* Left Column */}
                 <div className="space-y-8">
                     {/* Class-Wise Attendance */}
+                    {/* Class-Wise Attendance */}
                     <div>
                         <SectionHeader
                             title="Class-Wise Attendance"
                             icon={<span className="text-blue-600">{Icons.Summary}</span>}
                         />
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            {classData.map((cls, idx) => (
-                                <ClassAttendanceCard key={idx} data={cls} delay={idx * 150} />
-                            ))}
-                        </div>
+                        {dashboardData?.class_wise_attendance?.length > 0 ? (
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                {dashboardData.class_wise_attendance.map((cls, idx) => (
+                                    <ClassAttendanceCard
+                                        key={idx}
+                                        data={{
+                                            name: cls.class_name || cls.name,
+                                            present: cls.present_count || cls.present,
+                                            total: cls.total_count || cls.total
+                                        }}
+                                        delay={idx * 150}
+                                    />
+                                ))}
+                            </div>
+                        ) : (
+                            <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 text-center text-gray-500">
+                                No class attendance data available
+                            </div>
+                        )}
                     </div>
 
                     {/* Faculty-Wise Attendance (Pie Chart - Single Faculty) */}
@@ -452,49 +451,29 @@ const Attendencedashboard = () => {
                 {/* Right Column */}
                 <div className="space-y-8">
                     {/* Subject-Wise Attendance */}
+                    {/* Subject-Wise Attendance */}
                     <div>
                         <SectionHeader
                             title="Subject-Wise Attendance"
                             icon={<span className="text-orange-500">{Icons.Book}</span>}
                         />
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                            <CircularProgress
-                                label="Biology"
-                                value={58}
-                                color="#ef4444"
-                                delay={100}
-                            />
-                            <CircularProgress
-                                label="Physics"
-                                value={20}
-                                color="#ef4444"
-                                delay={200}
-                            />
-                            <CircularProgress
-                                label="Chemistry"
-                                value={45}
-                                color="#ef4444"
-                                delay={300}
-                            />
-                            {/* <CircularProgress
-                label="Math"
-                value={80}
-                color="#22c55e"
-                delay={400}
-              />
-              <CircularProgress
-                label="English"
-                value={70}
-                color="#f97316"
-                delay={500}
-              />
-              <CircularProgress
-                label="Geography"
-                value={94}
-                color="#22c55e"
-                delay={600}
-              /> */}
-                        </div>
+                        {dashboardData?.subject_wise_attendance?.length > 0 ? (
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                                {dashboardData.subject_wise_attendance.map((subject, idx) => (
+                                    <CircularProgress
+                                        key={idx}
+                                        label={subject.subject_name || subject.name}
+                                        value={subject.attendance_percentage || subject.value}
+                                        color={subject.color || "#ef4444"}
+                                        delay={(idx + 1) * 100}
+                                    />
+                                ))}
+                            </div>
+                        ) : (
+                            <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 text-center text-gray-500">
+                                No subject attendance data available
+                            </div>
+                        )}
                     </div>
 
                     {/* Absence Classification - Pie Chart Removed, Simple Clean List */}
@@ -552,8 +531,8 @@ const Attendencedashboard = () => {
             {/* Ongoing Classes Section */}
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 sm:p-8 mb-8 sm:mb-10">
                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
-                    <h2 className="text-xl font-bold text-gray-800 flex items-center gap-3">
-                        <Clock className="h-6 w-6 text-indigo-600" />
+                    <h2 className="text-lg sm:text-xl font-bold text-gray-800 flex items-center gap-3">
+                        <Clock className="h-5 w-5 sm:h-6 sm:w-6 text-indigo-600" />
                         Ongoing Classes ({timetableStats.ongoingClasses.length})
                     </h2>
                     <span className="px-4 py-1.5 bg-green-50 text-green-700 text-xs font-bold rounded-full border border-green-100 tracking-wider">
@@ -571,11 +550,11 @@ const Attendencedashboard = () => {
                                 className="min-w-[280px] bg-gradient-to-br from-indigo-50/70 to-blue-50/70 border border-indigo-200/50 rounded-xl p-5 hover:shadow-md transition-shadow"
                             >
                                 <div className="flex items-start justify-between mb-3">
-                                    <h3 className="font-bold text-indigo-900 text-lg">{cls.subject_name}</h3>
+                                    <h3 className="font-bold text-indigo-900 text-lg">{cls.subject_name || 'Subject'}</h3>
                                     <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse" />
                                 </div>
                                 <div className="space-y-2 text-sm text-gray-700">
-                                    <p><span className="font-medium">Teacher:</span> {cls.teacher_name}</p>
+                                    <p><span className="font-medium">Program:</span> {cls.program_name} ({cls.course_level_name})</p>
                                     <p><span className="font-medium">Room:</span> {cls.classroom}</p>
                                     <p className="flex items-center gap-2 text-indigo-700 font-medium">
                                         <Clock className="h-4 w-4" />
@@ -591,7 +570,7 @@ const Attendencedashboard = () => {
             {/* Recent & Upcoming Classes */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-8 mb-8 sm:mb-10">
                 <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 sm:p-6 hover:shadow-md transition-shadow">
-                    <h2 className="text-xl font-bold text-gray-800 mb-6 flex items-center gap-3">
+                    <h2 className="text-lg sm:text-xl font-bold text-gray-800 mb-6 flex items-center gap-3">
                         <Clock className="h-5 w-5 text-indigo-600" />
                         Recent Classes
                     </h2>
@@ -603,9 +582,10 @@ const Attendencedashboard = () => {
                                 <div key={i} className="border border-gray-200 rounded-xl p-5 hover:bg-gray-50 transition">
                                     <div className="flex justify-between items-start">
                                         <div className="flex-1">
-                                            <h4 className="font-semibold text-gray-900">{cls.subject_name}</h4>
-                                            <p className="text-sm text-gray-600 mt-1">Teacher: {cls.teacher_name}</p>
+                                            <h4 className="font-semibold text-gray-900">{cls.subject_name || 'Subject'}</h4>
+                                            <p className="text-sm text-gray-600 mt-1">{cls.program_name} ({cls.course_level_name})</p>
                                             <p className="text-sm text-gray-600">Room: {cls.classroom} • {cls.start_time} - {cls.end_time}</p>
+                                            <p className="text-xs text-gray-400 mt-1">{cls.date}</p>
                                         </div>
                                         <span className="px-4 py-2 bg-green-100 text-green-700 text-xs font-medium rounded-full">
                                             Completed
@@ -618,7 +598,7 @@ const Attendencedashboard = () => {
                 </div>
 
                 <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 sm:p-6 hover:shadow-md transition-shadow">
-                    <h2 className="text-xl font-bold text-gray-800 mb-6 flex items-center gap-3">
+                    <h2 className="text-lg sm:text-xl font-bold text-gray-800 mb-6 flex items-center gap-3">
                         <CalendarDays className="h-5 w-5 text-indigo-600" />
                         Upcoming Classes
                     </h2>
@@ -630,8 +610,10 @@ const Attendencedashboard = () => {
                                 <div key={i} className="border border-gray-200 rounded-xl p-5 hover:bg-gray-50 transition">
                                     <div className="flex justify-between items-center">
                                         <div>
-                                            <h4 className="font-semibold text-gray-900">{cls.subject_name}</h4>
-                                            <p className="text-sm text-gray-600 mt-1">Time: {cls.start_time} - {cls.end_time} • Room: {cls.classroom}</p>
+                                            <h4 className="font-semibold text-gray-900">{cls.subject_name || 'Subject'}</h4>
+                                            <p className="text-sm text-gray-600 mt-1">{cls.program_name} ({cls.course_level_name})</p>
+                                            <p className="text-sm text-gray-600 mt-1">Time: {cls.start_time} - {cls.end_time}</p>
+                                            <p className="text-sm text-gray-600">Room: {cls.classroom}</p>
                                         </div>
                                         <Clock className="h-8 w-8 text-indigo-500 opacity-70" />
                                     </div>
@@ -643,8 +625,8 @@ const Attendencedashboard = () => {
             </div>
 
             {/* Upcoming Holidays Section */}
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 sm:p-10 mb-8 sm:mb-10">
-                <h2 className="text-2xl font-bold text-center text-gray-800 mb-10 tracking-tight">
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 sm:p-8 lg:p-10 mb-8 sm:mb-10">
+                <h2 className="text-xl sm:text-2xl font-bold text-center text-gray-800 mb-8 sm:mb-10 tracking-tight">
                     Upcoming Holidays
                 </h2>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">

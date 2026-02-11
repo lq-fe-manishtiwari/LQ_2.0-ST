@@ -678,7 +678,7 @@ export default function AdvLearner() {
             {isMobileMenuOpen && (
               <div className="bg-white border rounded-lg p-4 mb-4 shadow-sm">
                 <div className="space-y-3">
-                  <button
+                  {/* <button
                     disabled={editMode}
                     onClick={() => setShowUploadModal(true)}
                     className={`w-full px-4 py-2 rounded-md text-white flex items-center justify-center gap-2
@@ -686,7 +686,7 @@ export default function AdvLearner() {
                   >
                     <Upload className="w-4 h-4" />
                     Upload Excel
-                  </button>
+                  </button> */}
 
                   {!editMode && (
                     <button
@@ -752,7 +752,7 @@ export default function AdvLearner() {
             </div>
 
             <div className="flex gap-3">
-              <button
+              {/* <button
                 disabled={editMode}
                 onClick={() => setShowUploadModal(true)}
                 className={`px-4 py-2 rounded-md text-white flex items-center gap-2 text-sm
@@ -760,7 +760,7 @@ export default function AdvLearner() {
               >
                 <Upload className="w-4 h-4" />
                 <span className="hidden sm:inline">Upload Excel</span>
-              </button>
+              </button> */}
 
               {!editMode ? (
                 <div className="flex gap-2">

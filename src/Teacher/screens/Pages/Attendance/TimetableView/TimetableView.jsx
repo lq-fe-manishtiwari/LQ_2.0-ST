@@ -305,10 +305,12 @@ const TimetableView = () => {
                             return baseHolidayItem;
                         }
 
-                        // Map each slot and inject holiday info
-                        const slots = dailySchedule.slots.map(slot => ({
-                            // Basic information
-                            id: slot.time_slot_id || `${date}_${slot.start_time}`,
+                        // Map each slot and inject holiday info - Filter out cancelled slots
+                        const slots = dailySchedule.slots
+                            .filter(slot => slot && slot.exception_type !== 'CANCELLED')
+                            .map(slot => ({
+                                // Basic information
+                                id: slot.time_slot_id || `${date}_${slot.start_time}`,
                             timetable_id: slot.timetable_id,
                             date: date,
                             day_of_week: dailySchedule.day_of_week,
@@ -750,27 +752,6 @@ const TimetableView = () => {
 
                 {/* Right Column - Details */}
                 <div className="flex-1">
-                    {/* Tags */}
-                    <div className="flex flex-wrap items-center gap-2 mb-3">
-                        <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-primary-50 text-primary-600">
-                            {slot.class_type || slot.type || "Lecture"}
-                        </span>
-                        {slot.subject_code && (
-                            <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-blue-50 text-blue-600">
-                                {slot.subject_code}
-                            </span>
-                        )}
-                        {slot.is_exception && (
-                            <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-orange-50 text-orange-600">
-                                {slot.exception_type === "SUBSTITUTED" ? "Substitution" : "Exception"}
-                            </span>
-                        )}
-                        {slot.day_of_week && (
-                            <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-purple-50 text-purple-600">
-                                {slot.day_of_week}
-                            </span>
-                        )}
-                    </div>
 
                     {/* Subject */}
                     <h3 className="text-base font-bold text-slate-800 mb-3">
@@ -1081,7 +1062,7 @@ const TimetableView = () => {
             {!loading && !error && (
                 <main className="flex-1 flex overflow-hidden">
                     {/* Sidebar - Calendar */}
-                    <aside className={`${isMobile ? (mobileViewMode === 'calendar' ? 'w-full block p-4' : 'hidden') : `w-[300px] xl:w-[360px] border-r border-slate-200 bg-white ${isSidebarOpen ? 'block' : 'hidden'}`}`}>
+                    <aside className={`${isMobile ? (mobileViewMode === 'calendar' ? 'w-full block p-4' : 'hidden') : `w-[300px] xl:w-[360px] shrink-0 border-r border-slate-200 bg-white ${isSidebarOpen ? 'block' : 'hidden'}`}`}>
                         <div className="p-4 md:p-5 flex flex-col gap-5">
                             <div className="flex items-center justify-between">
                                 <h2 className="text-xl font-bold text-slate-800">Calendar</h2>
@@ -1175,7 +1156,7 @@ const TimetableView = () => {
                     </aside>
 
                     {/* Main Content */}
-                    <div className={`flex-1 flex flex-col ${isMobile && mobileViewMode === "calendar" ? "hidden" : ""}`}>
+                    <div className={`flex-1 min-w-0 flex flex-col ${isMobile && mobileViewMode === "calendar" ? "hidden" : ""}`}>
                         {/* Toolbar */}
                         {!isMobile && (
                             <div className="sticky top-0 z-20 bg-slate-50/95 backdrop-blur-sm border-b border-slate-200 px-4 lg:px-6 py-3 flex items-center justify-between">
@@ -1346,49 +1327,49 @@ const TimetableView = () => {
                                 </div>
                             ) : viewMode === 'Week' ? (
                                 <div className="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-sm">
-                                    {/* Week Header */}
-                                    <div className="grid grid-cols-[140px_repeat(7,1fr)] border-b border-slate-100 bg-slate-50">
-                                        <div className="p-3 border-r border-slate-100 text-center">
-                                            <div className="text-xs font-bold text-slate-400">Time Slot</div>
-                                        </div>
-                                        {weekData.map((day, idx) => {
-                                            const isToday = isSameDay(day.date, new Date());
-                                            const isSelected = isSameDay(day.date, selectedDate);
-                                            return (
-                                                <div key={idx} className={`p-3 text-center border-r border-slate-100 last:border-r-0 ${isSelected ? 'bg-primary-50' : ''} ${day.isHoliday ? 'bg-amber-50' : ''}`}>
-                                                    <div className="text-xs font-bold text-slate-400 mb-1">
-                                                        {calendarDays[day.date.getDay() === 0 ? 6 : day.date.getDay() - 1]}
-                                                        {isToday && (
-                                                            <span className="ml-1 text-[10px] text-blue-600">•</span>
+                                    <div className="overflow-x-auto">
+                                        {/* Week Header */}
+                                        <div className="grid grid-cols-[140px_repeat(7,minmax(150px,1fr))] min-w-full border-b border-slate-100 bg-slate-50">
+                                            <div className="p-3 border-r border-slate-100 text-center">
+                                                <div className="text-xs font-bold text-slate-400">Time Slot</div>
+                                            </div>
+                                            {weekData.map((day, idx) => {
+                                                const isToday = isSameDay(day.date, new Date());
+                                                const isSelected = isSameDay(day.date, selectedDate);
+                                                return (
+                                                    <div key={idx} className={`p-3 text-center border-r border-slate-100 last:border-r-0 ${isSelected ? 'bg-primary-50' : ''} ${day.isHoliday ? 'bg-amber-50' : ''}`}>
+                                                        <div className="text-xs font-bold text-slate-400 mb-1">
+                                                            {calendarDays[day.date.getDay() === 0 ? 6 : day.date.getDay() - 1]}
+                                                            {isToday && (
+                                                                <span className="ml-1 text-[10px] text-blue-600">•</span>
+                                                            )}
+                                                        </div>
+                                                        <button
+                                                            onClick={() => handleWeekDayClick(day.date)}
+                                                            className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ${isToday ? 'bg-blue-600 text-white' : isSelected ? 'bg-primary-100 text-primary-700' : day.isHoliday ? 'bg-amber-100 text-orange-700' : 'text-slate-700 hover:bg-slate-100'}`}
+                                                        >
+                                                            {day.date.getDate()}
+                                                        </button>
+                                                        {day.isHoliday ? (
+                                                            <div className="text-[10px] text-orange-700 font-bold mt-1 truncate px-1">
+                                                                {day.holidayName}
+                                                            </div>
+                                                        ) : day.schedule.length > 0 && (
+                                                            <div className="text-[10px] text-primary-500 mt-1">
+                                                                {day.schedule.length} class{day.schedule.length > 1 ? 'es' : ''}
+                                                            </div>
                                                         )}
                                                     </div>
-                                                    <button
-                                                        onClick={() => handleWeekDayClick(day.date)}
-                                                        className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ${isToday ? 'bg-blue-600 text-white' : isSelected ? 'bg-primary-100 text-primary-700' : day.isHoliday ? 'bg-amber-100 text-orange-700' : 'text-slate-700 hover:bg-slate-100'}`}
-                                                    >
-                                                        {day.date.getDate()}
-                                                    </button>
-                                                    {day.isHoliday ? (
-                                                        <div className="text-[10px] text-orange-700 font-bold mt-1 truncate px-1">
-                                                            {day.holidayName}
-                                                        </div>
-                                                    ) : day.schedule.length > 0 && (
-                                                        <div className="text-[10px] text-primary-500 mt-1">
-                                                            {day.schedule.length} class{day.schedule.length > 1 ? 'es' : ''}
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            );
-                                        })}
-                                    </div>
+                                                );
+                                            })}
+                                        </div>
 
-                                    {/* Week Grid */}
-                                    {weekData.some(day => day.schedule.length > 0) ? (
-                                        <div className="overflow-x-auto">
-                                            <div className="min-w-full">
+                                        {/* Week Grid */}
+                                        {weekData.some(day => day.schedule.length > 0) ? (
+                                            <div className="grid grid-cols-[140px_repeat(7,minmax(150px,1fr))] min-w-full">
                                                 {uniqueTimeSlots.map((time, timeIndex) => (
-                                                    <div key={timeIndex} className="grid grid-cols-[140px_repeat(7,1fr)] border-b border-slate-100">
-                                                        <div className="p-3 border-r border-slate-100 bg-slate-50/50">
+                                                    <div key={timeIndex} className="contents">
+                                                        <div className="p-3 border-r border-b border-slate-100 bg-slate-50/50">
                                                             <div className="text-xs font-bold text-slate-600">
                                                                 {formatTimeForDisplay12hr(time)}
                                                             </div>
@@ -1396,7 +1377,7 @@ const TimetableView = () => {
                                                         {weekData.map((day, dayIndex) => {
                                                             const slot = day.schedule.find(s => s && s.start_time === time);
                                                             return (
-                                                                <div key={dayIndex} className="p-2 border-r border-slate-100 last:border-r-0 min-h-[60px]">
+                                                                <div key={dayIndex} className="p-2 border-r border-b border-slate-100 last:border-r-0 min-h-[60px]">
                                                                     {day.isHoliday && timeIndex === 0 ? (
                                                                         <div className="h-full p-2 rounded-md bg-gradient-to-r from-amber-50 to-yellow-50 border border-amber-200">
                                                                             <div className="text-xs font-bold text-amber-700">Holiday</div>
@@ -1426,10 +1407,10 @@ const TimetableView = () => {
                                                     </div>
                                                 ))}
                                             </div>
-                                        </div>
-                                    ) : (
-                                        <EmptyWeekState />
-                                    )}
+                                        ) : (
+                                            <EmptyWeekState />
+                                        )}
+                                    </div>
                                 </div>
                             ) : (
                                 <div className="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-sm">

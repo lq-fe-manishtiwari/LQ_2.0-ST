@@ -6,24 +6,28 @@ import {
   Bell,
   Calendar,
   Settings,
-  LogOut,
-  Menu,
-  X,
+  Clock,
+  CheckCircle2,
+  TrendingUp,
+  Award,
+  BookMarked,
+  ArrowRight,
+  Target,
+  FileText,
+  Activity,
+  Layers
 } from 'lucide-react';
 import { authenticationService } from '@/_services/api';
 import { useUserProfile } from '@/contexts/UserProfileContext';
-import Logo from "@/_assets/images_new_design/Login/lq_new.png";
 import { Link } from "react-router-dom";
 
 const StudentDashboard = () => {
   const [user, setUser] = useState(null);
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  
-  // Use UserProfile context for profile data
+  const [currentTime, setCurrentTime] = useState(new Date());
+
   const {
     profile,
     loading: profileLoading,
-    error: profileError,
     getFullName,
     fetchProfile,
     isLoaded
@@ -32,188 +36,233 @@ const StudentDashboard = () => {
   useEffect(() => {
     const currentUser = authenticationService.currentUser();
     setUser(currentUser);
-    
-    // Ensure profile data is loaded when dashboard mounts
+
     if (!isLoaded && !profileLoading) {
       fetchProfile();
     }
+
+    const timer = setInterval(() => setCurrentTime(new Date()), 60000);
+    return () => clearInterval(timer);
   }, [isLoaded, profileLoading, fetchProfile]);
 
-  const handleLogout = () => {
-    authenticationService.logout();
-  };
-
-  const stats = [
-    { title: 'Total Students', value: '1,234', icon: Users, color: 'from-blue-500 to-blue-600' },
-    { title: 'Courses Active', value: '45', icon: BookOpen, color: 'from-green-500 to-green-600' },
-    { title: 'Classes Today', value: '8', icon: Calendar, color: 'from-purple-500 to-purple-600' },
-    { title: 'Notifications', value: '3', icon: Bell, color: 'from-orange-500 to-orange-600' },
+  const dashboardStats = [
+    { title: 'Course Attendance', value: '0%', label: 'Current Semester', icon: Clock, color: 'text-blue-600', bg: 'bg-blue-50' },
+    { title: 'Learning Hours', value: '0.0', label: 'This Week', icon: Activity, color: 'text-emerald-600', bg: 'bg-emerald-50' },
+    { title: 'Assessments', value: '0', label: 'Pending Tasks', icon: FileText, color: 'text-indigo-600', bg: 'bg-indigo-50' },
+    { title: 'Academic Rank', value: '--', label: 'Global Rank', icon: Award, color: 'text-amber-600', bg: 'bg-amber-50' },
   ];
 
-  const classes = [
-    { time: '09:00 AM', subject: 'Mathematics', students: 32, color: 'blue' },
-    { time: '11:00 AM', subject: 'Science', students: 28, color: 'green' },
-    { time: '02:00 PM', subject: 'English', students: 35, color: 'purple' },
+  const upcomingActivities = [
+    { time: '00:00 AM', title: 'Upcoming Lesson Name', venue: 'Scheduled Location', category: 'Lecture', status: 'Upcoming' },
+    { time: '00:00 AM', title: 'Subject Activity Title', venue: 'Assigned Lab/Room', category: 'Practical', status: 'Pending' },
   ];
 
-  const announcements = [
-    'New course "Advanced Physics" added!',
-    'Parent-Teacher meeting on Friday',
-    'System maintenance scheduled for Sunday',
+  const courseProgress = [
+    { name: 'Enrolled Course A', percentage: 0, color: 'bg-blue-500' },
+    { name: 'Enrolled Course B', percentage: 0, color: 'bg-indigo-500' },
+    { name: 'Enrolled Course C', percentage: 0, color: 'bg-emerald-500' },
   ];
 
-  const quickLinks = [
-    { name: 'Academics', icon: BookOpen, path: '/academics', color: 'blue' },
-    { name: 'Student List', icon: Users, path: '/students', color: 'green' },
-    { name: 'Reports', icon: BarChart3, path: '/reports', color: 'purple' },
-    { name: 'Settings', icon: Settings, path: '/settings', color: 'gray' },
+  const latestUpdates = [
+    { message: 'New academic notification will appear here', date: 'Just now' },
+    { message: 'General announcement regarding campus/classes', date: 'Today' },
+  ];
+
+  const shortcuts = [
+    { name: 'Academics', icon: BookOpen, path: '/academics', color: 'text-blue-600', bg: 'bg-blue-100' },
+    { name: 'Time Table', icon: Calendar, path: '/timetable', color: 'text-emerald-600', bg: 'bg-emerald-100' },
+    { name: 'My Profile', icon: Users, path: '/my-profile', color: 'text-orange-600', bg: 'bg-orange-100' },
+    { name: 'Settings', icon: Settings, path: '/settings', color: 'text-gray-600', bg: 'bg-gray-100' },
   ];
 
   return (
-    <div className="min-h-screen to-indigo-100">
+    <div className="min-h-screen bg-[#F8FAFC]">
+      <main className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
 
-
-      {/* ==================== MAIN CONTENT ==================== */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-8">
-
-        {/* ---------- Welcome Card ---------- */}
-      <Link to="/my-profile" className="block">
-        <section className="bg-white bg-primary-600 rounded-2xl shadow-lg p-6 border border-gray-200" style={{backgroundColor:"#2162C1"}}>
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <div>
-              <h2 className="text-2xl sm:text-3xl font-bold text-primary-50 text-gray-900">
-                {profileLoading ? (
-                  <span className="flex items-center">
-                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white mr-2"></div>
-                    Loading...
-                  </span>
-                ) : (
-                  `Welcome Back, ${getFullName() || user?.sub || 'Student'}!`
-                )}
-              </h2>
-              <p className="text-gray-600 mt-1 text-primary-50">
-                {profileError ? (
-                  "Unable to load profile data. Please refresh the page."
-                ) : (
-                  "Here's what's happening with your classes today."
-                )}
-              </p>
+        {/* Header Section */}
+        <section className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+          <div className="space-y-2">
+            <h1 className="text-3xl font-bold text-slate-900 hover:text-blue-600 transition-colors">
+              <Link to="/my-profile" className="flex items-center gap-2">
+                {profileLoading ? 'Loading Dashboard...' : `Welcome, ${getFullName() || user?.sub || 'Student'}!`}
+                <ArrowRight className="w-6 h-6 opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all" />
+              </Link>
+            </h1>
+            <p className="text-slate-500 font-medium">
+              Explore your academic summary and daily highlights.
+            </p>
+          </div>
+          <div className="flex items-center gap-4 bg-white px-5 py-3 rounded-2xl shadow-sm border border-slate-200">
+            <div className="p-2 bg-blue-50 rounded-xl">
+              <Calendar className="w-5 h-5 text-blue-600" />
             </div>
-            <BarChart3 className="w-12 h-12 text-primary-50 sm:w-16 sm:h-16 text-blue-600" />
+            <div>
+              <p className="text-xs font-bold text-slate-400 uppercase tracking-wider leading-none mb-1">Current Date</p>
+              <span className="text-sm font-bold text-slate-700">
+                {currentTime.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}
+              </span>
+            </div>
           </div>
         </section>
-        </Link>
 
-        {/* ---------- Stats Grid (2 on mobile, 4 on lg) ---------- */}
-        <section className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {stats.map((stat, idx) => {
-            const Icon = stat.icon;
-            return (
-              <div
-                key={idx}
-                className="bg-white rounded-xl shadow-md hover:shadow-xl transition-all duration-300 p-5 border border-gray-100"
-              >
-                <div className="flex items-center justify-between">
-                  <div className={`p-2.5 rounded-lg bg-gradient-to-r ${stat.color}`}>
-                    <Icon className="w-5 h-5 text-white" />
+        {/* Generic Stats Grid */}
+        <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+          {dashboardStats.map((stat, idx) => (
+            <div key={idx} className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm hover:shadow-md transition-all group">
+              <div className="flex items-center justify-between mb-5">
+                <div className={`${stat.bg} p-3.5 rounded-2xl transition-transform group-hover:scale-110`}>
+                  <stat.icon className={`w-6 h-6 ${stat.color}`} />
+                </div>
+                <TrendingUp className="w-4 h-4 text-slate-300" />
+              </div>
+              <div className="space-y-1">
+                <h3 className="text-2xl font-black text-slate-800">{stat.value}</h3>
+                <p className="text-sm font-bold text-slate-500">{stat.title}</p>
+                <div className="pt-2">
+                  <span className="text-[10px] font-black uppercase text-slate-400 bg-slate-50 px-2 py-0.5 rounded-md">
+                    {stat.label}
+                  </span>
+                </div>
+              </div>
+            </div>
+          ))}
+        </section>
+
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+
+          {/* Main Feed Column */}
+          <div className="lg:col-span-8 space-y-8">
+
+            {/* Activities Table */}
+            <div className="bg-white rounded-[2rem] border border-slate-100 shadow-sm overflow-hidden">
+              <div className="px-8 py-6 flex items-center justify-between border-b border-slate-50">
+                <div className="flex items-center gap-3">
+                  <Layers className="w-5 h-5 text-blue-600" />
+                  <h2 className="text-lg font-bold text-slate-800">Learning Timeline</h2>
+                </div>
+                <button className="text-sm font-bold text-blue-600 hover:underline">Full Schedule</button>
+              </div>
+              <div className="divide-y divide-slate-50">
+                {upcomingActivities.map((act, idx) => (
+                  <div key={idx} className="px-8 py-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-slate-50/50 transition-colors cursor-default">
+                    <div className="flex items-start gap-5">
+                      <div className="flex flex-col items-center justify-center min-w-[80px] py-2 bg-slate-50 rounded-2xl border border-slate-100">
+                        <span className="text-[10px] font-black text-slate-400 uppercase">{act.time.split(' ')[1]}</span>
+                        <span className="text-sm font-black text-slate-700">{act.time.split(' ')[0]}</span>
+                      </div>
+                      <div className="space-y-1">
+                        <h4 className="font-bold text-slate-800">{act.title}</h4>
+                        <div className="flex items-center gap-4">
+                          <span className="text-xs font-bold text-slate-400 flex items-center gap-1.5">
+                            <Target className="w-3 h-3" /> {act.venue}
+                          </span>
+                          <span className="text-[10px] font-black px-2 py-0.5 bg-slate-100 text-slate-500 rounded uppercase tracking-tighter">
+                            {act.category}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                    <div>
+                      <span className="px-4 py-2 bg-slate-50 text-slate-400 text-xs font-black rounded-xl uppercase tracking-widest border border-slate-100">
+                        {act.status}
+                      </span>
+                    </div>
                   </div>
-                  <div className="text-right">
-                    <p className="text-2xl font-bold text-gray-900">{stat.value}</p>
-                    <p className="text-xs text-gray-600 mt-0.5">{stat.title}</p>
+                ))}
+              </div>
+            </div>
+
+            {/* Progress & Shortcuts Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              {/* Course Progress Card */}
+              <div className="bg-white p-8 rounded-[2rem] border border-slate-100 shadow-sm">
+                <div className="flex items-center gap-3 mb-8">
+                  <div className="w-1.5 h-6 bg-blue-600 rounded-full"></div>
+                  <h2 className="text-lg font-bold text-slate-800">Academic Progress</h2>
+                </div>
+                <div className="space-y-6">
+                  {courseProgress.map((course, idx) => (
+                    <div key={idx}>
+                      <div className="flex justify-between items-end mb-2.5">
+                        <span className="text-sm font-bold text-slate-600">{course.name}</span>
+                        <span className="text-xs font-black text-slate-300">{course.percentage}%</span>
+                      </div>
+                      <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
+                        <div
+                          className={`h-full ${course.color} opacity-20`}
+                          style={{ width: `100%` }}
+                        ></div>
+                      </div>
+                    </div>
+                  ))}
+                  <div className="pt-4 text-center">
+                    <p className="text-xs font-medium text-slate-400">Progress data will populate as you complete modules.</p>
                   </div>
                 </div>
               </div>
-            );
-          })}
-        </section>
 
-        {/* ---------- Main Grid (Classes + Announcements) ---------- */}
-        <section className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Upcoming Classes */}
-          <div className="lg:col-span-2 space-y-4">
-            <div className="bg-white rounded-2xl shadow-lg p-5 border border-gray-200">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                <Calendar className="w-5 h-5 mr-2 text-blue-600" />
-                Upcoming Classes
-              </h3>
-              <div className="space-y-3">
-                {classes.map((cls, idx) => (
-                  <div
-                    key={idx}
-                    className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
-                  >
-                    <div className="flex items-center space-x-3 mb-2 sm:mb-0">
-                      <div
-                        className={`w-10 h-10 rounded-full bg-${cls.color}-100 flex items-center justify-center flex-shrink-0`}
-                      >
-                        <Calendar className={`w-5 h-5 text-${cls.color}-600`} />
-                      </div>
-                      <div>
-                        <p className="font-medium text-gray-900">{cls.subject}</p>
-                        <p className="text-xs text-gray-600">{cls.time}</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center justify-between sm:justify-end space-x-3">
-                      <span className="text-xs text-gray-600">{cls.students} students</span>
-                      <button className="px-3 py-1.5 bg-blue-600 text-white text-xs rounded-lg hover:bg-blue-700 transition-colors">
-                        Start Class
-                      </button>
-                    </div>
+              {/* Quick Actions Card */}
+              <div className="bg-[#1E293B] p-8 rounded-[2.5rem] shadow-2xl relative overflow-hidden flex flex-col justify-between">
+                <div className="relative z-10">
+                  <h2 className="text-xl font-bold text-white mb-2">Student Hub</h2>
+                  <p className="text-slate-400 text-sm mb-8 leading-relaxed">Quickly jump to your desired section.</p>
+                  <div className="grid grid-cols-2 gap-4">
+                    {shortcuts.map((item, idx) => (
+                      <Link to={item.path} key={idx} className="group flex flex-col items-center p-4 bg-white/5 hover:bg-white/10 backdrop-blur-sm rounded-3xl transition-all border border-white/5">
+                        <div className={`p-3 rounded-2xl ${item.bg} mb-3 group-hover:scale-110 transition-transform`}>
+                          <item.icon className={`w-5 h-5 ${item.color}`} />
+                        </div>
+                        <span className="text-[10px] font-black text-white/70 uppercase tracking-widest">{item.name}</span>
+                      </Link>
+                    ))}
                   </div>
-                ))}
+                </div>
+                {/* Visual Accent */}
+                <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/10 rounded-full -mr-16 -mt-16 blur-3xl"></div>
               </div>
             </div>
           </div>
 
-          {/* Announcements */}
-          <div className="space-y-4">
-            <div className="bg-white rounded-2xl shadow-lg p-5 border border-gray-200 sticky top-24">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                <Bell className="w-5 h-5 mr-2 text-orange-600" />
-                Notification's
-              </h3>
-              <div className="space-y-3">
-                {announcements.map((ann, idx) => (
-                  <div
-                    key={idx}
-                    className="flex items-start space-x-2 p-2.5 bg-orange-50 rounded-lg border-l-4 border-orange-500"
-                  >
-                    <Bell className="w-4 h-4 text-orange-600 mt-0.5 flex-shrink-0" />
-                    <p className="text-xs text-gray-800">{ann}</p>
+          {/* Right Sidebar Column */}
+          <div className="lg:col-span-4 space-y-8">
+
+            {/* Updates Feed */}
+            <div className="bg-white p-8 rounded-[2rem] border border-slate-100 shadow-sm">
+              <div className="flex items-center justify-between mb-8">
+                <div className="flex items-center gap-3">
+                  <Bell className="w-5 h-5 text-orange-500" />
+                  <h2 className="text-lg font-bold text-slate-800">Latest Updates</h2>
+                </div>
+                <span className="w-2 h-2 bg-orange-500 rounded-full animate-ping"></span>
+              </div>
+              <div className="space-y-6">
+                {latestUpdates.map((update, idx) => (
+                  <div key={idx} className="flex gap-5 group cursor-default">
+                    <div className="flex-shrink-0 w-1 rounded-full bg-slate-100 group-hover:bg-blue-500 transition-colors"></div>
+                    <div>
+                      <p className="text-sm font-bold text-slate-700 leading-relaxed mb-1 group-hover:text-blue-600 transition-colors">
+                        {update.message}
+                      </p>
+                      <span className="text-[10px] font-black text-slate-300 uppercase tracking-tighter">
+                        {update.date}
+                      </span>
+                    </div>
                   </div>
                 ))}
               </div>
-              <button className="mt-4 w-full py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors text-sm">
-                View All
+              <button className="mt-8 w-full py-4 bg-slate-50 text-slate-500 text-xs font-black uppercase tracking-widest rounded-2xl hover:bg-slate-100 transition-all flex items-center justify-center gap-3">
+                View All Notifications <ArrowRight className="w-4 h-4" />
               </button>
             </div>
-          </div>
-        </section>
 
-        {/* ---------- Quick Links ---------- */}
-        <section className="bg-white rounded-2xl shadow-lg p-5 border border-gray-200">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-            <Settings className="w-5 h-5 mr-2 text-gray-600" />
-            Quick Links
-          </h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {quickLinks.map((link, idx) => {
-              const Icon = link.icon;
-              return (
-                <a
-                  key={idx}
-                  href={link.path}
-                  className={`flex items-center space-x-3 p-3 bg-gradient-to-r from-${link.color}-50 to-${link.color}-100 rounded-xl hover:shadow-md transition-all duration-200 border border-${link.color}-200`}
-                >
-                  <div className={`p-2.5 rounded-lg bg-${link.color}-100`}>
-                    <Icon className={`w-5 h-5 text-${link.color}-600`} />
-                  </div>
-                  <span className="font-medium text-gray-900">{link.name}</span>
-                </a>
-              );
-            })}
+
+
           </div>
-        </section>
+
+        </div>
+
+
+
       </main>
     </div>
   );
