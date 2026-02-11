@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { CreditCard, Calendar, CheckCircle, AlertCircle, TrendingUp, DollarSign, FileText } from 'lucide-react';
 import SweetAlert from 'react-bootstrap-sweetalert';
-import studentFeesService from '../../../.././../../_services/studentFees.service';
-const StudentFeesDetails = ({ studentId }) => {
+import studentFeesService from '../../../../../_services/studentFees.service';
+const StudentFeesDetails = () => {
     const [allocations, setAllocations] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -11,9 +11,26 @@ const StudentFeesDetails = ({ studentId }) => {
     const [errorAlert, setErrorAlert] = useState(null);
     const [warningAlert, setWarningAlert] = useState(null);
 
+    const getStudentId = () => {
+        try {
+            const profileStr = localStorage.getItem('userProfile');
+            if (!profileStr) return null;
+            const profile = JSON.parse(profileStr);
+            return profile?.student_id || null;
+        } catch (error) {
+            console.error('Error parsing profile:', error);
+            return null;
+        }
+    };
+
     useEffect(() => {
         const fetchFees = async () => {
-            if (!studentId) return;
+            const studentId = getStudentId();
+            if (!studentId) {
+                setError('Student ID not found');
+                setLoading(false);
+                return;
+            }
             try {
                 setLoading(true);
                 const data = await studentFeesService.getStudentFeeAllocations(studentId);
@@ -28,7 +45,7 @@ const StudentFeesDetails = ({ studentId }) => {
 
         fetchFees();
         setSelectedInstallments({});
-    }, [studentId]);
+    }, []);
 
     const getOverdueStatus = (dueDate) => {
         if (!dueDate) return false;
@@ -115,7 +132,7 @@ const StudentFeesDetails = ({ studentId }) => {
                             <div>
                                 <h2 className="text-xl sm:text-2xl font-bold flex items-center gap-2">
                                     <TrendingUp className="w-5 h-5 sm:w-6 sm:h-6" />
-                                    {allocation.semester_name || 'Current Semester'}
+                                    {allocation.class_year_name || 'Current Year'}
                                 </h2>
                                 <p className="text-blue-100 text-xs sm:text-sm mt-1">
                                     {allocation.academic_year_name} | {allocation.program_name}
