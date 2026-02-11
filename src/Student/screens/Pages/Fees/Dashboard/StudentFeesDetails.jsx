@@ -297,7 +297,7 @@ const StudentFeesDetails = () => {
                                             }}
                                         >
                                             <CreditCard size={18} />
-                                            <span className="text-sm sm:text-base">Pay Semester Balance (₹{allocation.pending_amount.toLocaleString('en-IN')})</span>
+                                            <span className="text-sm sm:text-base">Pay Balance (₹{allocation.pending_amount.toLocaleString('en-IN')})</span>
                                         </button>
                                     </div>
                                 )}
