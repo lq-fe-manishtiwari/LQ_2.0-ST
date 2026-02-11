@@ -264,44 +264,60 @@ const StudentFeesDetails = () => {
                             </div>
                         ) : (
                             /* Simple Fee Line Items for non-installment */
-                            <div className="space-y-3">
-                                <h3 className="text-sm font-black text-gray-400 uppercase tracking-widest flex items-center gap-2 border-b pb-2">
-                                    <FileText className="w-4 h-4" />
-                                    Fee Components
-                                </h3>
-                                <div className="divide-y">
-                                    {allocation.fee_lines?.map((line) => (
-                                        <div key={line.fee_line_id} className="py-4 flex flex-col sm:flex-row justify-between sm:items-center gap-2 group">
-                                            <div>
-                                                <p className="text-sm font-bold text-gray-800 group-hover:text-blue-600 transition-colors uppercase">{line.particular_name}</p>
-                                                <p className="text-[10px] text-gray-400 font-medium mt-0.5">Due by: {line.due_date ? new Date(line.due_date).toLocaleDateString('en-IN') : 'N/A'}</p>
-                                            </div>
-                                            <div className="flex sm:flex-col justify-between items-center sm:items-end sm:text-right border-t sm:border-0 pt-2 sm:pt-0">
-                                                <p className="text-sm font-black text-gray-800">₹{line.total_amount.toLocaleString('en-IN')}</p>
-                                                {line.balance > 0 && (
-                                                    <p className="text-[10px] font-black text-red-500 bg-red-50 px-2 py-0.5 rounded">₹{line.balance.toLocaleString('en-IN')} PENDING</p>
-                                                )}
-                                            </div>
-                                        </div>
-                                    ))}
+                            // <div className="space-y-3">
+                            //     <h3 className="text-sm font-black text-gray-400 uppercase tracking-widest flex items-center gap-2 border-b pb-2">
+                            //         <FileText className="w-4 h-4" />
+                            //         Fee Components
+                            //     </h3>
+                            //     <div className="divide-y">
+                            //         {allocation.fee_lines?.map((line) => (
+                            //             <div key={line.fee_line_id} className="py-4 flex flex-col sm:flex-row justify-between sm:items-center gap-2 group">
+                            //                 <div>
+                            //                     <p className="text-sm font-bold text-gray-800 group-hover:text-blue-600 transition-colors uppercase">{line.particular_name}</p>
+                            //                     <p className="text-[10px] text-gray-400 font-medium mt-0.5">Due by: {line.due_date ? new Date(line.due_date).toLocaleDateString('en-IN') : 'N/A'}</p>
+                            //                 </div>
+                            //                 <div className="flex sm:flex-col justify-between items-center sm:items-end sm:text-right border-t sm:border-0 pt-2 sm:pt-0">
+                            //                     <p className="text-sm font-black text-gray-800">₹{line.total_amount.toLocaleString('en-IN')}</p>
+                            //                     {line.balance > 0 && (
+                            //                         <p className="text-[10px] font-black text-red-500 bg-red-50 px-2 py-0.5 rounded">₹{line.balance.toLocaleString('en-IN')} PENDING</p>
+                            //                     )}
+                            //                 </div>
+                            //             </div>
+                            //         ))}
+                            //     </div>
+                            //     {allocation.pending_amount > 0 && (
+                            //         <div className="pt-4 flex justify-end">
+                            //             <button
+                            //                 className="w-full sm:w-auto bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-6 sm:px-8 py-3 rounded-xl shadow-lg shadow-indigo-200 transition-all active:scale-95 flex items-center justify-center gap-2"
+                            //                 onClick={() => {
+                            //                     setSuccessAlert({
+                            //                         title: 'Payment Initiated',
+                            //                         message: `Proceeding to payment gateway. Total Amount: ₹${allocation.pending_amount.toLocaleString('en-IN')}`
+                            //                     });
+                            //                 }}
+                            //             >
+                            //                 <CreditCard size={18} />
+                            //                 <span className="text-sm sm:text-base">Pay Semester Balance (₹{allocation.pending_amount.toLocaleString('en-IN')})</span>
+                            //             </button>
+                            //         </div>
+                            //     )}
+                            // </div>
+                            allocation.pending_amount > 0 && (
+                                <div className="pt-4 flex justify-end">
+                                    <button
+                                        className="w-full sm:w-auto bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-6 sm:px-8 py-3 rounded-xl shadow-lg shadow-indigo-200 transition-all active:scale-95 flex items-center justify-center gap-2"
+                                        onClick={() => {
+                                            setSuccessAlert({
+                                                title: 'Payment Initiated',
+                                                message: `Proceeding to payment gateway. Total Amount: ₹${allocation.pending_amount.toLocaleString('en-IN')}`
+                                            });
+                                        }}
+                                    >
+                                        <CreditCard size={18} />
+                                        <span className="text-sm sm:text-base">Pay  Balance (₹{allocation.pending_amount.toLocaleString('en-IN')})</span>
+                                    </button>
                                 </div>
-                                {allocation.pending_amount > 0 && (
-                                    <div className="pt-4 flex justify-end">
-                                        <button
-                                            className="w-full sm:w-auto bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-6 sm:px-8 py-3 rounded-xl shadow-lg shadow-indigo-200 transition-all active:scale-95 flex items-center justify-center gap-2"
-                                            onClick={() => {
-                                                setSuccessAlert({
-                                                    title: 'Payment Initiated',
-                                                    message: `Proceeding to payment gateway. Total Amount: ₹${allocation.pending_amount.toLocaleString('en-IN')}`
-                                                });
-                                            }}
-                                        >
-                                            <CreditCard size={18} />
-                                            <span className="text-sm sm:text-base">Pay Balance (₹{allocation.pending_amount.toLocaleString('en-IN')})</span>
-                                        </button>
-                                    </div>
-                                )}
-                            </div>
+                            )
                         )}
                     </div>
                 </div>
