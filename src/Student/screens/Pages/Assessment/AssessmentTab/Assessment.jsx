@@ -444,28 +444,16 @@ const Assessment = () => {
                                     >
                                         <Edit className="w-4 h-4" /> Continue
                                     </button>
-                                ) : (
-                                    <button
-                                        onClick={() => navigate(`/my-assessment/assessment/result/${a.id}`)}
-                                        disabled={a.status !== 'Expired'}
-                                        className={`flex-1 flex items-center justify-center gap-2 p-2 rounded-lg transition-all duration-200 shadow-sm ${a.status === 'Expired'
-                                            ? 'bg-green-100 text-green-600 hover:bg-green-200 hover:shadow-md'
-                                            : 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                                            }`}
-                                        title={a.status === 'Expired' ? "View Result" : "Result available after assessment expires"}
-                                    >
-                                        <Eye className="w-4 h-4" /> Result
-                                    </button>
-                                )}
+                                ) : null}
 
                                 <button
                                     onClick={() => navigate(`/my-assessment/assessment/responses/${a.id}`)}
-                                    disabled={a.status !== 'Expired'}
-                                    className={`p-2 rounded-lg transition-colors ${a.status === 'Expired'
+                                    disabled={a.status !== 'Expired' && a.status !== 'Completed'}
+                                    className={`p-2 rounded-lg transition-colors ${a.status === 'Expired' || a.status === 'Completed'
                                         ? 'bg-purple-100 text-purple-600 hover:bg-purple-200'
                                         : 'bg-gray-100 text-gray-400 cursor-not-allowed'
                                         }`}
-                                    title={a.status === 'Expired' ? "View Responses" : "Responses available after assessment expires"}
+                                    title={a.status === 'Expired' || a.status === 'Completed' ? "View Responses" : "Responses available after assessment completion or expiration"}
                                 >
                                     <Eye className="w-4 h-4" />
                                 </button>
@@ -606,29 +594,17 @@ const Assessment = () => {
                                                         >
                                                             <Clipboard className="w-5 h-5" />
                                                         </button>
-                                                    ) : (
-                                                        <button
-                                                            onClick={() => navigate(`/my-assessment/assessment/result/${a.id}`)}
-                                                            disabled={a.status !== 'Expired'}
-                                                            className={`p-2 rounded-lg transition-all duration-200 shadow-sm ${a.status === 'Expired'
-                                                                ? 'bg-green-100 text-green-600 hover:bg-green-200 hover:shadow-md'
-                                                                : 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                                                                }`}
-                                                            title={a.status === 'Expired' ? "View Result" : "Result available after assessment expires"}
-                                                        >
-                                                            <Eye className="w-5 h-5" />
-                                                        </button>
-                                                    )}
+                                                    ) : null}
 
                                                     {/* View Responses Button */}
                                                     <button
                                                         onClick={() => navigate(`/my-assessment/assessment/responses/${a.id}`)}
-                                                        disabled={a.status !== 'Expired'}
-                                                        className={`p-2 rounded-lg transition-all duration-200 shadow-sm ${a.status === 'Expired'
+                                                        disabled={a.status !== 'Expired' && a.status !== 'Completed'}
+                                                        className={`p-2 rounded-lg transition-all duration-200 shadow-sm ${a.status === 'Expired' || a.status === 'Completed'
                                                             ? 'bg-purple-100 text-purple-600 hover:bg-purple-200 hover:shadow-md'
                                                             : 'bg-gray-100 text-gray-400 cursor-not-allowed'
                                                             }`}
-                                                        title={a.status === 'Expired' ? "View Responses" : "Responses available after assessment expires"}
+                                                        title={a.status === 'Expired' || a.status === 'Completed' ? "View Responses" : "Responses available after assessment completion or expiration"}
                                                     >
                                                         <Eye className="w-5 h-5" />
                                                     </button>
