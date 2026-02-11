@@ -8,8 +8,6 @@ import StudentEducationalDetails from "./Components/StudentEducationalDetails";
 import StudentCommunicationDetails from "./Components/StudentCommunicationDetails";
 import StudentTransportDetails from "./Components/StudentTransportDetails";
 import StudentAcademicJourney from "./Components/StudentAcademicJourney";
-import StudentFeesDetails from "./Components/StudentFeesDetails";
-import { CreditCard } from "lucide-react";
 
 export default function ProfileDashboard() {
   const [activeTab, setActiveTab] = useState("personal");
@@ -30,8 +28,7 @@ export default function ProfileDashboard() {
     { id: 'educational', name: 'Educational', icon: <GraduationCap className="w-5 h-5" /> },
     { id: 'communication', name: 'Communication', icon: <MessageCircle className="w-5 h-5" /> },
     { id: 'transport', name: 'Transport', icon: <Bus className="w-5 h-5" /> },
-    { id: 'academic', name: 'Academic Journey', icon: <FileText className="w-5 h-5" /> },
-    { id: 'fees', name: 'Fees', icon: <CreditCard className="w-5 h-5" /> }
+    { id: 'academic', name: 'Academic Journey', icon: <FileText className="w-5 h-5" /> }
   ];
 
   // Use actual API data instead of dummy data
@@ -79,9 +76,6 @@ export default function ProfileDashboard() {
             historyLoading={historyLoading}
           />
         );
-
-      case 'fees':
-        return <StudentFeesDetails studentId={studentData.student_id} />;
 
       default:
         return null;

@@ -110,6 +110,18 @@ const StudentSidebar = ({ isOpen, toggle }) => {
           "/student-view-content",
         ],
       },
+      {
+  to: "/student/fees",
+  label: "Fees",
+  iconActive: classActive,      // replace with feesActive if available
+  iconInactive: classInactive,  // replace with feesInactive if available
+  match: [
+    "/student/fees",
+    "/student/fees-details",
+    "/student/payment-history"
+  ],
+},
+
       // {
       //   to: "/my-assessment",
       //   label: "Assessment",
