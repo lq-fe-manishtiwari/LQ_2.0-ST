@@ -520,7 +520,7 @@ export default function SlowLearner() {
       {/* Mobile Menu Dropdown */}
       {isMobileMenuOpen && (
         <div className="mt-3 pt-3 border-t space-y-2">
-          <button
+          {/* <button
             disabled={editMode}
             onClick={() => {
               setShowUploadModal(true);
@@ -531,7 +531,7 @@ export default function SlowLearner() {
           >
             <Upload className="w-4 h-4" />
             Upload Format
-          </button>
+          </button> */}
 
           {!editMode && (
             <>
@@ -677,7 +677,7 @@ export default function SlowLearner() {
             </div>
 
             <div className="flex gap-2 lg:gap-3 flex-wrap">
-              <button
+              {/* <button
                 disabled={editMode}
                 onClick={() => setShowUploadModal(true)}
                 className={`px-3 py-2 lg:px-4 lg:py-2 rounded-md text-white flex items-center gap-2 text-sm lg:text-base
@@ -686,7 +686,7 @@ export default function SlowLearner() {
                 <Upload className="w-4 h-4" />
                 <span className="hidden lg:inline">Upload Format</span>
                 <span className="lg:hidden">Upload</span>
-              </button>
+              </button> */}
 
               {!editMode && (
                 <>

@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { FileText, CheckCircle, AlertCircle, Download } from 'lucide-react';
+import SweetAlert from 'react-bootstrap-sweetalert';
 import { studentPlacementService } from '../Services/studentPlacement.service';
 import { api } from '../../../../../_services/api';
 
@@ -17,6 +18,7 @@ export default function PlacementConsent() {
   const [collegePolicy, setCollegePolicy] = useState(null);
   const [policyError, setPolicyError] = useState(null);
   const [policyId, setPolicyId] = useState(null); // will be set from API
+  const [alert, setAlert] = useState(null);
 
   useEffect(() => {
     const loadData = async () => {
@@ -85,15 +87,27 @@ export default function PlacementConsent() {
 
   const handleConsentSubmit = async () => {
     if (!hasReadPolicy) {
-      alert('Please confirm that you have read and understood the policy');
+      setAlert(
+        <SweetAlert warning title="Policy Not Confirmed" confirmBtnCssClass="btn-confirm" onConfirm={() => setAlert(null)}>
+          Please confirm that you have read and understood the policy
+        </SweetAlert>
+      );
       return;
     }
     if (!signature.trim()) {
-      alert('Please enter your full name as digital signature');
+      setAlert(
+        <SweetAlert warning title="Signature Required" confirmBtnCssClass="btn-confirm" onConfirm={() => setAlert(null)}>
+          Please enter your full name as digital signature
+        </SweetAlert>
+      );
       return;
     }
     if (!studentData?.collegeId || !studentData?.studentId || !policyId) {
-      alert('Required information is missing (policy or student data)');
+      setAlert(
+        <SweetAlert error title="Missing Information" confirmBtnCssClass="btn-confirm" onConfirm={() => setAlert(null)}>
+          Required information is missing (policy or student data)
+        </SweetAlert>
+      );
       return;
     }
 
@@ -110,21 +124,37 @@ export default function PlacementConsent() {
       };
 
       await studentPlacementService.submitStudentConsent(payload);
-      alert('Consent recorded successfully!');
+      setAlert(
+        <SweetAlert success title="Success!" confirmBtnCssClass="btn-confirm" onConfirm={() => setAlert(null)}>
+          Consent recorded successfully!
+        </SweetAlert>
+      );
       setConsentGiven(true);
     } catch (err) {
       console.error('Error submitting consent:', err);
-      alert('Failed to record consent. Please try again.');
+      setAlert(
+        <SweetAlert error title="Error" confirmBtnCssClass="btn-confirm" onConfirm={() => setAlert(null)}>
+          Failed to record consent. Please try again.
+        </SweetAlert>
+      );
     }
   };
 
   const handleOptOut = async () => {
     if (!optOutReason.trim()) {
-      alert('Please provide a reason for opting out');
+      setAlert(
+        <SweetAlert warning title="Reason Required" confirmBtnCssClass="btn-confirm" onConfirm={() => setAlert(null)}>
+          Please provide a reason for opting out
+        </SweetAlert>
+      );
       return;
     }
     if (!policyId) {
-      alert('Policy information not available');
+      setAlert(
+        <SweetAlert error title="Error" confirmBtnCssClass="btn-confirm" onConfirm={() => setAlert(null)}>
+          Policy information not available
+        </SweetAlert>
+      );
       return;
     }
 
@@ -141,12 +171,20 @@ export default function PlacementConsent() {
       };
 
       await studentPlacementService.submitStudentConsent(payload);
-      alert('Opt-out recorded successfully');
+      setAlert(
+        <SweetAlert success title="Opt-out Recorded" confirmBtnCssClass="btn-confirm" onConfirm={() => setAlert(null)}>
+          Opt-out recorded successfully
+        </SweetAlert>
+      );
       setOptOut(true);
       setShowOptOutForm(false);
     } catch (err) {
       console.error('Error submitting opt-out:', err);
-      alert('Failed to record opt-out. Please try again.');
+      setAlert(
+        <SweetAlert error title="Error" confirmBtnCssClass="btn-confirm" onConfirm={() => setAlert(null)}>
+          Failed to record opt-out. Please try again.
+        </SweetAlert>
+      );
     }
   };
 
@@ -177,6 +215,7 @@ export default function PlacementConsent() {
 
   return (
     <div className="min-h-screen bg-gray-50 p-6">
+      {alert}
       <div className="max-w-4xl mx-auto">
 
         {/* Success message when consent is given */}

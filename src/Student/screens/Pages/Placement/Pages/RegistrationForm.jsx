@@ -34,6 +34,7 @@ export default function RegistrationForm({
   const [formConfig, setFormConfig] = useState(null);
   const [formValues, setFormValues] = useState({});
   const [resumeFile, setResumeFile] = useState(null);
+  const [isDragging, setIsDragging] = useState(false);
 
   const [selectedJobIndexes, setSelectedJobIndexes] = useState([]);
   const [acceptedEligibility, setAcceptedEligibility] = useState({});
@@ -142,11 +143,8 @@ export default function RegistrationForm({
     setAcceptedEligibility(prev => ({ ...prev, [id]: !prev[id] }));
   };
 
-  const handleResumeChange = e => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    const MAX_SIZE = 5 * 1024 * 1024; // 5MB
+  const validateAndSetFile = file => {
+    const MAX_SIZE = 5 * 1024 * 1024;
     if (file.size > MAX_SIZE) {
       return setAlert(
         <SweetAlert
@@ -159,9 +157,30 @@ export default function RegistrationForm({
         </SweetAlert>
       );
     }
-
     setAlert(null);
     setResumeFile(file);
+  };
+
+  const handleResumeChange = e => {
+    const file = e.target.files?.[0];
+    if (file) validateAndSetFile(file);
+  };
+
+  const handleDragOver = e => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = e => {
+    e.preventDefault();
+    setIsDragging(false);
+  };
+
+  const handleDrop = e => {
+    e.preventDefault();
+    setIsDragging(false);
+    const file = e.dataTransfer.files?.[0];
+    if (file) validateAndSetFile(file);
   };
 
   const formatEligibilityText = criteria =>
@@ -524,7 +543,16 @@ const handleSubmit = async e => {
                     {/* Resume Upload */}
                     <div className="mt-6">
                       <label className="block text-sm font-medium text-gray-700 mb-2">Resume <span className="text-red-500">*</span></label>
-                      <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-blue-400 transition-colors">
+                      <div 
+                        onDragOver={handleDragOver}
+                        onDragLeave={handleDragLeave}
+                        onDrop={handleDrop}
+                        className={`border-2 border-dashed rounded-lg p-6 text-center transition-colors ${
+                          isDragging 
+                            ? 'border-blue-500 bg-blue-50' 
+                            : 'border-gray-300 hover:border-blue-400'
+                        }`}
+                      >
                         <input 
                           type="file" 
                           accept=".pdf,.doc,.docx"
@@ -535,7 +563,7 @@ const handleSubmit = async e => {
                         <label htmlFor="resume-upload" className="cursor-pointer">
                           <div className="text-gray-600">
                             <div className="font-medium">
-                              {resumeFile ? 'Change Resume' : 'Upload Resume'}
+                              {resumeFile ? 'Change Resume' : isDragging ? 'Drop file here' : 'Upload or Drag & Drop Resume'}
                             </div>
                             <div className="text-sm mt-1">PDF, DOC, DOCX up to 5MB</div>
                           </div>
