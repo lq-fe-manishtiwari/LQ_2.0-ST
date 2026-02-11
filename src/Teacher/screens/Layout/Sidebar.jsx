@@ -156,15 +156,15 @@ const Sidebar = ({ isOpen, toggle }) => {
       //     "/teacher-edit-question",
       //   ],
       // },
-      // {
-      //   to: "/teacher/academic-diary",
-      //   label: "Academic Diary",
-      //   iconActive: assessmentActive,
-      //   iconInactive: assessmentInactive,
-      //   match: [
-      //     "/teacher/academic-diary",
-      //   ],
-      // },
+      {
+        to: "/teacher/academic-diary",
+        label: "Academic Diary",
+        iconActive: assessmentActive,
+        iconInactive: assessmentInactive,
+        match: [
+          "/teacher/academic-diary",
+        ],
+      },
       // {
       //   to: "/teacher/us-feedback",
       //   label: "Feedback",
