@@ -123,7 +123,7 @@ const Assessment = () => {
                     current: "true"
                 };
 
-                const response = await assessmentService.getStudentAssessments([payload]);
+                const response = await assessmentService.getStudentAssessments([payload], profile.student_id);
                 if (response) {
 
                     const mappedData = response.map(item => ({
