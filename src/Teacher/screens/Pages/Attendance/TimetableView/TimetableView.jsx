@@ -305,10 +305,12 @@ const TimetableView = () => {
                             return baseHolidayItem;
                         }
 
-                        // Map each slot and inject holiday info
-                        const slots = dailySchedule.slots.map(slot => ({
-                            // Basic information
-                            id: slot.time_slot_id || `${date}_${slot.start_time}`,
+                        // Map each slot and inject holiday info - Filter out cancelled slots
+                        const slots = dailySchedule.slots
+                            .filter(slot => slot && slot.exception_type !== 'CANCELLED')
+                            .map(slot => ({
+                                // Basic information
+                                id: slot.time_slot_id || `${date}_${slot.start_time}`,
                             timetable_id: slot.timetable_id,
                             date: date,
                             day_of_week: dailySchedule.day_of_week,
@@ -751,7 +753,7 @@ const TimetableView = () => {
                 {/* Right Column - Details */}
                 <div className="flex-1">
                     {/* Tags */}
-                    <div className="flex flex-wrap items-center gap-2 mb-3">
+                    {/* <div className="flex flex-wrap items-center gap-2 mb-3">
                         <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-primary-50 text-primary-600">
                             {slot.class_type || slot.type || "Lecture"}
                         </span>
@@ -770,7 +772,7 @@ const TimetableView = () => {
                                 {slot.day_of_week}
                             </span>
                         )}
-                    </div>
+                    </div> */}
 
                     {/* Subject */}
                     <h3 className="text-base font-bold text-slate-800 mb-3">

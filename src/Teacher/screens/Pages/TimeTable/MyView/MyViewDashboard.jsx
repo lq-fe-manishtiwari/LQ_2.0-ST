@@ -293,47 +293,50 @@ const MyViewDashboard = () => {
                             return [];
                         }
 
-                        return dailySchedule.slots.map(slot => ({
-                            id: slot.time_slot_id || `${date}_${slot.start_time}`,
-                            date: date,
-                            day_of_week: dailySchedule.day_of_week,
-                            start_time: slot.start_time,
-                            end_time: slot.end_time,
-                            slot_name: slot.slot_name,
-                            subject_id: slot.subject_id,
-                            subject_name: slot.subject_name,
-                            subject_code: slot.subject_id ? `SUB-${slot.subject_id}` : "",
-                            teacher_id: slot.teacher_id,
-                            teacher_name: slot.teacher_name,
-                            academic_year_id: slot.academic_year_id,
-                            academic_year_name: slot.academic_year_name,
-                            program_id: slot.program_id,
-                            program_name: slot.program_name,
-                            batch_id: slot.batch_id,
-                            batch_name: slot.batch_name,
-                            semester_id: slot.semester_id,
-                            semester_name: slot.semester_name,
-                            division_id: slot.division_id,
-                            division_name: slot.division_name,
-                            classroom_id: slot.classroom_id,
-                            classroom_name: slot.classroom_name,
-                            room_number: slot.classroom_name || "Not Assigned",
-                            class_type: slot.slot_name || "Lecture",
-                            type: slot.entry_type || "REGULAR",
-                            notes: slot.notes,
-                            source: slot.source,
-                            template_slot_id: slot.template_slot_id,
-                            exception_id: slot.exception_id,
-                            is_exception: slot.is_exception || false,
-                            exception_type: slot.exception_type,
-                            original_teacher_id: slot.original_teacher_id,
-                            original_teacher_name: slot.original_teacher_name,
-                            department: slot.program_name || "",
-                            college: collegeName,
-                            // Holiday information from daily_schedule
-                            is_holiday: isHoliday,
-                            holiday_name: holidayName
-                        }));
+                        // Filter out cancelled slots and map the rest - with safety check for null slots
+                        return dailySchedule.slots
+                            .filter(slot => slot && slot.exception_type !== 'CANCELLED')
+                            .map(slot => ({
+                                id: slot.time_slot_id || `${date}_${slot.start_time}`,
+                                date: date,
+                                day_of_week: dailySchedule.day_of_week,
+                                start_time: slot.start_time,
+                                end_time: slot.end_time,
+                                slot_name: slot.slot_name,
+                                subject_id: slot.subject_id,
+                                subject_name: slot.subject_name,
+                                subject_code: slot.subject_id ? `SUB-${slot.subject_id}` : "",
+                                teacher_id: slot.teacher_id,
+                                teacher_name: slot.teacher_name,
+                                academic_year_id: slot.academic_year_id,
+                                academic_year_name: slot.academic_year_name,
+                                program_id: slot.program_id,
+                                program_name: slot.program_name,
+                                batch_id: slot.batch_id,
+                                batch_name: slot.batch_name,
+                                semester_id: slot.semester_id,
+                                semester_name: slot.semester_name,
+                                division_id: slot.division_id,
+                                division_name: slot.division_name,
+                                classroom_id: slot.classroom_id,
+                                classroom_name: slot.classroom_name,
+                                room_number: slot.classroom_name || "Not Assigned",
+                                class_type: slot.slot_name || "Lecture",
+                                type: slot.entry_type || "REGULAR",
+                                notes: slot.notes,
+                                source: slot.source,
+                                template_slot_id: slot.template_slot_id,
+                                exception_id: slot.exception_id,
+                                is_exception: slot.is_exception || false,
+                                exception_type: slot.exception_type,
+                                original_teacher_id: slot.original_teacher_id,
+                                original_teacher_name: slot.original_teacher_name,
+                                department: slot.program_name || "",
+                                college: collegeName,
+                                // Holiday information from daily_schedule
+                                is_holiday: isHoliday,
+                                holiday_name: holidayName
+                            }));
                     });
 
                     console.log("Mapped timetable array:", timetableArray);
@@ -705,26 +708,26 @@ const MyViewDashboard = () => {
                     </div>
 
                     <div className="flex-1">
-                        <div className="flex flex-wrap items-center gap-2 mb-3">
-                            <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-primary-50 text-primary-600">
+                        {/* <div className="flex flex-wrap items-center gap-2 mb-3"> */}
+                            {/* <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-primary-50 text-primary-600">
                                 {slot.class_type || slot.type || "Lecture"}
                             </span>
                             {slot.subject_code && (
                                 <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-blue-50 text-blue-600">
                                     {slot.subject_code}
                                 </span>
-                            )}
-                            {slot.is_exception && (
+                            )} */}
+                            {/* {slot.is_exception && (
                                 <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-orange-50 text-orange-600">
                                     {slot.exception_type === "SUBSTITUTED" ? "Substitution" : "Exception"}
                                 </span>
-                            )}
-                            {slot.day_of_week && (
+                            )} */}
+                            {/* {slot.day_of_week && (
                                 <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-purple-50 text-purple-600">
                                     {slot.day_of_week}
                                 </span>
-                            )}
-                        </div>
+                            )} */}
+                        {/* </div> */}
 
                         <h3 className="text-base font-bold text-slate-800 mb-3">
                             {slot.subject_name || slot.subject || "Subject Name"}
