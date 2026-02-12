@@ -993,6 +993,7 @@ export default function TabularView() {
                         )}
                     </div>
                 </div>
+                {filteredStudents.length > 0 && !loadingStudents && filters.timeSlot && (
                 <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 w-full sm:w-auto">
                     <div className="text-sm text-gray-600 whitespace-nowrap">
                         Showing {filteredStudents.length} of {students.length} students
@@ -1002,6 +1003,7 @@ export default function TabularView() {
                         onMarkAllAbsent={markAllAbsent}
                     />
                 </div>
+                )}
             </div>
 
             {/* Bulk Action Bar (Now above Table) */}
@@ -1434,7 +1436,7 @@ export default function TabularView() {
             `}</style>
             {/* Bottom Action Footer */}
             {
-                filteredStudents.length > 0 && !loadingStudents && (
+                filteredStudents.length > 0 && !loadingStudents && filters.timeSlot && (
                     <div className="px-6 py-6 border-t border-gray-100 bg-gray-50 flex justify-center">
                         <button
                             onClick={handleSubmitAttendance}
