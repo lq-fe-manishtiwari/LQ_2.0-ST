@@ -13,7 +13,6 @@ const QuestionReports = () => {
     const [showFilters, setShowFilters] = useState(true);
 
     const [filters, setFilters] = useState({
-        search: '',
         program: [],
         batch: [],
         academicYear: [],
@@ -51,12 +50,6 @@ const QuestionReports = () => {
     const fetchQuestions = async () => {
         if (!collegeId) return;
 
-        // Only fetch if academicYear is selected -> REMOVED
-        // if (!filters.academicYear || filters.academicYear.length === 0) {
-        //     setQuestions([]);
-        //     return;
-        // }
-
         try {
             setLoading(true);
             setCurrentPage(1);
@@ -91,11 +84,9 @@ const QuestionReports = () => {
             if (filters.subject.length > 0 && !filters.subject.map(String).includes(String(question.subject_id))) {
                 return false;
             }
-            const questionText = question.question || '';
-            const matchesSearch = !filters.search || questionText.toLowerCase().includes(filters.search.toLowerCase());
-            return matchesSearch;
+            return true;
         });
-    }, [filters.search, filters.subject, questions]);
+    }, [filters.subject, questions]);
 
     // Paginated Data - used for display
     const paginatedData = useMemo(() => {
@@ -139,12 +130,11 @@ const QuestionReports = () => {
             question.subject_name || '-',
             question.module_name || '-',
             question.question_level_name || '-',
-            question.default_marks || '-',
-            question.is_active ? 'Active' : 'Inactive'
+            question.default_marks || '-'
         ]);
 
         autoTable(doc, {
-            head: [['S.No', 'Question', 'Type', 'Category', 'Program', 'Subject', 'Module', 'Level', 'Marks', 'Status']],
+            head: [['S.No', 'Question', 'Type', 'Category', 'Program', 'Subject', 'Module', 'Level', 'Marks']],
             body: tableData,
             startY: 25,
             theme: 'grid',
@@ -165,8 +155,7 @@ const QuestionReports = () => {
             "Subject": question.subject_name || '-',
             "Module": question.module_name || '-',
             "Level": question.question_level_name || '-',
-            "Default Marks": question.default_marks || '-',
-            "Status": question.is_active ? 'Active' : 'Inactive'
+            "Default Marks": question.default_marks || '-'
         }));
 
         const ws = XLSX.utils.json_to_sheet(excelData);
@@ -179,7 +168,7 @@ const QuestionReports = () => {
     const downloadCSV = () => {
         if (!filteredQuestions.length) return;
 
-        const headers = ["S.No,Question,Type,Category,Program,Subject,Module,Level,Default Marks,Status"];
+        const headers = ["S.No,Question,Type,Category,Program,Subject,Module,Level,Default Marks"];
         const rows = filteredQuestions.map((question, index) => {
             const rowData = [
                 index + 1,
@@ -190,8 +179,7 @@ const QuestionReports = () => {
                 question.subject_name || '-',
                 question.module_name || '-',
                 question.question_level_name || '-',
-                question.default_marks || '-',
-                question.is_active ? 'Active' : 'Inactive'
+                question.default_marks || '-'
             ];
             return `"${rowData.join('","')}"`;
         });
@@ -209,7 +197,7 @@ const QuestionReports = () => {
     };
 
     const clearFilters = () => {
-        setFilters({ search: '', program: [], batch: [], academicYear: [], semester: [], subject: [] });
+        setFilters({ program: [], batch: [], academicYear: [], semester: [], subject: [] });
     };
 
     return (
@@ -271,27 +259,6 @@ const QuestionReports = () => {
             {showFilters && (
                 <div className="mb-6 p-5 bg-white rounded-2xl shadow-md border border-gray-200/60">
                     <AssessmentMultiSelectFilter filters={filters} setFilters={setFilters} includeSubject={true} />
-
-                    {/* Search */}
-                    <div className="mt-5">
-                        <label className="text-sm font-semibold text-slate-700 mb-1.5 block ml-0.5">Search</label>
-                        <input
-                            type="text"
-                            placeholder="Search questions..."
-                            value={filters.search}
-                            onChange={e => setFilters({ ...filters, search: e.target.value })}
-                            className="w-full px-4 py-2.5 border-2 border-slate-100 rounded-2xl focus:ring-2 focus:ring-blue-500 focus:border-blue-400 text-sm transition-all"
-                        />
-                    </div>
-
-                    <div className="flex justify-start mt-4 pt-4 border-t border-gray-100">
-                        <button
-                            onClick={clearFilters}
-                            className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
-                        >
-                            Clear All Filters
-                        </button>
-                    </div>
                 </div>
             )}
 
@@ -309,13 +276,12 @@ const QuestionReports = () => {
                             <th className="px-4 py-3 text-left">Module</th>
                             <th className="px-4 py-3 text-left">Level</th>
                             <th className="px-4 py-3 text-center">Marks</th>
-                            <th className="px-4 py-3 text-center">Status</th>
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100">
                         {loading ? (
                             <tr>
-                                <td colSpan={10} className="px-4 py-12 text-center">
+                                <td colSpan={9} className="px-4 py-12 text-center">
                                     <div className="flex flex-col items-center justify-center text-gray-500">
                                         <Loader2 className="w-8 h-8 animate-spin text-blue-600 mb-2" />
                                         <p>Loading question records...</p>
@@ -336,17 +302,11 @@ const QuestionReports = () => {
                                     <td className="px-4 py-3 text-gray-600">{question.module_name || '-'}</td>
                                     <td className="px-4 py-3 text-gray-600">{question.question_level_name || '-'}</td>
                                     <td className="px-4 py-3 text-center">{question.default_marks || '-'}</td>
-                                    <td className="px-4 py-3 text-center">
-                                        <span className={`px-2 py-1 rounded-full text-xs font-semibold ${question.is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                                            }`}>
-                                            {question.is_active ? 'Active' : 'Inactive'}
-                                        </span>
-                                    </td>
                                 </tr>
                             ))
                         ) : (
                             <tr>
-                                <td colSpan={10} className="p-12 text-center text-gray-500 bg-gray-50">
+                                <td colSpan={9} className="p-12 text-center text-gray-500 bg-gray-50">
                                     {filters?.academicYear?.length ? "No question records found." : "Please select filters to view questions."}
                                 </td>
                             </tr>
@@ -370,10 +330,6 @@ const QuestionReports = () => {
                                     <h3 className="font-bold text-gray-800 leading-snug line-clamp-2">{question.question || '-'}</h3>
                                     <p className="text-[10px] text-gray-400 uppercase font-bold tracking-wider mt-0.5">{question.subject_name || 'No Subject'}</p>
                                 </div>
-                                <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${question.is_active ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
-                                    }`}>
-                                    {question.is_active ? 'ACTIVE' : 'INACTIVE'}
-                                </span>
                             </div>
                             <div className="grid grid-cols-2 gap-y-3 mt-4 text-xs">
                                 <div>

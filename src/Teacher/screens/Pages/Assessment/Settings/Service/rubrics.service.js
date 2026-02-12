@@ -13,8 +13,22 @@ export const RubricService = {
     getRubricById,
     getRubricsBySubjectId,
     getRubricsByCollegeId,
-    getRubricsByCollegeAndType
+    getRubricsByCollegeId,
+    getRubricsByCollegeAndType,
+    getRubricByAssessmentId
 };
+
+// -------------------- GET RUBRIC BY ASSESSMENT ID --------------------
+function getRubricByAssessmentId(assessmentId) {
+    const requestOptions = {
+        method: 'GET',
+        headers: authHeader()
+    };
+
+    return fetch(`${ContentAPI}/admin/rubric/assessment/${assessmentId}`, requestOptions)
+        .then(handleResponse)
+        .then(data => data);
+}
 
 // -------------------- CREATE RUBRIC --------------------
 function saveRubric(values) {

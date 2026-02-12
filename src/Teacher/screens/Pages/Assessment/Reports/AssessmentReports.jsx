@@ -13,13 +13,11 @@ const AssessmentReports = () => {
     const [showFilters, setShowFilters] = useState(true);
 
     const [filters, setFilters] = useState({
-        search: '',
         program: [],
         batch: [],
         academicYear: [],
         semester: [],
-        subject: [],
-        status: []
+        subject: []
     });
 
     // Pagination State
@@ -46,7 +44,7 @@ const AssessmentReports = () => {
 
     const isAnyFilterActive = () => {
         return filters.program.length > 0 || filters.batch.length > 0 || filters.academicYear.length > 0 ||
-            filters.semester.length > 0 || filters.subject.length > 0 || filters.status.length > 0;
+            filters.semester.length > 0 || filters.subject.length > 0;
     };
 
     const fetchAssessments = async () => {
@@ -85,22 +83,15 @@ const AssessmentReports = () => {
 
     useEffect(() => {
         fetchAssessments();
-    }, [collegeId, filters.program, filters.batch, filters.academicYear, filters.semester, filters.subject, filters.status]);
+    }, [collegeId, filters.program, filters.batch, filters.academicYear, filters.semester, filters.subject]);
 
     const filteredAssessments = useMemo(() => {
         return assessments.filter(assessment => {
-            // Filter by Status (if selected)
-            if (filters.status.length > 0 && !filters.status.includes(assessment.status)) {
-                return false;
-            }
             // Filter by Subject (if selected)
             if (filters.subject.length > 0 && !filters.subject.map(String).includes(String(assessment.subject_id))) {
                 return false;
             }
-            // Filter by Search
-            const title = assessment.title || '';
-            const matchesSearch = !filters.search || title.toLowerCase().includes(filters.search.toLowerCase());
-            return matchesSearch;
+            return true;
         });
     }, [filters, assessments]);
 
@@ -155,7 +146,7 @@ const AssessmentReports = () => {
             formatDate(assessment.test_start_datetime),
             formatDate(assessment.test_end_datetime),
             assessment.status || '-',
-            assessment.questions ? assessment.questions.length : 0
+            assessment.question_count || 0
         ]);
 
         autoTable(doc, {
@@ -179,7 +170,7 @@ const AssessmentReports = () => {
             "Start Date": formatDate(assessment.test_start_datetime),
             "End Date": formatDate(assessment.test_end_datetime),
             "Status": assessment.status || '-',
-            "Total Questions": assessment.questions ? assessment.questions.length : 0
+            "Total Questions": assessment.question_count || 0
         }));
 
         const ws = XLSX.utils.json_to_sheet(excelData);
@@ -203,7 +194,7 @@ const AssessmentReports = () => {
                 formatDate(assessment.test_start_datetime),
                 formatDate(assessment.test_end_datetime),
                 assessment.status || '-',
-                assessment.questions ? assessment.questions.length : 0
+                assessment.question_count || 0
             ];
             return `"${rowData.join('","')}"`;
         });
@@ -221,7 +212,7 @@ const AssessmentReports = () => {
     };
 
     const clearFilters = () => {
-        setFilters({ search: '', program: [], batch: [], academicYear: [], semester: [], subject: [], status: [] });
+        setFilters({ program: [], batch: [], academicYear: [], semester: [], subject: [] });
     };
 
     return (
@@ -283,46 +274,6 @@ const AssessmentReports = () => {
             {showFilters && (
                 <div className="mb-6 p-5 bg-white rounded-2xl shadow-md border border-gray-200/60">
                     <AssessmentMultiSelectFilter filters={filters} setFilters={setFilters} includeSubject={true} />
-
-                    {/* Additional Filters */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mt-5">
-                        {/* Search */}
-                        <div className="relative">
-                            <label className="text-sm font-semibold text-slate-700 mb-1.5 block ml-0.5">Search</label>
-                            <input
-                                type="text"
-                                placeholder="Search assessments..."
-                                value={filters.search}
-                                onChange={e => setFilters({ ...filters, search: e.target.value })}
-                                className="w-full px-4 py-2.5 border-2 border-slate-100 rounded-2xl focus:ring-2 focus:ring-blue-500 focus:border-blue-400 text-sm transition-all"
-                            />
-                        </div>
-
-                        {/* Status Multi-Select */}
-                        <div className="relative">
-                            <label className="text-sm font-semibold text-slate-700 mb-1.5 block ml-0.5">Status</label>
-                            <select
-                                multiple
-                                value={filters.status}
-                                onChange={e => setFilters({ ...filters, status: Array.from(e.target.selectedOptions, option => option.value) })}
-                                className="w-full px-4 py-2.5 border-2 border-slate-100 rounded-2xl focus:ring-2 focus:ring-blue-500 focus:border-blue-400 text-sm transition-all"
-                                size="3"
-                            >
-                                <option value="Draft">Draft</option>
-                                <option value="Published">Published</option>
-                                <option value="Completed">Completed</option>
-                            </select>
-                        </div>
-                    </div>
-
-                    <div className="flex justify-start mt-4 pt-4 border-t border-gray-100">
-                        <button
-                            onClick={clearFilters}
-                            className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
-                        >
-                            Clear All Filters
-                        </button>
-                    </div>
                 </div>
             )}
 
@@ -338,14 +289,13 @@ const AssessmentReports = () => {
                             <th className="px-4 py-3 text-left">Mode</th>
                             <th className="px-4 py-3 text-left">Start Date</th>
                             <th className="px-4 py-3 text-left">End Date</th>
-                            <th className="px-4 py-3 text-left">Status</th>
                             <th className="px-4 py-3 text-center">Questions</th>
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100">
                         {loading ? (
                             <tr>
-                                <td colSpan={9} className="px-4 py-12 text-center">
+                                <td colSpan={8} className="px-4 py-12 text-center">
                                     <div className="flex flex-col items-center justify-center text-gray-500">
                                         <Loader2 className="w-8 h-8 animate-spin text-blue-600 mb-2" />
                                         <p>Loading assessment records...</p>
@@ -366,20 +316,12 @@ const AssessmentReports = () => {
                                     <td className="px-4 py-3 text-gray-600">{assessment.mode || '-'}</td>
                                     <td className="px-4 py-3 text-gray-600">{formatDate(assessment.test_start_datetime)}</td>
                                     <td className="px-4 py-3 text-gray-600">{formatDate(assessment.test_end_datetime)}</td>
-                                    <td className="px-4 py-3">
-                                        <span className={`px-2 py-1 rounded-full text-xs font-semibold ${assessment.status === 'Published' ? 'bg-green-100 text-green-800' :
-                                            assessment.status === 'Completed' ? 'bg-blue-100 text-blue-800' :
-                                                'bg-yellow-100 text-yellow-800'
-                                            }`}>
-                                            {assessment.status || 'Draft'}
-                                        </span>
-                                    </td>
-                                    <td className="px-4 py-3 text-center">{assessment.questions ? assessment.questions.length : 0}</td>
+                                    <td className="px-4 py-3 text-center">{assessment.question_count || 0}</td>
                                 </tr>
                             ))
                         ) : (
                             <tr>
-                                <td colSpan={9} className="p-12 text-center text-gray-500 bg-gray-50">
+                                <td colSpan={8} className="p-12 text-center text-gray-500 bg-gray-50">
                                     {filters?.academicYear?.length ? "No assessment records found." : "Please select filters to view assessments."}
                                 </td>
                             </tr>
@@ -403,12 +345,6 @@ const AssessmentReports = () => {
                                     <h3 className="font-bold text-gray-800 leading-snug">{assessment.title || '-'}</h3>
                                     <p className="text-[10px] text-gray-400 uppercase font-bold tracking-wider mt-0.5">{assessment.subject_name || 'No Subject'}</p>
                                 </div>
-                                <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${assessment.status === 'Published' ? 'bg-green-100 text-green-700' :
-                                    assessment.status === 'Completed' ? 'bg-blue-100 text-blue-700' :
-                                        'bg-yellow-100 text-yellow-700'
-                                    }`}>
-                                    {assessment.status || 'DRAFT'}
-                                </span>
                             </div>
                             <div className="grid grid-cols-2 gap-y-3 mt-4 text-xs">
                                 <div>
@@ -433,7 +369,7 @@ const AssessmentReports = () => {
                             <div className="mt-4 pt-3 border-t border-gray-50 flex justify-between items-center">
                                 <div className="flex items-center text-gray-500 text-[10px]">
                                     <Calendar className="w-3 h-3 mr-1" />
-                                    <span>Questions: {assessment.questions ? assessment.questions.length : 0}</span>
+                                    <span>Questions: {assessment.question_count || 0}</span>
                                 </div>
                             </div>
                         </div>

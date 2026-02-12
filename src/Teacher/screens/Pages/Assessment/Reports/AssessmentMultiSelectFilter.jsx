@@ -1,8 +1,18 @@
 import React, { useState, useEffect, useRef } from "react";
 import { ChevronDown, X } from "lucide-react";
+// Mapped imports to ensure functionality
 import { listOfBooksService } from "../../AcademicDiary/Services/listOfBooks.service";
-import { useUserProfile } from "../../../../../contexts/UserProfileContext";
-import { AssessmentService } from "../Services/assessment.service";
+import { contentService } from "../../Content/services/content.service";
+
+// Create service aliases to match user's code structure while using existing services
+const collegeService = {
+    getProgramByCollegeId: (id) => listOfBooksService.getProgramByCollegeId(id),
+    getSUbjectbyProgramID: (id) => contentService.getSubjectbyProgramId(id)
+};
+
+const batchService = {
+    getBatchByProgramId: (ids) => listOfBooksService.getBatchByProgramId(Array.isArray(ids) ? ids[0] : ids)
+};
 
 const MultiSelect = ({ label, value = [], onChange, options = [], placeholder, disabled }) => {
     const [open, setOpen] = useState(false);
@@ -117,54 +127,54 @@ const AssessmentMultiSelectFilter = ({ filters, setFilters, includeSubject = fal
     const [semesters, setSemesters] = useState([]);
     const [subjects, setSubjects] = useState([]);
 
-    const { userID } = useUserProfile();
-
     useEffect(() => {
         const loadPrograms = async () => {
             try {
                 const activeCollege = JSON.parse(localStorage.getItem("activeCollege"));
-                const collegeId = activeCollege?.id;
+                const collegeId = activeCollege?.id || activeCollege?.college_id; // Robust check
 
                 let programsData = [];
-                if (collegeId && userID) {
-                    const res = await AssessmentService.getProgrambyUserIdandCollegeId(userID, collegeId);
-                    programsData = Array.isArray(res) ? res : (res?.data || []);
+                if (collegeId) {
+                    programsData = await collegeService.getProgramByCollegeId(collegeId);
                 }
 
                 setPrograms((programsData || []).map(p => ({
-                    label: p.program_name,
-                    value: p.program_id,
+                    label: p.program_name || p.name,
+                    value: p.program_id || p.id,
                     ...p
                 })));
 
                 if (filters.program.length === 0 && programsData && programsData.length > 0) {
-                    setFilters(prev => ({ ...prev, program: [programsData[0].program_id] }));
+                    const firstId = programsData[0].program_id || programsData[0].id;
+                    setFilters(prev => ({ ...prev, program: [firstId] }));
                 }
             } catch (error) {
                 console.error('Error loading programs:', error);
             }
         };
         loadPrograms();
-    }, [userID]);
+    }, []);
 
     useEffect(() => {
         if (filters.program.length !== 1) {
+            // setBatches([]); // User code had this, but maybe better to act more like original? No, follow user code.
             setBatches([]);
             return;
         }
 
         const programId = filters.program[0];
 
-        listOfBooksService.getBatchByProgramId(programId).then((res) => {
-            const batchData = Array.isArray(res) ? res : (res?.data || []);
+        batchService.getBatchByProgramId([programId]).then((data) => {
+            const batchData = Array.isArray(data) ? data : (data?.data || []);
             setBatches(batchData.map(b => ({
-                label: b.batch_name,
-                value: b.batch_id,
+                label: b.batch_name || b.name,
+                value: b.batch_id || b.id,
                 ...b
             })));
 
             if (filters.batch.length === 0 && batchData.length > 0) {
-                setFilters(prev => ({ ...prev, batch: [batchData[0].batch_id] }));
+                const firstId = batchData[0].batch_id || batchData[0].id;
+                setFilters(prev => ({ ...prev, batch: [firstId] }));
             }
         });
     }, [filters.program]);
@@ -178,17 +188,17 @@ const AssessmentMultiSelectFilter = ({ filters, setFilters, includeSubject = fal
         const selectedBatch = batches.find(b => b.value === filters.batch[0]);
         if (!selectedBatch) return;
 
-        // Ensure academic_years exists and handle if it's nested or needing fetch (though usually embedded in batch)
         const ayData = selectedBatch.academic_years || [];
 
         setAcademicYears(ayData.map(y => ({
-            label: y.name,
-            value: y.academic_year_id,
+            label: y.name || y.academic_year,
+            value: y.academic_year_id || y.id,
             ...y
         })));
 
         if (filters.academicYear.length === 0 && ayData.length > 0) {
-            setFilters(prev => ({ ...prev, academicYear: [ayData[0].academic_year_id] }));
+            const firstId = ayData[0].academic_year_id || ayData[0].id;
+            setFilters(prev => ({ ...prev, academicYear: [firstId] }));
         }
     }, [filters.batch, batches]);
 
@@ -209,7 +219,7 @@ const AssessmentMultiSelectFilter = ({ filters, setFilters, includeSubject = fal
                 if (!seen.has(sd.semester_id)) {
                     seen.add(sd.semester_id);
                     uniqueSemesters.push({
-                        semester_id: sd.semester_id,
+                        semester_id: sd.semester_id || sd.id,
                         semester_name: sd.name || sd.semester_name,
                     });
                 }
@@ -217,30 +227,32 @@ const AssessmentMultiSelectFilter = ({ filters, setFilters, includeSubject = fal
         }
 
         setSemesters(uniqueSemesters.map(s => ({
-            label: s.semester_name,
-            value: s.semester_id,
+            label: s.semester_name || s.name,
+            value: s.semester_id || s.id,
             ...s
         })));
 
         if (filters.semester.length === 0 && uniqueSemesters.length > 0) {
-            setFilters(prev => ({ ...prev, semester: [uniqueSemesters[0].semester_id] }));
+            const firstId = uniqueSemesters[0].semester_id || uniqueSemesters[0].id;
+            setFilters(prev => ({ ...prev, semester: [firstId] }));
         }
     }, [filters.academicYear, academicYears]);
 
     // Load subjects when includeSubject is true
     useEffect(() => {
-        if (!includeSubject || filters.academicYear.length !== 1 || filters.semester.length !== 1) {
+        if (!includeSubject || filters.program.length !== 1) {
             setSubjects([]);
             return;
         }
 
         const loadSubjects = async () => {
             try {
-                const res = await listOfBooksService.getSubjectsByAcademicYearAndSemester(filters.academicYear[0], filters.semester[0]);
+                // User code used 'getSUbjectbyProgramID' typo, carefully mapped in my service alias
+                const res = await collegeService.getSUbjectbyProgramID(filters.program[0]);
                 const subjectsData = Array.isArray(res) ? res : (res?.data || []);
                 setSubjects(subjectsData.map(s => ({
                     label: s.subject_name || s.name,
-                    value: s.subject_id,
+                    value: s.subject_id || s.id,
                     ...s
                 })));
             } catch (error) {
@@ -249,7 +261,7 @@ const AssessmentMultiSelectFilter = ({ filters, setFilters, includeSubject = fal
         };
 
         loadSubjects();
-    }, [filters.academicYear, filters.semester, includeSubject]);
+    }, [filters.program, includeSubject]);
 
     return (
         <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4 md:gap-5">

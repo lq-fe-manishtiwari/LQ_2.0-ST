@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
-import { Download, Loader2, FileSpreadsheet, FileText, FileJson, ChevronDown, Search, Filter, ChevronUp, Target, Award } from 'lucide-react';
+import { Download, Loader2, FileSpreadsheet, FileText, FileJson, ChevronDown, Search, Filter, ChevronUp, Target, Award, X } from 'lucide-react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import * as XLSX from 'xlsx';
@@ -12,13 +12,11 @@ const RubricsReports = () => {
     const [showFilters, setShowFilters] = useState(true);
 
     const [filters, setFilters] = useState({
-        search: '',
         program: [],
         batch: [],
         academicYear: [],
         semester: [],
-        subject: [],
-        status: []
+        subject: []
     });
 
     // Pagination State
@@ -45,7 +43,7 @@ const RubricsReports = () => {
 
     const isAnyFilterActive = () => {
         return filters.program.length > 0 || filters.batch.length > 0 || filters.academicYear.length > 0 ||
-            filters.semester.length > 0 || filters.subject.length > 0 || filters.status.length > 0;
+            filters.semester.length > 0 || filters.subject.length > 0;
     };
 
     const fetchRubrics = async () => {
@@ -67,8 +65,7 @@ const RubricsReports = () => {
                 batch_ids: filters.batch,
                 academicYear_ids: filters.academicYear,
                 semester_ids: filters.semester,
-                subject_ids: filters.subject,
-                status: filters.status.length > 0 ? filters.status.includes('Active') : null
+                subject_ids: filters.subject
             };
 
             const res = await ReportsService.getRubricReport(payload);
@@ -83,32 +80,13 @@ const RubricsReports = () => {
 
     useEffect(() => {
         fetchRubrics();
-    }, [collegeId, filters.program, filters.batch, filters.academicYear, filters.semester, filters.subject, filters.status]);
+    }, [collegeId, filters.program, filters.batch, filters.academicYear, filters.semester, filters.subject]);
 
     const filteredRubrics = useMemo(() => {
         return rubrics.filter(rubric => {
-            // Filter by Status
-            if (filters.status.length > 0) {
-                const statusMatch = filters.status.some(status => {
-                    if (status === 'Active') return rubric.active === true;
-                    if (status === 'Inactive') return rubric.active === false;
-                    return false;
-                });
-                if (!statusMatch) return false;
-            }
-
             // Filter by Subject
             if (filters.subject.length > 0 && !filters.subject.map(String).includes(String(rubric.subject_id))) {
                 return false;
-            }
-
-            // Filter by Search
-            const searchTerm = filters.search.toLowerCase();
-            if (searchTerm) {
-                const matchesCode = (rubric.code || '').toLowerCase().includes(searchTerm);
-                const matchesName = (rubric.name || '').toLowerCase().includes(searchTerm);
-                const matchesDescription = (rubric.description || '').toLowerCase().includes(searchTerm);
-                return matchesCode || matchesName || matchesDescription;
             }
 
             return true;
@@ -159,19 +137,15 @@ const RubricsReports = () => {
 
         const tableData = filteredRubrics.map((rubric, index) => [
             index + 1,
-            rubric.code || '-',
-            rubric.name || '-',
+            rubric.rubric_name || '-',
             rubric.subject_name || '-',
-            rubric.course_outcome || '-',
-            rubric.blooms_level || '-',
-            rubric.total_marks || '-',
-            rubric.weightage ? `${rubric.weightage}%` : '-',
-            rubric.criteria_count || '-',
-            rubric.active ? 'Active' : 'Inactive'
+            rubric.rubric_type || '-',
+            rubric.rubric_category || '-',
+            rubric.total_points || '-'
         ]);
 
         autoTable(doc, {
-            head: [['S.No', 'Code', 'Rubric Name', 'Subject', 'Course Outcome', "Bloom's Level", 'Total Marks', 'Weightage', 'Criteria', 'Status']],
+            head: [['S.No', 'Rubric Name', 'Subject', 'Type', 'Category', 'Total Points']],
             body: tableData,
             startY: 25,
             theme: 'grid',
@@ -185,19 +159,13 @@ const RubricsReports = () => {
     const downloadExcel = () => {
         const excelData = filteredRubrics.map((rubric, index) => ({
             "S.No": index + 1,
-            "Code": rubric.code || '-',
-            "Rubric Name": rubric.name || '-',
+            "Rubric Name": rubric.rubric_name || '-',
             "Description": rubric.description || '-',
-            "Program": rubric.program_name || '-',
             "Subject": rubric.subject_name || '-',
-            "Semester": rubric.semester_name || '-',
-            "Course Outcome": rubric.course_outcome || '-',
-            "Bloom's Level": rubric.blooms_level || '-',
-            "Total Marks": rubric.total_marks || '-',
-            "Weightage (%)": rubric.weightage || '-',
-            "Criteria Count": rubric.criteria_count || '-',
-            "Status": rubric.active ? 'Active' : 'Inactive',
-            "Created Date": formatDate(rubric.created_date)
+            "Type": rubric.rubric_type || '-',
+            "Category": rubric.rubric_category || '-',
+            "Scoring Type": rubric.scoring_type || '-',
+            "Total Points": rubric.total_points || '-'
         }));
 
         const ws = XLSX.utils.json_to_sheet(excelData);
@@ -210,20 +178,17 @@ const RubricsReports = () => {
     const downloadCSV = () => {
         if (!filteredRubrics.length) return;
 
-        const headers = ["S.No,Code,Rubric Name,Description,Subject,Course Outcome,Bloom's Level,Total Marks,Weightage (%),Criteria Count,Status"];
+        const headers = ["S.No,Rubric Name,Description,Subject,Type,Category,Scoring Type,Total Points"];
         const rows = filteredRubrics.map((rubric, index) => {
             const rowData = [
                 index + 1,
-                rubric.code || '-',
-                (rubric.name || '-').replace(/"/g, '""'),
+                (rubric.rubric_name || '-').replace(/"/g, '""'),
                 (rubric.description || '-').replace(/"/g, '""'),
                 rubric.subject_name || '-',
-                rubric.course_outcome || '-',
-                rubric.blooms_level || '-',
-                rubric.total_marks || '-',
-                rubric.weightage || '-',
-                rubric.criteria_count || '-',
-                rubric.active ? 'Active' : 'Inactive'
+                rubric.rubric_type || '-',
+                rubric.rubric_category || '-',
+                rubric.scoring_type || '-',
+                rubric.total_points || '-'
             ];
             return `"${rowData.join('","')}"`;
         });
@@ -241,7 +206,7 @@ const RubricsReports = () => {
     };
 
     const clearFilters = () => {
-        setFilters({ search: '', program: [], batch: [], academicYear: [], semester: [], subject: [], status: [] });
+        setFilters({ program: [], batch: [], academicYear: [], semester: [], subject: [] });
     };
 
     return (
@@ -304,44 +269,7 @@ const RubricsReports = () => {
                 <div className="mb-6 p-5 bg-white rounded-2xl shadow-md border border-gray-200/60">
                     <AssessmentMultiSelectFilter filters={filters} setFilters={setFilters} includeSubject={true} />
 
-                    {/* Additional Filters */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-5">
-                        {/* Search */}
-                        <div className="relative">
-                            <label className="text-sm font-semibold text-slate-700 mb-1.5 block ml-0.5">Search</label>
-                            <input
-                                type="text"
-                                placeholder="Search by code, name or description..."
-                                value={filters.search}
-                                onChange={e => setFilters({ ...filters, search: e.target.value })}
-                                className="w-full px-4 py-2.5 border-2 border-slate-100 rounded-2xl focus:ring-2 focus:ring-blue-500 focus:border-blue-400 text-sm transition-all"
-                            />
-                        </div>
 
-                        {/* Status Multi-Select */}
-                        <div className="relative">
-                            <label className="text-sm font-semibold text-slate-700 mb-1.5 block ml-0.5">Status</label>
-                            <select
-                                multiple
-                                value={filters.status}
-                                onChange={e => setFilters({ ...filters, status: Array.from(e.target.selectedOptions, option => option.value) })}
-                                className="w-full px-4 py-2.5 border-2 border-slate-100 rounded-2xl focus:ring-2 focus:ring-blue-500 focus:border-blue-400 text-sm transition-all"
-                                size="2"
-                            >
-                                <option value="Active">Active</option>
-                                <option value="Inactive">Inactive</option>
-                            </select>
-                        </div>
-                    </div>
-
-                    <div className="flex justify-start mt-4 pt-4 border-t border-gray-100">
-                        <button
-                            onClick={clearFilters}
-                            className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
-                        >
-                            Clear All Filters
-                        </button>
-                    </div>
                 </div>
             )}
 
@@ -351,21 +279,17 @@ const RubricsReports = () => {
                     <thead className="table-header">
                         <tr>
                             <th className="px-4 py-3 text-left">S.No</th>
-                            <th className="px-4 py-3 text-left">Code</th>
                             <th className="px-4 py-3 text-left">Rubric Name</th>
                             <th className="px-4 py-3 text-left">Subject</th>
-                            <th className="px-4 py-3 text-left">Course Outcome</th>
-                            <th className="px-4 py-3 text-left">Bloom's Level</th>
-                            <th className="px-4 py-3 text-center">Total Marks</th>
-                            <th className="px-4 py-3 text-center">Weightage</th>
-                            <th className="px-4 py-3 text-center">Criteria</th>
-                            <th className="px-4 py-3 text-center">Status</th>
+                            <th className="px-4 py-3 text-left">Type</th>
+                            <th className="px-4 py-3 text-left">Category</th>
+                            <th className="px-4 py-3 text-center">Total Points</th>
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100">
                         {loading ? (
                             <tr>
-                                <td colSpan={10} className="px-4 py-12 text-center">
+                                <td colSpan={6} className="px-4 py-12 text-center">
                                     <div className="flex flex-col items-center justify-center text-gray-500">
                                         <Loader2 className="w-8 h-8 animate-spin text-blue-600 mb-2" />
                                         <p>Loading rubrics records...</p>
@@ -376,39 +300,24 @@ const RubricsReports = () => {
                             currentEntries.map((rubric, index) => (
                                 <tr key={rubric.rubric_id || index} className="hover:bg-blue-50 transition-colors duration-150">
                                     <td className="px-4 py-3">{start + index + 1}</td>
-                                    <td className="px-4 py-3 font-mono text-xs text-blue-600 font-semibold">{rubric.code || '-'}</td>
-                                    <td className="px-4 py-3 font-medium text-gray-800">{rubric.name || '-'}</td>
+                                    <td className="px-4 py-3 font-medium text-gray-800">{rubric.rubric_name || '-'}</td>
                                     <td className="px-4 py-3 text-gray-600">{rubric.subject_name || '-'}</td>
                                     <td className="px-4 py-3">
-                                        <span className="inline-flex items-center gap-1 px-2 py-1 bg-purple-50 text-purple-700 rounded-md text-xs font-medium">
-                                            <Target size={12} />
-                                            {rubric.course_outcome || '-'}
+                                        <span className="px-2 py-1 bg-blue-50 text-blue-700 rounded-md text-xs font-medium">
+                                            {rubric.rubric_type || '-'}
                                         </span>
                                     </td>
                                     <td className="px-4 py-3">
-                                        <span className="inline-flex items-center gap-1 px-2 py-1 bg-indigo-50 text-indigo-700 rounded-md text-xs font-medium">
-                                            <Award size={12} />
-                                            {rubric.blooms_level || '-'}
+                                        <span className="px-2 py-1 bg-purple-50 text-purple-700 rounded-md text-xs font-medium">
+                                            {rubric.rubric_category || '-'}
                                         </span>
                                     </td>
-                                    <td className="px-4 py-3 text-center font-semibold text-gray-700">{rubric.total_marks || '-'}</td>
-                                    <td className="px-4 py-3 text-center">
-                                        <span className="px-2 py-1 bg-orange-50 text-orange-700 rounded-md text-xs font-semibold">
-                                            {rubric.weightage ? `${rubric.weightage}%` : '-'}
-                                        </span>
-                                    </td>
-                                    <td className="px-4 py-3 text-center text-gray-600">{rubric.criteria_count || '-'}</td>
-                                    <td className="px-4 py-3 text-center">
-                                        <span className={`px-2 py-1 rounded-full text-xs font-semibold ${rubric.active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                                            }`}>
-                                            {rubric.active ? 'Active' : 'Inactive'}
-                                        </span>
-                                    </td>
+                                    <td className="px-4 py-3 text-center font-semibold text-gray-700">{rubric.total_points || '-'}</td>
                                 </tr>
                             ))
                         ) : (
                             <tr>
-                                <td colSpan={10} className="p-12 text-center text-gray-500 bg-gray-50">
+                                <td colSpan={6} className="p-12 text-center text-gray-500 bg-gray-50">
                                     {filters?.academicYear?.length ? "No rubrics records found." : "Please select filters to view rubrics."}
                                 </td>
                             </tr>
@@ -429,45 +338,26 @@ const RubricsReports = () => {
                         <div key={rubric.rubric_id || index} className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 hover:shadow-md transition-shadow">
                             <div className="flex justify-between items-start mb-3">
                                 <div className="flex-1">
-                                    <p className="text-xs font-mono text-blue-600 font-semibold mb-1">{rubric.code || '-'}</p>
-                                    <h3 className="font-bold text-gray-800 leading-snug">{rubric.name || '-'}</h3>
+                                    <h3 className="font-bold text-gray-800 leading-snug">{rubric.rubric_name || '-'}</h3>
                                     <p className="text-[10px] text-gray-400 uppercase font-bold tracking-wider mt-0.5">{rubric.subject_name || 'No Subject'}</p>
                                 </div>
-                                <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${rubric.active ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
-                                    }`}>
-                                    {rubric.active ? 'ACTIVE' : 'INACTIVE'}
-                                </span>
                             </div>
                             <div className="grid grid-cols-2 gap-y-3 mt-4 text-xs">
                                 <div>
-                                    <p className="text-[10px] text-gray-400 uppercase font-bold tracking-wider mb-0.5">Course Outcome</p>
-                                    <p className="text-gray-700 font-medium inline-flex items-center gap-1">
-                                        <Target size={12} className="text-purple-600" />
-                                        {rubric.course_outcome || '—'}
-                                    </p>
+                                    <p className="text-[10px] text-gray-400 uppercase font-bold tracking-wider mb-0.5">Type</p>
+                                    <p className="text-gray-700 font-medium">{rubric.rubric_type || '—'}</p>
                                 </div>
                                 <div>
-                                    <p className="text-[10px] text-gray-400 uppercase font-bold tracking-wider mb-0.5">Bloom's Level</p>
-                                    <p className="text-gray-700 font-medium inline-flex items-center gap-1">
-                                        <Award size={12} className="text-indigo-600" />
-                                        {rubric.blooms_level || '—'}
-                                    </p>
+                                    <p className="text-[10px] text-gray-400 uppercase font-bold tracking-wider mb-0.5">Category</p>
+                                    <p className="text-gray-700 font-medium">{rubric.rubric_category || '—'}</p>
                                 </div>
                                 <div>
-                                    <p className="text-[10px] text-gray-400 uppercase font-bold tracking-wider mb-0.5">Total Marks</p>
-                                    <p className="text-gray-700 font-semibold">{rubric.total_marks || '—'}</p>
+                                    <p className="text-[10px] text-gray-400 uppercase font-bold tracking-wider mb-0.5">Total Points</p>
+                                    <p className="text-gray-700 font-semibold">{rubric.total_points || '—'}</p>
                                 </div>
                                 <div>
-                                    <p className="text-[10px] text-gray-400 uppercase font-bold tracking-wider mb-0.5">Weightage</p>
-                                    <p className="text-orange-600 font-semibold">{rubric.weightage ? `${rubric.weightage}%` : '—'}</p>
-                                </div>
-                                <div>
-                                    <p className="text-[10px] text-gray-400 uppercase font-bold tracking-wider mb-0.5">Criteria Count</p>
-                                    <p className="text-gray-700 font-medium">{rubric.criteria_count || '—'}</p>
-                                </div>
-                                <div>
-                                    <p className="text-[10px] text-gray-400 uppercase font-bold tracking-wider mb-0.5">Semester</p>
-                                    <p className="text-gray-700 font-medium truncate">{rubric.semester_name || '—'}</p>
+                                    <p className="text-[10px] text-gray-400 uppercase font-bold tracking-wider mb-0.5">Scoring Type</p>
+                                    <p className="text-gray-700 font-medium">{rubric.scoring_type || '—'}</p>
                                 </div>
                             </div>
                             {rubric.description && (
