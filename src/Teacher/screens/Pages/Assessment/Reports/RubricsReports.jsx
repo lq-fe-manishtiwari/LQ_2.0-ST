@@ -51,11 +51,11 @@ const RubricsReports = () => {
     const fetchRubrics = async () => {
         if (!collegeId) return;
 
-        // Only fetch if academicYear is selected
-        if (!filters.academicYear || filters.academicYear.length === 0) {
-            setRubrics([]);
-            return;
-        }
+        // Only fetch if academicYear is selected -> REMOVED
+        // if (!filters.academicYear || filters.academicYear.length === 0) {
+        //     setRubrics([]);
+        //     return;
+        // }
 
         try {
             setLoading(true);

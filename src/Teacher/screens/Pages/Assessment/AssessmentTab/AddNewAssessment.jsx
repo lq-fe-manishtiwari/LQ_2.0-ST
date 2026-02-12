@@ -20,11 +20,12 @@ export default function AddNewAssessment() {
     externalAssessmentViewBtn: 'tab-inactive',
     selectedClass: location?.state?.selectedClass || '',
     selectedClassName: location?.state?.selectedClassName || '',
-    previous_page_url: location.state?.previous_path || '/admin-assessment',
+    previous_page_url: location.state?.previous_path || '/teacher/assessments',
     selected_test_type: location.state?.selected_test_type || 'ALL',
     selected_subject_props: location.state?.selected_subject || '',
     curr_date_ori: location.state?.curr_date_ori || new Date(),
     default_sel_tab: location.state?.default_sel_tab || '',
+    assessmentData: location.state?.assessmentData || null,
   });
 
   // ---------- Modal States ----------
@@ -116,39 +117,39 @@ export default function AddNewAssessment() {
                 <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
                   <img src={assesment_logo} alt="Assessment" className="w-8 h-8" />
                 </div>
-                <h1 className="text-2xl font-bold text-gray-900">Add New Assessment</h1>
+                <h1 className="text-2xl font-bold text-gray-900">
+                  {state.assessmentData ? 'Edit Assessment' : 'Add New Assessment'}
+                </h1>
               </div>
 
               {/* Right Circular Close Button */}
-            <button
-              onClick={goBack}
-              className="w-10 h-10 mt-3 sm:mt-0 flex items-center justify-center rounded-full text-white transition-all shadow-sm hover:shadow-md"
-              style={{ backgroundColor: "rgb(33 98 193 / var(--tw-bg-opacity, 1))" }}
-            >
-              <X className="w-5 h-5" />
-            </button>
+              <button
+                onClick={goBack}
+                className="w-10 h-10 mt-3 sm:mt-0 flex items-center justify-center rounded-full text-white transition-all shadow-sm hover:shadow-md"
+                style={{ backgroundColor: "rgb(33 98 193 / var(--tw-bg-opacity, 1))" }}
+              >
+                <X className="w-5 h-5" />
+              </button>
             </div>
 
             {/* Tabs: Online / Offline */}
             <div className="flex gap-3 mt-6 border-b border-gray-200">
               <button
                 onClick={() => handleTabView('Internal')}
-                className={`flex items-center gap-2 px-6 py-3 font-medium text-sm rounded-t-lg transition-all ${
-                  state.internalAssessmentViewBtn === 'tab-active'
-                    ? 'bg-blue-600 text-white shadow-md'
-                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                }`}
+                className={`flex items-center gap-2 px-6 py-3 font-medium text-sm rounded-t-lg transition-all ${state.internalAssessmentViewBtn === 'tab-active'
+                  ? 'bg-blue-600 text-white shadow-md'
+                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  }`}
               >
                 <Building className="w-4 h-4" />
                 Online
               </button>
               <button
                 onClick={() => handleTabView('External')}
-                className={`flex items-center gap-2 px-6 py-3 font-medium text-sm rounded-t-lg transition-all ${
-                  state.externalAssessmentViewBtn === 'tab-active'
-                    ? 'bg-blue-600 text-white shadow-md'
-                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                }`}
+                className={`flex items-center gap-2 px-6 py-3 font-medium text-sm rounded-t-lg transition-all ${state.externalAssessmentViewBtn === 'tab-active'
+                  ? 'bg-blue-600 text-white shadow-md'
+                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  }`}
               >
                 <Home className="w-4 h-4" />
                 Offline
@@ -165,8 +166,10 @@ export default function AddNewAssessment() {
             ) : (
               <>
                 {offline_assessment_enabled ? (
-                  int_ext_type === 'Internal' ? (
-                    <AddInternalAssessment
+                  (state.assessmentData?.mode === 'OFFLINE' || int_ext_type === 'External') ? (
+                    <AddExternalAssessment
+                      mode="OFFLINE"
+                      assessmentData={state.assessmentData}
                       showWarningModal={openWarningModal}
                       showImageModal={openImagePreview}
                       showSuccessModal={openSuccessModal}
@@ -174,7 +177,9 @@ export default function AddNewAssessment() {
                       selectedClassName={state.selectedClassName}
                     />
                   ) : (
-                    <AddExternalAssessment
+                    <AddInternalAssessment
+                      mode="ONLINE"
+                      assessmentData={state.assessmentData}
                       showWarningModal={openWarningModal}
                       showImageModal={openImagePreview}
                       showSuccessModal={openSuccessModal}
@@ -184,6 +189,8 @@ export default function AddNewAssessment() {
                   )
                 ) : (
                   <AddInternalAssessment
+                    mode="ONLINE"
+                    assessmentData={state.assessmentData}
                     showWarningModal={openWarningModal}
                     showImageModal={openImagePreview}
                     showSuccessModal={openSuccessModal}

@@ -52,11 +52,11 @@ const AssessmentReports = () => {
     const fetchAssessments = async () => {
         if (!collegeId) return;
 
-        // Only fetch if academicYear is selected
-        if (!filters.academicYear || filters.academicYear.length === 0) {
-            setAssessments([]);
-            return;
-        }
+        // Only fetch if academicYear is selected -> REMOVED to allow fetching all
+        // if (!filters.academicYear || filters.academicYear.length === 0) {
+        //     setAssessments([]);
+        //     return;
+        // }
 
         try {
             setLoading(true);

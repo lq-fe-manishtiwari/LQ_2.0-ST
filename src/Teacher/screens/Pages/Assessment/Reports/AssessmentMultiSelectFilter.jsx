@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from "react";
 import { ChevronDown, X } from "lucide-react";
 import { listOfBooksService } from "../../AcademicDiary/Services/listOfBooks.service";
+import { useUserProfile } from "../../../../../contexts/UserProfileContext";
+import { AssessmentService } from "../Services/assessment.service";
 
 const MultiSelect = ({ label, value = [], onChange, options = [], placeholder, disabled }) => {
     const [open, setOpen] = useState(false);
@@ -115,6 +117,8 @@ const AssessmentMultiSelectFilter = ({ filters, setFilters, includeSubject = fal
     const [semesters, setSemesters] = useState([]);
     const [subjects, setSubjects] = useState([]);
 
+    const { userID } = useUserProfile();
+
     useEffect(() => {
         const loadPrograms = async () => {
             try {
@@ -122,8 +126,9 @@ const AssessmentMultiSelectFilter = ({ filters, setFilters, includeSubject = fal
                 const collegeId = activeCollege?.id;
 
                 let programsData = [];
-                if (collegeId) {
-                    programsData = await listOfBooksService.getProgramByCollegeId(collegeId);
+                if (collegeId && userID) {
+                    const res = await AssessmentService.getProgrambyUserIdandCollegeId(userID, collegeId);
+                    programsData = Array.isArray(res) ? res : (res?.data || []);
                 }
 
                 setPrograms((programsData || []).map(p => ({
@@ -140,7 +145,7 @@ const AssessmentMultiSelectFilter = ({ filters, setFilters, includeSubject = fal
             }
         };
         loadPrograms();
-    }, []);
+    }, [userID]);
 
     useEffect(() => {
         if (filters.program.length !== 1) {
@@ -150,8 +155,8 @@ const AssessmentMultiSelectFilter = ({ filters, setFilters, includeSubject = fal
 
         const programId = filters.program[0];
 
-        listOfBooksService.getBatchByProgramId(programId).then((data) => {
-            const batchData = Array.isArray(data) ? data : [];
+        listOfBooksService.getBatchByProgramId(programId).then((res) => {
+            const batchData = Array.isArray(res) ? res : (res?.data || []);
             setBatches(batchData.map(b => ({
                 label: b.batch_name,
                 value: b.batch_id,
@@ -173,6 +178,7 @@ const AssessmentMultiSelectFilter = ({ filters, setFilters, includeSubject = fal
         const selectedBatch = batches.find(b => b.value === filters.batch[0]);
         if (!selectedBatch) return;
 
+        // Ensure academic_years exists and handle if it's nested or needing fetch (though usually embedded in batch)
         const ayData = selectedBatch.academic_years || [];
 
         setAcademicYears(ayData.map(y => ({
@@ -231,7 +237,7 @@ const AssessmentMultiSelectFilter = ({ filters, setFilters, includeSubject = fal
         const loadSubjects = async () => {
             try {
                 const res = await listOfBooksService.getSubjectsByAcademicYearAndSemester(filters.academicYear[0], filters.semester[0]);
-                const subjectsData = res.data || [];
+                const subjectsData = Array.isArray(res) ? res : (res?.data || []);
                 setSubjects(subjectsData.map(s => ({
                     label: s.subject_name || s.name,
                     value: s.subject_id,

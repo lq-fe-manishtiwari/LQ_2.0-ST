@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useUserProfile } from '../../../../../contexts/UserProfileContext';
 import {
   BarChart,
   Bar,
@@ -28,10 +29,12 @@ import { AssessmentService } from '../Services/assessment.service';
 import DatePicker from 'react-datepicker';
 import "react-datepicker/dist/react-datepicker.css";
 
+
 const AssessmentDashboard = () => {
   const [selectedTimeRange, setSelectedTimeRange] = useState('This Month');
   const [loading, setLoading] = useState(false);
   const [dashboardData, setDashboardData] = useState(null);
+  const { userID } = useUserProfile();
 
   const activeCollege = JSON.parse(localStorage.getItem("activeCollege")) || {};
   const collegeId = activeCollege?.id || activeCollege?.college_id;
@@ -42,10 +45,10 @@ const AssessmentDashboard = () => {
   const [selectedDate, setSelectedDate] = useState(new Date());
 
   useEffect(() => {
-    if (collegeId) {
+    if (collegeId && userID) {
       fetchPrograms();
     }
-  }, [collegeId]);
+  }, [collegeId, userID]);
 
   useEffect(() => {
     if (collegeId && selectedProgram) {
@@ -55,10 +58,17 @@ const AssessmentDashboard = () => {
 
   const fetchPrograms = async () => {
     try {
-      const res = await AssessmentService.getProgramByCollegeId(collegeId);
-      if (res && Array.isArray(res) && res.length > 0) {
-        setPrograms(res);
-        setSelectedProgram(res[0].program_id);
+      if (!userID) return;
+      const res = await AssessmentService.getProgrambyUserIdandCollegeId(userID, collegeId);
+      const programsData = Array.isArray(res) ? res : (res?.data || []);
+
+      if (programsData && programsData.length > 0) {
+        setPrograms(programsData);
+        // Safely extract ID, handling potential variations like 'id' or 'program_id'
+        const firstId = programsData[0].program_id || programsData[0].id;
+        if (firstId) {
+          setSelectedProgram(firstId);
+        }
       }
     } catch (error) {
       console.error("Error fetching programs:", error);
@@ -262,7 +272,7 @@ const AssessmentDashboard = () => {
                 className="px-4 py-2 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 max-w-[200px]"
               >
                 {programs.map((prog) => (
-                  <option key={prog.program_id} value={prog.program_id}>
+                  <option key={prog.program_id || prog.id} value={prog.program_id || prog.id}>
                     {prog.program_name || prog.name}
                   </option>
                 ))}

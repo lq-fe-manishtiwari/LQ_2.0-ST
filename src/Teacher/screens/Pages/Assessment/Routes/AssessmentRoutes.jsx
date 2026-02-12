@@ -12,6 +12,7 @@ import AddNewQuestion from "../AddQuestions/AddNewQuestions";
 import EditQuestion from "../AddQuestions/EditQuestion";
 import ViewQuestion from "../AddQuestions/ViewQuestion";
 import CheckPapers from "../AssessmentTab/CheckPapers";
+import RubricCheckPapers from "../AssessmentTab/RubricCheckPapers";
 import StudentResults from "../AssessmentTab/StudentResults";
 import Report from "../Reports/Report";
 
@@ -45,6 +46,7 @@ export default function AssessmentRoutes() {
 
         {/* Extra routes */}
         <Route path="check-papers/:id" element={<CheckPapers />} />
+        <Route path="rubric-check-papers/:id" element={<RubricCheckPapers />} />
         <Route
           path="student-results/:studentId/:assessmentId"
           element={<StudentResults />}

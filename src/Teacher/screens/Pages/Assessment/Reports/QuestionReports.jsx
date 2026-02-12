@@ -51,11 +51,11 @@ const QuestionReports = () => {
     const fetchQuestions = async () => {
         if (!collegeId) return;
 
-        // Only fetch if academicYear is selected
-        if (!filters.academicYear || filters.academicYear.length === 0) {
-            setQuestions([]);
-            return;
-        }
+        // Only fetch if academicYear is selected -> REMOVED
+        // if (!filters.academicYear || filters.academicYear.length === 0) {
+        //     setQuestions([]);
+        //     return;
+        // }
 
         try {
             setLoading(true);

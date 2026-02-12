@@ -69,12 +69,30 @@ const Questions = () => {
           allAllocations.forEach(a => {
             if (a.program) programMap.set(a.program.program_id, { value: a.program.program_id, label: a.program.program_name });
           });
-          setOptions(prev => ({ ...prev, programs: Array.from(programMap.values()) }));
+          const progOptions = Array.from(programMap.values());
+          setOptions(prev => ({ ...prev, programs: progOptions }));
+
+          // Auto-select first program if available and none selected
+          if (progOptions.length > 0 && !filters.selectedProgramId) {
+            const first = progOptions[0];
+            setFilters(prev => ({
+              ...prev,
+              program: first.label,
+              selectedProgramId: first.value
+            }));
+          }
         }
       } catch (err) { console.error(err); }
     };
     fetchPrograms();
   }, [teacherId]);
+
+  // Auto-fetch questions when main filters change
+  useEffect(() => {
+    if (filters.selectedProgramId) {
+      getQuestions();
+    }
+  }, [filters.selectedProgramId, filters.selectedPaperId, filters.selectedModuleId, filters.selectedUnitId]);
 
   // Load Dependent Data (Hierarchy: Program -> Batch -> Academic Year / Semester -> Division)
   useEffect(() => {
@@ -194,7 +212,7 @@ const Questions = () => {
     setFilters(newFilters);
   };
 
-  const getQuestions = async () => {
+  const getQuestions = useCallback(async () => {
     setLoadingQuestions(true);
     try {
       let res;
@@ -213,18 +231,20 @@ const Questions = () => {
       } else if (filters.selectedProgramId) {
         res = await QuestionsService.getQuestionsByProgram(filters.selectedProgramId);
       } else {
-        alert("Please select at least a program to fetch questions.");
+        // Only alert if this was manually triggered, or just return silently
+        // But since we are auto-selecting program, this should rarely happen.
+        // allow silent return if no program
         setLoadingQuestions(false);
         return;
       }
       setQuestionsData(Array.isArray(res) ? res : (res?.data || []));
     } catch (err) {
       console.error('Error fetching questions:', err);
-      alert('Error fetching questions. Please try again.');
+      // alert('Error fetching questions. Please try again.');
       setQuestionsData([]);
     }
     finally { setLoadingQuestions(false); }
-  };
+  }, [filters]);
 
   const handleDelete = async (id) => {
     if (!window.confirm("Are you sure you want to delete this question?")) return;

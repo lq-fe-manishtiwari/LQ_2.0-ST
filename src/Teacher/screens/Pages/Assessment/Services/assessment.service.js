@@ -23,7 +23,8 @@ export const AssessmentService = {
     evaluateBulk,
     evaluateAttempt,
     getStudentSubmissions,
-    getProgramByCollegeId
+    getProgrambyUserIdandCollegeId,
+
 };
 
 // -------------------- FILTER ASSESSMENTS --------------------
@@ -157,8 +158,10 @@ function getStudentSubmissions(assessmentId) {
     return fetch(`${ContentAPI}/student/assessment/attempt/${assessmentId}/responses`, requestOptions)
         .then(handleResponse);
 }
-function getProgramByCollegeId(collegeId) {
+function getProgrambyUserIdandCollegeId(userId, collegeId) {
+    // /api/admin/academic/programs/allocated/user/{userId}/college/{collegeId}
+
     const requestOptions = { method: 'GET', headers: authHeader() };
-    return fetch(`${AcademicAPI}/programs/by-college/${collegeId}`, requestOptions)
+    return fetch(`${AcademicAPI}/programs/allocated/user/${userId}/college/${collegeId}`, requestOptions)
         .then(handleResponse);
 }

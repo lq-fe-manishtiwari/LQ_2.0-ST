@@ -176,7 +176,7 @@ export default function EditQuestion() {
                 <div className="text-center max-w-lg">
                     <h2 className="text-2xl font-bold mb-4">Question data missing</h2>
                     <button
-                        onClick={() => navigate('/admin-assessment/questions')}
+                        onClick={() => navigate('/teacher/assessments/questions')}
                         className="mt-6 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
                     >
                         Back to Questions
@@ -196,7 +196,7 @@ export default function EditQuestion() {
                 <div className="flex justify-between items-center mb-8">
                     <h1 className="text-2xl md:text-3xl font-bold text-blue-700">Edit Question</h1>
                     <button
-                        onClick={() => navigate('/admin-assessment/questions')}
+                        onClick={() => navigate('/teacher/assessments/questions')}
                         className="p-3 rounded-full bg-gray-100 hover:bg-gray-200 transition"
                     >
                         <X className="w-6 h-6 text-gray-700" />
