@@ -2,9 +2,9 @@ import React from "react";
 import { NavLink } from "react-router-dom";
 
 const tabs = [
-  { label: "Dashboard", to: "/timetable/dashboard" },
+  // { label: "Dashboard", to: "/timetable/dashboard" },
   { label: "My View", to: "/timetable/my-view" },
-  { label: "Reports", to: "/timetable/reports" },
+  // { label: "Reports", to: "/timetable/reports" },
 ];
 
 export default function TabsNav() {
