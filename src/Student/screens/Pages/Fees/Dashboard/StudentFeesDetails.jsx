@@ -15,6 +15,7 @@ const StudentFeesDetails = () => {
     const [razorpayLoaded, setRazorpayLoaded] = useState(false);
     const [processingPayment, setProcessingPayment] = useState(false);
     const [paymentModes, setPaymentModes] = useState([]);
+    const [processingMessage, setProcessingMessage] = useState(null);
 
     // Razorpay keys
     // For development/testing, use test keys (rzp_test_...) to avoid website mismatch errors
@@ -93,22 +94,19 @@ const StudentFeesDetails = () => {
     // Load Razorpay script dynamically
     useEffect(() => {
         if (window.Razorpay) {
-            console.log('Razorpay already loaded');
             setRazorpayLoaded(true);
             return;
         }
-
-        console.log('Initializing Razorpay script load...');
         const script = document.createElement('script');
         script.id = 'razorpay-checkout-js';
         script.src = 'https://checkout.razorpay.com/v1/checkout.js';
         script.async = true;
-        
+
         script.onload = () => {
             console.log('Razorpay SDK loaded successfully');
             setRazorpayLoaded(true);
         };
-        
+
         script.onerror = () => {
             console.error('Razorpay SDK failed to load. Please check your internet connection or ad-blockers.');
             setRazorpayLoaded(false);
@@ -154,7 +152,7 @@ const StudentFeesDetails = () => {
 
             if (allocation.is_in_installment && installmentIds) {
                 // Installment-based payment
-                const selectedInsts = allocation.installments.filter(inst => 
+                const selectedInsts = allocation.installments.filter(inst =>
                     installmentIds.includes(inst.installment_id)
                 );
                 totalAmount = selectedInsts.reduce((sum, inst) => sum + inst.balance, 0);
@@ -203,7 +201,7 @@ const StudentFeesDetails = () => {
 
             const initResponse = await studentFeesService.initializeStudentPayment(initPayload);
             console.log('Init Response:', initResponse);
-            
+
             // Check for both camelCase and snake_case as backend might vary
             const initializationId = initResponse?.initializationId || initResponse?.initialization_id;
 
@@ -233,7 +231,7 @@ const StudentFeesDetails = () => {
             // Step 3: Open Razorpay Checkout
             // Passing the full order object to ensure exact match with backend
             openRazorpay(
-                orderResponse.order, 
+                orderResponse.order,
                 initializationId,
                 allocation,
                 feeLinePayments,
@@ -242,9 +240,9 @@ const StudentFeesDetails = () => {
 
         } catch (err) {
             console.error('Payment error:', err);
-            setErrorAlert({ 
-                title: 'Payment Failed', 
-                message: err.message || 'Something went wrong. Please try again.' 
+            setErrorAlert({
+                title: 'Payment Failed',
+                message: err.message || 'Something went wrong. Please try again.'
             });
         } finally {
             setProcessingPayment(false);
@@ -253,7 +251,7 @@ const StudentFeesDetails = () => {
 
     const openRazorpay = async (order, initializationId, allocation, feeLinePayments, paymentModeId) => {
         console.log('Opening Razorpay with order:', order);
-        
+
         if (!window.Razorpay) {
             console.log('Razorpay not found, waiting 500ms...');
             await new Promise(resolve => setTimeout(resolve, 500));
@@ -261,9 +259,9 @@ const StudentFeesDetails = () => {
 
         if (!window.Razorpay) {
             console.error('Razorpay SDK not available');
-            setErrorAlert({ 
-                title: 'Payment System Error', 
-                message: 'Payment system not loaded. Please refresh the page.' 
+            setErrorAlert({
+                title: 'Payment System Error',
+                message: 'Payment system not loaded. Please refresh the page.'
             });
             return;
         }
@@ -275,7 +273,7 @@ const StudentFeesDetails = () => {
             key: RAZORPAY_KEY_ID,
             amount: order.amount, // Already in paise from backend
             currency: order.currency || 'INR',
-            name: 'Student Fee Payment',
+            name: 'Western College of Commerce & Business Management',
             description: `Fee for ${allocation.class_year_name || 'Current Year'}`,
             order_id: order.id,
             prefill: {
@@ -316,13 +314,13 @@ const StudentFeesDetails = () => {
 
     const handlePaymentSuccess = async (razorpayResponse, initializationId, allocation, amount, feeLinePayments, paymentModeId) => {
         try {
-            // Step 4: Finalize Payment
-            await studentFeesService.finalizeStudentPayment(
-                initializationId,
-                razorpayResponse.razorpay_payment_id
-            );
+            // Show processing warning
+            setProcessingMessage({
+                title: 'Processing Payment',
+                message: 'Please wait while we process your transaction. Do not close this window or click anywhere.'
+            });
 
-            // Step 5: Collect Fee
+            // Step 1: Collect Fee First
             const collectPayload = {
                 initialization_id: initializationId,
                 student_fee_allocation_id: allocation.fee_allocation_id,
@@ -334,31 +332,67 @@ const StudentFeesDetails = () => {
                 fee_line_payments: feeLinePayments
             };
 
-            const collectResponse = await studentFeesService.collectStudentFee(collectPayload);
+            let collectResponse = null;
+            let collectSuccess = false;
 
-            if (collectResponse && collectResponse.receiptNumber) {
+            try {
+                collectResponse = await studentFeesService.collectStudentFee(collectPayload);
+                collectSuccess = true;
+            } catch (collectError) {
+                console.error('Collect fee failed:', collectError);
+                collectSuccess = false;
+            }
+
+            // Step 2: Finalize Payment (PUT call)
+            if (collectSuccess) {
+                // If collect succeeded, finalize with payment ID
+                await studentFeesService.finalizeStudentPayment(
+                    initializationId,
+                    razorpayResponse.razorpay_payment_id
+                );
+
+                // Clear processing message
+                setProcessingMessage(null);
+
+                // Show final success alert
                 setSuccessAlert({
                     title: 'Payment Successful!',
-                    message: `Payment of ₹${amount.toLocaleString('en-IN')} completed successfully. Receipt No: ${collectResponse.receiptNumber}`
+                    message: `Payment of ₹${amount.toLocaleString('en-IN')} completed successfully. ${collectResponse?.receipt_number ? `Receipt No: ${collectResponse.receipt_number}` : ''}`
                 });
 
-                // Clear selections and refresh data
+                // Clear selections
                 setSelectedInstallments({});
-                
-                // Refresh allocations
+
+                // Refresh component data without full page reload
                 const studentId = getStudentId();
                 if (studentId) {
                     const data = await studentFeesService.getStudentFeeAllocations(studentId);
                     setAllocations(data || []);
                 }
+
             } else {
-                setWarningAlert({
-                    title: 'Payment Processed',
-                    message: 'Payment was successful but receipt generation may be pending.'
+                // If collect failed, update PUT with error status
+                await studentFeesService.finalizeStudentPayment(
+                    initializationId,
+                    'FAILED'
+                );
+
+                // Clear processing message
+                setProcessingMessage(null);
+
+                // Show error
+                setErrorAlert({
+                    title: 'Processing Error',
+                    message: 'Payment was received but there was an error processing it. Please contact administration.'
                 });
             }
+
         } catch (err) {
             console.error('Error processing payment:', err);
+
+            // Clear processing message
+            setProcessingMessage(null);
+
             setErrorAlert({
                 title: 'Processing Error',
                 message: 'Payment was received but there was an error processing it. Please contact administration.'
@@ -415,6 +449,19 @@ const StudentFeesDetails = () => {
 
     return (
         <>
+            {processingMessage && (
+                <SweetAlert
+                    warning
+                    title={processingMessage.title}
+                    showConfirm={false}
+                    customClass="processing-alert"
+                >
+                    <div className="flex flex-col items-center">
+                        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4"></div>
+                        <p>{processingMessage.message}</p>
+                    </div>
+                </SweetAlert>
+            )}
             {successAlert && (
                 <SweetAlert
                     success
@@ -854,6 +901,76 @@ const StudentFeesDetails = () => {
                                         </button>
                                     </div>
                                 )
+                            )}
+
+                            {/* Payment History Section */}
+                            {console.log("allocation for payment history", allocation)}
+                            {allocation.payment_details.payments && allocation.payment_details.payments.length > 0 && (
+                                <div className="mt-6 space-y-4">
+                                    <h3 className="text-[10px] sm:text-sm font-black text-gray-400 uppercase tracking-widest flex items-center gap-2 border-b pb-2">
+                                        <FileText className="w-4 h-4" />
+                                        Payment History
+                                    </h3>
+                                    <div className="space-y-3">
+                                        {allocation.payment_details.payments.map((payment) => (
+                                            <div
+                                                key={payment.payment_id}
+                                                className="bg-green-50 border border-green-200 rounded-xl p-4 hover:shadow-md transition-shadow"
+                                            >
+                                                <div className="flex flex-col sm:flex-row justify-between gap-3">
+                                                    <div className="flex-1">
+                                                        <div className="flex items-center gap-2 mb-2">
+                                                            <CheckCircle className="w-5 h-5 text-green-600" />
+                                                            <span className="text-sm font-bold text-green-800">
+                                                                Receipt: {payment.receipt_number}
+                                                            </span>
+                                                        </div>
+                                                        <div className="grid grid-cols-2 gap-2 text-xs">
+                                                            <div>
+                                                                <span className="text-gray-500">Payment Mode:</span>
+                                                                <p className="font-semibold text-gray-700">{payment.payment_mode_name}</p>
+                                                            </div>
+                                                            <div>
+                                                                <span className="text-gray-500">Payment Date:</span>
+                                                                <p className="font-semibold text-gray-700">
+                                                                    {new Date(payment.payment_date).toLocaleDateString('en-IN', {
+                                                                        day: '2-digit',
+                                                                        month: 'short',
+                                                                        year: 'numeric'
+                                                                    })}
+                                                                </p>
+                                                            </div>
+                                                            {payment.transaction_reference && (
+                                                                <div className="col-span-2">
+                                                                    <span className="text-gray-500">Transaction Ref:</span>
+                                                                    <p className="font-semibold text-gray-700 text-xs break-all">
+                                                                        {payment.transaction_reference}
+                                                                    </p>
+                                                                </div>
+                                                            )}
+                                                            {payment.collected_by_name && (
+                                                                <div className="col-span-2">
+                                                                    <span className="text-gray-500">Collected By:</span>
+                                                                    <p className="font-semibold text-gray-700">
+                                                                        {payment.collected_by_name}
+                                                                    </p>
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                    <div className="flex items-center justify-center sm:justify-end">
+                                                        <div className="bg-green-100 rounded-lg px-4 py-2 text-center">
+                                                            <p className="text-xs text-green-600 font-medium mb-1">Amount Paid</p>
+                                                            <p className="text-lg font-black text-green-700">
+                                                                ₹{payment.total_amount_paid.toLocaleString('en-IN')}
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
                             )}
                         </div>
                     </div>
