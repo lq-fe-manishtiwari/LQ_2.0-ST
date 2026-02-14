@@ -27,7 +27,7 @@ import AcademicDiaryRoutes from '../Teacher/screens/Pages/AcademicDiary/Routes/A
 import SubjectSelectionRoutes from '../Teacher/screens/Pages/SubjectSelection/Routes/SubjectSelectionRoutes.jsx';
 import TimeTableRoutes from '../Student/screens/Pages/TimeTable/Routes/TimeTableRoutes.jsx';
 import AssessmentRoutes from "../Student/screens/Pages/Assessment/Routes/AssessmentRoutes.jsx";
-
+import FeesRoutes from '../Student/screens/Pages/Fees/Routes/FeesRoutes.jsx';
 import AcademicCalendarRoute from "../Teacher/screens/Pages/AcademicCalendar/Routes/AcademicCalendarRoute.jsx"
 import AcademicCalendarRoutes from "../Student/screens/Pages/AcademicCalendar/Routes/AcademicCalendarRoutes.jsx"
 import AttendanceRoutes from '../Teacher/screens/Pages/Attendance/Routes/AttendanceRoutes.jsx';
@@ -271,6 +271,17 @@ function App() {
             </ProtectedRoute>
           }
         />
+        <Route
+  path="/student/fees/*"
+  element={
+    <ProtectedRoute>
+      <StudentHomepage>
+        <FeesRoutes />
+      </StudentHomepage>
+    </ProtectedRoute>
+  }
+/>
+
 
         <Route
           path="/student/academic-calendar/*"
