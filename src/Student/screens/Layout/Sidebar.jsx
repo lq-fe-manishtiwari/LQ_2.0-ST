@@ -111,16 +111,16 @@ const StudentSidebar = ({ isOpen, toggle }) => {
         ],
       },
       {
-  to: "/student/fees",
-  label: "Fees",
-  iconActive: classActive,      // replace with feesActive if available
-  iconInactive: classInactive,  // replace with feesInactive if available
-  match: [
-    "/student/fees",
-    "/student/fees-details",
-    "/student/payment-history"
-  ],
-},
+        to: "/student/fees",
+        label: "Fees",
+        iconActive: classActive,      // replace with feesActive if available
+        iconInactive: classInactive,  // replace with feesInactive if available
+        match: [
+          "/student/fees",
+          "/student/fees-details",
+          "/student/payment-history"
+        ],
+      },
 
       // {
       //   to: "/my-assessment",
@@ -208,16 +208,16 @@ const StudentSidebar = ({ isOpen, toggle }) => {
       //   iconInactive: assessmentInactive,
       //   match: ["/student/us-feedback"],
       // },
-      // {
-      //   to: "/student/committees",
-      //   label: "My Committees",
-      //   iconActive: classActive,
-      //   iconInactive: classInactive,
-      //   match: [
-      //     "/student/committees",
-      //     "/student/committee"
-      //   ],
-      // },
+      {
+        to: "/student/committees",
+        label: "My Committees",
+        iconActive: classActive,
+        iconInactive: classInactive,
+        match: [
+          "/student/committees",
+          "/student/committee"
+        ],
+      },
 
       // {
       //   to: "/certificate",

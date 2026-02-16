@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { leaveService } from '../Services/Leave.Service';
+import { userCommitteeService } from '../../../../../_services/committeeService';
 import SweetAlert from 'react-bootstrap-sweetalert';
 import {
   Eye,
@@ -47,11 +48,13 @@ export default function MyLeaves() {
     toDate: '',
     days: '',
     reason: '',
+    committeeId: '',
     newAttachments: [],
     existingAttachments: [],
   });
 
   const [leaveTypes, setLeaveTypes] = useState([]);
+  const [committees, setCommittees] = useState([]);
 
   // SweetAlert states
   const [showConfirmDelete, setShowConfirmDelete] = useState(false);
@@ -94,6 +97,18 @@ export default function MyLeaves() {
         // Summary
         const summaryResponse = await leaveService.getLeavesSummaryByUserId(userId);
         setLeaveSummary(summaryResponse);
+
+        // Committees
+        try {
+          const studentId = userProfile?.student_id;
+          if (studentId) {
+            const committeesResponse = await userCommitteeService.getMyCommittees(studentId, 'STUDENT');
+            const committeesData = Array.isArray(committeesResponse) ? committeesResponse : [];
+            setCommittees(committeesData);
+          }
+        } catch (err) {
+          console.error('Error fetching committees:', err);
+        }
 
         setLoading(false);
       } catch (err) {
@@ -161,6 +176,7 @@ export default function MyLeaves() {
       toDate: '',
       days: '',
       reason: '',
+      committeeId: '',
       newAttachments: [],
       existingAttachments: [],
     });
@@ -191,15 +207,20 @@ export default function MyLeaves() {
         attachment: leaveForm.newAttachments,
       };
 
-      if (isEditMode) {
-         const updatePayload = {
-        ...basePayload,
-            existing_attachments: leaveForm.existingAttachments, // ← CRITICAL!
-            attachment: leaveForm.newAttachments, // only new files
-          };
 
-          await leaveService.updateLeaveForm(editingLeaveId, updatePayload);
-        } else {
+      if (leaveForm.committeeId) {
+        basePayload.committee_id = leaveForm.committeeId;
+      }
+
+      if (isEditMode) {
+        const updatePayload = {
+          ...basePayload,
+          existing_attachments: leaveForm.existingAttachments, // ← CRITICAL!
+          attachment: leaveForm.newAttachments, // only new files
+        };
+
+        await leaveService.updateLeaveForm(editingLeaveId, updatePayload);
+      } else {
         await leaveService.applyLeave({
           ...basePayload,
           leave_status: 'Pending',
@@ -312,6 +333,7 @@ export default function MyLeaves() {
       toDate: leave.to || leave.end_date || leave.toDate || '',
       days: leave.days || leave.no_of_days || '',
       reason: leave.reason || '',
+      committeeId: leave.committee_id || '',
       existingAttachments: attachments,
       newAttachments: [],
     });
@@ -370,99 +392,99 @@ export default function MyLeaves() {
     return leaveFor === 'HALF_DAY' ? 'Half Day' : 'Full Day';
   };
 
-const getAvailableDays = (leaveTypeId) => {
-  if (!leaveSummary || !leaveSummary.leave_summary || !leaveTypes.length) return Infinity;
+  const getAvailableDays = (leaveTypeId) => {
+    if (!leaveSummary || !leaveSummary.leave_summary || !leaveTypes.length) return Infinity;
 
-  // Find the leave type definition
-  const leaveType = leaveTypes.find(
-    (lt) => lt.leave_type_id === parseInt(leaveTypeId)
-  );
-
-  if (!leaveType) return Infinity;
-
-  // If this leave type has no limit → truly unlimited
-  if (leaveType.no_of_days_allowed == null || leaveType.no_of_days_allowed === '') {
-    return Infinity;
-  }
-
-  // Find summary entry for this leave type
-  const summaryItem = leaveSummary.leave_summary.find(
-    (item) => item.leave_type_id === parseInt(leaveTypeId)
-  );
-
-  let balance = Infinity; // default fallback
-
-  if (summaryItem && summaryItem.balance !== undefined) {
-    balance = parseFloat(summaryItem.balance);
-  } else {
-    // Not in summary → assume full entitlement (no leaves taken yet)
-    balance = parseFloat(leaveType.no_of_days_allowed) || 0;
-  }
-
-  // When editing a leave of the same type, add back the old days
-  if (isEditMode && editingLeaveId) {
-    const currentLeave = leaveRecords.find(
-      (leave) => (leave.apply_leave_id || leave.id) === editingLeaveId
+    // Find the leave type definition
+    const leaveType = leaveTypes.find(
+      (lt) => lt.leave_type_id === parseInt(leaveTypeId)
     );
 
-    if (
-      currentLeave &&
-      currentLeave.leave_type_id === parseInt(leaveTypeId)
-    ) {
-      const oldDaysNum = parseFloat(currentLeave.days || currentLeave.no_of_days || 0);
-      balance += oldDaysNum;
+    if (!leaveType) return Infinity;
+
+    // If this leave type has no limit → truly unlimited
+    if (leaveType.no_of_days_allowed == null || leaveType.no_of_days_allowed === '') {
+      return Infinity;
     }
-  }
 
-  return Math.max(0, balance);
-};
+    // Find summary entry for this leave type
+    const summaryItem = leaveSummary.leave_summary.find(
+      (item) => item.leave_type_id === parseInt(leaveTypeId)
+    );
 
-const getDaysValidationMessage = () => {
-  if (!leaveForm.type) return null;
+    let balance = Infinity; // default fallback
 
-  const available = getAvailableDays(leaveForm.type);
-  const requested = parseFloat(leaveForm.days || 0);
+    if (summaryItem && summaryItem.balance !== undefined) {
+      balance = parseFloat(summaryItem.balance);
+    } else {
+      // Not in summary → assume full entitlement (no leaves taken yet)
+      balance = parseFloat(leaveType.no_of_days_allowed) || 0;
+    }
 
-  if (requested <= 0) {
-    return '⚠️ Invalid date selection';
-  }
+    // When editing a leave of the same type, add back the old days
+    if (isEditMode && editingLeaveId) {
+      const currentLeave = leaveRecords.find(
+        (leave) => (leave.apply_leave_id || leave.id) === editingLeaveId
+      );
 
-  if (available === Infinity) {
-    return `✓ ${requested.toFixed(1)} day${requested !== 1 ? 's' : ''} requested (Unlimited)`;
-  }
+      if (
+        currentLeave &&
+        currentLeave.leave_type_id === parseInt(leaveTypeId)
+      ) {
+        const oldDaysNum = parseFloat(currentLeave.days || currentLeave.no_of_days || 0);
+        balance += oldDaysNum;
+      }
+    }
 
-  if (requested > available + 0.0001) {
-    return `❌ Exceeds limit: Only ${available.toFixed(1)} day${available !== 1 ? 's' : ''} available`;
-  }
+    return Math.max(0, balance);
+  };
 
-  return `✓ ${requested.toFixed(1)} day${requested !== 1 ? 's' : ''} requested (${available.toFixed(1)} remaining)`;
-};
+  const getDaysValidationMessage = () => {
+    if (!leaveForm.type) return null;
 
- const isSubmitDisabled = () => {
-  // Basic required fields
-  if (!leaveForm.type || !leaveForm.fromDate || !leaveForm.toDate || !leaveForm.days) {
-    return true;
-  }
+    const available = getAvailableDays(leaveForm.type);
+    const requested = parseFloat(leaveForm.days || 0);
 
-  const requestedDays = parseFloat(leaveForm.days);
+    if (requested <= 0) {
+      return '⚠️ Invalid date selection';
+    }
 
-  if (requestedDays <= 0) {
-    return true;
-  }
+    if (available === Infinity) {
+      return `✓ ${requested.toFixed(1)} day${requested !== 1 ? 's' : ''} requested (Unlimited)`;
+    }
 
-  const available = getAvailableDays(leaveForm.type);
+    if (requested > available + 0.0001) {
+      return `❌ Exceeds limit: Only ${available.toFixed(1)} day${available !== 1 ? 's' : ''} available`;
+    }
 
-  // Unlimited leave → always allow
-  if (available === Infinity) return false;
+    return `✓ ${requested.toFixed(1)} day${requested !== 1 ? 's' : ''} requested (${available.toFixed(1)} remaining)`;
+  };
 
-  // Core rule: new days must not exceed (old days + current balance)
-  // Since we added back old days in getAvailableDays(), this now works perfectly
-  if (requestedDays > available + 0.0001) {
-    return true;
-  }
+  const isSubmitDisabled = () => {
+    // Basic required fields
+    if (!leaveForm.type || !leaveForm.fromDate || !leaveForm.toDate || !leaveForm.days) {
+      return true;
+    }
 
-  return false;
-};
+    const requestedDays = parseFloat(leaveForm.days);
+
+    if (requestedDays <= 0) {
+      return true;
+    }
+
+    const available = getAvailableDays(leaveForm.type);
+
+    // Unlimited leave → always allow
+    if (available === Infinity) return false;
+
+    // Core rule: new days must not exceed (old days + current balance)
+    // Since we added back old days in getAvailableDays(), this now works perfectly
+    if (requestedDays > available + 0.0001) {
+      return true;
+    }
+
+    return false;
+  };
 
   // ── PAGINATION CALCULATIONS ───────────────────────────────────────────────
   const totalEntries = leaveRecords.length;
@@ -548,25 +570,25 @@ const getDaysValidationMessage = () => {
                   className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
                 >
                   <option value="">Select Leave Type</option>
-                {leaveTypes.map((lt) => {
-  const available = getAvailableDays(lt.leave_type_id);
-  const isDisabled = available <= 0 && available !== Infinity;
+                  {leaveTypes.map((lt) => {
+                    const available = getAvailableDays(lt.leave_type_id);
+                    const isDisabled = available <= 0 && available !== Infinity;
 
-  return (
-    <option
-      key={lt.leave_type_id}
-      value={lt.leave_type_id}
-      disabled={isDisabled}
-    >
-      {lt.leave_type}{' '}
-      {lt.no_of_days_allowed != null
-        ? `(Max: ${lt.no_of_days_allowed} days, ${lt.is_paid ? 'Paid' : 'Unpaid'}) → ${available === Infinity ? 'Unlimited' : `${available.toFixed(1)} day${available !== 1 ? 's' : ''} left`}`
-        : `(Unlimited, ${lt.is_paid ? 'Paid' : 'Unpaid'})`
-      }
-      {isDisabled && ' - No balance'}
-    </option>
-  );
-})}
+                    return (
+                      <option
+                        key={lt.leave_type_id}
+                        value={lt.leave_type_id}
+                        disabled={isDisabled}
+                      >
+                        {lt.leave_type}{' '}
+                        {lt.no_of_days_allowed != null
+                          ? `(Max: ${lt.no_of_days_allowed} days, ${lt.is_paid ? 'Paid' : 'Unpaid'}) → ${available === Infinity ? 'Unlimited' : `${available.toFixed(1)} day${available !== 1 ? 's' : ''} left`}`
+                          : `(Unlimited, ${lt.is_paid ? 'Paid' : 'Unpaid'})`
+                        }
+                        {isDisabled && ' - No balance'}
+                      </option>
+                    );
+                  })}
                 </select>
 
                 {leaveForm.type &&
@@ -578,18 +600,52 @@ const getDaysValidationMessage = () => {
                   )}
               </div>
 
-              {/* Leave Duration */}
-              <div>
-                <label className="block text-sm font-medium mb-2">Leave Duration</label>
-                <select
-                  name="leaveFor"
-                  value={leaveForm.leaveFor}
-                  onChange={handleFormChange}
-                  className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
-                >
-                  <option value="FULL_DAY">Full Day</option>
-                  <option value="HALF_DAY">Half Day</option>
-                </select>
+              {/* Leave Duration and Committee Name (side by side when Duty is selected) */}
+              <div className={leaveForm.type && leaveTypes.find(lt => lt.leave_type_id === parseInt(leaveForm.type))?.leave_type === 'Duty'
+                ? "grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6"
+                : ""}>
+
+                {/* Leave Duration */}
+                <div>
+                  <label className="block text-sm font-medium mb-2">Leave Duration</label>
+                  <select
+                    name="leaveFor"
+                    value={leaveForm.leaveFor}
+                    onChange={handleFormChange}
+                    className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
+                  >
+                    <option value="FULL_DAY">Full Day</option>
+                    <option value="HALF_DAY">Half Day</option>
+                  </select>
+                </div>
+
+                {/* Committee Name - Only show when leave type is "Duty" */}
+                {leaveForm.type && leaveTypes.find(lt => lt.leave_type_id === parseInt(leaveForm.type))?.leave_type === 'Duty' && (
+                  <div>
+                    <label className="block text-sm font-medium mb-2">
+                      Committee Name <span className="text-red-500">*</span>
+                    </label>
+                    <select
+                      name="committeeId"
+                      value={leaveForm.committeeId}
+                      onChange={handleFormChange}
+                      required
+                      className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
+                    >
+                      <option value="">Select Committee</option>
+                      {committees.map((committee) => (
+                        <option key={committee.committee_id} value={committee.committee_id}>
+                          {committee.name}
+                        </option>
+                      ))}
+                    </select>
+                    {committees.length === 0 && (
+                      <p className="text-yellow-600 text-sm mt-2">
+                        ⚠️ No committees available. Please contact your administrator.
+                      </p>
+                    )}
+                  </div>
+                )}
               </div>
 
               {/* Dates */}
@@ -949,27 +1005,27 @@ const getDaysValidationMessage = () => {
                             </span>
                           </td>
                           <td className="p-4">
-  <div className="space-y-2 max-w-xs">
+                            <div className="space-y-2 max-w-xs">
 
-    {/* Approver's Remark */}
-    {leave.remark && (
-      <div className={`mt-2 p-2 rounded-lg ${leave.leave_status === 'Rejected' || leave.leave_status === 'REJECTED'
-          ? 'bg-red-50 border border-red-200'
-          : 'bg-green-50 border border-green-200'
-        }`}>
-        <p className="text-xs font-medium text-gray-600">Approver Remark:</p>
-        <p className="text-sm font-medium" title={leave.remark}>
-          {leave.remark}
-        </p>
-      </div>
-    )}
+                              {/* Approver's Remark */}
+                              {leave.remark && (
+                                <div className={`mt-2 p-2 rounded-lg ${leave.leave_status === 'Rejected' || leave.leave_status === 'REJECTED'
+                                  ? 'bg-red-50 border border-red-200'
+                                  : 'bg-green-50 border border-green-200'
+                                  }`}>
+                                  <p className="text-xs font-medium text-gray-600">Approver Remark:</p>
+                                  <p className="text-sm font-medium" title={leave.remark}>
+                                    {leave.remark}
+                                  </p>
+                                </div>
+                              )}
 
-    {/* If neither exists */}
-    {!leave.reason && !leave.remark && (
-      <span className="text-gray-400 italic text-sm">No details provided</span>
-    )}
-  </div>
-</td>
+                              {/* If neither exists */}
+                              {!leave.reason && !leave.remark && (
+                                <span className="text-gray-400 italic text-sm">No details provided</span>
+                              )}
+                            </div>
+                          </td>
                           <td className="p-4">
                             <div className="flex items-center gap-2">
                               <button
