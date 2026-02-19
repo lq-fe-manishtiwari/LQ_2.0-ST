@@ -349,7 +349,16 @@ export default function TabularView() {
             let params = null;
             let isFromTimetable = false;
 
-            if (fromTimetable && passedSlot && !studentsFetched) {
+            // Prioritize current filters if they are complete
+            if (filters.academicYear && filters.semester && filters.division && filters.paper) {
+                params = {
+                    academicYearId: filters.academicYear,
+                    semesterId: filters.semester,
+                    divisionId: filters.division,
+                    subjectId: filters.paper
+                };
+            } else if (fromTimetable && passedSlot && !studentsFetched) {
+                // Fallback to timetable slot only if filters are incomplete and students haven't been fetched yet
                 params = {
                     academicYearId: passedSlot.academic_year_id,
                     semesterId: passedSlot.semester_id,
@@ -357,13 +366,6 @@ export default function TabularView() {
                     subjectId: passedSlot.subject_id
                 };
                 isFromTimetable = true;
-            } else if (filters.academicYear && filters.semester && filters.division && filters.paper) {
-                params = {
-                    academicYearId: filters.academicYear,
-                    semesterId: filters.semester,
-                    divisionId: filters.division,
-                    subjectId: filters.paper
-                };
             }
 
             if (!params) {
@@ -527,10 +529,12 @@ export default function TabularView() {
     // Filter handlers
     const handleFilterChange = (newFilters) => {
         setFilters(newFilters);
-        // If user manually changes filters, reset the timetable flag
+        // If user manually changes filters, reset the timetable flag and studentsFetched
         if (filtersSetFromTimetable) {
             setFiltersSetFromTimetable(false);
         }
+        // Reset studentsFetched to allow re-fetching when filters change
+        setStudentsFetched(false);
     };
 
     const toggleFilters = () => {
@@ -989,6 +993,7 @@ export default function TabularView() {
                         )}
                     </div>
                 </div>
+                {filteredStudents.length > 0 && !loadingStudents && filters.timeSlot && (
                 <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 w-full sm:w-auto">
                     <div className="text-sm text-gray-600 whitespace-nowrap">
                         Showing {filteredStudents.length} of {students.length} students
@@ -998,6 +1003,7 @@ export default function TabularView() {
                         onMarkAllAbsent={markAllAbsent}
                     />
                 </div>
+                )}
             </div>
 
             {/* Bulk Action Bar (Now above Table) */}
@@ -1430,7 +1436,7 @@ export default function TabularView() {
             `}</style>
             {/* Bottom Action Footer */}
             {
-                filteredStudents.length > 0 && !loadingStudents && (
+                filteredStudents.length > 0 && !loadingStudents && filters.timeSlot && (
                     <div className="px-6 py-6 border-t border-gray-100 bg-gray-50 flex justify-center">
                         <button
                             onClick={handleSubmitAttendance}
