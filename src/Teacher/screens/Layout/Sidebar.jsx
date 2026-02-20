@@ -244,15 +244,24 @@ const Sidebar = ({ isOpen, toggle }) => {
       //   iconActive: classActive,
       //   iconInactive: classInactive,
       //  },
-      // {
-      //   to: "/teacher/hrm",
-      //   label: "HRM",
-      //   iconActive: classActive,
-      //   iconInactive: classInactive,
-      //   match: [
-      //     "/teacher/hrm",
-      //   ],
-      // },
+      {
+        to: "/teacher/hrm",
+        label: "HRM",
+        iconActive: classActive,
+        iconInactive: classInactive,
+        match: [
+          "/teacher/hrm",
+        ],
+      },
+      {
+        to: "/teacher/task-management",
+        label: "Task Management",
+        iconActive: classActive,
+        iconInactive: classInactive,
+        match: [
+          "/teacher/task-management",
+        ],
+      },
       // {
       //   to: "/teacher-certificate",
       //   label: "Certificate",
