@@ -1,9 +1,11 @@
 import React from 'react';
 const { useState, useEffect } = React;
 import { ProfessionalEthicsService } from '../Services/ProfessionalEthics.service';
-import { Plus, X, ChevronDown, Eye, Edit, School, List, Loader2, Upload, ShieldCheck, Trash2 } from 'lucide-react';
+import { Plus, X, ChevronDown, Eye, Edit, School, List, Loader2, Upload, ShieldCheck, Trash2, Download } from 'lucide-react';
 import SweetAlert from 'react-bootstrap-sweetalert';
 import ExcelUploadModal from '../Component/ExcelUploadModal';
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
 
 const ProfessionalEthics = () => {
   // States
@@ -16,6 +18,7 @@ const ProfessionalEthics = () => {
   const [selectedEthics, setSelectedEthics] = useState(null);
   const [totalPages, setTotalPages] = useState(0);
   const [expandedIds, setExpandedIds] = useState([1]); // Default first one expanded
+  const [isDownloading, setIsDownloading] = useState(false);
 
   // Form states
   const [formData, setFormData] = useState({
@@ -382,11 +385,109 @@ const ProfessionalEthics = () => {
     setShowCreateDialog(true);
   };
 
+  const getReportMeta = () => {
+    const activeCollege = JSON.parse(localStorage.getItem('activeCollege') || '{}');
+    const collegeName = activeCollege?.college_name || activeCollege?.name || 'N/A';
+    const collegeFilter = searchCollegeId ? `College ID: ${searchCollegeId}` : 'All';
+    const generatedOn = new Date().toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' });
+    const programName = 'N/A'; // Since filters aren't directly available here
+    const teacherName = 'N/A';
+    return { collegeName, collegeFilter, generatedOn, programName, teacherName };
+  };
 
+  const handleDownloadPDF = () => {
+    if (!ethicsList.length) return;
+    const { collegeName, programName, teacherName } = getReportMeta();
+    const doc = new jsPDF();
+    const pageW = doc.internal.pageSize.getWidth();
+    const pageH = doc.internal.pageSize.getHeight();
+    const margin = 14;
+    const contentW = pageW - margin * 2;
+
+    // College name (top)
+    doc.setFontSize(13);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(30, 30, 30);
+    doc.text(collegeName, margin, 14);
+
+    // Report title
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(80, 80, 80);
+    doc.text('Report: Code of Professional Ethics', margin, 21);
+
+    // Program & Teacher row
+    doc.setFontSize(8.5);
+    doc.setTextColor(60, 60, 60);
+    doc.text(`Program: ${programName}`, margin, 27);
+    doc.text(`Teacher: ${teacherName}`, pageW - margin, 27, { align: 'right' });
+
+    // Separator
+    doc.setDrawColor(200, 200, 200);
+    doc.setLineWidth(0.4);
+    doc.line(margin, 31, pageW - margin, 31);
+
+    let y = 38;
+
+    ethicsList.forEach((ethics, idx) => {
+      const titleText = `${idx + 1}.  ${ethics.title}`;
+      const titleLines = doc.splitTextToSize(titleText, contentW - 8);
+      const titleBlockH = titleLines.length * 6 + 7;
+
+      // Page break if not enough room
+      if (y + titleBlockH + 14 > pageH - 14) {
+        doc.addPage();
+        y = 20;
+      }
+
+      // Blue header block (like accordion header)
+      doc.setFillColor(235, 243, 255);
+      doc.setDrawColor(147, 197, 253);
+      doc.setLineWidth(0.3);
+      doc.roundedRect(margin, y, contentW, titleBlockH, 2, 2, 'FD');
+
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(29, 78, 216);
+      doc.text(titleLines, margin + 5, y + 5.5);
+      y += titleBlockH + 3;
+
+      // Ethics points as bullet list
+      (ethics.ethics_points || []).forEach((pt) => {
+        const pointLines = doc.splitTextToSize(pt.point, contentW - 16);
+        const pointH = pointLines.length * 5.5 + 3;
+
+        if (y + pointH > pageH - 14) {
+          doc.addPage();
+          y = 20;
+        }
+
+        // Bullet dot (blue)
+        doc.setFillColor(96, 165, 250);
+        doc.circle(margin + 5, y + 2.2, 1, 'F');
+
+        doc.setFontSize(9);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(75, 85, 99);
+        doc.text(pointLines, margin + 10, y + 2);
+        y += pointH;
+      });
+
+      y += 7; // gap between sections
+    });
+
+    // Footer - UGC reference (same as UI)
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'italic');
+    doc.setTextColor(160, 160, 160);
+    doc.text('Reference: UGC Guidelines', margin, pageH - 8);
+
+    doc.save(`Professional_Ethics_${new Date().toISOString().split('T')[0]}.pdf`);
+  };
 
   return (
     <div className="min-h-screen bg-gray-50 p-6 md:p-8">
-      <div className="max-w-7xl mx-auto space-y-8">
+      <div id="professional-ethics-content" className="max-w-7xl mx-auto space-y-8 p-4 bg-gray-50 rounded-xl">
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div className="flex items-center gap-4">
@@ -395,6 +496,17 @@ const ProfessionalEthics = () => {
                 Professional Ethics Management
               </h1>
             </div>
+          </div>
+
+          <div className="flex items-center gap-4" data-html2canvas-ignore>
+            <button
+              onClick={handleDownloadPDF}
+              disabled={isDownloading}
+              className="flex items-center justify-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-all font-semibold shadow-md shadow-blue-100 active:scale-95 text-sm disabled:opacity-50"
+            >
+              {isDownloading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+              {isDownloading ? "Downloading..." : "Download PDF"}
+            </button>
           </div>
 
           {/* <div className="flex items-center gap-4">
