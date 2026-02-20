@@ -15,6 +15,48 @@ export default function MyInterviews() {
   const entriesPerPage = 10;
   const [currentPage, setCurrentPage] = useState(1);
 
+  // Compute outcome for each round
+  const computeOutcome = (application) => {
+    if (!application) return 'Pending';
+    
+    const attendance = application.attendance_status?.toUpperCase();
+    
+    // If not scheduled yet
+    if (!application.scheduled_date) return 'Pending';
+    
+    // If scheduled but no attendance
+    if (!attendance) return 'Scheduled';
+    
+    // If absent
+    if (attendance === 'ABSENT') return 'Rejected';
+    
+    // If present
+    if (attendance === 'PRESENT') {
+      if (application.is_last_round) {
+        return application.is_selected_for_next_round ? 'Final Selected' : 'Rejected';
+      }
+      return application.is_selected_for_next_round ? 'Selected' : 'Rejected';
+    }
+    
+    return 'Evaluated';
+  };
+
+  const getOutcomeBadge = (outcome) => {
+    const styles = {
+      Pending: 'bg-yellow-100 text-yellow-800',
+      Scheduled: 'bg-blue-100 text-blue-800',
+      Evaluated: 'bg-purple-100 text-purple-800',
+      Selected: 'bg-green-100 text-green-800',
+      'Final Selected': 'bg-emerald-100 text-emerald-800',
+      Rejected: 'bg-red-100 text-red-800',
+    };
+    return (
+      <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold ${styles[outcome] || 'bg-gray-100 text-gray-800'}`}>
+        {outcome}
+      </span>
+    );
+  };
+
   useEffect(() => {
     loadInterviews();
   }, []);
@@ -252,21 +294,9 @@ export default function MyInterviews() {
                           <td className="px-6 py-4 text-sm text-center text-gray-500">{app.scheduled_date || '-'}</td>
                           <td className="px-6 py-4 text-sm text-center text-gray-500">{app.scheduled_time || '-'}</td>
                           <td className="px-6 py-4 text-sm text-center">
-                            {app.attendance_status === 'PRESENT' ? (
-                              <span className="inline-flex items-center gap-1 px-2 py-1 bg-green-100 text-green-700 text-xs font-semibold rounded-full">
-                                <CheckCircle className="w-3 h-3" />
-                                Completed
-                              </span>
-                            ) : app.scheduled_date ? (
-                              <span className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-700 text-xs font-semibold rounded-full">
-                                <Clock className="w-3 h-3" />
-                                Scheduled
-                              </span>
-                            ) : (
-                              <span className="px-2 py-1 bg-gray-100 text-gray-700 text-xs font-semibold rounded-full">Pending</span>
-                            )}
+                            {getOutcomeBadge(computeOutcome(app))}
                           </td>
-                          <td className="px-6 py-4 text-sm text-center text-gray-500">{app.rating || '-'}</td>
+                          <td className="px-6 py-4 text-sm text-center text-gray-500">{app.rating !== null && app.rating !== undefined ? `${app.rating}/10` : '-'}</td>
                           <td className="px-6 py-4 text-sm text-center text-gray-500">{app.comment || '-'}</td>
                         </tr>
                       ))}
@@ -281,8 +311,9 @@ export default function MyInterviews() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {selectedInterview.interview_rounds?.map((round, idx) => {
                     const application = selectedInterview.interview_applications?.find(app => app.round_id === round.round_id);
-                    const isCompleted = application?.attendance_status === 'PRESENT';
-                    const isScheduled = application?.scheduled_date;
+                    const outcome = computeOutcome(application);
+                    const isCompleted = outcome === 'Selected' || outcome === 'Final Selected' || outcome === 'Rejected';
+                    const isScheduled = outcome === 'Scheduled';
 
                     return (
                       <div key={round.round_id} className={`relative rounded-lg border-2 p-4 shadow-sm ${
@@ -303,21 +334,7 @@ export default function MyInterviews() {
 
                         {/* Status Badge */}
                         <div className="flex justify-end mb-2">
-                          {isCompleted && (
-                            <span className="inline-flex items-center gap-1 px-2 py-1 bg-green-100 text-green-700 text-xs font-semibold rounded-full">
-                              <CheckCircle className="w-3 h-3" />
-                              Completed
-                            </span>
-                          )}
-                          {!isCompleted && isScheduled && (
-                            <span className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-700 text-xs font-semibold rounded-full">
-                              <Clock className="w-3 h-3" />
-                              Scheduled
-                            </span>
-                          )}
-                          {!isCompleted && !isScheduled && (
-                            <span className="px-2 py-1 bg-gray-100 text-gray-700 text-xs font-semibold rounded-full">Pending</span>
-                          )}
+                          {getOutcomeBadge(outcome)}
                         </div>
 
                         {/* Round Info */}
@@ -344,7 +361,7 @@ export default function MyInterviews() {
                               <span>{application.scheduled_time}</span>
                             </div>
                           )}
-                          {application?.rating && (
+                          {application?.rating !== null && application?.rating !== undefined && (
                             <div className="text-gray-600">
                               <span className="font-medium">Rating:</span> <span className="text-green-600 font-semibold">{application.rating}/10</span>
                             </div>
@@ -374,3 +391,4 @@ export default function MyInterviews() {
     </div>
   );
 }
+
