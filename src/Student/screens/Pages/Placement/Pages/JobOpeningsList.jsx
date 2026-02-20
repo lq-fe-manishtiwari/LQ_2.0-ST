@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState, useCallback } from 'react';
 import { Search, CheckCircle2 } from 'lucide-react';
 import { api } from '../../../../../_services/api';
 import {
@@ -9,16 +9,65 @@ import {
 } from '../Services/studentPlacement.service';
 import RegistrationForm from './RegistrationForm';
 
+/* ===================== ACTION BUTTON COMPONENT ===================== */
+const ActionButton = ({ row, appliedPlacementIds, deadlineOver, onApply, isMobile }) => {
+  if (appliedPlacementIds.has(row.placement_id)) {
+    return (
+      <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-700">
+        <CheckCircle2 className="w-3.5 h-3.5" /> Applied
+      </span>
+    );
+  }
+  
+  if (deadlineOver) {
+    return (
+      <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-700">
+        Closed
+      </span>
+    );
+  }
+  
+  return (
+    <button
+      onClick={() => onApply(row)}
+      disabled={row.status === 'APPLIED'}
+      className={`inline-flex items-center ${isMobile ? 'px-4 py-2 text-sm' : 'px-4 py-1.5 text-xs'} rounded-full font-semibold transition-colors ${
+        row.status === 'APPLIED'
+          ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+          : 'bg-blue-600 text-white hover:bg-blue-700'
+      }`}
+    >
+      {isMobile ? 'Apply Now' : 'Apply'}
+    </button>
+  );
+};
+
 export default function JobList() {
   const [rows, setRows] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(false);
-  const [showRegistration, setShowRegistration] = useState(false);
-  const [selectedJob, setSelectedJob] = useState(null);
+  const [registration, setRegistration] = useState({ show: false, job: null });
   const [appliedPlacementIds, setAppliedPlacementIds] = useState(new Set());
 
   const entriesPerPage = 10;
   const [currentPage, setCurrentPage] = useState(1);
+
+  /* ===================== DEBOUNCED SEARCH ===================== */
+  const debounce = (fn, delay) => {
+    let timer;
+    return (...args) => {
+      clearTimeout(timer);
+      timer = setTimeout(() => fn(...args), delay);
+    };
+  };
+
+  const debouncedSearch = useCallback(
+    debounce((value) => {
+      setSearchTerm(value);
+      setCurrentPage(1);
+    }, 300),
+    []
+  );
 
   useEffect(() => {
     loadJobs();
@@ -37,6 +86,22 @@ export default function JobList() {
     const month = String(d.getMonth() + 1).padStart(2, '0');
     const year = d.getFullYear();
     return `${day}/${month}/${year}`;
+  };
+
+  const getStatusBadge = (status) => {
+    const statusConfig = {
+      'Applied': { bg: 'bg-green-100', text: 'text-green-700', label: 'Applied' },
+      'Scheduled': { bg: 'bg-blue-100', text: 'text-blue-700', label: 'Scheduled' },
+      'In Progress': { bg: 'bg-yellow-100', text: 'text-yellow-700', label: 'In Progress' },
+      'Completed': { bg: 'bg-purple-100', text: 'text-purple-700', label: 'Completed' },
+      'Expired': { bg: 'bg-red-100', text: 'text-red-700', label: 'Expired' }
+    };
+    const config = statusConfig[status] || { bg: 'bg-gray-100', text: 'text-gray-700', label: status };
+    return (
+      <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold ${config.bg} ${config.text}`}>
+        {config.label}
+      </span>
+    );
   };
 
   /* ===================== NORMALIZATION ===================== */
@@ -79,6 +144,7 @@ export default function JobList() {
               ? 'OPEN'
               : job.status,
 
+          placement_status: job.placement_status,
           college_id: job.college_id,
 
           originalJobData: {
@@ -191,16 +257,18 @@ export default function JobList() {
     }
   };
 
-  const handleApply = row => {
-    setSelectedJob({
-      jobdata: row.originalJobData,
-      jobOpeningId: row.job_opening_id,
-      placementId: row.placement_id,
-      companyName: row.company?.company_name,
-      collegeId: row.college_id
+  const handleApply = useCallback(row => {
+    setRegistration({
+      show: true,
+      job: {
+        jobdata: row.originalJobData,
+        jobOpeningId: row.job_opening_id,
+        placementId: row.placement_id,
+        companyName: row.company?.company_name,
+        collegeId: row.college_id
+      }
     });
-    setShowRegistration(true);
-  };
+  }, []);
 
   /* ===================== UI ===================== */
   if (loading) {
@@ -220,11 +288,7 @@ export default function JobList() {
         <input
           type="search"
           placeholder="Search placement / role / company"
-          value={searchTerm}
-          onChange={e => {
-            setSearchTerm(e.target.value);
-            setCurrentPage(1);
-          }}
+          onChange={e => debouncedSearch(e.target.value)}
           className="w-full pl-10 pr-4 py-3 border rounded-xl"
         />
       </div>
@@ -241,48 +305,54 @@ export default function JobList() {
               <th className="px-4 py-3 text-center text-sm">Vacancy</th>
               <th className="px-4 py-3 text-center text-sm">Opening Date</th>
               <th className="px-4 py-3 text-center text-sm">Last Date</th>
+              <th className="px-4 py-3 text-center text-sm">Status</th>
               <th className="px-4 py-3 text-center text-sm">Action</th>
             </tr>
           </thead>
 
           <tbody className="divide-y">
-            {currentEntries.map(row => {
-              const deadlineOver = isDeadlineOver(row.last_date);
-              const disabled = deadlineOver || row.status !== 'OPEN';
+            {currentEntries.length > 0 ? (
+              currentEntries.map(row => {
+                const deadlineOver = isDeadlineOver(row.last_date);
+                const disabled = deadlineOver || row.status !== 'OPEN';
 
-              return (
-                <tr key={row.placement_id} className="hover:bg-gray-50">
-                  <td className="px-4 py-3 text-center text-sm">{row.placement_id}</td>
-                  <td className="px-4 py-3 text-center text-sm">{row.company?.company_name}</td>
-                  <td className="px-4 py-3 text-center text-sm">{row.role_name}</td>
-                  <td className="px-4 py-3 text-center text-sm">
-                    ₹{row.min_ctc}L – ₹{row.max_ctc}L
-                  </td>
-                  <td className="px-4 py-3 text-center text-sm">{row.vacancy}</td>
-                  <td className="px-4 py-3 text-center text-sm">
-                    {formatDate(row.opening_date)}
-                  </td>
-                  <td className="px-4 py-3 text-center text-sm">
-                    {formatDate(row.last_date)}
-                  </td>
-                  <td className="px-4 py-3 text-center">
-                    {appliedPlacementIds.has(row.placement_id) ? (
-                      <span className="inline-flex items-center text-green-600 text-sm">
-                        <CheckCircle2 className="w-4 h-4 mr-1" /> Applied
-                      </span>
-                    ) : (
-                      <button
-                        disabled={disabled}
-                        onClick={() => handleApply(row)}
-                        className="px-4 py-1.5 bg-blue-600 text-white rounded disabled:opacity-50"
-                      >
-                        {deadlineOver ? 'Closed' : 'Apply'}
-                      </button>
-                    )}
-                  </td>
-                </tr>
-              );
-            })}
+                return (
+                  <tr key={row.placement_id} className="hover:bg-gray-50">
+                    <td className="px-4 py-3 text-center text-sm">{row.placement_id}</td>
+                    <td className="px-4 py-3 text-center text-sm">{row.company?.company_name}</td>
+                    <td className="px-4 py-3 text-center text-sm">{row.role_name}</td>
+                    <td className="px-4 py-3 text-center text-sm">
+                      ₹{row.min_ctc}L – ₹{row.max_ctc}L
+                    </td>
+                    <td className="px-4 py-3 text-center text-sm">{row.vacancy}</td>
+                    <td className="px-4 py-3 text-center text-sm">
+                      {formatDate(row.opening_date)}
+                    </td>
+                    <td className="px-4 py-3 text-center text-sm">
+                      {formatDate(row.last_date)}
+                    </td>
+                    <td className="px-4 py-3 text-center">
+                      {getStatusBadge(row.placement_status || row.status)}
+                    </td>
+                    <td className="px-4 py-3 text-center">
+                      <ActionButton 
+                        row={row} 
+                        appliedPlacementIds={appliedPlacementIds} 
+                        deadlineOver={deadlineOver} 
+                        onApply={handleApply}
+                        isMobile={false}
+                      />
+                    </td>
+                  </tr>
+                );
+              })
+            ) : (
+              <tr>
+                <td colSpan="9" className="px-6 py-8 text-center text-gray-500">
+                  {searchTerm ? 'No job openings found matching your search' : 'No job openings available'}
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
 
@@ -292,18 +362,23 @@ export default function JobList() {
             <button
               onClick={() => handlePageChange(currentPage - 1)}
               disabled={currentPage === 1}
-              className="px-4 py-2 bg-gray-200 rounded disabled:opacity-50"
+              className={`px-4 py-2 rounded-md ${currentPage === 1
+                ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                : 'bg-blue-600 hover:bg-blue-700 text-white'
+              }`}
             >
               Previous
             </button>
-            <span>
-              {(currentPage - 1) * entriesPerPage + 1}–
-              {Math.min(currentPage * entriesPerPage, totalEntries)} of {totalEntries}
+            <span className="text-gray-700 font-medium">
+              Showing {(currentPage - 1) * entriesPerPage + 1}–{Math.min(currentPage * entriesPerPage, totalEntries)} of {totalEntries} entries
             </span>
             <button
               onClick={() => handlePageChange(currentPage + 1)}
               disabled={currentPage === totalPages}
-              className="px-4 py-2 bg-gray-200 rounded disabled:opacity-50"
+              className={`px-4 py-2 rounded-md ${currentPage === totalPages
+                ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                : 'bg-blue-600 hover:bg-blue-700 text-white'
+              }`}
             >
               Next
             </button>
@@ -311,17 +386,104 @@ export default function JobList() {
         )}
       </div>
 
+      {/* MOBILE CARDS */}
+      <div className="lg:hidden space-y-4">
+        {currentEntries.length === 0 ? (
+          <div className="bg-white rounded-xl shadow-md p-8 text-center border border-gray-200">
+            <div className="text-gray-500">
+              <p className="text-lg font-medium mb-2">No job openings found</p>
+              <p className="text-sm">
+                {searchTerm ? 'No job openings found matching your search' : 'No job openings available at the moment'}
+              </p>
+            </div>
+          </div>
+        ) : (
+          currentEntries.map(row => {
+            const deadlineOver = isDeadlineOver(row.last_date);
+            const disabled = deadlineOver || row.status !== 'OPEN';
+
+            return (
+              <div
+                key={row.placement_id}
+                className="bg-white rounded-xl shadow-md border border-gray-200 p-5 hover:shadow-lg transition-all"
+              >
+                <div className="flex justify-between items-start mb-3">
+                  <div>
+                    <p className="font-semibold text-gray-900">{row.company?.company_name}</p>
+                    <p className="text-sm text-gray-500">{row.role_name}</p>
+                  </div>
+                  <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded">
+                    {row.placement_id}
+                  </span>
+                </div>
+
+                <div className="space-y-2 text-sm text-gray-700 mb-4">
+                  <div className="grid grid-cols-2 gap-2">
+                    <div><span className="font-medium">CTC:</span> ₹{row.min_ctc}L – ₹{row.max_ctc}L</div>
+                    <div><span className="font-medium">Vacancy:</span> {row.vacancy}</div>
+                    <div><span className="font-medium">Opening:</span> {formatDate(row.opening_date)}</div>
+                    <div><span className="font-medium">Deadline:</span> {formatDate(row.last_date)}</div>
+                  </div>
+                  <div className="pt-2">
+                    {getStatusBadge(row.placement_status || row.status)}
+                  </div>
+                </div>
+
+                <div className="flex justify-end">
+                  <ActionButton 
+                    row={row} 
+                    appliedPlacementIds={appliedPlacementIds} 
+                    deadlineOver={deadlineOver} 
+                    onApply={handleApply}
+                    isMobile={true}
+                  />
+                </div>
+              </div>
+            );
+          })
+        )}
+      </div>
+
+      {/* MOBILE PAGINATION */}
+      {totalEntries > 0 && (
+        <div className="lg:hidden flex justify-between items-center px-4 py-4 bg-white rounded-lg shadow-sm border border-gray-200 mt-4 text-sm text-gray-600">
+          <button
+            onClick={() => handlePageChange(currentPage - 1)}
+            disabled={currentPage === 1}
+            className={`px-4 py-2 rounded-md ${currentPage === 1
+              ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+              : 'bg-blue-600 hover:bg-blue-700 text-white'
+            }`}
+          >
+            Previous
+          </button>
+          <span className="text-gray-700 font-medium text-xs">
+            {(currentPage - 1) * entriesPerPage + 1}–{Math.min(currentPage * entriesPerPage, totalEntries)} of {totalEntries}
+          </span>
+          <button
+            onClick={() => handlePageChange(currentPage + 1)}
+            disabled={currentPage === totalPages}
+            className={`px-4 py-2 rounded-md ${currentPage === totalPages
+              ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+              : 'bg-blue-600 hover:bg-blue-700 text-white'
+            }`}
+          >
+            Next
+          </button>
+        </div>
+      )}
+
       {/* REGISTRATION FORM */}
-      {showRegistration && selectedJob && (
+      {registration.show && registration.job && (
         <RegistrationForm
-          job={selectedJob.jobdata}
-          jobOpeningId={selectedJob.jobOpeningId}
-          placementId={selectedJob.placementId}
-          collegeId={selectedJob.collegeId}
-          companyName={selectedJob.companyName}
-          onClose={() => setShowRegistration(false)}
+          job={registration.job.jobdata}
+          jobOpeningId={registration.job.jobOpeningId}
+          placementId={registration.job.placementId}
+          collegeId={registration.job.collegeId}
+          companyName={registration.job.companyName}
+          onClose={() => setRegistration({ show: false, job: null })}
           onSuccess={() => {
-            setShowRegistration(false);
+            setRegistration({ show: false, job: null });
             loadJobs();
           }}
         />
@@ -329,3 +491,4 @@ export default function JobList() {
     </div>
   );
 }
+  
