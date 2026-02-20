@@ -11,7 +11,11 @@ import RegistrationForm from './RegistrationForm';
 
 /* ===================== ACTION BUTTON COMPONENT ===================== */
 const ActionButton = ({ row, appliedPlacementIds, deadlineOver, onApply, isMobile }) => {
-  if (appliedPlacementIds.has(row.placement_id)) {
+  const isApplied = appliedPlacementIds.has(row.placement_id) || row.placement_status === 'Applied' || row.status === 'Applied';
+  const isFutureDate = new Date(row.opening_date) > new Date();
+  const isDisabled = isApplied || isFutureDate;
+  
+  if (isApplied) {
     return (
       <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-700">
         <CheckCircle2 className="w-3.5 h-3.5" /> Applied
@@ -27,12 +31,20 @@ const ActionButton = ({ row, appliedPlacementIds, deadlineOver, onApply, isMobil
     );
   }
   
+  if (isFutureDate) {
+    return (
+      <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-gray-100 text-gray-700">
+        Not Open Yet
+      </span>
+    );
+  }
+  
   return (
     <button
       onClick={() => onApply(row)}
-      disabled={row.status === 'APPLIED'}
+      disabled={isDisabled}
       className={`inline-flex items-center ${isMobile ? 'px-4 py-2 text-sm' : 'px-4 py-1.5 text-xs'} rounded-full font-semibold transition-colors ${
-        row.status === 'APPLIED'
+        isDisabled
           ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
           : 'bg-blue-600 text-white hover:bg-blue-700'
       }`}
@@ -319,7 +331,13 @@ export default function JobList() {
                 return (
                   <tr key={row.placement_id} className="hover:bg-gray-50">
                     <td className="px-4 py-3 text-center text-sm">{row.placement_id}</td>
-                    <td className="px-4 py-3 text-center text-sm">{row.company?.company_name}</td>
+                    <td className="px-4 py-3 text-center text-sm">
+                      <span className="block" title={row.company?.company_name}>
+                        {row.company?.company_name?.length > 7 
+                          ? `${row.company.company_name.substring(0, 7)}...` 
+                          : row.company?.company_name}
+                      </span>
+                    </td>
                     <td className="px-4 py-3 text-center text-sm">{row.role_name}</td>
                     <td className="px-4 py-3 text-center text-sm">
                       ₹{row.min_ctc}L – ₹{row.max_ctc}L
@@ -408,9 +426,13 @@ export default function JobList() {
                 className="bg-white rounded-xl shadow-md border border-gray-200 p-5 hover:shadow-lg transition-all"
               >
                 <div className="flex justify-between items-start mb-3">
-                  <div>
-                    <p className="font-semibold text-gray-900">{row.company?.company_name}</p>
-                    <p className="text-sm text-gray-500">{row.role_name}</p>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold text-gray-900" title={row.company?.company_name}>
+                      {row.company?.company_name?.length > 7 
+                        ? `${row.company.company_name.substring(0, 7)}...` 
+                        : row.company?.company_name}
+                    </p>
+                    <p className="text-sm text-gray-500 truncate">{row.role_name}</p>
                   </div>
                   <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded">
                     {row.placement_id}
