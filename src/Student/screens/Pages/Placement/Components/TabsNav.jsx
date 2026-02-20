@@ -2,7 +2,7 @@ import React from "react";
 import { NavLink, useLocation } from "react-router-dom";
 
 const tabs = [
-  { label: "Dashboard", to: "/student-placement" },
+  // { label: "Dashboard", to: "/student-placement" },
   // { label: "Profile", to: "/student-placement/profile" },
   { label: "Job Openings", to: "/student-placement/job-openings" },
   { label: "My Applications", to: "/student-placement/my-registrations" },

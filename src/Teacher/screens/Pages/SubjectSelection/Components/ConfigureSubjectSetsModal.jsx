@@ -32,7 +32,7 @@ const ConfigureSubjectSetsModal = ({
                 subjectSetId: set.subject_set_id || null
             }));
         }
-        return [{ id: 1, name: "Set 1", subjects: [], isEditingName: false, subjectSetId: null  }];
+        return [{ id: 1, name: "Set 1", subjects: [], isEditingName: false, subjectSetId: null }];
     };
 
     const [sets, setSets] = useState(getInitialSets());
@@ -87,7 +87,7 @@ const ConfigureSubjectSetsModal = ({
 
     const addNewSet = () => {
         const newSetNumber = sets.length + 1;
-        setSets([...sets, { id: Date.now(), name: `Set ${newSetNumber}`, subjects: [], isEditingName: false, subjectSetId: null  }]);
+        setSets([...sets, { id: Date.now(), name: `Set ${newSetNumber}`, subjects: [], isEditingName: false, subjectSetId: null }]);
     };
 
     const removeSet = (setId) => {
@@ -96,7 +96,7 @@ const ConfigureSubjectSetsModal = ({
     };
 
     const resetAllSets = () => {
-        setSets([{ id: 1, name: "Set 1", subjects: [], isEditingName: false, subjectSetId: null  }]);
+        setSets([{ id: 1, name: "Set 1", subjects: [], isEditingName: false, subjectSetId: null }]);
     };
 
     const toggleSetNameEdit = (setId) => {
@@ -131,8 +131,8 @@ const ConfigureSubjectSetsModal = ({
 
     return (
         <div className="fixed inset-0 z-50 overflow-y-auto bg-black bg-opacity-40">
-            <div className="flex min-h-full items-start justify-center p-4 pt-10">
-                <div className="relative bg-white rounded-lg shadow-xl w-full max-w-6xl">
+            <div className="flex min-h-full items-start justify-center p-2 sm:p-4 pt-4 sm:pt-10">
+                <div className="relative bg-white rounded-lg shadow-xl w-full max-w-6xl mx-auto">
                     {/* Header */}
                     <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
                         <div>
@@ -208,21 +208,21 @@ const ConfigureSubjectSetsModal = ({
                                             <div key={set.id} className="border border-gray-300 rounded-lg bg-white">
                                                 {/* Set Header */}
                                                 <div className="px-4 py-3 bg-gray-50 border-b border-gray-200">
-                                                    <div className="flex items-center justify-between">
-                                                        <div className="flex items-center gap-2 flex-1">
+                                                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0">
+                                                        <div className="flex items-center gap-2 flex-1 w-full">
                                                             {set.isEditingName ? (
                                                                 <>
                                                                     <input
                                                                         type="text"
                                                                         value={set.name}
                                                                         onChange={(e) => updateSetName(set.id, e.target.value)}
-                                                                        className="flex-1 px-3 py-1.5 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                                                                        className="flex-1 px-3 py-1.5 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 min-w-0"
                                                                         placeholder="Enter set name"
                                                                         autoFocus
                                                                     />
                                                                     <button
                                                                         onClick={() => toggleSetNameEdit(set.id)}
-                                                                        className="p-1.5 text-gray-600 hover:text-gray-900"
+                                                                        className="p-1.5 text-gray-600 hover:text-gray-900 shrink-0"
                                                                         title="Save"
                                                                     >
                                                                         <Check size={18} />
@@ -230,24 +230,24 @@ const ConfigureSubjectSetsModal = ({
                                                                 </>
                                                             ) : (
                                                                 <>
-                                                                    <h4 className="font-semibold text-gray-900">{set.name}</h4>
+                                                                    <h4 className="font-semibold text-gray-900 truncate max-w-[200px] sm:max-w-xs">{set.name}</h4>
                                                                     <button
                                                                         onClick={() => toggleSetNameEdit(set.id)}
-                                                                        className="p-1 text-gray-400 hover:text-gray-600"
+                                                                        className="p-1 text-gray-400 hover:text-gray-600 shrink-0"
                                                                         title="Edit name"
                                                                     >
                                                                         <Edit2 size={14} />
                                                                     </button>
                                                                 </>
                                                             )}
-                                                            <span className="text-xs text-gray-500">
+                                                            <span className="text-xs text-gray-500 whitespace-nowrap">
                                                                 ({set.subjects.length} subjects)
                                                             </span>
                                                         </div>
                                                         {sets.length > 1 && (
                                                             <button
                                                                 onClick={() => removeSet(set.id)}
-                                                                className="ml-2 px-3 py-1.5 text-sm text-red-600 hover:bg-red-50 rounded-md"
+                                                                className="w-full sm:w-auto px-3 py-1.5 text-sm text-red-600 hover:bg-red-50 rounded-md border border-gray-200 sm:border-transparent text-center"
                                                             >
                                                                 Remove Set
                                                             </button>
@@ -323,32 +323,32 @@ const ConfigureSubjectSetsModal = ({
                     </div>
 
                     {/* Footer */}
-                    <div className="flex items-center justify-between px-6 py-4 border-t border-gray-200 bg-gray-50">
-                        <div className="flex gap-2">
+                    <div className="flex flex-col sm:flex-row items-center justify-between gap-4 px-6 py-4 border-t border-gray-200 bg-gray-50">
+                        <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
                             <button
                                 onClick={addNewSet}
-                                className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 font-medium"
+                                className="flex items-center justify-center gap-2 px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 font-medium w-full sm:w-auto"
                             >
                                 <Plus size={16} />
                                 Add New Set
                             </button>
                             <button
                                 onClick={resetAllSets}
-                                className="px-4 py-2 text-gray-600 hover:text-gray-900 font-medium"
+                                className="px-4 py-2 text-gray-600 hover:text-gray-900 font-medium w-full sm:w-auto text-center"
                             >
                                 Reset All
                             </button>
                         </div>
-                        <div className="flex gap-2">
+                        <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
                             <button
                                 onClick={onClose}
-                                className="px-5 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 font-medium"
+                                className="px-5 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 font-medium w-full sm:w-auto"
                             >
                                 Cancel
                             </button>
                             <button
                                 onClick={handleSave}
-                                className="px-5 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 font-medium"
+                                className="px-5 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 font-medium w-full sm:w-auto"
                             >
                                 Save Configuration
                             </button>

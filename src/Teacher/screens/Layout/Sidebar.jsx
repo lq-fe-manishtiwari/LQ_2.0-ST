@@ -141,21 +141,21 @@ const Sidebar = ({ isOpen, toggle }) => {
         iconInactive: contentInactive,
         match: ["/subject-selection"],
       },
-      {
-        to: "/teacher/assessments",
-        label: "Assessment",
-        iconActive: assessmentActive,
-        iconInactive: assessmentInactive,
-        match: [
-          "/teacher/assessments",
-          "/teacher-add-assessment",
-          "/teacher-view-assessments",
-          "/teacher-view-st-test-result",
-          "/teacher-view-assessments-details",
-          "/teacher-add-question",
-          "/teacher-edit-question",
-        ],
-      },
+      // {
+      //   to: "/teacher/assessments",
+      //   label: "Assessment",
+      //   iconActive: assessmentActive,
+      //   iconInactive: assessmentInactive,
+      //   match: [
+      //     "/teacher/assessments",
+      //     "/teacher-add-assessment",
+      //     "/teacher-view-assessments",
+      //     "/teacher-view-st-test-result",
+      //     "/teacher-view-assessments-details",
+      //     "/teacher-add-question",
+      //     "/teacher-edit-question",
+      //   ],
+      // },
       {
         to: "/teacher/academic-diary",
         label: "Academic Diary",
@@ -165,57 +165,57 @@ const Sidebar = ({ isOpen, toggle }) => {
           "/teacher/academic-diary",
         ],
       },
-      {
-        to: "/teacher/us-feedback",
-        label: "Feedback",
-        iconActive: assessmentActive,
-        iconInactive: assessmentInactive,
-        match: [
-          "/teacher/us-feedback",
-        ],
-      },
-      {
-        to: "/teacher/committees",
-        label: "Committee",
-        iconActive: classActive,
-        iconInactive: classInactive,
-        match: ["/teacher/committees", "/teacher/committee"],
-      },
-       
-      {
-  to: "/teacher/placement",
-  label: "Placement",
-  iconActive: classActive,
-  iconInactive: classInactive,
-  match: ["/teacher/placement"], // remove the '*' — startsWith handles nested routes
-},
+      // {
+      //   to: "/teacher/us-feedback",
+      //   label: "Feedback",
+      //   iconActive: assessmentActive,
+      //   iconInactive: assessmentInactive,
+      //   match: [
+      //     "/teacher/us-feedback",
+      //   ],
+      // },
+      // {
+      //   to: "/teacher/committees",
+      //   label: "Committee",
+      //   iconActive: classActive,
+      //   iconInactive: classInactive,
+      //   match: ["/teacher/committees", "/teacher/committee"],
+      // },
 
-     
-      {
-        to: "/teacher-analytics",
-        label: "Insights",
-        iconActive: analyticsActive,
-        iconInactive: analyticsInactive,
-      },
-      {
-        to: "/teacher-coding",
-        label: "Coding",
-        iconActive: codingActive,
-        iconInactive: codingInactive,
-      },
-      {
-        to: "/teacher-quickNotesList",
-        label: "Quick Notes",
-        iconActive: quicknotesActive,
-        iconInactive: quicknotesInactive,
-        match: ["/teacher-quickNotesList", "/teacher-view-note"],
-      },
-      {
-        to: "/teacher-engage",
-        label: "Engage",
-        iconActive: contentActive,
-        iconInactive: contentInactive,
-      },
+      // {
+      //   to: "/teacher/placement",
+      //   label: "Placement",
+      //   iconActive: classActive,
+      //   iconInactive: classInactive,
+      //   match: ["/teacher/placement"], // remove the '*' — startsWith handles nested routes
+      // },
+
+
+      // {
+      //   to: "/teacher-analytics",
+      //   label: "Insights",
+      //   iconActive: analyticsActive,
+      //   iconInactive: analyticsInactive,
+      // },
+      // {
+      //   to: "/teacher-coding",
+      //   label: "Coding",
+      //   iconActive: codingActive,
+      //   iconInactive: codingInactive,
+      // },
+      // {
+      //   to: "/teacher-quickNotesList",
+      //   label: "Quick Notes",
+      //   iconActive: quicknotesActive,
+      //   iconInactive: quicknotesInactive,
+      //   match: ["/teacher-quickNotesList", "/teacher-view-note"],
+      // },
+      // {
+      //   to: "/teacher-engage",
+      //   label: "Engage",
+      //   iconActive: contentActive,
+      //   iconInactive: contentInactive,
+      // },
       {
         to: "/teacher-syllabus",
         label: "Academics",
@@ -232,12 +232,12 @@ const Sidebar = ({ isOpen, toggle }) => {
       },
 
 
-      {
-        to: "/teacher/library",
-        label: "My Library",
-        iconActive: classActive,
-        iconInactive: classInactive,
-      },
+      // {
+      //   to: "/teacher/library",
+      //   label: "My Library",
+      //   iconActive: classActive,
+      //   iconInactive: classInactive,
+      // },
       // {
       //   to: "/pms",
       //   label: "HRM",
@@ -254,11 +254,20 @@ const Sidebar = ({ isOpen, toggle }) => {
         ],
       },
       {
-        to: "/teacher-certificate",
-        label: "Certificate",
+        to: "/teacher/task-management",
+        label: "Task Management",
         iconActive: classActive,
         iconInactive: classInactive,
+        match: [
+          "/teacher/task-management",
+        ],
       },
+      // {
+      //   to: "/teacher-certificate",
+      //   label: "Certificate",
+      //   iconActive: classActive,
+      //   iconInactive: classInactive,
+      // },
       {
         to: "/reports",
         label: "Reports",
@@ -266,36 +275,36 @@ const Sidebar = ({ isOpen, toggle }) => {
         iconInactive: classInactive,
         show: reportAccess === "true" || reportAccess === true,
       },
-      {
-        to: "/teacher/exam",
-        label: "Exam Management",
-        iconActive: classActive,
-        iconInactive: classInactive,
-      },
-      {
-        to: "/teacher/leaves",
-        label: "Leaves",
-        iconActive: classActive,
-        iconInactive: classInactive,
-      },
-      {
-        to: "/obe-setting",
-        label: "OBE Setting",
-        iconActive: classActive,
-        iconInactive: classInactive,
-      },
-      {
-        to: "/Document-Generation-dashbaord",
-        label: "Document",
-        iconActive: classActive,
-        iconInactive: classInactive,
-      },
-      {
-        to: "/Purchase",
-        label: "Purchase",
-        iconActive: classActive,
-        iconInactive: classInactive,
-      },
+      // {
+      //   to: "/teacher/exam",
+      //   label: "Exam Management",
+      //   iconActive: classActive,
+      //   iconInactive: classInactive,
+      // },
+      // {
+      //   to: "/teacher/leaves",
+      //   label: "Leaves",
+      //   iconActive: classActive,
+      //   iconInactive: classInactive,
+      // },
+      // {
+      //   to: "/obe-setting",
+      //   label: "OBE Setting",
+      //   iconActive: classActive,
+      //   iconInactive: classInactive,
+      // },
+      // {
+      //   to: "/Document-Generation-dashbaord",
+      //   label: "Document",
+      //   iconActive: classActive,
+      //   iconInactive: classInactive,
+      // },
+      // {
+      //   to: "/Purchase",
+      //   label: "Purchase",
+      //   iconActive: classActive,
+      //   iconInactive: classInactive,
+      // },
     ],
     [chapterTopicAccess, reportAccess]
   );
@@ -325,7 +334,7 @@ const Sidebar = ({ isOpen, toggle }) => {
               alt={item.label}
               className="w-5 h-5"
             />
-            {isOpen && <span className="text-sm font-medium">{item.label}</span>}
+            {(isOpen || closeOnClick) && <span className="text-sm font-medium">{item.label}</span>}
           </Link>
         </li>
       );
@@ -403,7 +412,7 @@ const Sidebar = ({ isOpen, toggle }) => {
       {/* ===== Mobile Sidebar Drawer ===== */}
       {isMobileOpen && (
         <div
-          className="fixed inset-0 bg-black bg-opacity-50 z-40 md:hidden"
+          className="fixed inset-0 bg-black bg-opacity-50 z-[100] md:hidden"
           onClick={handleMobileToggle}
         >
           <div

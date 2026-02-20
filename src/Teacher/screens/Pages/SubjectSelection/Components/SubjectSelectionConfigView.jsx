@@ -91,15 +91,15 @@ const SubjectSelectionConfigView = ({
     return (
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
             {/* Header */}
-            <div className="flex items-center justify-between mb-6">
-                <h3 className="text-xl font-semibold text-blue-600">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
+                <h3 className="text-lg sm:text-xl font-semibold text-blue-600">
                     {displayName}
                 </h3>
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto overflow-x-auto pb-2 sm:pb-0">
                     {/* Details Button */}
                     <button
                         onClick={() => onViewDetails && onViewDetails(existingConfig, subjectType, vertical)}
-                        className="flex items-center gap-2 px-3 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors text-sm font-medium"
+                        className="flex items-center gap-2 px-3 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors text-sm font-medium whitespace-nowrap"
                         title="View Details"
                     >
                         <Eye size={16} />
@@ -108,7 +108,7 @@ const SubjectSelectionConfigView = ({
 
                     <button
                         onClick={() => setShowManagement(!showManagement)}
-                        className="flex items-center gap-2 text-sm text-gray-600 hover:text-gray-800"
+                        className="flex items-center gap-2 text-sm text-gray-600 hover:text-gray-800 whitespace-nowrap"
                     >
                         Management
                         {showManagement ? <ChevronUp size={16} /> : <ChevronDown size={16} />}

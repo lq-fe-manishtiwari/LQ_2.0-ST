@@ -27,13 +27,14 @@ import AcademicDiaryRoutes from '../Teacher/screens/Pages/AcademicDiary/Routes/A
 import SubjectSelectionRoutes from '../Teacher/screens/Pages/SubjectSelection/Routes/SubjectSelectionRoutes.jsx';
 import TimeTableRoutes from '../Student/screens/Pages/TimeTable/Routes/TimeTableRoutes.jsx';
 import AssessmentRoutes from "../Student/screens/Pages/Assessment/Routes/AssessmentRoutes.jsx";
-
+import FeesRoutes from '../Student/screens/Pages/Fees/Routes/FeesRoutes.jsx';
 import AcademicCalendarRoute from "../Teacher/screens/Pages/AcademicCalendar/Routes/AcademicCalendarRoute.jsx"
 import AcademicCalendarRoutes from "../Student/screens/Pages/AcademicCalendar/Routes/AcademicCalendarRoutes.jsx"
 import AttendanceRoutes from '../Teacher/screens/Pages/Attendance/Routes/AttendanceRoutes.jsx';
 import StudentAttendanceRoutes from '../Student/screens/Pages/Attendance/Routes/AttendanceRoutes.jsx';
 import StudentPlacementRoutes from '../Student/screens/Pages/Placement/Routes/StudentPlacementRoutes.jsx';
 import PlacementRoutes from '../Teacher/screens/Pages/Placement/Routes/PlacementRoutes.jsx';
+import TaskManagementRoutes from '../Teacher/screens/Pages/TaskManagement/Routes/TaskManagementRoute.jsx';
 // ────── Route guards ──────
 const ProtectedRoute = ({ children }) => {
   const isLoggedIn = !!localStorage.getItem('refreshToken');
@@ -130,6 +131,16 @@ function App() {
     </ProtectedRoute>
   }
 />
+        <Route
+          path="/teacher/task-management/*"
+          element={
+            <ProtectedRoute>
+              <TeacherHomepage>
+                <TaskManagementRoutes />
+              </TeacherHomepage>
+            </ProtectedRoute>
+          }
+        />
 
         <Route
           path="/teacher/attendance/*"
@@ -271,6 +282,17 @@ function App() {
             </ProtectedRoute>
           }
         />
+        <Route
+  path="/student/fees/*"
+  element={
+    <ProtectedRoute>
+      <StudentHomepage>
+        <FeesRoutes />
+      </StudentHomepage>
+    </ProtectedRoute>
+  }
+/>
+
 
         <Route
           path="/student/academic-calendar/*"
