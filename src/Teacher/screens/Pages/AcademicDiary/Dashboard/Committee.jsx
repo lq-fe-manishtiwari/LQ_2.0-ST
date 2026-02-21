@@ -8,9 +8,7 @@ import {
   User,
   Loader2,
   Edit,
-  ChevronDown,
   Download,
-  FileJson,
 } from "lucide-react";
 import { committeeService } from "../Services/committee.service";
 import CommitteeEditModal from "./CommitteeEditModal";
@@ -25,8 +23,6 @@ export default function Committee() {
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingCommittee, setEditingCommittee] = useState(null);
   const [existingRecordId, setExistingRecordId] = useState(null);
-  const [showExportMenu, setShowExportMenu] = useState(false);
-  const exportMenuRef = useRef(null);
 
   const teacherId = userProfile.getTeacherId();
   const collegeId = userProfile.getCollegeId();
@@ -139,16 +135,7 @@ export default function Committee() {
     return levels;
   };
 
-  // Close export menu on outside click
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (exportMenuRef.current && !exportMenuRef.current.contains(event.target)) {
-        setShowExportMenu(false);
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
+
 
   const getReportMeta = () => {
     const activeCollege = JSON.parse(localStorage.getItem("activeCollege") || "{}");
@@ -258,7 +245,6 @@ export default function Committee() {
     });
 
     doc.save(`Committee_Memberships_${new Date().toISOString().split("T")[0]}.pdf`);
-    setShowExportMenu(false);
   };
 
   const handleEdit = (committee) => {
@@ -353,34 +339,17 @@ export default function Committee() {
           </h2>
         </div>
 
-        {/* Export Dropdown */}
-        <div className="relative w-full sm:w-auto" ref={exportMenuRef}>
+        {/* Export Button */}
+        <div className="relative w-full sm:w-auto">
           <button
-            onClick={() => setShowExportMenu(!showExportMenu)}
+            onClick={downloadPDF}
             disabled={!committeeData.length || loading}
-            className={`w-full flex items-center justify-center gap-2 px-6 py-2.5 text-sm font-semibold bg-orange-500 border border-orange-600 rounded-xl text-white hover:bg-orange-600 shadow-md transition-all active:scale-95 ${!committeeData.length || loading ? "opacity-50 cursor-not-allowed" : ""
+            className={`w-full flex items-center justify-center gap-2 px-6 py-2.5 text-sm font-semibold bg-green-600 border border-green-700 rounded-xl text-white hover:bg-green-700 shadow-md transition-all active:scale-95 ${!committeeData.length || loading ? "opacity-50 cursor-not-allowed" : ""
               }`}
           >
             <Download className="w-4 h-4" />
-            <span>Export</span>
-            <ChevronDown
-              className={`w-4 h-4 transition-transform ${showExportMenu ? "rotate-180" : ""}`}
-            />
+            <span>Download PDF</span>
           </button>
-
-          {showExportMenu && (
-            <div className="absolute right-0 mt-2 w-48 bg-white border border-gray-200 rounded-lg shadow-xl z-50">
-              <div className="py-1">
-                <button
-                  onClick={downloadPDF}
-                  className="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-red-50 hover:text-red-700 flex items-center gap-3 transition-colors"
-                >
-                  <FileJson className="w-4 h-4 text-red-600" />
-                  <span>PDF (.pdf)</span>
-                </button>
-              </div>
-            </div>
-          )}
         </div>
       </div>
 

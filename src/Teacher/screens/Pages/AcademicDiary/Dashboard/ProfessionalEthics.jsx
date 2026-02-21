@@ -502,7 +502,7 @@ const ProfessionalEthics = () => {
             <button
               onClick={handleDownloadPDF}
               disabled={isDownloading}
-              className="flex items-center justify-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-all font-semibold shadow-md shadow-blue-100 active:scale-95 text-sm disabled:opacity-50"
+              className="flex items-center justify-center gap-2 px-6 py-3 bg-green-600 text-white rounded-xl hover:bg-green-700 transition-all font-semibold shadow-md shadow-green-100 active:scale-95 text-sm disabled:opacity-50"
             >
               {isDownloading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
               {isDownloading ? "Downloading..." : "Download PDF"}
