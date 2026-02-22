@@ -13,6 +13,7 @@ const tabs = [
   { label: "Timetable", to: "/teacher/academic-diary/time-table" },
   { label: "Leave", to: "/teacher/academic-diary/leave" },
   { label: "Monitoring Reports", to: "/teacher/academic-diary/monitoring-reports" },
+  { label: "API", to: "/teacher/academic-diary/performance-matrix" },
 ];
 
 export default function AcademicTabsNav() {
