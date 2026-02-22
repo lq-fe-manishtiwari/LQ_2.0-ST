@@ -3,10 +3,14 @@ import { authHeader, handleResponse, authHeaderToPost, PMSAPI } from '@/_service
 export const monitoringService = {
   getActivities,
   addActivity,
-  updateActivity,
   deleteActivity,
+  getOtherStaffActivities,
+  addOtherStaffActivity,
+  updateOtherStaffActivity,
+  deleteOtherStaffActivity,
   getResponses,
   saveBulkResponses,
+  getAppraisalsByUserId
 };
 
 /**
@@ -67,20 +71,7 @@ function saveBulkResponses(data) {
     .then(handleResponse);
 }
 
-/**
- * Update an existing activity
- * @param {Object} data - Activity data including activity_id
- * @returns {Promise<Object>} Updated activity
- */
-function updateActivity(data) {
-  const requestOptions = {
-    method: 'PUT',
-    headers: authHeaderToPost(),
-    body: JSON.stringify(data),
-  };
-  return fetch(`${PMSAPI}/academic-diary/internal-monitoring/activity`, requestOptions)
-    .then(handleResponse);
-}
+
 
 /**
  * Delete an activity
@@ -91,4 +82,55 @@ function deleteActivity(activityId) {
   const requestOptions = { method: 'DELETE', headers: authHeader() };
   return fetch(`${PMSAPI}/academic-diary/internal-monitoring/activity/${activityId}`, requestOptions)
     .then(handleResponse);
+}
+
+function getOtherStaffActivities(collegeId, term) {
+  const requestOptions = { method: 'GET', headers: authHeader() };
+  return fetch(`${PMSAPI}/academic-diary/internal-monitoring/other-staff-activity/all?collegeId=${collegeId}&term=${term}`, requestOptions)
+    .then(handleResponse);
+}
+
+function addOtherStaffActivity(data) {
+  const requestOptions = {
+    method: 'POST',
+    headers: authHeaderToPost(),
+    body: JSON.stringify(data),
+  };
+  return fetch(`${PMSAPI}/academic-diary/internal-monitoring/other-staff-activity`, requestOptions)
+    .then(handleResponse);
+}
+
+function updateOtherStaffActivity(data) {
+  const requestOptions = {
+    method: 'POST',
+    headers: authHeaderToPost(),
+    body: JSON.stringify(data),
+  };
+  return fetch(`${PMSAPI}/academic-diary/internal-monitoring/other-staff-activity`, requestOptions)
+    .then(handleResponse);
+}
+
+function deleteOtherStaffActivity(activityId) {
+  const requestOptions = { method: 'DELETE', headers: authHeader() };
+  return fetch(`${PMSAPI}/academic-diary/internal-monitoring/other-staff-activity/${activityId}`, requestOptions)
+    .then(handleResponse);
+}
+function getAppraisalsByUserId(collegeId, userId) {
+    const payload = {
+        collegeId: collegeId,
+        userId: userId,
+        status: "",
+        keyword: "",
+        skip: 0,
+        size: 1000,
+        sortField: "id",
+        sortOrder: "ASC"
+    };
+    const requestOptions = {
+        method: 'POST',
+        headers: authHeaderToPost(),
+        body: JSON.stringify(payload)
+    };
+    return fetch(`${PMSAPI}/admin/appraisals`, requestOptions)
+        .then(handleResponse);
 }
