@@ -449,8 +449,9 @@ function bulkCreatePriority(values) {
 // ======================= Performance Matrix / Monitoring APIs =======================
 
 function getAuthorityRoles(collegeId) {
+    // GET /api/admin/authority-role/college/{collegeId}
     const requestOptions = { method: 'GET', headers: authHeader() };
-    return fetch(`${PMSAPI}/academic-diary/internal-monitoring/authority-role/all?collegeId=${collegeId}`, requestOptions)
+    return fetch(`${PMSAPI}/admin/authority-role/college/${collegeId}`, requestOptions)
         .then(handleResponse);
 }
 
@@ -468,7 +469,7 @@ function getAllFrequency(collegeId) {
 
 function getAllRatings(collegeId) {
     const requestOptions = { method: 'GET', headers: authHeader() };
-    return fetch(`${PMSAPI}/admin/rating-config/all?collegeId=${collegeId}`, requestOptions)
+    return fetch(`${PMSAPI}/admin/ratings/college?collegeId=${collegeId}`, requestOptions)
         .then(handleResponse);
 }
 

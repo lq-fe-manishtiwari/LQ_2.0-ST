@@ -38,6 +38,11 @@ const PerformanceMatrix = () => {
         return profile ? JSON.parse(profile) : null;
     }, []);
 
+    const activeCollege = useMemo(() => {
+        const college = localStorage.getItem("activeCollege");
+        return college ? JSON.parse(college) : null;
+    }, []);
+
     const currentUserId = useMemo(() => {
         if (!currentUser) return null;
         return currentUser.userId || currentUser.id || currentUser.employeeId || currentUser.user_id;
@@ -205,7 +210,6 @@ const PerformanceMatrix = () => {
         return !!isDesignated;
     };
 
-    // Note: Local fetching of teacher names for hierarchy labels is skipped and handled dynamically in the UI
     const handleOpenAddModal = async () => {
         setIsEditing(false);
         setFormData({ activity_name: '', target: '', unit_id: '', frequency_id: '' });
@@ -453,7 +457,6 @@ const PerformanceMatrix = () => {
                                 doc.link(data.cell.x + paddingLeft, yPos, data.cell.width - paddingLeft * 2, lineHeight, { url: url });
                             });
                         } catch (e) {
-                            // Silently fail
                         }
                     }
                 }
@@ -500,7 +503,7 @@ const PerformanceMatrix = () => {
 
             const docs = responses[`${a.activity_id}_docs`];
             if (docs && docs.length > 0) {
-                row['Evidence Document'] = docs; // Keep the array of URLs for later processing
+                row['Evidence Document'] = docs;
             } else {
                 row['Evidence Document'] = '-';
             }
@@ -544,12 +547,10 @@ const PerformanceMatrix = () => {
                     cell.alignment.wrapText = true;
                 });
 
-                // Handle Evidence Document cell text and hyperlinks via formula
                 const evidenceDocColIndex = exportColumns.findIndex(col => col.key === 'Evidence Document') + 1;
                 const evidenceCell = newRow.getCell(evidenceDocColIndex);
                 if (evidenceCell.value && Array.isArray(evidenceCell.value)) {
                     const docsArray = evidenceCell.value;
-                    // Use only the first document for formula cell to prevent Excel corruption on multi-line formulas
                     const firstUrl = docsArray[0];
                     evidenceCell.value = {
                         formula: `HYPERLINK("${firstUrl}", "Document 1${docsArray.length > 1 ? ` (+${docsArray.length - 1} more)` : ''}")`
@@ -857,7 +858,6 @@ const PerformanceMatrix = () => {
                                             <th rowSpan="2" className="px-6 py-5 text-center text-[10px] font-bold tracking-widest border-b border-white/10 min-w-[180px]">Self</th>
                                             <th colSpan={authorityRoles.length} className="px-4 py-5 text-center text-[10px] font-bold tracking-widest border-b border-white/10">Authority Appraisals</th>
                                             <th rowSpan="2" className="px-6 py-5 text-center text-[10px] font-bold tracking-widest border-b border-white/10 min-w-[140px]">Final</th>
-                                            <th rowSpan="2" className="px-6 py-5 text-center text-[10px] font-bold tracking-widest border-b border-white/10 w-[100px]">Actions</th>
                                         </tr>
                                         <tr className="bg-primary-600 text-white">
                                             {authorityRoles.map(role => (
@@ -915,12 +915,6 @@ const PerformanceMatrix = () => {
                                                             {responses[`${a.activity_id}_final_rating_calc`] && <button onClick={() => { setCalcModalData(responses[`${a.activity_id}_final_rating_calc`]); setShowCalcModal(true); }} className="w-8 h-8 flex items-center justify-center text-green-600 hover:bg-green-50 rounded-lg transition-colors border border-green-100/50" title="View Breakdown"><Eye size={14} /></button>}
                                                         </div>
                                                     ) : <span className="text-xs font-bold text-gray-300">-</span>}
-                                                </td>
-                                                <td className="px-4 py-4">
-                                                    <div className="flex justify-center gap-1">
-                                                        <button onClick={() => handleOpenEditModal(a)} className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg"><Edit size={14} /></button>
-                                                        <button onClick={() => handleDeleteActivity(a.activity_id)} className="p-2 text-red-500 hover:bg-red-50 rounded-lg"><Trash2 size={14} /></button>
-                                                    </div>
                                                 </td>
                                             </tr>
                                         ))}
