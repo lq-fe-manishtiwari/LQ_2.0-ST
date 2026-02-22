@@ -1,6 +1,6 @@
 // Class
 // import config from 'config';
-import { authHeader, handleResponse, authHeaderToPost, AcademicAPI, PMSAPI ,TeacherLoginAPI} from '@/_services/api';
+import { authHeader, handleResponse, authHeaderToPost, AcademicAPI, PMSAPI, TeacherLoginAPI } from '@/_services/api';
 
 export const Settings = {
     getAllRole,
@@ -50,6 +50,14 @@ export const Settings = {
     checkPriorityExistsByName,
     bulkCreatePriority,
 
+    // Performance Matrix / Monitoring Related
+    getAuthorityRoles,
+    getAllUnit,
+    getAllFrequency,
+    getAllRatings,
+    getApprovalHierarchyByEmployeeId,
+    updateAppraisal,
+    postAppraisal,
 
 };
 
@@ -57,43 +65,43 @@ function getAllRole() {
     // @GetMapping("/api/admin/role")
     const requestOptions = { method: 'GET', headers: authHeader() };
     return fetch(`${TeacherLoginAPI}/admin/role`, requestOptions)
-    .then(handleResponse);
+        .then(handleResponse);
 }
 
 function postRole(values) {
-   // @PostMapping("/api/admin/role")
-   const requestOptions = {
-    method: 'POST',
-    headers: authHeaderToPost(),
-    body: JSON.stringify(values)
-};
-return fetch(`${TeacherLoginAPI}/admin/role`, requestOptions)
-    .then(handleResponse)
-    .then(data => {
-        return data;
-    });
-  }
+    // @PostMapping("/api/admin/role")
+    const requestOptions = {
+        method: 'POST',
+        headers: authHeaderToPost(),
+        body: JSON.stringify(values)
+    };
+    return fetch(`${TeacherLoginAPI}/admin/role`, requestOptions)
+        .then(handleResponse)
+        .then(data => {
+            return data;
+        });
+}
 
 function getRolebyID(id) {
     // @GetMapping("/api/admin/role/{id}")
     const requestOptions = { method: 'GET', headers: authHeader() };
     return fetch(`${TeacherLoginAPI}/admin/role/${id}`, requestOptions)
-    .then(handleResponse);
+        .then(handleResponse);
 }
 
 function updateRole(values, id) {
     // @PutMapping("/api/admin/role/{id}")
-      const requestOptions = {
-          method: 'PUT',
-          headers: authHeaderToPost(),
-          body: JSON.stringify(values)
-      };
-      return fetch(`${TeacherLoginAPI}/admin/role/${id}`, requestOptions)
-      .then(handleResponse)
-      .then(role => {
-          return role;
-      });
-  }
+    const requestOptions = {
+        method: 'PUT',
+        headers: authHeaderToPost(),
+        body: JSON.stringify(values)
+    };
+    return fetch(`${TeacherLoginAPI}/admin/role/${id}`, requestOptions)
+        .then(handleResponse)
+        .then(role => {
+            return role;
+        });
+}
 
 function deleteRole(id) {
     // @DeleteMapping("/api/admin/role/{id}")
@@ -210,7 +218,7 @@ function deleteApi(id) {
             if (!response.ok) {
                 throw new Error('Network response was not ok');
             }
-            return response.text(); 
+            return response.text();
         });
 }
 
@@ -341,9 +349,9 @@ function updateTaskStatus(values, id) {
 
 function deleteTaskStatus(id) {
     // DELETE /api/admin/task-status/delete/{id}
-    const requestOptions = { 
-        method: 'DELETE', 
-        headers: authHeader() 
+    const requestOptions = {
+        method: 'DELETE',
+        headers: authHeader()
     };
     return fetch(`${PMSAPI}/admin/task-status/delete/${id}`, requestOptions)
         .then(handleResponse);
@@ -409,9 +417,9 @@ function updatePriority(values, id) {
 
 function deletePriority(id) {
     // DELETE /api/admin/priority/delete/{id}
-    const requestOptions = { 
-        method: 'DELETE', 
-        headers: authHeader() 
+    const requestOptions = {
+        method: 'DELETE',
+        headers: authHeader()
     };
     return fetch(`${PMSAPI}/admin/priority/delete/${id}`, requestOptions)
         .then(handleResponse);
@@ -436,4 +444,56 @@ function bulkCreatePriority(values) {
         .then(data => {
             return data;
         });
+}
+
+// ======================= Performance Matrix / Monitoring APIs =======================
+
+function getAuthorityRoles(collegeId) {
+    const requestOptions = { method: 'GET', headers: authHeader() };
+    return fetch(`${PMSAPI}/academic-diary/internal-monitoring/authority-role/all?collegeId=${collegeId}`, requestOptions)
+        .then(handleResponse);
+}
+
+function getAllUnit(collegeId) {
+    const requestOptions = { method: 'GET', headers: authHeader() };
+    return fetch(`${PMSAPI}/academic-diary/internal-monitoring/unit/all?collegeId=${collegeId}`, requestOptions)
+        .then(handleResponse);
+}
+
+function getAllFrequency(collegeId) {
+    const requestOptions = { method: 'GET', headers: authHeader() };
+    return fetch(`${PMSAPI}/academic-diary/internal-monitoring/frequency/all?collegeId=${collegeId}`, requestOptions)
+        .then(handleResponse);
+}
+
+function getAllRatings(collegeId) {
+    const requestOptions = { method: 'GET', headers: authHeader() };
+    return fetch(`${PMSAPI}/admin/rating-config/all?collegeId=${collegeId}`, requestOptions)
+        .then(handleResponse);
+}
+
+function getApprovalHierarchyByEmployeeId(employeeId) {
+    const requestOptions = { method: 'GET', headers: authHeader() };
+    return fetch(`${PMSAPI}/admin/approval-hierarchy/employee/${employeeId}`, requestOptions)
+        .then(handleResponse);
+}
+
+function updateAppraisal(id, data) {
+    const requestOptions = {
+        method: 'PUT',
+        headers: authHeaderToPost(),
+        body: JSON.stringify(data)
+    };
+    return fetch(`${PMSAPI}/admin/appraisals/${id}`, requestOptions)
+        .then(handleResponse);
+}
+
+function postAppraisal(data) {
+    const requestOptions = {
+        method: 'POST',
+        headers: authHeaderToPost(),
+        body: JSON.stringify(data)
+    };
+    return fetch(`${PMSAPI}/admin/appraisals`, requestOptions)
+        .then(handleResponse);
 }

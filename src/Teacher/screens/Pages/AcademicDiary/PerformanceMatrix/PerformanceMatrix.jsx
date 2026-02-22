@@ -69,7 +69,6 @@ const PerformanceMatrix = () => {
     }, [collegeId]);
 
     useEffect(() => {
-        console.log("selectedUserId", selectedUserId, "collegeid", collegeId, "activitie", activities);
         if (selectedUserId && collegeId) {
             fetchResponses();
             fetchSelectedUserHierarchy();
@@ -77,21 +76,20 @@ const PerformanceMatrix = () => {
             setResponses({});
             setEmployeeHierarchy({});
         }
-    }, [selectedUserId, collegeId]);
+    }, [selectedUserId, collegeId, activities, authorityRoles]);
 
     const initData = async () => {
         setLoading(true);
         try {
-            console.log("i am in 3 in activity")
             const [activityData, rolesData] = await Promise.all([
-                monitoringService.getActivities(collegeId, ''),
-                MonitoringSettings.getAuthorityRoles(collegeId)
+                monitoringService.getActivities(collegeId, '').catch(e => { return null; }),
+                MonitoringSettings.getAuthorityRoles(collegeId).catch(e => { return null; })
             ]);
-            console.log("activityData", activityData);
+
             setActivities(activityData || []);
             setAuthorityRoles(rolesData || []);
         } catch (error) {
-            console.error('Error initializing data:', error);
+            // Silently fail or handle gracefully
         } finally {
             setLoading(false);
         }
@@ -107,7 +105,7 @@ const PerformanceMatrix = () => {
             setUnits(unitsData || []);
             setFrequencies(frequenciesData || []);
         } catch (error) {
-            console.error('Error fetching modal data:', error);
+            // Silently fail
         }
     };
 
@@ -117,18 +115,17 @@ const PerformanceMatrix = () => {
             const active = (data || []).find(r => r.is_active);
             setActiveRatingConfig(active || null);
         } catch (error) {
-            console.error('Error fetching active rating:', error);
+            // Silently fail
         }
     };
 
     const fetchResponses = async () => {
-        console.log("i am in")
-        if (!activities.length || !selectedUserId) return;
+        if (!activities.length || !selectedUserId) {
+            return;
+        }
         setLoading(true);
         try {
-            console.log("i am in 2")
             const data = await monitoringService.getAppraisalsByUserId(collegeId, selectedUserId);
-            console.log("i am in 3")
             const mappedResponses = {};
             (data || []).forEach(res => {
                 const activity = (activities || []).find(a => a.activity_name === res.activity);
@@ -166,7 +163,7 @@ const PerformanceMatrix = () => {
             });
             setResponses(mappedResponses);
         } catch (error) {
-            console.error('Error fetching responses:', error);
+            // Silently fail
         } finally {
             setLoading(false);
         }
@@ -184,7 +181,7 @@ const PerformanceMatrix = () => {
                 setEmployeeHierarchy(hierarchyMap);
             }
         } catch (error) {
-            console.error('Error fetching user hierarchy:', error);
+            // Silently fail
         }
     };
 
@@ -254,7 +251,6 @@ const PerformanceMatrix = () => {
             setShowActivityModal(false);
             initData();
         } catch (error) {
-            console.error('Save error:', error);
             setAlert(<SweetAlert error title="Error!" confirmBtnCssClass="btn-confirm" onConfirm={() => setAlert(null)}>Failed to save.</SweetAlert>);
         }
     };
@@ -348,7 +344,6 @@ const PerformanceMatrix = () => {
             });
             setPendingChanges(prev => ({ ...prev, [activityId]: true }));
         } catch (error) {
-            console.error("Upload failed:", error);
             setAlert(<SweetAlert error title="Error!" confirmBtnCssClass="btn-confirm" onConfirm={() => setAlert(null)}>Document upload failed.</SweetAlert>);
         } finally {
             setUploadingDoc(false);
@@ -458,7 +453,7 @@ const PerformanceMatrix = () => {
                                 doc.link(data.cell.x + paddingLeft, yPos, data.cell.width - paddingLeft * 2, lineHeight, { url: url });
                             });
                         } catch (e) {
-                            console.error('Error adding PDF hyperlink:', e);
+                            // Silently fail
                         }
                     }
                 }
@@ -580,7 +575,7 @@ const PerformanceMatrix = () => {
             link.click();
             setShowExportDropdown(false);
         } catch (err) {
-            console.error('Export Excel failed:', err);
+            // Silently fail
         }
     };
 
@@ -688,7 +683,6 @@ const PerformanceMatrix = () => {
             await fetchResponses();
             setAlert(<SweetAlert success title="Synced!" confirmBtnCssClass="btn-confirm" onConfirm={() => setAlert(null)}>Performance Matrix updated successfully.</SweetAlert>);
         } catch (error) {
-            console.error('CRITICAL ERROR in handleSubmitAll:', error);
             setAlert(<SweetAlert error title="Error!" confirmBtnCssClass="btn-confirm" onConfirm={() => setAlert(null)}>Failed to synchronize changes.</SweetAlert>);
         } finally {
             setSaving(false);

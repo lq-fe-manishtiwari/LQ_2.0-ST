@@ -116,21 +116,7 @@ function deleteOtherStaffActivity(activityId) {
     .then(handleResponse);
 }
 function getAppraisalsByUserId(collegeId, userId) {
-    const payload = {
-        collegeId: collegeId,
-        userId: userId,
-        status: "",
-        keyword: "",
-        skip: 0,
-        size: 1000,
-        sortField: "id",
-        sortOrder: "ASC"
-    };
-    const requestOptions = {
-        method: 'POST',
-        headers: authHeaderToPost(),
-        body: JSON.stringify(payload)
-    };
-    return fetch(`${PMSAPI}/admin/appraisals`, requestOptions)
-        .then(handleResponse);
+  const requestOptions = { method: 'GET', headers: authHeader() };
+  return fetch(`${PMSAPI}/admin/appraisals?collegeId=${collegeId}&userId=${userId}`, requestOptions)
+    .then(handleResponse);
 }
