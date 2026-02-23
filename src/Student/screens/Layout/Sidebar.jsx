@@ -122,13 +122,13 @@ const StudentSidebar = ({ isOpen, toggle }) => {
   ],
 },
 
-      // {
-      //   to: "/my-assessment",
-      //   label: "Assessment",
-      //   iconActive: assessmentActive,
-      //   iconInactive: assessmentInactive,
-      //   match: ["/my-assessment", "/st-view-test-details", "/st-retest"],
-      // },
+      {
+        to: "/my-assessment",
+        label: "Assessment",
+        iconActive: assessmentActive,
+        iconInactive: assessmentInactive,
+        match: ["/my-assessment", "/st-view-test-details", "/st-retest"],
+      },
       // {
       //   to: "/student-learning-plan",
       //   label: "Learning Plan",
