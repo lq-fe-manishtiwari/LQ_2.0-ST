@@ -1,5 +1,5 @@
 // ListOfBooks & ParticipationInSeminar Service
-import { authHeader, handleResponse, authHeaderToPost, PMSAPI, AcademicAPI } from '@/_services/api';
+import { authHeader, handleResponse, authHeaderToPost, authHeaderToFile, PMSAPI, AcademicAPI } from '@/_services/api';
 
 export const listOfBooksService = {
     // --- List of Books ---
@@ -60,6 +60,15 @@ export const listOfBooksService = {
     getProgramByCollegeId,
     getBatchByProgramId,
     getSubjectsByAcademicYearAndSemester,
+
+     // --- Intellectual Property Rights (IPR) ---
+    saveIPR,
+    getIPRByCollege,
+    getIPRByUserAndCollege,
+    deleteIPR,
+
+    // --- S3 Document Upload ---
+    uploadDocumentToS3,
 
 };
 
@@ -467,5 +476,57 @@ function getSubjectsByAcademicYearAndSemester(academicYearId, semesterId) {
         .catch(error => {
             console.error('Error fetching subjects by academic year and semester:', error);
             throw error;
+        });
+}
+
+// POST /api/academic-diary/ipr (Combined Create/Update - include id for update)
+function saveIPR(values) {
+    const requestOptions = {
+        method: 'POST',
+        headers: authHeaderToPost(),
+        body: JSON.stringify(values),
+    };
+    return fetch(`${PMSAPI}/academic-diary/ipr`, requestOptions).then(handleResponse);
+}
+
+// GET /api/academic-diary/ipr/college/{collegeId}
+function getIPRByCollege(collegeId) {
+    const requestOptions = { method: 'GET', headers: authHeader() };
+    return fetch(`${PMSAPI}/academic-diary/ipr/college/${collegeId}`, requestOptions).then(handleResponse);
+}
+
+// GET /api/academic-diary/ipr/user/{userId}/college/{collegeId}
+function getIPRByUserAndCollege(userId, collegeId) {
+    const requestOptions = { method: 'GET', headers: authHeader() };
+    return fetch(`${PMSAPI}/academic-diary/ipr/user/${userId}/college/${collegeId}`, requestOptions).then(handleResponse);
+}
+
+// DELETE /api/academic-diary/ipr/{id}
+function deleteIPR(id) {
+    const requestOptions = { method: 'DELETE', headers: authHeader() };
+    return fetch(`${PMSAPI}/academic-diary/ipr/${id}`, requestOptions).then(handleResponse);
+}
+
+
+/* =========================
+   S3 DOCUMENT UPLOAD
+========================= */
+function uploadDocumentToS3(file) {
+    const formData = new FormData();
+    formData.append('file', file);
+    const requestOptions = {
+        method: 'POST',
+        headers: authHeaderToFile(),
+        body: formData,
+    };
+    return fetch(`${AcademicAPI}/s3/upload`, requestOptions)
+        .then(res => res.ok ? res.text() : res.text().then(err => Promise.reject(new Error(err))))
+        .then(text => {
+            try {
+                const parsed = JSON.parse(text);
+                return parsed.response || parsed.url || text.trim();
+            } catch {
+                return text.trim();
+            }
         });
 }

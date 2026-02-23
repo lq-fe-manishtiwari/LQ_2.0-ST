@@ -6,6 +6,7 @@ import Counseling from "./Counseling";
 import Societal from "./Societal";
 import OtherContributions from "./OtherContributions";
 import LecturesObserved from "./LecturesObserved";
+import IPR from "./IPR";
 import { ChevronDown, ChevronUp } from "lucide-react";
 
 const contributionsList = [
@@ -26,6 +27,11 @@ const contributionsList = [
     key: "lectures",
     title: "Lectures Observed",
     component: <LecturesObserved />,
+  },
+  {
+    key: "ipr",
+    title: "Intellectual Property Rights (IPR)",
+    component: <IPR />,
   },
   { key: "other", title: "Any Other Contributions", component: <OtherContributions /> },
 ];
