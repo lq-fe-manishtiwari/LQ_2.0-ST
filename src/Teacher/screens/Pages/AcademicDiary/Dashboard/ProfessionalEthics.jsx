@@ -10,6 +10,8 @@ import html2canvas from 'html2canvas';
 const ProfessionalEthics = () => {
   // States
   const [ethicsList, setEthicsList] = useState([]);
+  const [consentStatus, setConsentStatus] = useState(false);
+  const [isSubmittingConsent, setIsSubmittingConsent] = useState(false);
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
@@ -36,7 +38,61 @@ const ProfessionalEthics = () => {
   // Fetch all professional ethics on component mount
   useEffect(() => {
     fetchAllProfessionalEthics();
+    fetchConsentStatus();
   }, [currentPage, rowsPerPage]);
+
+  // Consent Functions
+  const fetchConsentStatus = async () => {
+    try {
+      const currentUser = JSON.parse(localStorage.getItem("currentUser"));
+      const userId = currentUser?.id || currentUser?.jti || currentUser?.userId || currentUser?.sub;
+
+      console.log('Fetching consent for userId:', userId);
+      if (!userId) {
+        console.warn('No valid userId found for consent fetch');
+        return;
+      }
+
+      const response = await ProfessionalEthicsService.GetStudentConsentByUserId(userId);
+      console.log('Consent response:', response);
+
+      if (response && response.is_acknowledged) {
+        setConsentStatus(response.is_acknowledged);
+      }
+    } catch (err) {
+      console.error('Error fetching consent status:', err);
+    }
+  };
+
+  const handleConsentChange = async (e) => {
+    const checked = e.target.checked;
+    setConsentStatus(checked);
+    setIsSubmittingConsent(true);
+
+    try {
+      const activeCollege = JSON.parse(localStorage.getItem("activeCollege"));
+      const currentUser = JSON.parse(localStorage.getItem("currentUser"));
+      const userId = currentUser?.id || currentUser?.jti || currentUser?.userId || currentUser?.sub || 50;
+
+      const payload = {
+        college_id: activeCollege?.id,
+        is_acknowledged: checked,
+        is_opt_out: false,
+        opt_out_reason: null,
+        is_approved: true,
+        user_id: userId
+      };
+
+      await ProfessionalEthicsService.PostStudentConsent(payload);
+      showAlert('Success!', 'Consent updated successfully!', 'success');
+    } catch (err) {
+      showAlert('Error!', 'Failed to update consent', 'error');
+      setConsentStatus(!checked); // Revert on failure
+      console.error('Error updating consent:', err);
+    } finally {
+      setIsSubmittingConsent(false);
+    }
+  };
 
   // API Functions - Updated to match your API response structure
   const fetchAllProfessionalEthics = async () => {
@@ -620,6 +676,31 @@ const ProfessionalEthics = () => {
               )}
             </div>
           )}
+
+          {/* Consent Checkbox */}
+          <div className="px-6 py-5 border-t border-gray-100 bg-white flex items-start gap-4">
+            <div className="flex items-center h-5 mt-1">
+              <input
+                id="ethics-consent"
+                type="checkbox"
+                checked={consentStatus}
+                onChange={handleConsentChange}
+                disabled={isSubmittingConsent}
+                className="w-5 h-5 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2 disabled:opacity-50 transition-all cursor-pointer"
+              />
+            </div>
+            <div className="flex-1">
+              <label htmlFor="ethics-consent" className={`text-sm font-semibold tracking-tight cursor-pointer ${consentStatus ? 'text-blue-700' : 'text-gray-800'}`}>
+                I acknowledge and agree to abide by the Code of Professional Ethics.
+              </label>
+              <p className="text-xs text-gray-500 mt-1">
+                By checking this box, you confirm that you have read, understood, and accept the professional ethics and guidelines provided above.
+              </p>
+            </div>
+            {isSubmittingConsent && (
+              <Loader2 className="w-5 h-5 text-blue-600 animate-spin" />
+            )}
+          </div>
 
           {/* Footer Note matching the image */}
           <div className="px-6 py-4 border-t border-gray-50 bg-gray-50/30 flex justify-end">
