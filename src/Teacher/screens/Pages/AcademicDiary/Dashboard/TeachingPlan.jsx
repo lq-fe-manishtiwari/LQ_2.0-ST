@@ -1,12 +1,13 @@
 'use client';
 
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { Plus, Search, Trash2, Edit, Filter, ChevronDown, FileText, X } from 'lucide-react';
+import { Plus, Search, Trash2, Edit, Filter, ChevronDown, FileText, X, Download } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import SweetAlert from "react-bootstrap-sweetalert";
 import { teacherProfileService } from '../Services/academicDiary.service';
 import { teachingPlanService } from '../Services/teachingPlan.service';
 import { api } from '@/_services/api';
+import { useUserProfile } from "@/contexts/UserProfileContext";
 
 // Custom Select Component
 const CustomSelect = ({ label, value, onChange, options, placeholder, disabled = false }) => {
@@ -64,6 +65,7 @@ const CustomSelect = ({ label, value, onChange, options, placeholder, disabled =
 };
 
 export default function TeachingPlanDashboard() {
+    const { getUserId } = useUserProfile();
     const [teachingPlans, setTeachingPlans] = useState([]);
     const [allTeachingPlans, setAllTeachingPlans] = useState([]);
     const [searchTerm, setSearchTerm] = useState('');
@@ -86,6 +88,10 @@ export default function TeachingPlanDashboard() {
 
     // Filter visibility state
     const [filterOpen, setFilterOpen] = useState(false);
+
+    // Export visibility state
+    const [exportOpen, setExportOpen] = useState(false);
+    const exportRef = useRef(null);
 
     // Pagination
     const entriesPerPage = 10;
@@ -131,6 +137,16 @@ export default function TeachingPlanDashboard() {
     // Initial load
     useEffect(() => {
         loadAllTeachingPlans();
+    }, []);
+
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (exportRef.current && !exportRef.current.contains(event.target)) {
+                setExportOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
     // Clear all filters
@@ -234,6 +250,67 @@ export default function TeachingPlanDashboard() {
     const handlePrev = () => currentPage > 1 && setCurrentPage(p => p - 1);
     const handleNext = () => currentPage < totalPages && setCurrentPage(p => p + 1);
     const resetPage = () => setCurrentPage(1);
+
+    const handleExport = async (type) => {
+        try {
+            const userProfile = JSON.parse(localStorage.getItem("userProfile") || "{}");
+            const collegeId = userProfile.college_id;
+            const teacher_id = userProfile.teacher_id;
+            const userId = getUserId();
+
+            if (!collegeId || !userId) {
+                setAlert(
+                    <SweetAlert danger title="Error!" onConfirm={() => setAlert(null)}>
+                        User information missing.
+                    </SweetAlert>
+                );
+                return;
+            }
+
+            setAlert(
+                <SweetAlert title="Exporting..." showConfirm={false}>
+                    <div className="flex flex-col items-center justify-center p-4">
+                        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600 mb-4"></div>
+                        <p>Generating your {type.toUpperCase()} file...</p>
+                    </div>
+                </SweetAlert>
+            );
+
+            let blob;
+            let filename = `Teaching_Plan_Report`;
+
+            if (type === 'pdf') {
+                blob = await teachingPlanService.DownloadTeachingPlanPDF(collegeId, userId);
+                filename += '.pdf';
+            } else if (type === 'excel') {
+                blob = await teachingPlanService.DownloadTeachingPlanExcel(collegeId, userId);
+                filename += '.xlsx';
+            }
+
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+
+            setAlert(
+                <SweetAlert success title="Success!" onConfirm={() => setAlert(null)} timeout={2000}>
+                    File downloaded successfully.
+                </SweetAlert>
+            );
+        } catch (error) {
+            console.error('Export error:', error);
+            setAlert(
+                <SweetAlert danger title="Export Failed" onConfirm={() => setAlert(null)}>
+                    Failed to export the file. Please try again.
+                </SweetAlert>
+            );
+        }
+        setExportOpen(false);
+    };
 
     // Delete functionality
     const handleDeleteConfirm = (id) => {
@@ -424,6 +501,39 @@ export default function TeachingPlanDashboard() {
                             className={`w-4 h-4 text-blue-600 transition-transform ${filterOpen ? 'rotate-180' : 'rotate-0'}`}
                         />
                     </button>
+
+                    {/* Export Dropdown Button */}
+                    <div className="relative" ref={exportRef}>
+                        <button
+                            onClick={() => setExportOpen(!exportOpen)}
+                            className="flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 text-white px-4 py-3 rounded-xl shadow-sm transition-all w-full sm:w-auto"
+                        >
+                            <Download className="w-4 h-4" />
+                            <span className="font-medium">Export</span>
+                            <ChevronDown
+                                className={`w-4 h-4 transition-transform ${exportOpen ? 'rotate-180' : 'rotate-0'}`}
+                            />
+                        </button>
+
+                        {exportOpen && (
+                            <div className="absolute right-0 mt-2 w-48 bg-white border border-gray-200 rounded-xl shadow-lg z-20 py-2">
+                                <button
+                                    onClick={() => handleExport('pdf')}
+                                    className="w-full text-left px-4 py-2 hover:bg-blue-50 text-gray-700 hover:text-blue-700 transition-colors flex items-center gap-2"
+                                >
+                                    <FileText className="w-4 h-4" />
+                                    Export as PDF
+                                </button>
+                                <button
+                                    onClick={() => handleExport('excel')}
+                                    className="w-full text-left px-4 py-2 hover:bg-green-50 text-gray-700 hover:text-green-700 transition-colors flex items-center gap-2"
+                                >
+                                    <Download className="w-4 h-4" />
+                                    Export as Excel
+                                </button>
+                            </div>
+                        )}
+                    </div>
 
                     {/* Add Teaching Plan Button */}
                     <button
