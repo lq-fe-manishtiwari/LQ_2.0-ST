@@ -204,10 +204,8 @@ const TakeAssessment = () => {
           }
         }
 
-        // If timer hasn't started yet, don't do anything
         if (prev <= 0) return 0;
 
-        // Auto-submit on last second
         if (prev <= 1) {
           console.log("Duration timer reached. Auto-submitting...");
           submitAssessment(true);
