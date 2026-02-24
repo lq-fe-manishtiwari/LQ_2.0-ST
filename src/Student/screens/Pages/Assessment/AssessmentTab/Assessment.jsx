@@ -74,39 +74,33 @@ const Assessment = () => {
 
     // Helper function to determine assessment status based on time
     const getAssessmentStatus = (item) => {
-        // Check submission count first - if > 0, it's completed/submitted
-        if (item.submission_count > 0) {
-            return 'Completed';
+        // Priority 1: Check if explicitly marked as attempted in API
+        const hasAttempted = item.is_attempted === true || item.is_attempted === 'true' ||
+            item.is_attempt === true || item.is_attempt === 'true';
+
+        if (hasAttempted) {
+            return 'Attempted';
         }
 
-        // If there's a submission status, use it
-        if (item.submission_status) {
-            return item.submission_status;
+        // Priority 2: Check if currently in progress
+        if (item.submission_status === 'In Progress') {
+            return 'In Progress';
         }
 
-        // If offline mode, return "Not Attempted" for DRAFT
-        if (item.mode === 'OFFLINE') {
-            return item.status === 'DRAFT' ? 'Not Attempted' : item.status;
-        }
-
-        // For online assessments, check time windows
-        if (item.test_start_datetime && item.test_end_datetime) {
-            const now = new Date();
+        // Priority 3: Check time windows for assessments not yet attempted
+        const now = new Date();
+        if (item.test_start_datetime) {
             const startTime = new Date(item.test_start_datetime);
-            const endTime = new Date(item.test_end_datetime);
-
-            if (now < startTime) {
-                return 'Upcoming';
-            } else if (now > endTime) {
-                return 'Expired';
-            } else {
-                // Current time is between start and end
-                return 'Not Attempted';
-            }
+            if (now < startTime) return 'Upcoming';
         }
 
-        // Fallback to original logic
-        return item.status === 'DRAFT' ? 'Not Attempted' : item.status;
+        if (item.test_end_datetime) {
+            const endTime = new Date(item.test_end_datetime);
+            if (now > endTime) return 'Expired';
+        }
+
+        // Fallback for not attempted/standard active state
+        return 'Not Attempted';
     };
 
     const loadAssessments = async () => {
@@ -135,10 +129,10 @@ const Assessment = () => {
                         },
                         startDate: item.test_start_datetime ? new Date(item.test_start_datetime).toLocaleString() : "N/A",
                         endDate: item.test_end_datetime ? new Date(item.test_end_datetime).toLocaleString() : "N/A",
-                        attempted: 0,
+                        attempted: (item.is_attempted === true || item.is_attempted === 'true' || item.is_attempt === true || item.is_attempt === 'true') ? 1 : 0,
                         total: 0,
                         status: getAssessmentStatus(item),
-                        proctoring: false,
+                        proctoring: item.is_proctored || false,
                         offline: item.mode === 'OFFLINE',
                         type: item.mode || 'Online',
                         percentage: 0,
@@ -147,7 +141,7 @@ const Assessment = () => {
                         duration: item.time_limit_minutes || 0,
                         questionCount: 0,
                         originalData: item
-                    }));
+                    })).sort((a, b) => b.id - a.id);
                     setAssessments(mappedData);
                 }
             }
@@ -424,6 +418,10 @@ const Assessment = () => {
                                     <div className="text-gray-700 font-medium">{a.endDate}</div>
                                 </div>
                                 <div>
+                                    <div className="text-gray-400 mb-0.5 uppercase tracking-wider font-semibold" style={{ fontSize: '9px' }}>Start Time</div>
+                                    <div className="text-gray-700 font-medium">{a.startDate}</div>
+                                </div>
+                                <div>
                                     <div className="text-gray-400 mb-0.5 uppercase tracking-wider font-semibold" style={{ fontSize: '9px' }}>Type</div>
                                     <div className="text-gray-700 font-medium italic">{a.rubricType || '-'}</div>
                                 </div>
@@ -489,6 +487,7 @@ const Assessment = () => {
                                     <th className="table-th whitespace-nowrap">Duration</th>
                                     <th className="table-th whitespace-nowrap">Category</th>
                                     <th className="table-th whitespace-nowrap text-center">Rubric Type</th>
+                                    <th className="table-th whitespace-nowrap">Start Time</th>
                                     <th className="table-th whitespace-nowrap">Due Date</th>
                                     <th className="table-th whitespace-nowrap">Status</th>
                                     <th className="table-th whitespace-nowrap text-center">Action</th>
@@ -542,6 +541,7 @@ const Assessment = () => {
                                                 )}
                                             </td>
 
+                                            <td className="table-td whitespace-nowrap py-1 text-sm text-gray-500">{a.startDate}</td>
                                             <td className="table-td whitespace-nowrap py-1 text-sm text-gray-500">{a.endDate}</td>
                                             <td className="table-td whitespace-nowrap py-1">
                                                 <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${a.status === 'Attempted' || a.status === 'Completed' ? 'bg-green-100 text-green-700' :
