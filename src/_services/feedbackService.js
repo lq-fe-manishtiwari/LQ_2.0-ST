@@ -41,6 +41,7 @@ export const feedbackService = {
     submitFeedbackResponse,
     checkSubmissionStatus,
     getMySubmission,
+    getStudentTeacherMappings,
 
     // Public access
     getPublicFeedback,
@@ -203,5 +204,34 @@ async function getPublicFeedback(code, feedbackFormId = null) {
         return response.json();
     } catch (error) {
         handleApiError(error, 'Get Public Feedback');
+    }
+}
+
+/**
+ * Get student's teacher-subject mappings
+ * @param {number} studentId - Student ID
+ * @param {number} academicYearId - Academic Year ID
+ * @param {number} semesterId - Semester ID
+ * @param {number} divisionId - Division ID
+ * @returns {Promise<Array>} Teacher-subject mappings
+ */
+async function getStudentTeacherMappings(studentId, academicYearId, semesterId, divisionId) {
+    try {
+        validateParams({ studentId, academicYearId, semesterId, divisionId }, 'Get Student Teacher Mappings');
+
+        const params = new URLSearchParams({
+            academicYearId: academicYearId.toString(),
+            semesterId: semesterId.toString(),
+            divisionId: divisionId.toString()
+        });
+
+        const requestOptions = { method: 'GET', headers: authHeader() };
+        const response = await fetch(
+            `${AcademicAPI}/subjects/student/${studentId}/teacher-mappings?${params.toString()}`,
+            requestOptions
+        );
+        return handleResponse(response);
+    } catch (error) {
+        handleApiError(error, 'Get Student Teacher Mappings');
     }
 }

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { feedbackService } from "@/_services/feedbackService";
+import { StudentService } from "../../Profile/Student.Service";
 import SweetAlert from "react-bootstrap-sweetalert";
 
 export default function FillFeedbackForm() {
@@ -12,11 +13,22 @@ export default function FillFeedbackForm() {
     const [answers, setAnswers] = useState({});
     const [userProfile, setUserProfile] = useState(null);
     const [showSuccessAlert, setShowSuccessAlert] = useState(false);
+    const [showErrorAlert, setShowErrorAlert] = useState(false);
+    const [errorMessage, setErrorMessage] = useState('');
+    const [teacherSubjects, setTeacherSubjects] = useState([]);
+    const [teacherSubjectPairs, setTeacherSubjectPairs] = useState([]);
+    const [studentContext, setStudentContext] = useState(null);
 
     useEffect(() => {
         loadUserProfile();
         loadForm();
     }, [formId]);
+
+    useEffect(() => {
+        if (form && userProfile?.user?.user_type === 'STUDENT') {
+            loadTeacherMappings();
+        }
+    }, [form, userProfile]);
 
     const loadUserProfile = () => {
         const storedProfile = localStorage.getItem('userProfile');
@@ -31,22 +43,6 @@ export default function FillFeedbackForm() {
             const response = await feedbackService.getFeedbackFormById(formId);
             const formData = response?.data || response;
             setForm(formData);
-
-            // Initialize answers object with correct field names
-            const initialAnswers = {};
-            formData.sections?.forEach(section => {
-                section.questions?.forEach(question => {
-                    // Use feedback_question_id from API response
-                    const qId = question.feedback_question_id;
-                    initialAnswers[qId] = {
-                        questionId: qId,
-                        answerText: null,
-                        answerValue: null,
-                        answerJson: null
-                    };
-                });
-            });
-            setAnswers(initialAnswers);
         } catch (error) {
             console.error('Error loading form:', error);
             alert('Failed to load feedback form');
@@ -56,14 +52,68 @@ export default function FillFeedbackForm() {
         }
     };
 
-    const handleAnswerChange = (questionId, type, value) => {
+    const loadTeacherMappings = async () => {
+        try {
+            const studentId = userProfile?.student_id;
+            const academicYearId = form?.target_academic_year_id;
+            const semesterId = form?.target_semester_id;
+            
+            if (studentId && academicYearId && semesterId) {
+                const history = await StudentService.getStudentHistory(studentId);
+                const matchingRecord = history?.find(
+                    h => h.academic_year_id === academicYearId && h.semester_id === semesterId
+                );
+                
+                const divisionId = matchingRecord?.division_id;
+                
+                if (divisionId) {
+                    // Store context for submission
+                    setStudentContext({
+                        academicYearId,
+                        semesterId,
+                        divisionId
+                    });
+                    
+                    const response = await feedbackService.getStudentTeacherMappings(
+                        studentId,
+                        academicYearId,
+                        semesterId,
+                        divisionId
+                    );
+                    const mappings = response?.data || response || [];
+                    setTeacherSubjects(mappings);
+                    
+                    const pairs = [];
+                    mappings.forEach(subject => {
+                        if (subject.teachers && subject.teachers.length > 0) {
+                            subject.teachers.forEach(teacher => {
+                                pairs.push({
+                                    teacher_id: teacher.teacher_id,
+                                    teacher_name: teacher.teacher_name,
+                                    subject_id: subject.subject_id,
+                                    subject_name: subject.subject_name
+                                });
+                            });
+                        }
+                    });
+                    setTeacherSubjectPairs(pairs);
+                }
+            }
+        } catch (error) {
+            console.error('Error loading teacher mappings:', error);
+        }
+    };
+
+    const handleAnswerChange = (uniqueQuestionId, originalQuestionId, type, value, teacherId, subjectId) => {
         setAnswers(prev => ({
             ...prev,
-            [questionId]: {
-                ...prev[questionId],
-                ...(type === 'text' && { answerText: value }),
-                ...(type === 'value' && { answerValue: value }),
-                ...(type === 'json' && { answerJson: value })
+            [uniqueQuestionId]: {
+                questionId: originalQuestionId,
+                teacherId: teacherId || null,
+                subjectId: subjectId || null,
+                answerText: type === 'text' ? value : (prev[uniqueQuestionId]?.answerText || null),
+                answerValue: type === 'value' ? value : (prev[uniqueQuestionId]?.answerValue || null),
+                answerJson: type === 'json' ? value : (prev[uniqueQuestionId]?.answerJson || null)
             }
         }));
     };
@@ -72,26 +122,48 @@ export default function FillFeedbackForm() {
         e.preventDefault();
 
         if (!userProfile) {
-            alert('User profile not found. Please login again.');
+            setErrorMessage('User profile not found. Please login again.');
+            setShowErrorAlert(true);
             return;
         }
 
-        // Validate required questions
+        // Validate required questions only for visible teacher-subject pairs
         const unansweredRequired = [];
-        form.sections?.forEach(section => {
-            section.questions?.forEach(question => {
-                if (question.required) {
-                    const answer = answers[question.feedback_question_id];
-                    const isEmpty = !answer.answerText && !answer.answerValue && !answer.answerJson;
-                    if (isEmpty) {
-                        unansweredRequired.push(question.label);
-                    }
-                }
+        
+        if (teacherSubjectPairs.length > 0) {
+            // Teacher-wise validation
+            teacherSubjectPairs.forEach(pair => {
+                form.sections?.forEach(section => {
+                    section.questions?.forEach(question => {
+                        if (question.required) {
+                            const uniqueQuestionId = `${pair.teacher_id}_${pair.subject_id}_${question.feedback_question_id}`;
+                            const answer = answers[uniqueQuestionId];
+                            const isEmpty = !answer || (!answer.answerText && !answer.answerValue && !answer.answerJson);
+                            if (isEmpty) {
+                                unansweredRequired.push(`${pair.teacher_name} - ${pair.subject_name}: ${question.label}`);
+                            }
+                        }
+                    });
+                });
             });
-        });
+        } else {
+            // General validation
+            form.sections?.forEach(section => {
+                section.questions?.forEach(question => {
+                    if (question.required) {
+                        const answer = answers[question.feedback_question_id];
+                        const isEmpty = !answer || (!answer.answerText && !answer.answerValue && !answer.answerJson);
+                        if (isEmpty) {
+                            unansweredRequired.push(question.label);
+                        }
+                    }
+                });
+            });
+        }
 
         if (unansweredRequired.length > 0) {
-            alert(`Please answer all required questions:\n- ${unansweredRequired.join('\n- ')}`);
+            setErrorMessage(`Please answer all required questions:\n\n${unansweredRequired.join('\n')}`);
+            setShowErrorAlert(true);
             return;
         }
 
@@ -101,30 +173,35 @@ export default function FillFeedbackForm() {
                 feedback_form_id: parseInt(formId),
                 user_id: userProfile?.user?.user_id || userProfile?.userId,
                 user_type: userProfile?.user?.user_type || userProfile?.userType,
+                ...(studentContext && {
+                    academic_year_id: studentContext.academicYearId,
+                    semester_id: studentContext.semesterId,
+                    division_id: studentContext.divisionId
+                }),
                 answers: Object.values(answers).map(a => ({
                     question_id: a.questionId,
+                    teacher_id: a.teacherId,
+                    subject_id: a.subjectId,
                     answer_text: a.answerText,
                     answer_value: a.answerValue,
                     answer_json: a.answerJson
                 }))
             };
 
-            console.log('Submitting feedback:', submissionData);
             await feedbackService.submitFeedbackResponse(submissionData);
             setShowSuccessAlert(true);
         } catch (error) {
             console.error('Error submitting feedback:', error);
-            alert(error?.message || 'Failed to submit feedback');
+            setErrorMessage(error?.message || 'Failed to submit feedback');
+            setShowErrorAlert(true);
         } finally {
             setSubmitting(false);
         }
     };
 
-    const renderQuestion = (question) => {
-        const questionId = question.feedback_question_id;
-        const answer = answers[questionId] || {};
+    const renderQuestion = (question, uniqueQuestionId, teacherId, subjectId) => {
+        const answer = answers[uniqueQuestionId] || {};
 
-        // Use 'type' field from API response
         switch (question.type) {
             case 'text':
                 const textConfig = typeof question.config === 'string' ? JSON.parse(question.config) : question.config;
@@ -138,7 +215,7 @@ export default function FillFeedbackForm() {
                             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                             placeholder="Enter your answer..."
                             value={answer.answerText || ''}
-                            onChange={(e) => handleAnswerChange(questionId, 'text', e.target.value)}
+                            onChange={(e) => handleAnswerChange(uniqueQuestionId, question.feedback_question_id, 'text', e.target.value, teacherId, subjectId)}
                             maxLength={maxLength}
                             required={question.required}
                         />
@@ -150,7 +227,7 @@ export default function FillFeedbackForm() {
                             rows="4"
                             placeholder="Enter your answer..."
                             value={answer.answerText || ''}
-                            onChange={(e) => handleAnswerChange(questionId, 'text', e.target.value)}
+                            onChange={(e) => handleAnswerChange(uniqueQuestionId, question.feedback_question_id, 'text', e.target.value, teacherId, subjectId)}
                             maxLength={maxLength}
                             required={question.required}
                         />
@@ -170,10 +247,10 @@ export default function FillFeedbackForm() {
                                 <label key={index} className="flex items-center gap-2 cursor-pointer">
                                     <input
                                         type="radio"
-                                        name={`rating-${questionId}`}
+                                        name={`rating-${uniqueQuestionId}`}
                                         value={index + 1}
                                         checked={answer.answerValue === index + 1}
-                                        onChange={(e) => handleAnswerChange(questionId, 'value', parseInt(e.target.value))}
+                                        onChange={(e) => handleAnswerChange(uniqueQuestionId, question.feedback_question_id, 'value', parseInt(e.target.value), teacherId, subjectId)}
                                         required={question.required}
                                         className="w-4 h-4 text-blue-600"
                                     />
@@ -189,7 +266,7 @@ export default function FillFeedbackForm() {
                                 <button
                                     key={index}
                                     type="button"
-                                    onClick={() => handleAnswerChange(questionId, 'value', index + 1)}
+                                    onClick={() => handleAnswerChange(uniqueQuestionId, question.feedback_question_id, 'value', index + 1, teacherId, subjectId)}
                                     className="text-3xl focus:outline-none"
                                 >
                                     {answer.answerValue > index ? '⭐' : '☆'}
@@ -204,10 +281,10 @@ export default function FillFeedbackForm() {
                                 <label key={index} className="flex items-center gap-1 cursor-pointer">
                                     <input
                                         type="radio"
-                                        name={`rating-${questionId}`}
+                                        name={`rating-${uniqueQuestionId}`}
                                         value={index + 1}
                                         checked={answer.answerValue === index + 1}
-                                        onChange={(e) => handleAnswerChange(questionId, 'value', parseInt(e.target.value))}
+                                        onChange={(e) => handleAnswerChange(uniqueQuestionId, question.feedback_question_id, 'value', parseInt(e.target.value), teacherId, subjectId)}
                                         required={question.required}
                                         className="w-4 h-4 text-blue-600"
                                     />
@@ -227,10 +304,10 @@ export default function FillFeedbackForm() {
                             <label key={index} className="flex items-center gap-2 cursor-pointer">
                                 <input
                                     type="radio"
-                                    name={`radio-${questionId}`}
+                                    name={`radio-${uniqueQuestionId}`}
                                     value={option}
                                     checked={answer.answerText === option}
-                                    onChange={(e) => handleAnswerChange(questionId, 'text', e.target.value)}
+                                    onChange={(e) => handleAnswerChange(uniqueQuestionId, question.feedback_question_id, 'text', e.target.value, teacherId, subjectId)}
                                     required={question.required}
                                     className="w-4 h-4 text-blue-600"
                                 />
@@ -252,7 +329,7 @@ export default function FillFeedbackForm() {
                     } else {
                         updated = updated.filter(o => o !== option);
                     }
-                    handleAnswerChange(questionId, 'json', JSON.stringify(updated));
+                    handleAnswerChange(uniqueQuestionId, question.feedback_question_id, 'json', JSON.stringify(updated), teacherId, subjectId);
                 };
 
                 return (
@@ -294,41 +371,88 @@ export default function FillFeedbackForm() {
 
     return (
         <div className="max-w-4xl mx-auto p-4">
-            {/* Header */}
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
-                <h1 className="text-2xl font-bold text-gray-900 mb-2">{form.form_name}</h1>
-                <p className="text-gray-600 text-sm">Code: {form.code}</p>
-                <div className="flex gap-4 mt-3 text-sm text-gray-500">
-                    <span><i className="bi bi-calendar-event mr-1"></i>Start: {form.start_date}</span>
-                    <span><i className="bi bi-calendar-x mr-1"></i>End: {form.end_date}</span>
+            <div className="bg-gradient-to-r from-blue-600 to-blue-700 rounded-lg shadow-lg p-6 mb-6 text-white">
+                <h1 className="text-3xl font-bold mb-4 text-center">{form.form_name}</h1>
+                <div className="flex items-center justify-between text-sm">
+                    <div className="flex items-center gap-2">
+                        <i className="bi bi-hash"></i>
+                        <span>Code: <span className="font-semibold">{form.code}</span></span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <i className="bi bi-calendar-event"></i>
+                        <span>Start: <span className="font-semibold">{form.start_date}</span></span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <i className="bi bi-calendar-x"></i>
+                        <span>End: <span className="font-semibold">{form.end_date}</span></span>
+                    </div>
                 </div>
             </div>
 
-            {/* Form */}
             <form onSubmit={handleSubmit}>
-                {form.sections?.map((section, sectionIndex) => (
-                    <div key={section.feedback_section_id} className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-4">
-                        <h2 className="text-xl font-semibold text-gray-800 mb-4">
-                            {sectionIndex + 1}. {section.title || 'General'}
-                        </h2>
+                {teacherSubjectPairs.length > 0 ? (
+                    teacherSubjectPairs.map((pair, pairIndex) => (
+                        <div key={pairIndex} className="mb-6">
+                            <div className="bg-blue-50 border-l-4 border-blue-600 p-4 mb-4 rounded-r-lg">
+                                <div className="flex items-center gap-3">
+                                    <i className="bi bi-person-badge text-blue-600 text-xl"></i>
+                                    <div>
+                                        <h3 className="font-semibold text-gray-900">{pair.teacher_name}</h3>
+                                        <p className="text-sm text-gray-600">{pair.subject_name}</p>
+                                    </div>
+                                </div>
+                            </div>
 
-                        <div className="space-y-6">
-                            {section.questions?.map((question, questionIndex) => (
-                                <div key={question.feedback_question_id} className="border-b border-gray-100 pb-6 last:border-0">
-                                    <label className="block mb-3">
-                                        <span className="text-gray-800 font-medium">
-                                            {questionIndex + 1}. {question.label}
-                                            {question.required && <span className="text-red-500 ml-1">*</span>}
-                                        </span>
-                                    </label>
-                                    {renderQuestion(question)}
+                            {form.sections?.map((section, sectionIndex) => (
+                                <div key={section.feedback_section_id} className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-4">
+                                    <h2 className="text-xl font-semibold text-gray-800 mb-4">
+                                        {sectionIndex + 1}. {section.title || 'General'}
+                                    </h2>
+
+                                    <div className="space-y-6">
+                                        {section.questions?.map((question, questionIndex) => {
+                                            const uniqueQuestionId = `${pair.teacher_id}_${pair.subject_id}_${question.feedback_question_id}`;
+                                            return (
+                                                <div key={uniqueQuestionId} className="border-b border-gray-100 pb-6 last:border-0">
+                                                    <label className="block mb-3">
+                                                        <span className="text-gray-800 font-medium">
+                                                            {questionIndex + 1}. {question.label}
+                                                            {question.required && <span className="text-red-500 ml-1">*</span>}
+                                                        </span>
+                                                    </label>
+                                                    {renderQuestion(question, uniqueQuestionId, pair.teacher_id, pair.subject_id)}
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
                                 </div>
                             ))}
                         </div>
-                    </div>
-                ))}
+                    ))
+                ) : (
+                    form.sections?.map((section, sectionIndex) => (
+                        <div key={section.feedback_section_id} className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-4">
+                            <h2 className="text-xl font-semibold text-gray-800 mb-4">
+                                {sectionIndex + 1}. {section.title || 'General'}
+                            </h2>
 
-                {/* Submit Button */}
+                            <div className="space-y-6">
+                                {section.questions?.map((question, questionIndex) => (
+                                    <div key={question.feedback_question_id} className="border-b border-gray-100 pb-6 last:border-0">
+                                        <label className="block mb-3">
+                                            <span className="text-gray-800 font-medium">
+                                                {questionIndex + 1}. {question.label}
+                                                {question.required && <span className="text-red-500 ml-1">*</span>}
+                                            </span>
+                                        </label>
+                                        {renderQuestion(question, question.feedback_question_id)}
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    ))
+                )}
+
                 <div className="flex gap-3 justify-end mt-6">
                     <button
                         type="button"
@@ -358,7 +482,6 @@ export default function FillFeedbackForm() {
                 </div>
             </form>
 
-            {/* Success Alert */}
             {showSuccessAlert && (
                 <SweetAlert
                     success
@@ -370,6 +493,17 @@ export default function FillFeedbackForm() {
                     confirmBtnCssClass="btn-confirm"
                 >
                     Feedback submitted successfully!
+                </SweetAlert>
+            )}
+
+            {showErrorAlert && (
+                <SweetAlert
+                    error
+                    title="Error!"
+                    onConfirm={() => setShowErrorAlert(false)}
+                    confirmBtnCssClass="btn-confirm"
+                >
+                    {errorMessage}
                 </SweetAlert>
             )}
         </div>
