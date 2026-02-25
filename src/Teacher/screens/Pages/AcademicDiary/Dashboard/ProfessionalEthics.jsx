@@ -7,10 +7,14 @@ import ExcelUploadModal from '../Component/ExcelUploadModal';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 
+import { useUserProfile } from '@/contexts/UserProfileContext';
+
 const ProfessionalEthics = () => {
+  const { getUserId } = useUserProfile();
   // States
   const [ethicsList, setEthicsList] = useState([]);
   const [consentStatus, setConsentStatus] = useState(false);
+  const [isApproved, setIsApproved] = useState(false);
   const [isSubmittingConsent, setIsSubmittingConsent] = useState(false);
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(0);
@@ -44,8 +48,7 @@ const ProfessionalEthics = () => {
   // Consent Functions
   const fetchConsentStatus = async () => {
     try {
-      const currentUser = JSON.parse(localStorage.getItem("currentUser"));
-      const userId = currentUser?.id || currentUser?.jti || currentUser?.userId || currentUser?.sub;
+      const userId = getUserId();
 
       console.log('Fetching consent for userId:', userId);
       if (!userId) {
@@ -53,41 +56,47 @@ const ProfessionalEthics = () => {
         return;
       }
 
-      const response = await ProfessionalEthicsService.GetStudentConsentByUserId(userId);
+      const response = await ProfessionalEthicsService.GetTeacherConsentByUserId(userId);
       console.log('Consent response:', response);
 
-      if (response && response.is_acknowledged) {
-        setConsentStatus(response.is_acknowledged);
+      // Check if response has content array and it is not empty
+      const consentData = response?.content?.length > 0 ? response.content[0] : response;
+
+      if (consentData && consentData.is_approved) {
+        setConsentStatus(true);
+        setIsApproved(true);
+      } else if (consentData && consentData.is_acknowledged) {
+        setConsentStatus(consentData.is_acknowledged);
       }
     } catch (err) {
       console.error('Error fetching consent status:', err);
     }
   };
 
-  const handleConsentChange = async (e) => {
-    const checked = e.target.checked;
-    setConsentStatus(checked);
+  const handleConsentChange = (e) => {
+    if (!isApproved) {
+      setConsentStatus(e.target.checked);
+    }
+  };
+
+  const handleApproveConsent = async () => {
     setIsSubmittingConsent(true);
 
     try {
       const activeCollege = JSON.parse(localStorage.getItem("activeCollege"));
-      const currentUser = JSON.parse(localStorage.getItem("currentUser"));
-      const userId = currentUser?.id || currentUser?.jti || currentUser?.userId || currentUser?.sub || 50;
+      const userId = getUserId();
 
       const payload = {
-        college_id: activeCollege?.id,
-        is_acknowledged: checked,
-        is_opt_out: false,
-        opt_out_reason: null,
-        is_approved: true,
-        user_id: userId
+        college_id: activeCollege?.id || 1,
+        user_id: userId,
+        is_approved: true
       };
 
-      await ProfessionalEthicsService.PostStudentConsent(payload);
-      showAlert('Success!', 'Consent updated successfully!', 'success');
+      await ProfessionalEthicsService.PostTeacherConsent(payload);
+      showAlert('Success!', 'Consent approved successfully!', 'success');
+      setIsApproved(true);
     } catch (err) {
       showAlert('Error!', 'Failed to update consent', 'error');
-      setConsentStatus(!checked); // Revert on failure
       console.error('Error updating consent:', err);
     } finally {
       setIsSubmittingConsent(false);
@@ -685,7 +694,7 @@ const ProfessionalEthics = () => {
                 type="checkbox"
                 checked={consentStatus}
                 onChange={handleConsentChange}
-                disabled={isSubmittingConsent}
+                disabled={isSubmittingConsent || isApproved}
                 className="w-5 h-5 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2 disabled:opacity-50 transition-all cursor-pointer"
               />
             </div>
@@ -696,8 +705,18 @@ const ProfessionalEthics = () => {
               <p className="text-xs text-gray-500 mt-1">
                 By checking this box, you confirm that you have read, understood, and accept the professional ethics and guidelines provided above.
               </p>
+              {consentStatus && !isApproved && (
+                <button
+                  onClick={handleApproveConsent}
+                  disabled={isSubmittingConsent}
+                  className="mt-3 flex items-center justify-center gap-2 px-6 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-all font-semibold shadow-md shadow-blue-100 active:scale-95 text-sm disabled:opacity-50"
+                >
+                  {isSubmittingConsent ? <Loader2 className="w-4 h-4 animate-spin" /> : <ShieldCheck className="w-4 h-4" />}
+                  {isSubmittingConsent ? "Approving..." : "Approve"}
+                </button>
+              )}
             </div>
-            {isSubmittingConsent && (
+            {isSubmittingConsent && !consentStatus && (
               <Loader2 className="w-5 h-5 text-blue-600 animate-spin" />
             )}
           </div>

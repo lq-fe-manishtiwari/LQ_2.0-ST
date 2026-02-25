@@ -10,8 +10,8 @@ export const ProfessionalEthicsService = {
     UpdateProfessionalEthics,
     SoftDeleteProfessionalEthics,
     HardDeleteProfessionalEthics,
-    PostStudentConsent,
-    GetStudentConsentByUserId,
+    PostTeacherConsent,
+    GetTeacherConsentByUserId,
      // Daily Work Report
     getTeacherDailyReport,
     getOtherActivities,
@@ -116,13 +116,13 @@ function HardDeleteProfessionalEthics(professionalEthicsId) {
 }
 
 // 8. POST: Student Consent
-function PostStudentConsent(values) {
+function PostTeacherConsent(values) {
     const requestOptions = {
         method: 'POST',
         headers: authHeaderToPost(),
         body: JSON.stringify(values)
     };
-    return fetch(`${API_BASE_URL}/student-consent`, requestOptions)
+    return fetch(`${PMSAPI}/academic-diary/professional-ethics-consent`, requestOptions)
         .then(handleResponse)
         .then(data => {
             return data;
@@ -130,12 +130,12 @@ function PostStudentConsent(values) {
 }
 
 // 9. GET: Student Consent by User ID
-function GetStudentConsentByUserId(userId) {
+function GetTeacherConsentByUserId(userId) {
     const requestOptions = {
         method: 'GET',
         headers: authHeader()
     };
-    return fetch(`${API_BASE_URL}/student-consent/getByUserId/${userId}`, requestOptions)
+    return fetch(`${PMSAPI}/academic-diary/professional-ethics-consent/user/${userId}`, requestOptions)
         .then(handleResponse)
         .then(data => {
             return data;
