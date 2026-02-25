@@ -118,86 +118,107 @@ export default function FillFeedbackForm() {
         }));
     };
 
-    const handleSubmit = async (e) => {
-        e.preventDefault();
+const handleSubmit = async (e) => {
+    e.preventDefault();
 
-        if (!userProfile) {
-            setErrorMessage('User profile not found. Please login again.');
-            setShowErrorAlert(true);
-            return;
-        }
+    if (!userProfile) {
+        setErrorMessage('User profile not found. Please login again.');
+        setShowErrorAlert(true);
+        return;
+    }
 
-        // Validate required questions only for visible teacher-subject pairs
-        const unansweredRequired = [];
-        
-        if (teacherSubjectPairs.length > 0) {
-            // Teacher-wise validation
-            teacherSubjectPairs.forEach(pair => {
-                form.sections?.forEach(section => {
-                    section.questions?.forEach(question => {
-                        if (question.required) {
-                            const uniqueQuestionId = `${pair.teacher_id}_${pair.subject_id}_${question.feedback_question_id}`;
-                            const answer = answers[uniqueQuestionId];
-                            const isEmpty = !answer || (!answer.answerText && !answer.answerValue && !answer.answerJson);
-                            if (isEmpty) {
-                                unansweredRequired.push(`${pair.teacher_name} - ${pair.subject_name}: ${question.label}`);
-                            }
-                        }
-                    });
-                });
-            });
-        } else {
-            // General validation
+    // Validate required questions only for visible teacher-subject pairs
+    const unansweredRequired = [];
+
+    if (teacherSubjectPairs.length > 0) {
+        teacherSubjectPairs.forEach(pair => {
             form.sections?.forEach(section => {
                 section.questions?.forEach(question => {
                     if (question.required) {
-                        const answer = answers[question.feedback_question_id];
-                        const isEmpty = !answer || (!answer.answerText && !answer.answerValue && !answer.answerJson);
+                        const uniqueQuestionId = `${pair.teacher_id}_${pair.subject_id}_${question.feedback_question_id}`;
+                        const answer = answers[uniqueQuestionId];
+                        const isEmpty = !answer || 
+                            (!answer.answerText && !answer.answerValue && !answer.answerJson);
                         if (isEmpty) {
-                            unansweredRequired.push(question.label);
+                            unansweredRequired.push(
+                                `${pair.teacher_name} - ${pair.subject_name}: ${question.label}`
+                            );
                         }
                     }
                 });
             });
-        }
+        });
+    } else {
+        form.sections?.forEach(section => {
+            section.questions?.forEach(question => {
+                if (question.required) {
+                    const answer = answers[question.feedback_question_id];
+                    const isEmpty = !answer || 
+                        (!answer.answerText && !answer.answerValue && !answer.answerJson);
+                    if (isEmpty) {
+                        unansweredRequired.push(question.label);
+                    }
+                }
+            });
+        });
+    }
 
-        if (unansweredRequired.length > 0) {
-            setErrorMessage(`Please answer all required questions:\n\n${unansweredRequired.join('\n')}`);
-            setShowErrorAlert(true);
-            return;
-        }
+    if (unansweredRequired.length > 0) {
+        setErrorMessage(
+            `Please answer all required questions:\n\n${unansweredRequired.join('\n')}`
+        );
+        setShowErrorAlert(true);
+        return;
+    }
 
-        setSubmitting(true);
-        try {
-            const submissionData = {
+    setSubmitting(true);
+
+    try {
+        // Group answers per teacher + subject
+        const grouped = {};
+
+        Object.values(answers).forEach(a => {
+            const key = `${a.teacherId || 0}_${a.subjectId || 0}`;
+            if (!grouped[key]) grouped[key] = [];
+            grouped[key].push({
+                question_id: a.questionId,
+                answer_text: a.answerText,
+                answer_value: a.answerValue,
+                answer_json: a.answerJson
+            });
+        });
+
+        // Convert grouped answers to array of payload objects
+        const payloadList = Object.entries(grouped).map(([key, ansArray]) => {
+            const [teacherId, subjectId] = key.split('_').map(Number);
+            return {
                 feedback_form_id: parseInt(formId),
                 user_id: userProfile?.user?.user_id || userProfile?.userId,
                 user_type: userProfile?.user?.user_type || userProfile?.userType,
+                teacher_id: teacherId,
+                subject_id: subjectId,
                 ...(studentContext && {
                     academic_year_id: studentContext.academicYearId,
                     semester_id: studentContext.semesterId,
                     division_id: studentContext.divisionId
                 }),
-                answers: Object.values(answers).map(a => ({
-                    question_id: a.questionId,
-                    teacher_id: a.teacherId,
-                    subject_id: a.subjectId,
-                    answer_text: a.answerText,
-                    answer_value: a.answerValue,
-                    answer_json: a.answerJson
-                }))
+                answers: ansArray
             };
+        });
 
-            await feedbackService.submitFeedbackResponse(submissionData);
-            setShowSuccessAlert(true);
-        } catch (error) {
-            console.error('Error submitting feedback:', error);
-            setErrorMessage(error?.message || 'Failed to submit feedback');
-            setShowErrorAlert(true);
-        } finally {
-            setSubmitting(false);
-        }
-    };
+        // Submit bulk
+        await feedbackService.submitFeedbackResponseBulk(payloadList);
+
+        setShowSuccessAlert(true);
+
+    } catch (error) {
+        console.error('Error submitting feedback:', error);
+        setErrorMessage(error?.message || 'Failed to submit feedback');
+        setShowErrorAlert(true);
+    } finally {
+        setSubmitting(false);
+    }
+};
 
     const renderQuestion = (question, uniqueQuestionId, teacherId, subjectId) => {
         const answer = answers[uniqueQuestionId] || {};

@@ -39,6 +39,7 @@ export const feedbackService = {
     getMyFeedbackForms,
     getFeedbackFormById,
     submitFeedbackResponse,
+    submitFeedbackResponseBulk,
     checkSubmissionStatus,
     getMySubmission,
     getStudentTeacherMappings,
@@ -135,6 +136,29 @@ async function submitFeedbackResponse(submissionData) {
 
         const response = await fetch(`${AcademicAPI}/feedback/submit`, requestOptions);
         return handleResponse(response);
+    } catch (error) {
+        handleApiError(error, 'Submit Feedback Response');
+    }
+}
+
+
+async function submitFeedbackResponseBulk(submissionData) {
+    try {
+        console.log('Submitting feedback:', submissionData);
+
+        const requestOptions = {
+            method: 'POST',
+            headers: authHeaderToPost(),
+            body: JSON.stringify(submissionData), // ✅ send array directly
+        };
+
+        const response = await fetch(
+            `${AcademicAPI}/feedback/submit-bulk`,
+            requestOptions
+        );
+
+        return handleResponse(response);
+
     } catch (error) {
         handleApiError(error, 'Submit Feedback Response');
     }
