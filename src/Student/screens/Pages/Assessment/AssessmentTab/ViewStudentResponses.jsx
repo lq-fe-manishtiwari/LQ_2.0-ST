@@ -35,7 +35,7 @@ const ViewStudentResponses = () => {
 
                 const allAttempts = responsesData.attempts || [];
                 // Latest SUBMITTED attempt or the last attempt
-                const latestAttempt = allAttempts.slice().reverse().find(a => a.status === 'SUBMITTED') || allAttempts[allAttempts.length - 1];
+                const latestAttempt = allAttempts.slice().reverse().find(a => a.status === 'SUBMITTED' || a.status === 'EVALUATED' || a.status === 'COMPLETED') || allAttempts[0];
 
                 setAttempt(latestAttempt);
 
@@ -50,7 +50,7 @@ const ViewStudentResponses = () => {
                             question_id: r.question_id,
                             question_text: r.question_text,
                             question_category: r.selected_option_id ? 'OBJECTIVE' : 'SUBJECTIVE',
-                            marks: r.marks_obtained || 0,
+                            marks: r.max_marks || 0,
                             options: []
                         }));
                     }
@@ -61,10 +61,15 @@ const ViewStudentResponses = () => {
                         // Normalize question text across different API formats
                         const qText = q.question || q.question_text || q.text || studentResp.question_text || "No question text available";
 
+                        const evaluation = latestAttempt.evaluation?.question_evaluations?.find(
+                            e => e.question_response_id === studentResp.response_id
+                        ) || {};
+
                         return {
                             ...q,
                             display_text: qText,
-                            student_response: studentResp
+                            student_response: studentResp,
+                            evaluation: evaluation
                         };
                     });
                     setMergedResponses(merged);
@@ -79,10 +84,10 @@ const ViewStudentResponses = () => {
 
     if (loading) {
         return (
-            <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+            <div className="min-h-screen bg-gray-50 flex items-center justify-center">
                 <div className="flex flex-col items-center gap-4">
                     <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-                    <p className="text-slate-600 font-medium tracking-tight">Loading assessment details...</p>
+                    <p className="text-gray-600 font-medium tracking-tight">Loading assessment details...</p>
                 </div>
             </div>
         );
@@ -90,13 +95,13 @@ const ViewStudentResponses = () => {
 
     if (!attempt || mergedResponses.length === 0) {
         return (
-            <div className="min-h-screen bg-slate-50 p-6 flex items-center justify-center">
-                <div className="bg-white rounded-xl shadow-lg p-8 max-w-md w-full text-center border border-slate-200">
+            <div className="min-h-screen bg-gray-50 p-6 flex items-center justify-center">
+                <div className="bg-white rounded-xl shadow-lg p-8 max-w-md w-full text-center border border-gray-200">
                     <div className="w-16 h-16 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-4">
                         <Info className="w-8 h-8" />
                     </div>
-                    <h3 className="text-xl font-bold text-slate-900 mb-2">Result Data Missing</h3>
-                    <p className="text-slate-600 mb-6 font-medium">We couldn't load the questions or responses for this assessment review.</p>
+                    <h3 className="text-xl font-bold text-gray-800 mb-2">Result Data Missing</h3>
+                    <p className="text-gray-600 mb-6 font-medium">We couldn't load the questions or responses for this assessment review.</p>
                     <button
                         onClick={() => navigate('/my-assessment/assessment')}
                         className="w-full py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-all shadow-md"
@@ -112,21 +117,21 @@ const ViewStudentResponses = () => {
     const studentAns = currentQ?.student_response || {};
 
     return (
-        <div className="min-h-screen bg-slate-50 flex flex-col font-sans">
+        <div className="min-h-screen bg-gray-50 flex flex-col font-sans">
             {/* Header - Assessment Module Theme */}
-            <header className="bg-white shadow-lg border-b border-slate-200 sticky top-0 z-20">
+            <header className="bg-white shadow-lg border-b border-gray-200 sticky top-0 z-20">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
                     <div className="flex items-center gap-4">
                         <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
                             <BookOpen className="w-5 h-5 text-blue-600" />
                         </div>
                         <div>
-                            <h1 className="text-lg sm:text-xl font-bold text-slate-900">
+                            <h1 className="text-lg sm:text-xl font-bold text-gray-800">
                                 {assessmentData?.title || 'Assessment Review'}
                             </h1>
-                            <p className="text-xs text-slate-600 flex items-center gap-2 mt-0.5 font-medium">
+                            <p className="text-xs text-gray-600 flex items-center gap-2 mt-0.5 font-medium">
                                 <span className="text-blue-600 font-bold uppercase tracking-wider">Results</span>
-                                <span className="w-1 h-1 bg-slate-400 rounded-full"></span>
+                                <span className="w-1 h-1 bg-gray-400 rounded-full"></span>
                                 <span>Score: {attempt.total_score || 0} / {attempt.max_marks || 0}</span>
                             </p>
                         </div>
@@ -144,28 +149,28 @@ const ViewStudentResponses = () => {
             <div className="max-w-7xl mx-auto w-full p-4 sm:p-6 flex flex-col lg:flex-row gap-6">
                 {/* Main Content Area */}
                 <div className="flex-1 space-y-6">
-                    <div className="bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden min-h-[500px] flex flex-col">
+                    <div className="bg-white rounded-2xl shadow-xl border border-gray-200 overflow-hidden min-h-[500px] flex flex-col">
                         {/* Question Header */}
-                        <div className="bg-slate-50 px-6 py-4 border-b border-slate-200 flex justify-between items-center">
+                        <div className="bg-gray-50 px-6 py-4 border-b border-gray-200 flex justify-between items-center">
                             <div>
-                                <h2 className="text-lg font-bold text-slate-900">
+                                <h2 className="text-lg font-bold text-gray-800">
                                     Question {currentQuestionIdx + 1}
                                 </h2>
-                                <p className="text-[10px] text-slate-500 uppercase font-black tracking-widest mt-0.5">
+                                <p className="text-[10px] text-gray-500 uppercase font-black tracking-widest mt-0.5">
                                     Type: {currentQ.question_category} • Marks: {currentQ.marks || 0}
                                 </p>
                             </div>
                             <div className="text-right">
                                 <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border 
-                                    ${studentAns.marks_obtained > 0 ? 'bg-green-50 text-green-700 border-green-200' : 'bg-slate-100 text-slate-600 border-slate-200'}`}>
-                                    Obtained: {studentAns.marks_obtained || 0} {studentAns.marks_obtained === 1 ? 'Mark' : 'Marks'}
+                                    ${studentAns.marks_obtained > 0 ? 'bg-green-50 text-green-700 border-green-200' : 'bg-gray-100 text-gray-600 border-gray-200'}`}>
+                                    Score: {studentAns.marks_obtained || 0} / {currentQ.marks || 0}
                                 </span>
                             </div>
                         </div>
 
                         {/* Question Content */}
                         <div className="p-6 sm:p-10 flex-1">
-                            <div className="text-xl text-slate-900 font-bold mb-10 leading-relaxed">
+                            <div className="text-xl text-gray-800 font-bold mb-10 leading-relaxed">
                                 {currentQ.display_text}
                             </div>
 
@@ -178,9 +183,9 @@ const ViewStudentResponses = () => {
                                                 const isSelected = studentAns.selected_option_id === opt.option_id;
                                                 const isCorrectOpt = opt.is_correct === true || opt.is_answer === true;
 
-                                                let borderClass = 'border-slate-200';
+                                                let borderClass = 'border-gray-200';
                                                 let bgClass = 'bg-white';
-                                                let textClass = 'text-slate-900';
+                                                let textClass = 'text-gray-700';
                                                 let icon = null;
 
                                                 if (isSelected) {
@@ -206,25 +211,25 @@ const ViewStudentResponses = () => {
                                                             {opt.option_text || opt.text || "Option"}
                                                         </span>
                                                         <div className="flex items-center gap-3">
-                                                            {isSelected && <span className="text-[10px] font-bold text-slate-400 uppercase italic">Your Answer</span>}
+                                                            {isSelected && <span className="text-[10px] font-bold text-gray-400 uppercase italic">Your Answer</span>}
                                                             {icon}
                                                         </div>
                                                     </div>
                                                 );
                                             })
                                         ) : (
-                                            <div className="bg-slate-50 border-2 border-slate-100 rounded-xl p-6 text-slate-700">
+                                            <div className="bg-gray-50 border-2 border-gray-100 rounded-xl p-6 text-gray-700">
                                                 <div className="flex items-center gap-2 mb-3 font-bold text-blue-600">
                                                     <Info className="w-4 h-4" />
                                                     Response Details:
                                                 </div>
                                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                                    <div className="p-4 bg-white border border-slate-200 rounded-xl">
-                                                        <p className="text-[10px] text-slate-400 uppercase font-black mb-1">Answer ID</p>
-                                                        <p className="font-mono font-bold text-slate-900">{studentAns.selected_option_id || 'N/A'}</p>
+                                                    <div className="p-4 bg-white border border-gray-200 rounded-xl">
+                                                        <p className="text-[10px] text-gray-400 uppercase font-black mb-1">Answer ID</p>
+                                                        <p className="font-mono font-bold text-gray-800">{studentAns.selected_option_id || 'N/A'}</p>
                                                     </div>
-                                                    <div className="p-4 bg-white border border-slate-200 rounded-xl">
-                                                        <p className="text-[10px] text-slate-400 uppercase font-black mb-1">Accuracy</p>
+                                                    <div className="p-4 bg-white border border-gray-200 rounded-xl">
+                                                        <p className="text-[10px] text-gray-400 uppercase font-black mb-1">Accuracy</p>
                                                         <p className={`font-bold ${studentAns.is_correct ? 'text-green-600' : 'text-red-500'}`}>
                                                             {studentAns.is_correct ? 'Correct' : 'Incorrect'}
                                                         </p>
@@ -236,15 +241,25 @@ const ViewStudentResponses = () => {
                                 ) : (
                                     /* Subjective View */
                                     <div className="space-y-8">
-                                        <div className="bg-slate-50 border-2 border-slate-100 rounded-2xl p-6 sm:p-8">
-                                            <div className="flex items-center justify-between mb-4 pb-4 border-b border-slate-200/50">
-                                                <h4 className="text-xs font-bold text-slate-600 uppercase tracking-wider">Submitted Answer:</h4>
-                                                <span className="text-[10px] text-slate-400 font-medium italic">Read-only mode</span>
+                                        <div className="bg-gray-50 border-2 border-gray-100 rounded-2xl p-6 sm:p-8">
+                                            <div className="flex items-center justify-between mb-4 pb-4 border-b border-gray-200/50">
+                                                <h4 className="text-xs font-bold text-gray-600 uppercase tracking-wider">Submitted Answer:</h4>
+                                                <span className="text-[10px] text-gray-400 font-medium italic">Read-only mode</span>
                                             </div>
-                                            <div className="text-slate-900 leading-[1.8] font-medium text-lg whitespace-pre-wrap min-h-[150px] font-serif">
+                                            <div className="text-gray-800 leading-[1.8] font-medium text-lg whitespace-pre-wrap min-h-[150px] font-serif">
                                                 {studentAns.text_response || 'No response recorded by candidate.'}
                                             </div>
                                         </div>
+
+                                        {/* Evaluator Remarks */}
+                                        {currentQ.evaluation?.question_feedback && (
+                                            <div className="bg-blue-50 border-2 border-blue-100 rounded-2xl p-6 sm:p-8">
+                                                <h4 className="text-xs font-bold text-blue-700 uppercase tracking-wider mb-4">Evaluator Remarks:</h4>
+                                                <div className="text-blue-900 leading-relaxed font-medium whitespace-pre-wrap">
+                                                    {currentQ.evaluation.question_feedback}
+                                                </div>
+                                            </div>
+                                        )}
 
                                         {currentQ.explanation && (
                                             <div className="bg-emerald-50 border-2 border-emerald-100/50 rounded-2xl p-6 sm:p-8">
@@ -260,11 +275,11 @@ const ViewStudentResponses = () => {
                         </div>
 
                         {/* Navigation Footer */}
-                        <div className="bg-slate-50 px-6 py-5 border-t border-slate-200 flex justify-between items-center">
+                        <div className="bg-gray-50 px-6 py-5 border-t border-gray-200 flex justify-between items-center">
                             <button
                                 onClick={() => setCurrentQuestionIdx(prev => Math.max(0, prev - 1))}
                                 disabled={currentQuestionIdx === 0}
-                                className="flex items-center gap-2 px-6 py-3 bg-white text-slate-600 rounded-xl hover:bg-slate-100 disabled:opacity-50 font-bold border-2 border-slate-200 transition-all shadow-sm"
+                                className="flex items-center gap-2 px-6 py-3 bg-white text-gray-600 rounded-xl hover:bg-gray-100 disabled:opacity-50 font-bold border-2 border-gray-200 transition-all shadow-sm"
                             >
                                 <ChevronLeft className="w-5 h-5" />
                                 PREV
@@ -274,7 +289,7 @@ const ViewStudentResponses = () => {
                                     {mergedResponses.map((_, i) => (
                                         <div
                                             key={i}
-                                            className={`w-1.5 h-1.5 rounded-full transition-all duration-300 ${currentQuestionIdx === i ? 'bg-blue-600 w-4' : 'bg-slate-300'}`}
+                                            className={`w-1.5 h-1.5 rounded-full transition-all duration-300 ${currentQuestionIdx === i ? 'bg-blue-600 w-4' : 'bg-gray-300'}`}
                                         ></div>
                                     ))}
                                 </div>
@@ -293,9 +308,9 @@ const ViewStudentResponses = () => {
 
                 {/* Sidebar Navigation */}
                 <div className="w-full lg:w-80">
-                    <div className="bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden sticky top-28">
-                        <div className="bg-slate-50 px-6 py-5 border-b border-slate-200">
-                            <h3 className="text-sm font-black text-slate-900 uppercase tracking-wider flex items-center gap-2">
+                    <div className="bg-white rounded-2xl shadow-xl border border-gray-200 overflow-hidden sticky top-28">
+                        <div className="bg-gray-50 px-6 py-5 border-b border-gray-200">
+                            <h3 className="text-sm font-black text-gray-800 uppercase tracking-wider flex items-center gap-2">
                                 <ClipboardList className="w-4 h-4 text-blue-600" />
                                 Nav Palette
                             </h3>
@@ -313,7 +328,7 @@ const ViewStudentResponses = () => {
                                             className={`w-12 h-12 rounded-xl text-sm font-bold transition-all border-2
                                                 ${isCurrent ? 'bg-blue-600 text-white border-blue-600 shadow-md transform scale-105' :
                                                     isAnswered ? 'bg-emerald-50 text-emerald-700 border-emerald-100 hover:bg-emerald-100' :
-                                                        'bg-slate-50 text-slate-400 border-slate-50 hover:border-slate-200 hover:text-slate-600'}`}
+                                                        'bg-gray-50 text-gray-400 border-gray-50 hover:border-gray-200 hover:text-gray-600'}`}
                                         >
                                             {idx + 1}
                                         </button>
@@ -321,19 +336,19 @@ const ViewStudentResponses = () => {
                                 })}
                             </div>
 
-                            <div className="space-y-4 pt-6 border-t border-slate-100">
+                            <div className="space-y-4 pt-6 border-t border-gray-100">
                                 <button
                                     onClick={() => navigate('/my-assessment/assessment')}
-                                    className="w-full py-4 bg-slate-900 text-white rounded-xl font-bold hover:bg-slate-800 transition-all shadow-lg active:scale-95 text-xs uppercase tracking-widest"
+                                    className="w-full py-4 bg-white text-gray-700 border border-gray-200 rounded-xl font-bold hover:bg-gray-50 transition-all shadow-sm active:scale-95 text-xs uppercase tracking-widest"
                                 >
                                     Exit Review
                                 </button>
-                                <div className="flex flex-col gap-2 bg-slate-50 p-4 rounded-xl border border-slate-100">
+                                <div className="flex flex-col gap-2 bg-gray-50 p-4 rounded-xl border border-gray-100">
                                     <div className="flex items-center justify-between">
-                                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total Accuracy</span>
+                                        <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Total Accuracy</span>
                                         <span className="text-xs font-bold text-blue-600">{Math.round(((attempt.total_score || 0) / (attempt.max_marks || 1)) * 100)}%</span>
                                     </div>
-                                    <div className="w-full h-1 bg-slate-200 rounded-full overflow-hidden">
+                                    <div className="w-full h-1 bg-gray-200 rounded-full overflow-hidden">
                                         <div
                                             className="h-full bg-blue-500 transition-all duration-300"
                                             style={{ width: `${((attempt.total_score || 0) / (attempt.max_marks || 1)) * 100}%` }}

@@ -37,21 +37,27 @@ export default function MarksEntry({
 
         setStudents(studentsList);
 
-        const preparedMarks = studentsList.map((s) => {
-          const mark = s.subject_marks?.[0] || {};
+      const preparedMarks = studentsList.map((s) => {
+  // ✅ Find correct subject marks like AddMarksEntry
+  const mark =
+    s.subject_marks?.find(
+      (sub) => Number(sub.subject_id) === Number(subjectId)
+    ) || {};
 
-          return {
-            student_id: s.student_id,
-            student_firstname: s.student_firstname || "",
-            student_middlename: s.student_middlename || "",
-            student_lastname: s.student_lastname || "",
-            roll_number: s.roll_number || "",
-            permanent_registration_number: s.permanent_registration_number || "",
-            marks_obtained: mark.marks_obtained ?? "",
-            attendance_status: mark.attendance_status || "PRESENT",
-            exam_marks_id: mark.exam_marks_id || null,
-          };
-        });
+  return {
+    student_id: s.student_id,
+    student_firstname: s.student_firstname || "",
+    student_middlename: s.student_middlename || "",
+    student_lastname: s.student_lastname || "",
+    roll_number: s.roll_number || "",
+    permanent_registration_number:
+      s.permanent_registration_number || "",
+    marks_obtained: mark.marks_obtained ?? "",
+    attendance_status: mark.attendance_status || "PRESENT",
+    exam_marks_id: mark.exam_marks_id || null,
+    maximum_marks: mark.maximum_marks || 0,
+  };
+});
 
         setMarksData(preparedMarks);
         setOriginalMarks(JSON.parse(JSON.stringify(preparedMarks))); // snapshot for comparison
@@ -214,6 +220,7 @@ export default function MarksEntry({
                           <th className="px-4 py-3 bg-[#2162c1] text-white">Student Name</th>
                           <th className="px-4 py-3 bg-[#2162c1] text-white">Reg. No</th>
                           <th className="px-4 py-3 bg-[#2162c1] text-white">Marks Obtained</th>
+                           <th className="px-4 py-3 bg-[#2162c1] text-white">Max</th>
                           <th className="px-4 py-3 bg-[#2162c1] text-white">Attendance</th>
                         </tr>
                       </thead>
@@ -230,25 +237,50 @@ export default function MarksEntry({
                             <td className="px-6 py-3">{`${s.student_firstname} ${s.student_middlename || ""} ${s.student_lastname}`.trim()}</td>
                             <td className="px-6 py-3 text-gray-600">{s.permanent_registration_number || "-"}</td>
 
-                            <td className="px-6 py-3">
-                              <input
-                                type="number"
-                                min="0"
-                                step="0.5"
-                                value={s.marks_obtained}
-                                data-index={index}
-                                onChange={(e) =>
-                                  handleChange(
-                                    s.student_id,
-                                    "marks_obtained",
-                                    e.target.value === "" ? "" : Number(e.target.value)
-                                  )
-                                }
-                                onKeyDown={(e) => handleMarksEnter(e, index)}
-                                className="w-24 mx-auto rounded-md border px-3 py-2 text-center focus:ring-2 focus:ring-blue-500 focus:outline-none focus:border-blue-500"
-                                placeholder="0"
-                              />
-                            </td>
+                            <td className="px-4 py-2">
+  <input
+    type="number"
+    min="0"
+    max={s.maximum_marks}
+    value={s.marks_obtained}
+    data-index={index}
+    onChange={(e) => {
+      let value = e.target.value;
+
+      if (value === "") {
+        handleChange(s.student_id, "marks_obtained", "");
+        return;
+      }
+
+      value = Number(value);
+
+      // Prevent negative
+      if (value < 0) value = 0;
+
+      // Prevent exceeding max
+      if (value > s.maximum_marks) {
+        value = s.maximum_marks;
+      }
+
+      handleChange(s.student_id, "marks_obtained", value);
+    }}
+    onKeyDown={(e) => {
+      // Disable arrow increment/decrement
+      if (e.key === "ArrowUp" || e.key === "ArrowDown") {
+        e.preventDefault();
+      }
+
+      handleMarksEnter(e, index);
+    }}
+    onWheel={(e) => e.target.blur()} // Disable scroll change
+    className="w-full rounded-md border px-2 py-1 text-center
+      focus:ring-2 focus:ring-blue-400 no-spinner"
+  />
+</td>
+
+                      <td className="px-4 py-2 text-center font-semibold">
+                        {s.maximum_marks}
+                      </td>
 
                             <td className="px-6 py-3">
                               <select

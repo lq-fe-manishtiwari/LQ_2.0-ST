@@ -34,6 +34,7 @@ import AttendanceRoutes from '../Teacher/screens/Pages/Attendance/Routes/Attenda
 import StudentAttendanceRoutes from '../Student/screens/Pages/Attendance/Routes/AttendanceRoutes.jsx';
 import StudentPlacementRoutes from '../Student/screens/Pages/Placement/Routes/StudentPlacementRoutes.jsx';
 import PlacementRoutes from '../Teacher/screens/Pages/Placement/Routes/PlacementRoutes.jsx';
+import TaskManagementRoutes from '../Teacher/screens/Pages/TaskManagement/Routes/TaskManagementRoute.jsx';
 // ────── Route guards ──────
 const ProtectedRoute = ({ children }) => {
   const isLoggedIn = !!localStorage.getItem('refreshToken');
@@ -130,6 +131,16 @@ function App() {
     </ProtectedRoute>
   }
 />
+        <Route
+          path="/teacher/task-management/*"
+          element={
+            <ProtectedRoute>
+              <TeacherHomepage>
+                <TaskManagementRoutes />
+              </TeacherHomepage>
+            </ProtectedRoute>
+          }
+        />
 
         <Route
           path="/teacher/attendance/*"

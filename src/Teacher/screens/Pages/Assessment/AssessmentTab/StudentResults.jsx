@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { 
-  ArrowLeft, 
-  User, 
-  CheckCircle, 
-  XCircle, 
-  Clock, 
-  FileText, 
-  Download, 
+import {
+  ArrowLeft,
+  User,
+  CheckCircle,
+  XCircle,
+  Clock,
+  FileText,
+  Download,
   Award,
   Target,
   TrendingUp,
@@ -163,11 +163,10 @@ const StudentResults = () => {
               <span className={`px-6 py-3 rounded-xl text-sm font-bold border-2 ${getGradeColor(studentResult.results.grade)}`}>
                 Grade: {studentResult.results.grade}
               </span>
-              <span className={`px-6 py-3 rounded-xl text-sm font-bold border-2 ${
-                studentResult.results.status === 'Passed' 
-                  ? 'text-emerald-700 bg-emerald-100 border-emerald-200' 
+              <span className={`px-6 py-3 rounded-xl text-sm font-bold border-2 ${studentResult.results.status === 'Passed'
+                  ? 'text-emerald-700 bg-emerald-100 border-emerald-200'
                   : 'text-red-700 bg-red-100 border-red-200'
-              }`}>
+                }`}>
                 {studentResult.results.status}
               </span>
             </div>
@@ -183,7 +182,7 @@ const StudentResults = () => {
             <div className="text-2xl sm:text-3xl font-bold text-blue-600 mb-1 sm:mb-2">{studentResult.results.percentage}%</div>
             <p className="text-slate-600 font-semibold text-sm sm:text-base">Score</p>
           </div>
-          
+
           <div className="bg-white rounded-xl sm:rounded-2xl shadow-lg border border-slate-200 p-4 sm:p-6 text-center hover:shadow-xl transition-all duration-200">
             <div className="w-12 h-12 sm:w-16 sm:h-16 bg-emerald-100 rounded-xl sm:rounded-2xl flex items-center justify-center mx-auto mb-3 sm:mb-4">
               <Award className="w-6 h-6 sm:w-8 sm:h-8 text-emerald-600" />
@@ -191,7 +190,7 @@ const StudentResults = () => {
             <div className="text-2xl sm:text-3xl font-bold text-emerald-600 mb-1 sm:mb-2">{studentResult.results.obtainedMarks}</div>
             <p className="text-slate-600 font-semibold text-sm sm:text-base">Marks Obtained</p>
           </div>
-          
+
           <div className="bg-white rounded-xl sm:rounded-2xl shadow-lg border border-slate-200 p-4 sm:p-6 text-center hover:shadow-xl transition-all duration-200">
             <div className="w-12 h-12 sm:w-16 sm:h-16 bg-purple-100 rounded-xl sm:rounded-2xl flex items-center justify-center mx-auto mb-3 sm:mb-4">
               <TrendingUp className="w-6 h-6 sm:w-8 sm:h-8 text-purple-600" />
@@ -199,7 +198,7 @@ const StudentResults = () => {
             <div className="text-2xl sm:text-3xl font-bold text-purple-600 mb-1 sm:mb-2">{studentResult.results.totalMarks}</div>
             <p className="text-slate-600 font-semibold text-sm sm:text-base">Total Marks</p>
           </div>
-          
+
           <div className="bg-white rounded-xl sm:rounded-2xl shadow-lg border border-slate-200 p-4 sm:p-6 text-center hover:shadow-xl transition-all duration-200">
             <div className="w-12 h-12 sm:w-16 sm:h-16 bg-amber-100 rounded-xl sm:rounded-2xl flex items-center justify-center mx-auto mb-3 sm:mb-4">
               <Clock className="w-6 h-6 sm:w-8 sm:h-8 text-amber-600" />
@@ -233,11 +232,10 @@ const StudentResults = () => {
                         <span className="text-lg font-bold text-slate-900">{question.marks}</span>
                         <span className="text-slate-500">/ {question.maxMarks}</span>
                       </div>
-                      <div className={`text-sm font-semibold ${
-                        question.marks === question.maxMarks ? 'text-emerald-600' :
-                        question.marks >= question.maxMarks * 0.7 ? 'text-blue-600' :
-                        question.marks >= question.maxMarks * 0.5 ? 'text-amber-600' : 'text-red-600'
-                      }`}>
+                      <div className={`text-sm font-semibold ${question.marks === question.maxMarks ? 'text-emerald-600' :
+                          question.marks >= question.maxMarks * 0.7 ? 'text-blue-600' :
+                            question.marks >= question.maxMarks * 0.5 ? 'text-amber-600' : 'text-red-600'
+                        }`}>
                         {Math.round((question.marks / question.maxMarks) * 100)}%
                       </div>
                     </div>
@@ -253,11 +251,10 @@ const StudentResults = () => {
                       <h5 className="font-semibold text-slate-800 mb-2">Options:</h5>
                       <div className="grid grid-cols-2 gap-2">
                         {question.options.map((option, idx) => (
-                          <div key={idx} className={`p-2 rounded-lg text-sm ${
-                            option === question.correctAnswer ? 'bg-emerald-100 text-emerald-800 border border-emerald-200' :
-                            option === question.studentAnswer && option !== question.correctAnswer ? 'bg-red-100 text-red-800 border border-red-200' :
-                            'bg-slate-100 text-slate-700'
-                          }`}>
+                          <div key={idx} className={`p-2 rounded-lg text-sm ${option === question.correctAnswer ? 'bg-emerald-100 text-emerald-800 border border-emerald-200' :
+                              option === question.studentAnswer && option !== question.correctAnswer ? 'bg-red-100 text-red-800 border border-red-200' :
+                                'bg-slate-100 text-slate-700'
+                            }`}>
                             {option}
                             {option === question.correctAnswer && <CheckCircle className="w-4 h-4 inline ml-2" />}
                             {option === question.studentAnswer && option !== question.correctAnswer && <XCircle className="w-4 h-4 inline ml-2" />}

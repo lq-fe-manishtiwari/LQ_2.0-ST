@@ -141,21 +141,21 @@ const Sidebar = ({ isOpen, toggle }) => {
         iconInactive: contentInactive,
         match: ["/subject-selection"],
       },
-      // {
-      //   to: "/teacher/assessments",
-      //   label: "Assessment",
-      //   iconActive: assessmentActive,
-      //   iconInactive: assessmentInactive,
-      //   match: [
-      //     "/teacher/assessments",
-      //     "/teacher-add-assessment",
-      //     "/teacher-view-assessments",
-      //     "/teacher-view-st-test-result",
-      //     "/teacher-view-assessments-details",
-      //     "/teacher-add-question",
-      //     "/teacher-edit-question",
-      //   ],
-      // },
+      {
+        to: "/teacher/assessments",
+        label: "Assessment",
+        iconActive: assessmentActive,
+        iconInactive: assessmentInactive,
+        match: [
+          "/teacher/assessments",
+          "/teacher-add-assessment",
+          "/teacher-view-assessments",
+          "/teacher-view-st-test-result",
+          "/teacher-view-assessments-details",
+          "/teacher-add-question",
+          "/teacher-edit-question",
+        ],
+      },
       {
         to: "/teacher/academic-diary",
         label: "Academic Diary",
@@ -244,15 +244,24 @@ const Sidebar = ({ isOpen, toggle }) => {
       //   iconActive: classActive,
       //   iconInactive: classInactive,
       //  },
-      // {
-      //   to: "/teacher/hrm",
-      //   label: "HRM",
-      //   iconActive: classActive,
-      //   iconInactive: classInactive,
-      //   match: [
-      //     "/teacher/hrm",
-      //   ],
-      // },
+      {
+        to: "/teacher/hrm",
+        label: "HRM",
+        iconActive: classActive,
+        iconInactive: classInactive,
+        match: [
+          "/teacher/hrm",
+        ],
+      },
+      {
+        to: "/teacher/task-management",
+        label: "Task Management",
+        iconActive: classActive,
+        iconInactive: classInactive,
+        match: [
+          "/teacher/task-management",
+        ],
+      },
       // {
       //   to: "/teacher-certificate",
       //   label: "Certificate",

@@ -1,375 +1,452 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { ChevronDown, Upload } from 'lucide-react';
-// import { CKEditor } from '@ckeditor/ckeditor5-react';
-// import ClassicEditor from '@ckeditor/ckeditor5-build-classic';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { ChevronDown, Upload, Plus, Trash2 } from 'lucide-react';
+import { contentService as addContentService } from '../../Content/services/AddContent.service.js';
+import { getTeacherAllocatedPrograms } from '../../../../../_services/api.js';
+import { useUserProfile } from "../../../../../contexts/UserProfileContext.jsx";
+import { COService } from "../Settings/Service/co.service.js"
+import { QuestionsService } from '../Services/questions.service.js';
 
-const ObjectiveQuestion = ({ formData, handleChange, errors, touched }) => {
+const ObjectiveQuestion = ({
+  formData,
+  setFieldValue,
+  errors,
+  touched,
+}) => {
+  const { getTeacherId } = useUserProfile();
+  const teacherId = getTeacherId();
+
+  const [questionLevels, setQuestionLevels] = useState([]);
+  const [loadingQuestionLevels, setLoadingQuestionLevels] = useState(false);
+
+  // ==== Dropdown States ====
+  const [programOptions, setProgramOptions] = useState([]);
+  const [allocationData, setAllocationData] = useState(null);
+
+  const [batchOptions, setBatchOptions] = useState([]);
+  const [academicSemesterOptions, setAcademicSemesterOptions] = useState([]);
+  const [divisionOptions, setDivisionOptions] = useState([]);
+  const [subjectOptions, setSubjectOptions] = useState([]);
+  const [moduleOptions, setModuleOptions] = useState([]);
+  const [unitOptions, setUnitOptions] = useState([]);
+  const [coOptions, setCoOptions] = useState([]);
+  const [bloomsLevels, setBloomsLevels] = useState([]);
+
+  // ==== Loading States ====
+  const [loadingPrograms, setLoadingPrograms] = useState(false);
+  const [loadingSubjects, setLoadingSubjects] = useState(false);
+  const [loadingModules, setLoadingModules] = useState(false);
+  const [loadingCOs, setLoadingCOs] = useState(false);
+  const [loadingBloomsLevels, setLoadingBloomsLevels] = useState(false);
+
+  // ==== UI States ====
   const [openDropdown, setOpenDropdown] = useState(null);
   const dropdownRefs = useRef({});
 
-  const handleSelect = (fieldName, value) => {
-    handleChange({ target: { name: fieldName, value } });
+  const common = formData.common || {};
+  const questions = formData.questions || [{}];
+
+  // Initialize data
+  useEffect(() => {
+    const fetchInitialData = async () => {
+      setLoadingPrograms(true);
+      setLoadingQuestionLevels(true);
+      setLoadingBloomsLevels(true);
+      try {
+        const [programsRes, levelsRes, bloomsRes] = await Promise.all([
+          getTeacherAllocatedPrograms(teacherId),
+          QuestionsService.getAllQuestionLevels(),
+          QuestionsService.getAllBloomsLevels()
+        ]);
+
+        if (programsRes.success && programsRes.data) {
+          setAllocationData(programsRes.data);
+          const allAllocations = [
+            ...(programsRes.data.class_teacher_allocation || []),
+            ...(programsRes.data.normal_allocation || [])
+          ];
+          const programMap = new Map();
+          allAllocations.forEach(allocation => {
+            if (allocation.program) {
+              const program = allocation.program;
+              if (!programMap.has(program.program_id)) {
+                programMap.set(program.program_id, {
+                  id: program.program_id,
+                  name: program.program_name
+                });
+              }
+            }
+          });
+          setProgramOptions(Array.from(programMap.values()));
+        }
+        setQuestionLevels(levelsRes || []);
+        setBloomsLevels(bloomsRes || []);
+      } catch (err) {
+        console.error('Failed to fetch initial data:', err);
+      } finally {
+        setLoadingPrograms(false);
+        setLoadingQuestionLevels(false);
+        setLoadingBloomsLevels(false);
+      }
+    };
+
+    if (teacherId) fetchInitialData();
+  }, [teacherId]);
+
+  // Load Batches when Program changes
+  useEffect(() => {
+    if (!common.programId || !allocationData) {
+      setBatchOptions([]);
+      return;
+    }
+
+    const selectedProgramId = parseInt(common.programId);
+    const allAllocations = [...(allocationData.class_teacher_allocation || []), ...(allocationData.normal_allocation || [])];
+    const allocations = allAllocations.filter(a => (a.program?.program_id || a.program_id) === selectedProgramId);
+
+    const batchMap = new Map();
+    allocations.forEach(a => {
+      if (a.batch) batchMap.set(a.batch.batch_id, { id: a.batch.batch_id, name: a.batch.batch_name });
+    });
+    setBatchOptions(Array.from(batchMap.values()));
+  }, [common.programId, allocationData]);
+
+  // Load Semesters when Program + Batch changes
+  useEffect(() => {
+    if (!common.programId || !common.batchId || !allocationData) {
+      setAcademicSemesterOptions([]);
+      return;
+    }
+
+    const selectedProgramId = parseInt(common.programId);
+    const selectedBatchId = parseInt(common.batchId);
+    const allAllocations = [...(allocationData.class_teacher_allocation || []), ...(allocationData.normal_allocation || [])];
+    const allocations = allAllocations.filter(a =>
+      (a.program?.program_id || a.program_id) === selectedProgramId &&
+      (a.batch?.batch_id || a.batch_id) === selectedBatchId
+    );
+
+    const semesterMap = new Map();
+    allocations.forEach(a => {
+      if (a.academic_year && a.semester) {
+        const key = `${a.academic_year_id}-${a.semester_id}`;
+        if (!semesterMap.has(key)) {
+          semesterMap.set(key, {
+            id: key,
+            name: `${a.academic_year.name} - ${a.semester.name}`,
+            academicYearId: a.academic_year_id,
+            semesterId: a.semester_id
+          });
+        }
+      }
+    });
+    setAcademicSemesterOptions(Array.from(semesterMap.values()));
+  }, [common.programId, common.batchId, allocationData]);
+
+  // Load Divisions when Program + Batch + Semester changes
+  useEffect(() => {
+    if (!common.programId || !common.batchId || !common.semesterId || !allocationData) {
+      setDivisionOptions([]);
+      return;
+    }
+
+    const selectedProgramId = parseInt(common.programId);
+    const selectedBatchId = parseInt(common.batchId);
+    const selectedSemesterId = parseInt(common.semesterId);
+    const allAllocations = [...(allocationData.class_teacher_allocation || []), ...(allocationData.normal_allocation || [])];
+    const allocations = allAllocations.filter(a =>
+      (a.program?.program_id || a.program_id) === selectedProgramId &&
+      (a.batch?.batch_id || a.batch_id) === selectedBatchId &&
+      (a.semester?.semester_id || a.semester_id) === selectedSemesterId
+    );
+
+    const divisionMap = new Map();
+    allocations.forEach(a => {
+      if (a.division) {
+        divisionMap.set(a.division.division_id, { id: a.division.division_id, name: a.division.division_name });
+      }
+    });
+    setDivisionOptions(Array.from(divisionMap.values()));
+  }, [common.programId, common.batchId, common.semesterId, allocationData]);
+
+  // Load Subjects when Academic Year/Semester changes
+  useEffect(() => {
+    if (!common.academicYearId || !common.semesterId || !common.programId || !common.batchId || !common.divisionId) {
+      setSubjectOptions([]);
+      return;
+    }
+
+    const fetchSubjects = async () => {
+      setLoadingSubjects(true);
+      try {
+        const res = await addContentService.getTeacherSubjectsAllocated(teacherId, common.academicYearId, common.semesterId);
+        if (Array.isArray(res)) {
+          setSubjectOptions(res.map(s => ({ id: s.subject_id, name: s.subject_name || s.name })));
+        }
+      } catch (err) {
+        console.error('Failed to fetch subjects:', err);
+      } finally {
+        setLoadingSubjects(false);
+      }
+    };
+    fetchSubjects();
+  }, [common.academicYearId, common.semesterId, common.programId, common.batchId, common.divisionId, teacherId]);
+
+  // Load Modules when Subject changes
+  useEffect(() => {
+    if (!common.paperId) {
+      setModuleOptions([]);
+      return;
+    }
+
+    const fetchModules = async () => {
+      setLoadingModules(true);
+      try {
+        const res = await addContentService.getModulesAndUnits(common.paperId);
+        const modules = res?.modules || [];
+        setModuleOptions(modules.map(m => ({
+          id: m.module_id || m.id,
+          name: m.module_name || m.name,
+          units: m.units || []
+        })));
+      } catch (err) {
+        console.error('Failed to fetch modules:', err);
+      } finally {
+        setLoadingModules(false);
+      }
+    };
+
+    const fetchCOs = async () => {
+      setLoadingCOs(true);
+      try {
+        const response = await COService.getAllCOByCourseId(common.paperId);
+        setCoOptions(response.map(co => ({
+          id: co.course_outcome_id,
+          name: co.outcome_code || co.outcome_title,
+        })));
+      } catch (err) {
+        console.error('Failed to fetch COs:', err);
+      } finally {
+        setLoadingCOs(false);
+      }
+    };
+
+    fetchModules();
+    fetchCOs();
+  }, [common.paperId]);
+
+  // Update Units when Module changes
+  useEffect(() => {
+    if (!common.moduleId) {
+      setUnitOptions([]);
+      return;
+    }
+    const module = moduleOptions.find(m => m.id == common.moduleId);
+    if (module?.units) {
+      setUnitOptions(module.units.map(u => ({ id: u.unit_id || u.id, name: u.unit_name || u.name })));
+    } else {
+      setUnitOptions([]);
+    }
+  }, [common.moduleId, moduleOptions]);
+
+  const handleCommonSelect = (fieldName, value) => {
+    if (fieldName === 'program') {
+      const selected = programOptions.find(p => p.name === value);
+      setFieldValue('common.program', value);
+      setFieldValue('common.programId', selected?.id || "");
+      // Reset dependents
+      setFieldValue('common.batch', "");
+      setFieldValue('common.batchId', "");
+      setFieldValue('common.academicYearSemester', "");
+      setFieldValue('common.academicYear', "");
+      setFieldValue('common.academicYearId', "");
+      setFieldValue('common.semester', "");
+      setFieldValue('common.semesterId', "");
+      setFieldValue('common.division', "");
+      setFieldValue('common.divisionId', "");
+      setFieldValue('common.paper', "");
+      setFieldValue('common.paperId', "");
+    } else if (fieldName === 'batch') {
+      const selected = batchOptions.find(b => b.name === value);
+      setFieldValue('common.batch', value);
+      setFieldValue('common.batchId', selected?.id || "");
+      // Reset dependents
+      setFieldValue('common.academicYearSemester', "");
+      setFieldValue('common.academicYear', "");
+      setFieldValue('common.academicYearId', "");
+      setFieldValue('common.semester', "");
+      setFieldValue('common.semesterId', "");
+      setFieldValue('common.division', "");
+      setFieldValue('common.divisionId', "");
+      setFieldValue('common.paper', "");
+      setFieldValue('common.paperId', "");
+    } else if (fieldName === 'academicYearSemester') {
+      const selected = academicSemesterOptions.find(s => s.name === value);
+      setFieldValue('common.academicYearSemester', value);
+      setFieldValue('common.academicYear', selected ? "Set" : ""); // Visual only
+      setFieldValue('common.academicYearId', selected?.academicYearId || "");
+      setFieldValue('common.semester', selected?.name.split(' - ')[1] || "");
+      setFieldValue('common.semesterId', selected?.semesterId || "");
+      // Reset dependents
+      setFieldValue('common.division', "");
+      setFieldValue('common.divisionId', "");
+      setFieldValue('common.paper', "");
+      setFieldValue('common.paperId', "");
+    } else if (fieldName === 'division') {
+      const selected = divisionOptions.find(d => d.name === value);
+      setFieldValue('common.division', value);
+      setFieldValue('common.divisionId', selected?.id || "");
+    } else if (fieldName === 'subject') {
+      const selected = subjectOptions.find(s => s.name === value);
+      setFieldValue('common.paper', value);
+      setFieldValue('common.paperId', selected?.id || "");
+      // Reset dependents
+      setFieldValue('common.module', "");
+      setFieldValue('common.moduleId', "");
+      setFieldValue('common.unit', "");
+      setFieldValue('common.unitId', "");
+    } else if (fieldName === 'module') {
+      const selected = moduleOptions.find(m => m.name === value);
+      setFieldValue('common.module', value);
+      setFieldValue('common.moduleId', selected?.id || "");
+      // Reset dependent
+      setFieldValue('common.unit', "");
+      setFieldValue('common.unitId', "");
+    } else if (fieldName === 'unit') {
+      const selected = unitOptions.find(u => u.name === value);
+      setFieldValue('common.unit', value);
+      setFieldValue('common.unitId', selected?.id || "");
+    } else if (fieldName === 'courseOutcome') {
+      const selected = coOptions.find(co => co.name === value);
+      setFieldValue('common.courseOutcome', value);
+      setFieldValue('common.courseOutcomeId', selected?.id || "");
+    } else if (fieldName === 'bloomsLevel') {
+      const selected = bloomsLevels.find(b => b.level_name === value);
+      setFieldValue('common.bloomsLevel', value);
+      setFieldValue('common.bloomsLevelId', selected?.blooms_level_id || "");
+    }
     setOpenDropdown(null);
   };
 
-  const handleEditorChange = (fieldName, data) => {
-    handleChange({ target: { name: fieldName, value: data } });
+  const handleQuestionSelect = (index, fieldName, value) => {
+    if (fieldName === 'questionLevel') {
+      const selected = questionLevels.find(l => l.question_level_type === value);
+      setFieldValue(`questions[${index}].questionLevel`, value);
+      setFieldValue(`questions[${index}].question_level_id`, selected?.question_level_id || null);
+    }
+    setOpenDropdown(null);
   };
 
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (!Object.values(dropdownRefs.current).some(ref => ref?.contains(event.target))) {
-        setOpenDropdown(null);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+  const handleQuestionChange = (index, field, value) => {
+    setFieldValue(`questions[${index}].${field}`, value);
+  };
 
-  const CustomDropdown = ({ fieldName, label, value, options, placeholder, required = false }) => (
-    <div ref={el => dropdownRefs.current[fieldName] = el} className="relative">
-      <label className="block font-medium mb-1 text-gray-700 text-sm md:text-base">
-        {label}{required && <span className="text-red-500">*</span>}
-      </label>
+  const handleQuestionFileChange = (index, e) => {
+    const files = e.target.files;
+    if (!files?.length) return;
+    const names = Array.from(files).map(f => f.name).join(', ');
+    setFieldValue(`questions[${index}].questionImagesNames`, names);
+    // Note: Actual upload logic would go here if needed
+  };
+
+  const addQuestion = () => {
+    setFieldValue('questions', [...questions, {
+      bloomsLevel: "",
+      questionLevel: "",
+      defaultMarks: "",
+      question: "",
+      noOfOptions: 4,
+      answer: "",
+      optionA: "",
+      optionB: "",
+      optionC: "",
+      optionD: "",
+      optionE: "",
+    }]);
+  };
+
+  const removeQuestion = (index) => {
+    const newQs = questions.filter((_, i) => i !== index);
+    setFieldValue('questions', newQs.length ? newQs : [{}]);
+  };
+
+  const CustomDropdown = ({ id, label, value, options, placeholder, required, onSelect, disabled, loading }) => (
+    <div ref={el => (dropdownRefs.current[id] = el)} className="relative">
+      <label className="block font-medium mb-1 text-gray-700 text-sm">{label}{required && <span className="text-red-500">*</span>}</label>
       <div
-        className={`w-full px-3 py-2.5 border bg-white cursor-pointer rounded-md min-h-[42px] flex items-center justify-between transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-blue-400 hover:border-blue-400 ${errors[fieldName] && touched[fieldName] ? 'border-red-500' : 'border-gray-300'
-          }`}
-        onClick={() => setOpenDropdown(openDropdown === fieldName ? null : fieldName)}
+        className={`w-full px-3 py-2 border bg-white cursor-pointer rounded-md min-h-[40px] flex items-center justify-between ${disabled ? 'bg-gray-100 cursor-not-allowed' : 'hover:border-blue-400 focus:ring-2 focus:ring-blue-400'}`}
+        onClick={() => !disabled && setOpenDropdown(openDropdown === id ? null : id)}
       >
-        <span className={`${value ? 'text-gray-900' : 'text-gray-400'} text-sm md:text-base`}>
-          {value || placeholder}
-        </span>
-        <ChevronDown
-          className={`w-4 h-4 text-gray-400 transition-transform ${openDropdown === fieldName ? 'rotate-180' : 'rotate-0'}`}
-        />
+        <span className={value ? 'text-gray-900' : 'text-gray-400'}>{loading ? 'Loading...' : value || placeholder}</span>
+        {!disabled && <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${openDropdown === id ? 'rotate-180' : ''}`} />}
       </div>
-      {openDropdown === fieldName && (
-        <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto">
-          <div
-            className="px-4 py-2 text-sm text-gray-700 cursor-pointer hover:bg-blue-50 transition-colors"
-            onClick={() => handleSelect(fieldName, '')}
-          >
-            {placeholder}
-          </div>
-          {options.map((option) => (
-            <div
-              key={option}
-              className="px-4 py-2 text-sm text-gray-700 cursor-pointer hover:bg-blue-50 transition-colors"
-              onClick={() => handleSelect(fieldName, option)}
-            >
-              {option}
-            </div>
+      {openDropdown === id && !disabled && (
+        <div className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto">
+          {options.map((opt, idx) => (
+            <div key={idx} className="px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 cursor-pointer" onClick={() => onSelect(opt)}>{opt}</div>
           ))}
         </div>
-      )}
-      {errors[fieldName] && touched[fieldName] && (
-        <p className="mt-1 text-sm text-red-600">{errors[fieldName]}</p>
       )}
     </div>
   );
 
-  const editorConfig = {
-    toolbar: {
-      items: [
-        'heading', '|',
-        'bold', 'italic', 'underline', 'strikethrough', '|',
-        'fontColor', 'fontBackgroundColor', '|',
-        'bulletedList', 'numberedList', '|',
-        'alignment', '|',
-        'undo', 'redo'
-      ]
-    },
-    language: 'en',
-    licenseKey: '',
-  };
-
   return (
-    <div className="space-y-6 md:space-y-8 p-4 md:p-0">
-      {/* Program, Class, Subject - Responsive Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-5">
-        <CustomDropdown
-          fieldName="Program"
-          label="Program"
-          value={formData.grade}
-          options={['MBA', 'BCA', 'MCA']}
-          placeholder="Select Program"
-          required
-        />
-
-
-
-        <CustomDropdown
-          fieldName="Paper"
-          label="Paper"
-          value={formData.subject}
-          options={['Mathematics', 'Science', 'English']}
-          placeholder="Select Paper"
-          required
-        />
-        <CustomDropdown
-          fieldName="Module"
-          label="Module"
-          value={formData.chapter}
-          options={['Chapter 1', 'Chapter 2', 'Chapter 3']}
-          placeholder="Select Modules"
-          required
-        />
+    <div className="space-y-6">
+      {/* FILTER SECTION */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 pb-6 border-b">
+        <CustomDropdown id="program" label="Program" value={common.program} options={programOptions.map(p => p.name)} placeholder="Select Program" required onSelect={v => handleCommonSelect('program', v)} loading={loadingPrograms} />
+        <CustomDropdown id="batch" label="Batch" value={common.batch} options={batchOptions.map(b => b.name)} placeholder="Select Batch" required disabled={!common.programId} onSelect={v => handleCommonSelect('batch', v)} />
+        <CustomDropdown id="academicSemester" label="Academic Year - Semester" value={common.academicYearSemester} options={academicSemesterOptions.map(s => s.name)} placeholder="Select Semester" required disabled={!common.batchId} onSelect={v => handleCommonSelect('academicYearSemester', v)} />
+        <CustomDropdown id="division" label="Division" value={common.division} options={divisionOptions.map(d => d.name)} placeholder="Select Division" disabled={!common.semesterId || divisionOptions.length === 0} onSelect={v => handleCommonSelect('division', v)} />
+        <CustomDropdown id="subject" label="Paper" value={common.paper} options={subjectOptions.map(s => s.name)} placeholder="Select Paper" required disabled={!common.semesterId} onSelect={v => handleCommonSelect('subject', v)} loading={loadingSubjects} />
+        <CustomDropdown id="module" label="Module" value={common.module} options={moduleOptions.map(m => m.name)} placeholder="Select Module" required disabled={!common.paperId} onSelect={v => handleCommonSelect('module', v)} loading={loadingModules} />
+        <CustomDropdown id="unit" label="Unit" value={common.unit} options={unitOptions.map(u => u.name)} placeholder="Select Unit" required disabled={!common.moduleId} onSelect={v => handleCommonSelect('unit', v)} />
+        <CustomDropdown id="co" label="Course Outcome" value={common.courseOutcome} options={coOptions.map(co => co.name)} placeholder="Select CO" required disabled={!common.paperId} onSelect={v => handleCommonSelect('courseOutcome', v)} loading={loadingCOs} />
+        <CustomDropdown id="blooms" label="Bloom's Level" value={common.bloomsLevel} options={bloomsLevels.map(b => b.level_name)} placeholder="Select BL" required onSelect={v => handleCommonSelect('bloomsLevel', v)} loading={loadingBloomsLevels} />
       </div>
 
-      {/* Chapter, Topic, Course Outcomes - Responsive Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-5">
-
-
-        <div>
-          <label className="block font-medium mb-1 text-gray-700 text-sm md:text-base">Unit</label>
-          <input
-            type="text"
-            name="topic"
-            value={formData.topic}
-            onChange={handleChange}
-            placeholder="Enter Unit"
-            className="w-full border rounded-md px-3 py-2.5 min-h-[42px] focus:outline-none focus:ring-2 focus:ring-blue-400 transition-all duration-150 hover:border-blue-400 border-gray-300 text-sm md:text-base"
-          />
-        </div>
-
-        <div>
-          <label className="block font-medium mb-1 text-gray-700 text-sm md:text-base">Course Outcomes</label>
-          <input
-            type="text"
-            name="courseOutcomes"
-            value={formData.courseOutcomes}
-            onChange={handleChange}
-            placeholder="Enter CO"
-            className="w-full border rounded-md px-3 py-2.5 min-h-[42px] focus:outline-none focus:ring-2 focus:ring-blue-400 transition-all duration-150 hover:border-blue-400 border-gray-300 text-sm md:text-base"
-          />
-        </div>
-        <CustomDropdown
-          fieldName="bloomsLevel"
-          label="Bloom's Level"
-          value={formData.bloomsLevel}
-          options={['Remember', 'Understand', 'Apply', 'Analyze', 'Evaluate', 'Create']}
-          placeholder="Select BL"
-        />
-
-
-
-      </div>
-
-
-
-      {/* Question Type, Question Level, Default Marks - Responsive Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-5">
-        <CustomDropdown
-          fieldName="questionType"
-          label="Question Type"
-          value={formData.questionType}
-          options={['General', 'MCQ', 'True/False']}
-          placeholder="General"
-          required
-        />
-
-        <CustomDropdown
-          fieldName="questionLevel"
-          label="Question Level"
-          value={formData.questionLevel}
-          options={['Basic', 'Intermediate', 'Advanced']}
-          placeholder="Basic"
-          required
-        />
-
-        <div>
-          <label className="block font-medium mb-1 text-gray-700 text-sm md:text-base">
-            Default Marks <span className="text-red-500">*</span>
-          </label>
-          <input
-            type="number"
-            name="defaultMarks"
-            value={formData.defaultMarks}
-            onChange={handleChange}
-            placeholder="Enter Default Marks"
-            min="1"
-            max="100"
-            className={`w-full border rounded-md px-3 py-2.5 min-h-[42px] focus:outline-none focus:ring-2 focus:ring-blue-400 transition-all duration-150 hover:border-blue-400 text-sm md:text-base ${errors.defaultMarks && touched.defaultMarks ? 'border-red-500' : 'border-gray-300'
-              }`}
-          />
-          {errors.defaultMarks && touched.defaultMarks && (
-            <p className="mt-1 text-sm text-red-600">{errors.defaultMarks}</p>
-          )}
-        </div>
-      </div>
-      {/* Bloom's Level, Category, No. of Options - Responsive Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-5">
-
-        <CustomDropdown
-          fieldName="noOfOptions"
-          label="No. of Options"
-          value={formData.noOfOptions}
-          options={['3', '4', '5']}
-          placeholder="4"
-          required
-        />
-      </div>
-      {/* Question */}
-      <div>
-        <label className="block font-medium mb-1 text-gray-700 text-sm md:text-base">
-          Question <span className="text-red-500">*</span>
-        </label>
-        <textarea
-          name="question"
-          value={formData.question}
-          onChange={handleChange}
-          rows="4"
-          placeholder="Enter your question here..."
-          className={`w-full border rounded-md px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-400 transition-all duration-150 hover:border-blue-400 text-sm md:text-base ${errors.question && touched.question ? 'border-red-500' : 'border-gray-300'
-            }`}
-        />
-        {errors.question && touched.question && (
-          <p className="mt-1 text-sm text-red-600">{errors.question}</p>
-        )}
-      </div>
-
-      {/* Question Images */}
-      <div>
-        <label className="block font-medium mb-1 text-gray-700 text-sm md:text-base">Question Images</label>
-        <div className="relative">
-          <input
-            type="text"
-            value={formData.questionImages || ""}
-            readOnly
-            placeholder="No file chosen"
-            className="w-full border rounded-md px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-400 bg-gray-50 border-gray-300 text-sm md:text-base"
-          />
-          <input
-            type="file"
-            accept="image/jpeg,image/png,image/jpg,application/pdf"
-            className="hidden"
-            id="questionImages"
-            multiple
-          />
-          <label
-            htmlFor="questionImages"
-            className="absolute right-3 top-1/2 -translate-y-1/2 cursor-pointer flex items-center space-x-1 text-blue-600 hover:text-blue-800 font-medium text-sm md:text-base"
-          >
-            <Upload className="h-4 w-4" />
-            <span className="hidden xs:inline">Choose file</span>
-          </label>
-        </div>
-        <p className="mt-1 text-xs text-gray-500">Supported formats: jpeg, png, jpg, pdf (Max 150MB)</p>
-        <p className="text-xs text-gray-500">0 Images Selected</p>
-      </div>
-
-      {/* Options with CKEditor - Responsive Grid */}
-      <div className="space-y-4 md:space-y-5">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-5">
-          <div>
-            <label className="block font-medium mb-1 text-gray-700 text-sm md:text-base">
-              Option 1 <span className="text-red-500">*</span>
-            </label>
-            <div className={`border rounded-md overflow-hidden transition-all duration-150 hover:border-blue-400 ${errors.option1 && touched.option1 ? 'border-red-500' : 'border-gray-300'
-              }`}>
-              {/* <CKEditor
-                editor={ClassicEditor}
-                data={formData.option1 || ''}
-                config={editorConfig}
-                onChange={(event, editor) => {
-                  const data = editor.getData();
-                  handleEditorChange('option1', data);
-                }}
-              /> */}
-            </div>
-            {errors.option1 && touched.option1 && (
-              <p className="mt-1 text-sm text-red-600">{errors.option1}</p>
+      {/* QUESTIONS */}
+      {questions.map((q, index) => (
+        <div key={index} className="border border-gray-200 rounded-lg p-6 bg-gray-50 space-y-4">
+          <div className="flex justify-between items-center">
+            <h3 className="font-semibold text-gray-800">Question {index + 1}</h3>
+            {questions.length > 1 && (
+              <button type="button" onClick={() => removeQuestion(index)} className="text-red-500 hover:text-red-700 flex items-center gap-1 text-sm"><Trash2 size={16} /> Remove</button>
             )}
           </div>
 
-          <div>
-            <label className="block font-medium mb-1 text-gray-700 text-sm md:text-base">
-              Option 2 <span className="text-red-500">*</span>
-            </label>
-            <div className={`border rounded-md overflow-hidden transition-all duration-150 hover:border-blue-400 ${errors.option2 && touched.option2 ? 'border-red-500' : 'border-gray-300'
-              }`}>
-              {/* <CKEditor
-                editor={ClassicEditor}
-                data={formData.option2 || ''}
-                config={editorConfig}
-                onChange={(event, editor) => {
-                  const data = editor.getData();
-                  handleEditorChange('option2', data);
-                }}
-              /> */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <CustomDropdown id={`qlevel-${index}`} label="Question Level" value={q.questionLevel} options={questionLevels.map(l => l.question_level_type)} placeholder="Select Level" onSelect={v => handleQuestionSelect(index, 'questionLevel', v)} />
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Default Marks <span className="text-red-500">*</span></label>
+              <input type="number" min="1" value={q.defaultMarks} onChange={e => handleQuestionChange(index, 'defaultMarks', e.target.value)} className="w-full border rounded px-3 py-2" placeholder="Marks" />
             </div>
-            {errors.option2 && touched.option2 && (
-              <p className="mt-1 text-sm text-red-600">{errors.option2}</p>
-            )}
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-5">
-          <div>
-            <label className="block font-medium mb-1 text-gray-700 text-sm md:text-base">
-              Option 3 <span className="text-red-500">*</span>
-            </label>
-            <div className={`border rounded-md overflow-hidden transition-all duration-150 hover:border-blue-400 ${errors.option3 && touched.option3 ? 'border-red-500' : 'border-gray-300'
-              }`}>
-              {/* <CKEditor
-                editor={ClassicEditor}
-                data={formData.option3 || ''}
-                config={editorConfig}
-                onChange={(event, editor) => {
-                  const data = editor.getData();
-                  handleEditorChange('option3', data);
-                }}
-              /> */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">No. of Options</label>
+              <select value={q.noOfOptions} onChange={e => handleQuestionChange(index, 'noOfOptions', e.target.value)} className="w-full border rounded px-3 py-2 bg-white">
+                {[2, 3, 4, 5].map(n => <option key={n} value={n}>{n}</option>)}
+              </select>
             </div>
-            {errors.option3 && touched.option3 && (
-              <p className="mt-1 text-sm text-red-600">{errors.option3}</p>
-            )}
           </div>
 
           <div>
-            <label className="block font-medium mb-1 text-gray-700 text-sm md:text-base">
-              Option 4 <span className="text-red-500">*</span>
-            </label>
-            <div className={`border rounded-md overflow-hidden transition-all duration-150 hover:border-blue-400 ${errors.option4 && touched.option4 ? 'border-red-500' : 'border-gray-300'
-              }`}>
-              {/* <CKEditor
-                editor={ClassicEditor}
-                data={formData.option4 || ''}
-                config={editorConfig}
-                onChange={(event, editor) => {
-                  const data = editor.getData();
-                  handleEditorChange('option4', data);
-                }}
-              /> */}
-            </div>
-            {errors.option4 && touched.option4 && (
-              <p className="mt-1 text-sm text-red-600">{errors.option4}</p>
-            )}
+            <label className="block text-sm font-medium text-gray-700 mb-1">Question <span className="text-red-500">*</span></label>
+            <textarea rows="3" value={q.question} onChange={e => handleQuestionChange(index, 'question', e.target.value)} className="w-full border rounded px-3 py-2" placeholder="Enter question..." />
+          </div>
+
+          <div className="space-y-3">
+            <label className="block text-sm font-medium text-gray-700">Options & Correct Answer</label>
+            {['A', 'B', 'C', 'D', 'E'].slice(0, Number(q.noOfOptions || 4)).map(opt => (
+              <div key={opt} className="flex items-center gap-3">
+                <input type="radio" name={`answer-${index}`} checked={q.answer === opt} onChange={() => handleQuestionChange(index, 'answer', opt)} className="w-4 h-4 text-blue-600" />
+                <span className="font-medium text-gray-500 w-4">{opt}</span>
+                <input type="text" value={q[`option${opt}`]} onChange={e => handleQuestionChange(index, `option${opt}`, e.target.value)} className="flex-1 border rounded px-3 py-2" placeholder={`Option ${opt}`} />
+              </div>
+            ))}
           </div>
         </div>
-      </div>
+      ))}
 
-      {/* Answer - Responsive Layout */}
-      <div>
-        <label className="block font-medium mb-1 text-gray-700 text-sm md:text-base">
-          Correct Answer <span className="text-red-500">*</span>
-        </label>
-        <div className="flex flex-col xs:flex-row flex-wrap gap-3 md:gap-4">
-          {['Option 1', 'Option 2', 'Option 3', 'Option 4'].map((option) => (
-            <label key={option} className="flex items-center space-x-2 cursor-pointer min-w-[100px]">
-              <input
-                type="radio"
-                name="answer"
-                value={option}
-                checked={formData.answer === option}
-                onChange={handleChange}
-                className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
-              />
-              <span className="text-sm text-gray-700 whitespace-nowrap">{option}</span>
-            </label>
-          ))}
-        </div>
-      </div>
+      <button type="button" onClick={addQuestion} className="flex items-center gap-2 px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition font-medium"><Plus size={18} /> Add Question</button>
     </div>
   );
 };

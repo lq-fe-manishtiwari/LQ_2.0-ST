@@ -185,20 +185,39 @@ const TakeAssessment = () => {
     };
   }, []);
 
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const hasSubmittedRef = useRef(false);
+
   useEffect(() => {
     const timer = setInterval(() => {
+      if (hasSubmittedRef.current) return;
+
       setTimeLeft(prev => {
-        if (prev === 0) return 0; // Don't start until initialized
+        // Check absolute end time if metadata is available
+        if (assessmentMetadata?.testEndDatetime) {
+          const now = new Date();
+          const endTime = new Date(assessmentMetadata.testEndDatetime);
+          if (now >= endTime) {
+            console.log("Absolute end time reached. Auto-submitting...");
+            submitAssessment(true);
+            return 0;
+          }
+        }
+
+        if (prev <= 0) return 0;
+
         if (prev <= 1) {
-          submitAssessment(true); // Auto-submit on timeout
+          console.log("Duration timer reached. Auto-submitting...");
+          submitAssessment(true);
           return 0;
         }
+
         return prev - 1;
       });
     }, 1000);
 
     return () => clearInterval(timer);
-  }, []);
+  }, [assessmentMetadata]);
 
   const formatTime = (seconds) => {
     const hours = Math.floor(seconds / 3600);
@@ -267,6 +286,11 @@ const TakeAssessment = () => {
   };
 
   const submitAssessment = async (isAutoSubmit = false) => {
+    // Prevent multiple submissions
+    if (hasSubmittedRef.current) return;
+    hasSubmittedRef.current = true;
+    setIsSubmitting(true);
+
     setAlert(
       <SweetAlert
         loading
@@ -301,6 +325,8 @@ const TakeAssessment = () => {
           </SweetAlert>
         );
       } else {
+        hasSubmittedRef.current = false; // Reset if no attempt ID
+        setIsSubmitting(false);
         setAlert(
           <SweetAlert
             danger
@@ -313,6 +339,8 @@ const TakeAssessment = () => {
       }
     } catch (error) {
       console.error('Error submitting assessment:', error);
+      hasSubmittedRef.current = false; // Allow retry on failure
+      setIsSubmitting(false);
       setAlert(
         <SweetAlert
           danger
