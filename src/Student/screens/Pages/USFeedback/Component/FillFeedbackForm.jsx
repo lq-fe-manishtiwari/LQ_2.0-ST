@@ -131,8 +131,26 @@ const handleSubmit = async (e) => {
     const unansweredRequired = [];
 
     if (teacherSubjectPairs.length > 0) {
+        // Validate general sections once
+        form.sections?.filter(s => s.is_general).forEach(section => {
+            section.questions?.forEach(question => {
+                if (question.required) {
+                    const uniqueQuestionId = question.feedback_question_id;
+                    const answer = answers[uniqueQuestionId];
+                    const isEmpty = !answer || 
+                        (!answer.answerText && !answer.answerValue && !answer.answerJson);
+                    if (isEmpty) {
+                        unansweredRequired.push(
+                            `General - ${section.title}: ${question.label}`
+                        );
+                    }
+                }
+            });
+        });
+
+        // Validate teacher-subject specific sections
         teacherSubjectPairs.forEach(pair => {
-            form.sections?.forEach(section => {
+            form.sections?.filter(s => !s.is_general).forEach(section => {
                 section.questions?.forEach(question => {
                     if (question.required) {
                         const uniqueQuestionId = `${pair.teacher_id}_${pair.subject_id}_${question.feedback_question_id}`;
@@ -156,7 +174,7 @@ const handleSubmit = async (e) => {
                     const isEmpty = !answer || 
                         (!answer.answerText && !answer.answerValue && !answer.answerJson);
                     if (isEmpty) {
-                        unansweredRequired.push(question.label);
+                        unansweredRequired.push(section.title ? `${section.title}: ${question.label}` : question.label);
                     }
                 }
             });
@@ -411,6 +429,29 @@ const handleSubmit = async (e) => {
             </div>
 
             <form onSubmit={handleSubmit}>
+                {/* General Sections - Rendered only once if there are teacher mappings */}
+                {teacherSubjectPairs.length > 0 && form.sections?.filter(s => s.is_general).map((section, sectionIndex) => (
+                    <div key={section.feedback_section_id} className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-4">
+                        <h2 className="text-xl font-semibold text-gray-800 mb-4">
+                            {sectionIndex + 1}. {section.title || 'General Feedback'}
+                        </h2>
+
+                        <div className="space-y-6">
+                            {section.questions?.map((question, questionIndex) => (
+                                <div key={question.feedback_question_id} className="border-b border-gray-100 pb-6 last:border-0">
+                                    <label className="block mb-3">
+                                        <span className="text-gray-800 font-medium">
+                                            {questionIndex + 1}. {question.label}
+                                            {question.required && <span className="text-red-500 ml-1">*</span>}
+                                        </span>
+                                    </label>
+                                    {renderQuestion(question, question.feedback_question_id)}
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                ))}
+
                 {teacherSubjectPairs.length > 0 ? (
                     teacherSubjectPairs.map((pair, pairIndex) => (
                         <div key={pairIndex} className="mb-6">
@@ -424,10 +465,10 @@ const handleSubmit = async (e) => {
                                 </div>
                             </div>
 
-                            {form.sections?.map((section, sectionIndex) => (
+                            {form.sections?.filter(s => !s.is_general).map((section, sectionIndex) => (
                                 <div key={section.feedback_section_id} className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-4">
                                     <h2 className="text-xl font-semibold text-gray-800 mb-4">
-                                        {sectionIndex + 1}. {section.title || 'General'}
+                                        {sectionIndex + 1}. {section.title || 'Teacher Feedback'}
                                     </h2>
 
                                     <div className="space-y-6">
@@ -454,7 +495,7 @@ const handleSubmit = async (e) => {
                     form.sections?.map((section, sectionIndex) => (
                         <div key={section.feedback_section_id} className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-4">
                             <h2 className="text-xl font-semibold text-gray-800 mb-4">
-                                {sectionIndex + 1}. {section.title || 'General'}
+                                {sectionIndex + 1}. {section.title || 'Feedback'}
                             </h2>
 
                             <div className="space-y-6">
