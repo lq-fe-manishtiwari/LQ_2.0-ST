@@ -55,50 +55,90 @@ export default function FillFeedbackForm() {
     const loadTeacherMappings = async () => {
         try {
             const studentId = userProfile?.student_id;
-            const academicYearId = form?.target_academic_year_id;
-            const semesterId = form?.target_semester_id;
-            
-            if (studentId && academicYearId && semesterId) {
-                const history = await StudentService.getStudentHistory(studentId);
-                const matchingRecord = history?.find(
-                    h => h.academic_year_id === academicYearId && h.semester_id === semesterId
-                );
-                
-                const divisionId = matchingRecord?.division_id;
-                
-                if (divisionId) {
-                    // Store context for submission
-                    setStudentContext({
-                        academicYearId,
-                        semesterId,
-                        divisionId
-                    });
-                    
-                    const response = await feedbackService.getStudentTeacherMappings(
-                        studentId,
-                        academicYearId,
-                        semesterId,
-                        divisionId
-                    );
-                    const mappings = response?.data || response || [];
-                    setTeacherSubjects(mappings);
-                    
-                    const pairs = [];
-                    mappings.forEach(subject => {
-                        if (subject.teachers && subject.teachers.length > 0) {
-                            subject.teachers.forEach(teacher => {
-                                pairs.push({
-                                    teacher_id: teacher.teacher_id,
-                                    teacher_name: teacher.teacher_name,
-                                    subject_id: subject.subject_id,
-                                    subject_name: subject.subject_name
-                                });
-                            });
-                        }
-                    });
-                    setTeacherSubjectPairs(pairs);
-                }
+
+            if (!studentId) {
+                console.warn('loadTeacherMappings: studentId not found, skipping.');
+                return;
             }
+
+            // Step 1: Always fetch student history
+            const history = await StudentService.getStudentHistory(studentId);
+
+            if (!history || history.length === 0) {
+                console.warn('loadTeacherMappings: No student history found.');
+                return;
+            }
+
+            // Step 2: Resolve academicYearId & semesterId
+            // Prefer form's target values; fall back to latest history record
+            const formAcademicYearId = form?.target_academic_year_id;
+            const formSemesterId = form?.target_semester_id;
+
+            let resolvedAcademicYearId = null;
+            let resolvedSemesterId = null;
+            let resolvedDivisionId = null;
+
+            if (formAcademicYearId && formSemesterId) {
+                // Try to find exact matching history record
+                const matchingRecord = history.find(
+                    h => h.academic_year_id === formAcademicYearId && h.semester_id === formSemesterId
+                );
+
+                if (matchingRecord) {
+                    resolvedAcademicYearId = matchingRecord.academic_year_id;
+                    resolvedSemesterId = matchingRecord.semester_id;
+                    resolvedDivisionId = matchingRecord.division_id;
+                } else {
+                    // Form has target values but no matching history — use form values + latest history's division
+                    resolvedAcademicYearId = formAcademicYearId;
+                    resolvedSemesterId = formSemesterId;
+                    resolvedDivisionId = history[0]?.division_id;
+                }
+            } else {
+                // Form has no target values — use latest history record
+                const latestHistory = history[0];
+                resolvedAcademicYearId = latestHistory?.academic_year_id;
+                resolvedSemesterId = latestHistory?.semester_id;
+                resolvedDivisionId = latestHistory?.division_id;
+            }
+
+            if (!resolvedAcademicYearId || !resolvedSemesterId || !resolvedDivisionId) {
+                console.warn('loadTeacherMappings: Could not resolve academicYearId, semesterId or divisionId.');
+                return;
+            }
+
+            // Store context for submission payload
+            setStudentContext({
+                academicYearId: resolvedAcademicYearId,
+                semesterId: resolvedSemesterId,
+                divisionId: resolvedDivisionId
+            });
+
+            // Step 3: Fetch teacher mappings
+            const response = await feedbackService.getStudentTeacherMappings(
+                studentId,
+                resolvedAcademicYearId,
+                resolvedSemesterId,
+                resolvedDivisionId
+            );
+            const mappings = response?.data || response || [];
+            setTeacherSubjects(mappings);
+
+            const pairs = [];
+            mappings.forEach(subject => {
+                if (subject.teachers && subject.teachers.length > 0) {
+                    subject.teachers.forEach(teacher => {
+                        pairs.push({
+                            teacher_id: teacher.teacher_id,
+                            teacher_name: teacher.teacher_name,
+                            subject_id: subject.subject_id,
+                            subject_name: subject.subject_name
+                        });
+                    });
+                }
+            });
+            setTeacherSubjectPairs(pairs);
+
         } catch (error) {
             console.error('Error loading teacher mappings:', error);
         }
