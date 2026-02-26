@@ -146,8 +146,12 @@ const RubricAssessmentView = ({ isOpen, onClose, assessmentData = null }) => {
                                                     </div>
                                                     {criterion.weight_percentage !== null && (
                                                         <div className="ml-4 px-3 py-1 bg-white rounded-lg border border-blue-200 shadow-sm">
-                                                            <div className="text-[10px] uppercase text-slate-500 font-bold">Weight</div>
-                                                            <div className="text-sm font-bold text-blue-700">{criterion.weight_percentage}%</div>
+                                                            <div className="text-[10px] uppercase text-slate-500 font-bold">
+                                                                {displayData.scoringType === 'PERCENTAGE' ? 'Weight' : 'Points'}
+                                                            </div>
+                                                            <div className="text-sm font-bold text-blue-700">
+                                                                {criterion.weight_percentage}{displayData.scoringType === 'PERCENTAGE' ? '%' : ' Pts'}
+                                                            </div>
                                                         </div>
                                                     )}
                                                 </div>
@@ -229,7 +233,7 @@ const RubricAssessmentView = ({ isOpen, onClose, assessmentData = null }) => {
                                                             )}
                                                             {criterion.weight_percentage !== null && (
                                                                 <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-slate-100 text-slate-600">
-                                                                    Weight: {criterion.weight_percentage}%
+                                                                    {displayData.scoringType === 'PERCENTAGE' ? 'Weight' : 'Points'}: {criterion.weight_percentage}{displayData.scoringType === 'PERCENTAGE' ? '%' : ' Pts'}
                                                                 </span>
                                                             )}
                                                         </td>
