@@ -27,6 +27,7 @@ import AcademicDiaryRoutes from '../Teacher/screens/Pages/AcademicDiary/Routes/A
 import SubjectSelectionRoutes from '../Teacher/screens/Pages/SubjectSelection/Routes/SubjectSelectionRoutes.jsx';
 import TimeTableRoutes from '../Student/screens/Pages/TimeTable/Routes/TimeTableRoutes.jsx';
 import AssessmentRoutes from "../Student/screens/Pages/Assessment/Routes/AssessmentRoutes.jsx";
+import TeacherAssessmentRoutes from "../Teacher/screens/Pages/Assessment copy/Routes/AssessmentRoutes.jsx";
 import FeesRoutes from '../Student/screens/Pages/Fees/Routes/FeesRoutes.jsx';
 import AcademicCalendarRoute from "../Teacher/screens/Pages/AcademicCalendar/Routes/AcademicCalendarRoute.jsx"
 import AcademicCalendarRoutes from "../Student/screens/Pages/AcademicCalendar/Routes/AcademicCalendarRoutes.jsx"
@@ -122,15 +123,15 @@ function App() {
           }
         />
         <Route
-  path="/teacher/placement/*"
-  element={
-    <ProtectedRoute>
-      <TeacherHomepage>
-        <PlacementRoutes />
-      </TeacherHomepage>
-    </ProtectedRoute>
-  }
-/>
+          path="/teacher/placement/*"
+          element={
+            <ProtectedRoute>
+              <TeacherHomepage>
+                <PlacementRoutes />
+              </TeacherHomepage>
+            </ProtectedRoute>
+          }
+        />
         <Route
           path="/teacher/task-management/*"
           element={
@@ -164,6 +165,18 @@ function App() {
           }
         />
 
+
+        {/* ────── TEACHER – Assessment ────── */}
+        <Route
+          path="/admin-assessment/*"
+          element={
+            <ProtectedRoute>
+              <TeacherHomepage>
+                <TeacherAssessmentRoutes />
+              </TeacherHomepage>
+            </ProtectedRoute>
+          }
+        />
 
         {/* ────── STUDENT ────── */}
         <Route
@@ -283,15 +296,15 @@ function App() {
           }
         />
         <Route
-  path="/student/fees/*"
-  element={
-    <ProtectedRoute>
-      <StudentHomepage>
-        <FeesRoutes />
-      </StudentHomepage>
-    </ProtectedRoute>
-  }
-/>
+          path="/student/fees/*"
+          element={
+            <ProtectedRoute>
+              <StudentHomepage>
+                <FeesRoutes />
+              </StudentHomepage>
+            </ProtectedRoute>
+          }
+        />
 
 
         <Route

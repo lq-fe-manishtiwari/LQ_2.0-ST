@@ -30,7 +30,7 @@ export default function FontSizeAdjuster() {
 
   return (
     <div className="flex items-center justify-between p-2">
-       <span className="text-sm font-medium text-gray-700 dark:text-gray-200">Font Size</span>
+      <span className="text-sm font-medium text-gray-700 dark:text-gray-200">Font Size</span>
       <div className="flex items-center gap-2">
         <button
           onClick={decreaseSize}

@@ -16,7 +16,7 @@ import TeacherProfile from "../Dashboard/TeacherProfile.jsx";
 
 // Other routes
 import ClassRoutes from "../Pages/Class/Routes/ClassRoutes.jsx";
-import AssessmentRoutes from "../Pages/Assessment/Routes/AssessmentRoutes.jsx";
+import AssessmentRoutes from "../Pages/Assessment copy/Routes/AssessmentRoutes.jsx";
 import ContentRoutes from "../Pages/Content/Routes/ContentRoutes.jsx";
 import FeedbackRoutes from "../Pages/Feedback/Routes/FeedbackRoutes.jsx";
 import USFeedbackRoutes from "../Pages/USFeedback/Routes/USFeedbackRoutes.jsx";
