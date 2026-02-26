@@ -1,19 +1,17 @@
 'use client';
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Formik, Field, Form } from 'formik';
 import * as Yup from 'yup';
 import { ChevronDown, Calendar, Clock, Check, Upload, X, CheckCircle } from 'lucide-react';
 import assesment_logo from '@/_assets/images_new_design/Assessment_logo.svg';
 
-import { collegeService } from '../../Academics/Services/college.service';
-import { contentService } from '../../Content/Services/content.service';
-// import { fetchClassesByprogram } from '../../Student/Services/student.service'; // Removed
-import { batchService } from '../../Academics/Services/batch.Service'; // Added
+import { contentService } from '../../Academics/Services/content.service';
+import { batchService } from '../../Academics/Services/batch.Service';
 import { useUserProfile } from '../../../../../contexts/UserProfileContext';
 import { AssessmentService } from '../Services/assessment.service';
-// import { uploadFileToS3 } from '../../../../_services/api';
 import { RubricService } from '../Settings/Service/rubric.service';
 import moment from "moment";
+import { useAssessmentFormLogic } from '../../Assessment/hooks/useAssessmentFormLogic';
 
 const AddExternalAssessment = ({ grade, nba, currentUser, showSuccessModal, showWarningModal, userRole, mode: propMode, assessmentData }) => {
   const { userID, userRole: contextUserRole } = useUserProfile();
@@ -43,6 +41,18 @@ const AddExternalAssessment = ({ grade, nba, currentUser, showSuccessModal, show
   const [assessmentType, setAssessmentType] = useState('STANDARD_GENERAL'); // New
   const [rubricType, setRubricType] = useState(''); // New
 
+  // Derive formData for the hook (uses teacher ID)
+  const hookFormData = useMemo(() => ({
+    selectedProgram: String(selectedGrade || ''),
+    selectedAcademicSemester: selectedAcademicYear && selectedSemester
+      ? `${selectedAcademicYear}-${selectedSemester}`
+      : '',
+    selectedBatch: String(selectedBatch || ''),
+    selectedSubject: String(selectedSubject || ''),
+  }), [selectedGrade, selectedAcademicYear, selectedSemester, selectedBatch, selectedSubject]);
+
+  const { options: hookOptions } = useAssessmentFormLogic(hookFormData);
+
   const [testDate, setTestDate] = useState(new Date(new Date().setDate(new Date().getDate() + 1)));
   const [testLastDate, setTestLastDate] = useState(new Date(new Date().setDate(new Date().getDate() + 2))); // New
   const [timeLimit, setTimeLimit] = useState(''); // New
@@ -68,107 +78,88 @@ const AddExternalAssessment = ({ grade, nba, currentUser, showSuccessModal, show
     RUBRIC_BL_CO: 'Rubric with BL & CO',
   };
 
-  // Fetch Programs ... (Kept similar) & Initialize Edit Mode
+  // EDIT MODE INITIALIZATION
   useEffect(() => {
     const fetchProgramsAndInitialize = async () => {
-      if (!collegeId) return;
+      if (!assessmentData || !collegeId) return;
       try {
-        let programsData = [];
-        const role = contextUserRole || userRole?.userRole;
+        const ad = assessmentData;
 
-        if (role === "SUPERADMIN") {
-          const storedPrograms = localStorage.getItem("college_programs");
-          if (storedPrograms) programsData = JSON.parse(storedPrograms);
-          else programsData = await collegeService.getProgrambyUserIdandCollegeId(userID, collegeId);
-        } else {
-          programsData = await collegeService.getProgrambyUserIdandCollegeId(userID, collegeId);
-        }
-        const formattedPrograms = programsData.map(p => ({
-          grade_id: p.program_id,
-          name: p.program_name || p.name
-        }));
-        setProgramOptions(formattedPrograms);
+        // 1. Load Batches & Cascade Data
+        const batchRes = await batchService.getBatchByProgramId([ad.program_id]);
+        const batchesData = Array.isArray(batchRes) ? batchRes : [];
 
-        // --- EDIT MODE INITIALIZATION ---
-        if (assessmentData) {
-          const ad = assessmentData;
-          console.log("Initializing AddExternalAssessment in EDIT mode:", ad);
-
-          // 1. Load Batches & Cascade Data
-          const batchRes = await batchService.getBatchByProgramId([ad.program_id]);
-          const batchesData = Array.isArray(batchRes) ? batchRes : [];
-
-          const extractedAYs = [];
-          const extractedSems = [];
-          batchesData.forEach(batch => {
-            batch.academic_years?.forEach(ay => {
-              extractedAYs.push({ academic_year_id: ay.academic_year_id, name: ay.name, batchId: batch.batch_id });
-              ay.semester_divisions?.forEach(sem => {
-                extractedSems.push({ semester_id: sem.semester_id, semester_name: sem.name, academicYearId: ay.academic_year_id, divisions: sem.divisions || [] });
-              });
+        const extractedAYs = [];
+        const extractedSems = [];
+        batchesData.forEach(batch => {
+          batch.academic_years?.forEach(ay => {
+            extractedAYs.push({ academic_year_id: ay.academic_year_id, name: ay.name, batchId: batch.batch_id });
+            ay.semester_divisions?.forEach(sem => {
+              extractedSems.push({ semester_id: sem.semester_id, semester_name: sem.name, academicYearId: ay.academic_year_id, divisions: sem.divisions || [] });
             });
           });
+        });
 
-          allBatchesRef.current = batchesData;
-          allAcademicYearsRef.current = extractedAYs;
-          allSemestersRef.current = extractedSems;
+        allBatchesRef.current = batchesData;
+        allAcademicYearsRef.current = extractedAYs;
+        allSemestersRef.current = extractedSems;
 
-          // 2. Load Subjects
-          const subjectRes = await contentService.getSubjectbyProgramId(ad.program_id);
-          const subjects = subjectRes.filter(s => !s.is_deleted).map(s => ({ subject_id: s.subject_id, name: s.subject_name || s.name }));
+        // 2. Load Subjects
+        const subjectRes = await contentService.getSubjectbyProgramId(ad.program_id);
+        const subjects = subjectRes.filter(s => !s.is_deleted).map(s => ({ subject_id: s.subject_id, name: s.subject_name || s.name }));
 
-          // 3. Load Modules
-          let chapters = [];
-          if (ad.subject_id) {
-            const moduleRes = await contentService.getModulesbySubject(ad.subject_id);
-            chapters = (moduleRes?.modules || moduleRes || []).map(m => ({ chapter_id: m.module_id, label: m.module_name, units: m.units || [] }));
-          }
-
-          // 4. Load Topics
-          let topics = [];
-          if (ad.module_id) {
-            const selectedModule = chapters.find(c => c.chapter_id == ad.module_id);
-            topics = selectedModule?.units.map(u => ({ topic_id: u.unit_id, label: u.unit_name })) || [];
-          }
-
-          // 5. Relevant Lists
-          const relevantAYs = extractedAYs.filter(ay => ay.batchId == ad.batch_id);
-          const relevantSems = extractedSems.filter(s => s.academicYearId == ad.academic_year_id);
-          const selectedSemObj = extractedSems.find(s => s.semester_id == ad.semester_id);
-          const divisionsList = selectedSemObj?.divisions?.map(d => ({
-            grade_division_id: d.division_id,
-            name: d.division_name
-          })) || [];
-
-          setBatchOptions(batchesData.map(b => ({ value: b.batch_id, label: b.batch_name })));
-          setAcademicYearOptions(relevantAYs.map(ay => ({ value: ay.academic_year_id, label: ay.name })));
-          setSemesterOptions(relevantSems.map(s => ({ value: s.semester_id, label: s.semester_name })));
-          setDivisionOptions(divisionsList);
-          setSubjectOptions(subjects);
-          setChapterOptions(chapters);
-          setTopicOptions(topics);
-
-          setSelectedGrade(ad.program_id);
-          setSelectedBatch(ad.batch_id);
-          setSelectedAcademicYear(ad.academic_year_id);
-          setSelectedSemester(ad.semester_id);
-          setSelectedDivision(ad.division_id);
-          setSelectedSubject(ad.subject_id);
-          setSelectedChapter(ad.module_id);
-          setSelectedTopic(ad.unit_id);
-          setAssessmentType(ad.type);
-          setTestDate(ad.test_start_datetime ? new Date(ad.test_start_datetime) : testDate);
-          setTestLastDate(ad.test_end_datetime ? new Date(ad.test_end_datetime) : testLastDate);
-          setTimeLimit(ad.time_limit_minutes || '');
-          setMode(ad.mode || mode);
+        // 3. Load Modules
+        let chapters = [];
+        if (ad.subject_id) {
+          const moduleRes = await contentService.getModulesbySubject(ad.subject_id);
+          const rawMods = Array.isArray(moduleRes) ? moduleRes : (moduleRes?.modules || []);
+          chapters = rawMods.map(m => ({ chapter_id: m.module_id, label: m.module_name, units: m.units || [] }));
         }
 
+        // 4. Load Topics
+        let topics = [];
+        if (ad.module_id) {
+          const selectedModule = chapters.find(c => c.chapter_id == ad.module_id);
+          topics = selectedModule?.units.map(u => ({ topic_id: u.unit_id, label: u.unit_name })) || [];
+        }
+
+        // 5. Relevant Lists
+        const relevantAYs = extractedAYs.filter(ay => ay.batchId == ad.batch_id);
+        const relevantSems = extractedSems.filter(s => s.academicYearId == ad.academic_year_id);
+        const selectedSemObj = extractedSems.find(s => s.semester_id == ad.semester_id);
+        const divisionsList = selectedSemObj?.divisions?.map(d => ({
+          grade_division_id: d.division_id,
+          name: d.division_name
+        })) || [];
+
+        setBatchOptions(batchesData.map(b => ({ value: b.batch_id, label: b.batch_name })));
+        setAcademicYearOptions(relevantAYs.map(ay => ({ value: ay.academic_year_id, label: ay.name })));
+        setSemesterOptions(relevantSems.map(s => ({ value: s.semester_id, label: s.semester_name })));
+        setDivisionOptions(divisionsList);
+        setSubjectOptions(subjects);
+        setChapterOptions(chapters);
+        setTopicOptions(topics);
+
+        setSelectedGrade(ad.program_id);
+        setSelectedBatch(ad.batch_id);
+        setSelectedAcademicYear(ad.academic_year_id);
+        setSelectedSemester(ad.semester_id);
+        setSelectedDivision(ad.division_id);
+        setSelectedSubject(ad.subject_id);
+        setSelectedChapter(ad.module_id);
+        setSelectedTopic(ad.unit_id);
+        setAssessmentType(ad.type);
+        setTestDate(ad.test_start_datetime ? new Date(ad.test_start_datetime) : testDate);
+        setTestLastDate(ad.test_end_datetime ? new Date(ad.test_end_datetime) : testLastDate);
+        setTimeLimit(ad.time_limit_minutes || '');
+        setMode(ad.mode || mode);
       } catch (err) {
         console.error('Failed to fetch programs or initialize edit:', err);
       }
     };
     fetchProgramsAndInitialize();
-  }, [collegeId, userID, contextUserRole]);
+  }, [assessmentData, collegeId]);
+
 
   const handleGradeChange = async (gradeId, setFieldValue) => {
     setSelectedGrade(gradeId);
@@ -306,7 +297,16 @@ const AddExternalAssessment = ({ grade, nba, currentUser, showSuccessModal, show
 
   const handleDivisionChange = (divisionId, setFieldValue) => {
     setSelectedDivision(divisionId);
-    setFieldValue('grade_division_id', divisionId);
+    if (!divisionId) {
+      setFieldValue('grade_division_id', '');
+      return;
+    }
+
+    if (divisionId === 'All') {
+      setFieldValue('grade_division_id', 'All');
+    } else {
+      setFieldValue('grade_division_id', divisionId);
+    }
   };
 
   const handleSubjectChange = async (subjectId, setFieldValue) => {
@@ -320,14 +320,14 @@ const AddExternalAssessment = ({ grade, nba, currentUser, showSuccessModal, show
     if (subjectId) {
       try {
         const response = await contentService.getModulesbySubject(subjectId);
-        const modules = response?.modules || response || [];
+        const modules = Array.isArray(response) ? response : (response?.modules || []);
         setChapterOptions(modules.map(m => ({
           chapter_id: m.module_id,
           label: m.module_name,
           units: m.units || []
         })));
       } catch (err) {
-        console.error("Error fetching modules:", err);
+        console.error('Error fetching modules:', err);
       }
     }
   };
@@ -635,7 +635,7 @@ const AddExternalAssessment = ({ grade, nba, currentUser, showSuccessModal, show
                 fieldName="grade"
                 label="Program"
                 value={values.grade}
-                options={programOptions}
+                options={hookOptions.programs}
                 placeholder="Select Program"
                 required
                 onChangeCallback={(val) => {
@@ -686,7 +686,7 @@ const AddExternalAssessment = ({ grade, nba, currentUser, showSuccessModal, show
                 fieldName="grade_division_id"
                 label="Division"
                 value={values.grade_division_id}
-                options={divisionOptions.map(d => ({ grade_division_id: d.grade_division_id, name: d.name }))}
+                options={divisionOptions.length ? divisionOptions.map(d => ({ value: d.grade_division_id, label: d.name })) : [{ label: 'All', value: 'All' }]}
                 placeholder="Select Division"
                 required
                 onChangeCallback={(val) => {

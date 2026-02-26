@@ -12,7 +12,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 
 // Services
 import { collegeService } from '../../Academics/Services/college.service';
-import { contentService } from '../../Content/Services/content.service';
+import { contentService } from '../../Content/services/content.service';
 import { batchService } from '../../Academics/Services/batch.Service';
 import { useUserProfile } from '../../../../contexts/UserProfileContext';
 import { AssessmentService } from '../Services/assessment.service';
@@ -413,6 +413,87 @@ const EditAssessment = ({ showSuccessModal, showWarningModal, userRole }) => {
   };
 
 
+  const handleBatchChange = (batchId, setFieldValue) => {
+    setFieldValue('batch_id', batchId);
+    setFieldValue('academic_year_id', '');
+    setFieldValue('semester_id', '');
+    setFieldValue('grade_division', '');
+
+    const filteredAYs = allAcademicYearsRef.current.filter(ay => ay.batchId == batchId);
+
+    setState(prev => ({
+      ...prev,
+      selectedBatch: batchId,
+      academicYears: filteredAYs.map(ay => ({ value: ay.academic_year_id, label: ay.name })),
+      semesters: [],
+      divisions: [],
+      selectedAcademicYear: '',
+      selectedSemester: '',
+      selectedDivision: ''
+    }));
+  };
+
+  const handleAcademicYearChange = (ayId, setFieldValue) => {
+    setFieldValue('academic_year_id', ayId);
+    setFieldValue('semester_id', '');
+    setFieldValue('grade_division', '');
+
+    const filteredSems = allSemestersRef.current.filter(s => s.academicYearId == ayId);
+
+    setState(prev => ({
+      ...prev,
+      selectedAcademicYear: ayId,
+      semesters: filteredSems.map(s => ({ value: s.semester_id, label: s.semester_name })),
+      divisions: [],
+      selectedSemester: '',
+      selectedDivision: ''
+    }));
+  };
+
+  const handleSemesterChange = (semId, setFieldValue) => {
+    setFieldValue('semester_id', semId);
+    setFieldValue('grade_division', '');
+
+    // Extract Divisions from the selected semester from REF
+    const selectedSemObj = allSemestersRef.current.find(s => s.semester_id == semId);
+    let divisionsList = [];
+    if (selectedSemObj && selectedSemObj.divisions) {
+      divisionsList = selectedSemObj.divisions.map(d => ({
+        grade_division_id: d.division_id,
+        grade_division_obj_str: JSON.stringify({
+          grade_division_id: d.division_id,
+        }),
+        division: { name: d.division_name }
+      }));
+    }
+
+    setState(prev => ({
+      ...prev,
+      selectedSemester: semId,
+      divisions: divisionsList,
+      selectedDivision: ''
+    }));
+  };
+
+  const handleDivisionChange = async (divisionObjStr, setFieldValue) => {
+    if (!divisionObjStr) {
+      setFieldValue('grade_division', '');
+      return;
+    }
+
+    if (divisionObjStr === 'All') {
+      setFieldValue('grade_division', 'All');
+      setState(prev => ({ ...prev, selectedDivision: 'All' }));
+    } else {
+      const obj = typeof divisionObjStr === 'string' && divisionObjStr.startsWith('{') ? JSON.parse(divisionObjStr) : null;
+      const divisionId = obj?.grade_division_id || divisionObjStr;
+
+      setState(prev => ({ ...prev, selectedDivision: divisionId }));
+      setFieldValue('grade_division', divisionObjStr);
+    }
+  };
+
+
   const validationSchema = Yup.object().shape({
     title: Yup.string().required('Title is required'),
     grade_id: Yup.string().required('Program is required'),
@@ -577,18 +658,21 @@ const EditAssessment = ({ showSuccessModal, showWarningModal, userRole }) => {
               <CustomDropdown
                 fieldName="grade_id" label="Program" value={values.grade_id}
                 options={state.grades}
+                onChangeCallback={(val) => handleGradeChange(val, setFieldValue)}
                 setFieldValue={setFieldValue} errors={errors} touched={touched}
                 openDropdown={openDropdown} setOpenDropdown={setOpenDropdown} dropdownRef={el => dropdownRefs.current['grade_id'] = el}
               />
               <CustomDropdown
                 fieldName="batch_id" label="Batch" value={values.batch_id}
                 options={state.batches}
+                onChangeCallback={(val) => handleBatchChange(val, setFieldValue)}
                 setFieldValue={setFieldValue} errors={errors} touched={touched}
                 openDropdown={openDropdown} setOpenDropdown={setOpenDropdown} dropdownRef={el => dropdownRefs.current['batch_id'] = el}
               />
               <CustomDropdown
                 fieldName="academic_year_id" label="Academic Year" value={values.academic_year_id}
                 options={state.academicYears}
+                onChangeCallback={(val) => handleAcademicYearChange(val, setFieldValue)}
                 setFieldValue={setFieldValue} errors={errors} touched={touched}
                 openDropdown={openDropdown} setOpenDropdown={setOpenDropdown} dropdownRef={el => dropdownRefs.current['academic_year_id'] = el}
               />
@@ -599,18 +683,35 @@ const EditAssessment = ({ showSuccessModal, showWarningModal, userRole }) => {
               <CustomDropdown
                 fieldName="semester_id" label="Semester" value={values.semester_id}
                 options={state.semesters}
+                onChangeCallback={(val) => handleSemesterChange(val, setFieldValue)}
                 setFieldValue={setFieldValue} errors={errors} touched={touched}
                 openDropdown={openDropdown} setOpenDropdown={setOpenDropdown} dropdownRef={el => dropdownRefs.current['semester_id'] = el}
               />
               <CustomDropdown
                 fieldName="grade_division" label="Division" value={values.grade_division}
                 options={state.divisions.length ? state.divisions : [{ label: 'All', value: 'All' }]}
+                onChangeCallback={(val) => handleDivisionChange(val, setFieldValue)}
                 setFieldValue={setFieldValue} errors={errors} touched={touched}
                 openDropdown={openDropdown} setOpenDropdown={setOpenDropdown} dropdownRef={el => dropdownRefs.current['grade_division'] = el}
               />
               <CustomDropdown
                 fieldName="subject_id" label="Subject" value={values.subject_id}
                 options={state.subjects}
+                onChangeCallback={async (val) => {
+                  setFieldValue('subject_id', val);
+                  setFieldValue('chapter_id', '');
+                  setFieldValue('topic_id', '');
+                  setState(prev => ({ ...prev, selectedSubject: val, chapters: [], topics: [] }));
+                  try {
+                    const response = await contentService.getModulesbySubject(val);
+                    const modules = response?.modules || response || [];
+                    setState(prev => ({
+                      ...prev,
+                      chapters: modules.map(m => ({ chapter_id: m.module_id, label: m.module_name, units: m.units || [] }))
+                    }));
+                  } catch (e) { console.error(e) }
+                  loadQuestions(setFieldValue, { selectedSubject: val, selectedChapter: '', selectedTopic: '' });
+                }}
                 setFieldValue={setFieldValue} errors={errors} touched={touched}
                 openDropdown={openDropdown} setOpenDropdown={setOpenDropdown} dropdownRef={el => dropdownRefs.current['subject_id'] = el}
               />
@@ -621,18 +722,29 @@ const EditAssessment = ({ showSuccessModal, showWarningModal, userRole }) => {
               <CustomDropdown
                 fieldName="chapter_id" label="Module" value={values.chapter_id}
                 options={state.chapters}
-                setFieldValue={setFieldValue} errors={errors} touched={touched}
-                openDropdown={openDropdown} setOpenDropdown={setOpenDropdown} dropdownRef={el => dropdownRefs.current['chapter_id'] = el}
-                // Add onChangeCallback for loadQuestions logic if user changes module
                 onChangeCallback={(val) => {
                   setFieldValue('chapter_id', val);
-                  // handleChapterChange logic here or just rely on them invalidating questions manually
-                  loadQuestions(setFieldValue, { selectedChapter: val });
+                  setFieldValue('topic_id', '');
+                  const selectedModule = state.chapters.find(c => c.chapter_id == val);
+                  setState(prev => ({
+                    ...prev,
+                    selectedChapter: val,
+                    topics: selectedModule?.units?.map(u => ({ topic_id: u.unit_id, label: u.unit_name })) || [],
+                    selectedTopic: ''
+                  }));
+                  loadQuestions(setFieldValue, { selectedChapter: val, selectedTopic: '' });
                 }}
+                setFieldValue={setFieldValue} errors={errors} touched={touched}
+                openDropdown={openDropdown} setOpenDropdown={setOpenDropdown} dropdownRef={el => dropdownRefs.current['chapter_id'] = el}
               />
               <CustomDropdown
                 fieldName="topic_id" label="Unit" value={values.topic_id}
                 options={state.topics}
+                onChangeCallback={(val) => {
+                  setFieldValue('topic_id', val);
+                  setState(prev => ({ ...prev, selectedTopic: val }));
+                  loadQuestions(setFieldValue, { selectedTopic: val });
+                }}
                 setFieldValue={setFieldValue} errors={errors} touched={touched}
                 openDropdown={openDropdown} setOpenDropdown={setOpenDropdown} dropdownRef={el => dropdownRefs.current['topic_id'] = el}
               />

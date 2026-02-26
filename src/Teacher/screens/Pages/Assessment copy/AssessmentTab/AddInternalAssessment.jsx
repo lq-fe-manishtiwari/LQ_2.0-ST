@@ -1,5 +1,5 @@
 'use client';
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Formik, Field, Form } from 'formik';
 import * as Yup from 'yup';
 import DatePicker from 'react-datepicker';
@@ -9,16 +9,13 @@ import { Search, Calendar, Clock, CheckCircle, Loader2, ChevronDown, Image, File
 import assesment_logo from '@/_assets/images_new_design/Assessment_logo.svg';
 import SearchImg from '@/_assets/images/Search.svg';
 
-
-// Mock services (replace with actual imports)
-import { collegeService } from '../../Academics/Services/college.service';
-import { contentService } from '../../Content/Services/content.service';
-// import { fetchClassesByprogram } from '../../Student/Services/student.service'; // Removed in favor of Batch flow
-import { batchService } from '../../Academics/Services/batch.Service'; // Added
+import { contentService } from '../../Academics/Services/content.service';
+import { batchService } from '../../Academics/Services/batch.Service';
 import { useUserProfile } from '../../../../../contexts/UserProfileContext';
 import { AssessmentService } from '../Services/assessment.service';
 import { QuestionsService } from '../Services/questions.service.js';
 import { RubricService } from '../Settings/Service/rubric.service';
+import { useAssessmentFormLogic } from '../../Assessment/hooks/useAssessmentFormLogic';
 
 const AddInternalAssessment = ({ grade, nba, currentUser, showSuccessModal, showWarningModal, userRole, mode: propMode, assessmentData }) => {
   const { userID, userRole: contextUserRole } = useUserProfile();
@@ -67,6 +64,19 @@ const AddInternalAssessment = ({ grade, nba, currentUser, showSuccessModal, show
     rubrics: [], // Added for real rubrics
   });
 
+  // Derive form data for hook (uses teacher ID to get allocated programs)
+  // selectedGrade drives the hook's program selection
+  const hookFormData = useMemo(() => ({
+    selectedProgram: String(state.selectedGrade || ''),
+    selectedAcademicSemester: state.selectedAcademicYear && state.selectedSemester
+      ? `${state.selectedAcademicYear}-${state.selectedSemester}`
+      : '',
+    selectedBatch: String(state.selectedBatch || ''),
+    selectedSubject: String(state.selectedSubject || ''),
+  }), [state.selectedGrade, state.selectedAcademicYear, state.selectedSemester, state.selectedBatch, state.selectedSubject]);
+
+  const { options: hookOptions } = useAssessmentFormLogic(hookFormData);
+
   // Helper refs for filtering (similar to PaperDashboard)
   const allBatchesRef = useRef([]);
   const allAcademicYearsRef = useRef([]);
@@ -79,174 +89,150 @@ const AddInternalAssessment = ({ grade, nba, currentUser, showSuccessModal, show
   const [assessmentOpen, setAssessmentOpen] = useState(false);
   const [hoveredParent, setHoveredParent] = useState(null);
 
-  // Fetch Programs (Grades) & Initialize Edit Mode
+  // EDIT MODE INITIALIZATION
   useEffect(() => {
     const loadInitialData = async () => {
-      if (!collegeId) return;
+      if (!assessmentData || !collegeId) return;
       try {
-        let programsData = [];
-        const role = contextUserRole || userRole?.userRole;
+        const ad = assessmentData;
 
-        if (role === "SUPERADMIN") {
-          // SUPERADMIN: fetch all programs by college (no userId needed)
-          programsData = await collegeService.getAllProgramByCollegeId(collegeId);
-        } else if (userID) {
-          // Regular users: fetch allocated programs for this user
-          programsData = await collegeService.getProgrambyUserIdandCollegeId(userID, collegeId);
-        } else {
-          // Fallback if userID not yet available: fetch all by college
-          programsData = await collegeService.getAllProgramByCollegeId(collegeId);
-        }
+        // 1. Load Batches & Cascade Data
+        const batchRes = await batchService.getBatchByProgramId([ad.program_id]);
+        const batchesData = Array.isArray(batchRes) ? batchRes : [];
 
-        const formattedGrades = (programsData || []).map(p => ({
-          grade_id: p.program_id,
-          name: p.program_name || p.name
-        }));
-
-        setState(prev => ({ ...prev, grades: formattedGrades }));
-
-        // --- EDIT MODE INITIALIZATION ---
-        if (assessmentData) {
-          const ad = assessmentData;
-          console.log("Initializing AddInternalAssessment in EDIT mode:", ad);
-
-          // 1. Load Batches & Cascade Data
-          const batchRes = await batchService.getBatchByProgramId([ad.program_id]);
-          const batchesData = Array.isArray(batchRes) ? batchRes : [];
-
-          const extractedAYs = [];
-          const extractedSems = [];
-          batchesData.forEach(batch => {
-            batch.academic_years?.forEach(ay => {
-              extractedAYs.push({ academic_year_id: ay.academic_year_id, name: ay.name, batchId: batch.batch_id });
-              ay.semester_divisions?.forEach(sem => {
-                extractedSems.push({ semester_id: sem.semester_id, semester_name: sem.name, academicYearId: ay.academic_year_id, divisions: sem.divisions || [] });
-              });
+        const extractedAYs = [];
+        const extractedSems = [];
+        batchesData.forEach(batch => {
+          batch.academic_years?.forEach(ay => {
+            extractedAYs.push({ academic_year_id: ay.academic_year_id, name: ay.name, batchId: batch.batch_id });
+            ay.semester_divisions?.forEach(sem => {
+              extractedSems.push({ semester_id: sem.semester_id, semester_name: sem.name, academicYearId: ay.academic_year_id, divisions: sem.divisions || [] });
             });
           });
+        });
 
-          allBatchesRef.current = batchesData;
-          allAcademicYearsRef.current = extractedAYs;
-          allSemestersRef.current = extractedSems;
+        allBatchesRef.current = batchesData;
+        allAcademicYearsRef.current = extractedAYs;
+        allSemestersRef.current = extractedSems;
 
-          // 2. Load Subjects
-          const subjectRes = await contentService.getSubjectbyProgramId(ad.program_id);
-          const subjects = subjectRes.filter(s => !s.is_deleted).map(s => ({ subject_id: s.subject_id, name: s.subject_name || s.name }));
+        // 2. Load Subjects
+        const subjectRes = await contentService.getSubjectbyProgramId(ad.program_id);
+        const subjects = subjectRes.filter(s => !s.is_deleted).map(s => ({ subject_id: s.subject_id, name: s.subject_name || s.name }));
 
-          // 3. Load Modules
-          let chapters = [];
-          if (ad.subject_id) {
-            const moduleRes = await contentService.getModulesbySubject(ad.subject_id);
-            chapters = (moduleRes?.modules || moduleRes || []).map(m => ({ chapter_id: m.module_id, label: m.module_name, units: m.units || [] }));
-          }
+        // 3. Load Modules
+        let chapters = [];
+        if (ad.subject_id) {
+          const moduleRes = await contentService.getModulesbySubject(ad.subject_id);
+          const rawMods = Array.isArray(moduleRes) ? moduleRes : (moduleRes?.modules || []);
+          chapters = rawMods.map(m => ({ chapter_id: m.module_id, label: m.module_name, units: m.units || [] }));
+        }
 
-          // 4. Load Topics
-          let topics = [];
-          if (ad.module_id) {
-            const selectedModule = chapters.find(c => c.chapter_id == ad.module_id);
-            topics = selectedModule?.units.map(u => ({ topic_id: u.unit_id, label: u.unit_name })) || [];
-          }
+        // 4. Load Topics
+        let topics = [];
+        if (ad.module_id) {
+          const selectedModule = chapters.find(c => c.chapter_id == ad.module_id);
+          topics = selectedModule?.units.map(u => ({ topic_id: u.unit_id, label: u.unit_name })) || [];
+        }
 
-          // 5. Relevant Lists for Dropdowns
-          const relevantAYs = extractedAYs.filter(ay => ay.batchId == ad.batch_id);
-          const relevantSems = extractedSems.filter(s => s.academicYearId == ad.academic_year_id);
-          const selectedSemObj = extractedSems.find(s => s.semester_id == ad.semester_id);
-          const divisionsList = selectedSemObj?.divisions?.map(d => ({
-            grade_division_id: d.division_id,
-            grade_division_obj_str: JSON.stringify({ grade_division_id: d.division_id, grade_id: ad.program_id }),
-            division: { name: d.division_name }
-          })) || [];
+        // 5. Relevant Lists for Dropdowns
+        const relevantAYs = extractedAYs.filter(ay => ay.batchId == ad.batch_id);
+        const relevantSems = extractedSems.filter(s => s.academicYearId == ad.academic_year_id);
+        const selectedSemObj = extractedSems.find(s => s.semester_id == ad.semester_id);
+        const divisionsList = selectedSemObj?.divisions?.map(d => ({
+          grade_division_id: d.division_id,
+          grade_division_obj_str: JSON.stringify({ grade_division_id: d.division_id, grade_id: ad.program_id }),
+          division: { name: d.division_name }
+        })) || [];
+
+        setState(prev => ({
+          ...prev,
+          batches: batchesData.map(b => ({ value: b.batch_id, label: b.batch_name })),
+          academicYears: relevantAYs.map(ay => ({ value: ay.academic_year_id, label: ay.name })),
+          semesters: relevantSems.map(s => ({ value: s.semester_id, label: s.semester_name })),
+          divisions: divisionsList,
+          subjects,
+          chapters,
+          topics,
+          selectedGrade: ad.program_id,
+          selectedBatch: ad.batch_id,
+          selectedAcademicYear: ad.academic_year_id,
+          selectedSemester: ad.semester_id,
+          selectedDivision: ad.division_id,
+          selectedSubject: ad.subject_id,
+          selectedChapter: ad.module_id,
+          selectedTopic: ad.unit_id,
+          selectedTestCategory: ad.category ? (ad.category.charAt(0).toUpperCase() + ad.category.slice(1).toLowerCase()) : 'Objective',
+          assessmentType: ad.type,
+          testDate: ad.test_start_datetime ? new Date(ad.test_start_datetime) : prev.testDate,
+          testLastDate: ad.test_end_datetime ? new Date(ad.test_end_datetime) : prev.testLastDate,
+          timeLimit: ad.time_limit_minutes || '',
+          mode: ad.mode || prev.mode,
+          rubricType: ad.rubric_type || '',
+          rubricId: ad.rubric_id || '',
+          rubricName: ad.rubric_name || ''
+        }));
+
+        // 6. Load Questions and Mark existing ones
+        const qFilters = {
+          college_id: collegeId,
+          program_id: ad.program_id,
+          subject_id: ad.subject_id,
+          module_id: ad.module_id,
+          unit_id: ad.unit_id,
+        };
+        if (ad.category && ad.category !== 'MIXED') qFilters.category = ad.category.toUpperCase();
+
+        try {
+          const qRes = await contentService.getAssessmentQuestionsByFilter(qFilters);
+          const fetchedQs = Array.isArray(qRes) ? qRes : (qRes?.questions || []);
+          const existingIds = new Set((ad.questions || []).map(q => q.question_id));
+
+          const formatted = fetchedQs.map(q => {
+            const levelName = q.question_level_name ? q.question_level_name.toUpperCase() : 'MEDIUM';
+            return {
+              ...q,
+              question_id: q.question_id,
+              question: q.question ? q.question.replace(/<p[^>]*>/g, "").replace(/<\/p>/g, "") : "",
+              color_code: levelName === 'EASY' ? '#10b981' : levelName === 'MEDIUM' ? '#f59e0b' : '#ef4444',
+              isChecked: existingIds.has(q.question_id),
+              question_level: { question_level_type: levelName },
+              default_weight_age: q.default_marks || q.default_weight_age || 1,
+              option1: q.options?.[0]?.option_text || '',
+              option2: q.options?.[1]?.option_text || '',
+              option3: q.options?.[2]?.option_text || '',
+              option4: q.options?.[3]?.option_text || '',
+              objective_subjective_type: q.question_category === 'OBJECTIVE' ? 'Objective' : 'Subjective'
+            };
+          });
+
+          const counts = formatted.reduce((acc, q) => {
+            if (q.isChecked) {
+              acc.total++;
+              if (q.question_level.question_level_type === 'EASY') acc.easy++;
+              else if (q.question_level.question_level_type === 'MEDIUM') acc.medium++;
+              else if (q.question_level.question_level_type === 'HARD') acc.hard++;
+            }
+            return acc;
+          }, { total: 0, easy: 0, medium: 0, hard: 0 });
 
           setState(prev => ({
             ...prev,
-            batches: batchesData.map(b => ({ value: b.batch_id, label: b.batch_name })),
-            academicYears: relevantAYs.map(ay => ({ value: ay.academic_year_id, label: ay.name })),
-            semesters: relevantSems.map(s => ({ value: s.semester_id, label: s.semester_name })),
-            divisions: divisionsList,
-            subjects,
-            chapters,
-            topics,
-            selectedGrade: ad.program_id,
-            selectedBatch: ad.batch_id,
-            selectedAcademicYear: ad.academic_year_id,
-            selectedSemester: ad.semester_id,
-            selectedDivision: ad.division_id,
-            selectedSubject: ad.subject_id,
-            selectedChapter: ad.module_id,
-            selectedTopic: ad.unit_id,
-            selectedTestCategory: ad.category ? (ad.category.charAt(0).toUpperCase() + ad.category.slice(1).toLowerCase()) : 'Objective',
-            assessmentType: ad.type,
-            testDate: ad.test_start_datetime ? new Date(ad.test_start_datetime) : prev.testDate,
-            testLastDate: ad.test_end_datetime ? new Date(ad.test_end_datetime) : prev.testLastDate,
-            timeLimit: ad.time_limit_minutes || '',
-            mode: ad.mode || prev.mode,
-            rubricType: ad.rubric_type || '',
-            rubricId: ad.rubric_id || '',
-            rubricName: ad.rubric_name || ''
+            questions: formatted,
+            filteredQuestions: formatted,
+            noOfQuestions: counts.total,
+            noOfEasy: counts.easy,
+            noOfMedium: counts.medium,
+            noOfHard: counts.hard
           }));
-
-          // 6. Load Questions and Mark existing ones
-          const qFilters = {
-            college_id: collegeId,
-            program_id: ad.program_id,
-            subject_id: ad.subject_id,
-            module_id: ad.module_id,
-            unit_id: ad.unit_id,
-          };
-          if (ad.category && ad.category !== 'MIXED') qFilters.category = ad.category.toUpperCase();
-
-          try {
-            const qRes = await contentService.getAssessmentQuestionsByFilter(qFilters);
-            const fetchedQs = Array.isArray(qRes) ? qRes : (qRes?.questions || []);
-            const existingIds = new Set((ad.questions || []).map(q => q.question_id));
-
-            const formatted = fetchedQs.map(q => {
-              const levelName = q.question_level_name ? q.question_level_name.toUpperCase() : 'MEDIUM';
-              return {
-                ...q,
-                question_id: q.question_id,
-                question: q.question ? q.question.replace(/<p[^>]*>/g, "").replace(/<\/p>/g, "") : "",
-                color_code: levelName === 'EASY' ? '#10b981' : levelName === 'MEDIUM' ? '#f59e0b' : '#ef4444',
-                isChecked: existingIds.has(q.question_id),
-                question_level: { question_level_type: levelName },
-                default_weight_age: q.default_marks || q.default_weight_age || 1,
-                option1: q.options?.[0]?.option_text || '',
-                option2: q.options?.[1]?.option_text || '',
-                option3: q.options?.[2]?.option_text || '',
-                option4: q.options?.[3]?.option_text || '',
-                objective_subjective_type: q.question_category === 'OBJECTIVE' ? 'Objective' : 'Subjective'
-              };
-            });
-
-            const counts = formatted.reduce((acc, q) => {
-              if (q.isChecked) {
-                acc.total++;
-                if (q.question_level.question_level_type === 'EASY') acc.easy++;
-                else if (q.question_level.question_level_type === 'MEDIUM') acc.medium++;
-                else if (q.question_level.question_level_type === 'HARD') acc.hard++;
-              }
-              return acc;
-            }, { total: 0, easy: 0, medium: 0, hard: 0 });
-
-            setState(prev => ({
-              ...prev,
-              questions: formatted,
-              filteredQuestions: formatted,
-              noOfQuestions: counts.total,
-              noOfEasy: counts.easy,
-              noOfMedium: counts.medium,
-              noOfHard: counts.hard
-            }));
-          } catch (err) {
-            console.error("Error loading questions in edit:", err);
-          }
+        } catch (err) {
+          console.error("Error loading questions in edit:", err);
         }
       } catch (error) {
-        console.error("Error loading grades:", error);
+        console.error("Error initializing edit mode:", error);
       }
     };
     loadInitialData();
-  }, [collegeId, userID, contextUserRole]);
+  }, [assessmentData, collegeId]);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -439,13 +425,12 @@ const AddInternalAssessment = ({ grade, nba, currentUser, showSuccessModal, show
     setFieldValue('subject_id', subjectId);
     setFieldValue('chapter_id', '');
     setFieldValue('topic_id', '');
-    // Preserve division — enableReinitialize would otherwise wipe it
     if (currentDivisionValue) setFieldValue('grade_division', currentDivisionValue);
 
     if (subjectId) {
       try {
         const response = await contentService.getModulesbySubject(subjectId);
-        const modules = response?.modules || response || [];
+        const modules = Array.isArray(response) ? response : (response?.modules || []);
         setState(prev => ({
           ...prev,
           chapters: modules.map(m => ({
@@ -456,7 +441,7 @@ const AddInternalAssessment = ({ grade, nba, currentUser, showSuccessModal, show
         }));
         if (currentDivisionValue) setFieldValue('grade_division', currentDivisionValue);
       } catch (err) {
-        console.error("Error fetching modules:", err);
+        console.error('Error fetching modules:', err);
       }
     }
   };
@@ -468,13 +453,10 @@ const AddInternalAssessment = ({ grade, nba, currentUser, showSuccessModal, show
     if (currentDivisionValue) setFieldValue('grade_division', currentDivisionValue);
     if (chapterId) {
       const module = state.chapters.find(m => m.chapter_id === chapterId);
-      if (module && module.units) {
+      if (module?.units) {
         setState(prev => ({
           ...prev,
-          topics: module.units.map(u => ({
-            topic_id: u.unit_id,
-            label: u.unit_name
-          }))
+          topics: module.units.map(u => ({ topic_id: u.unit_id, label: u.unit_name }))
         }));
         if (currentDivisionValue) setFieldValue('grade_division', currentDivisionValue);
       }
@@ -911,7 +893,7 @@ const AddInternalAssessment = ({ grade, nba, currentUser, showSuccessModal, show
                 fieldName="grade_id"
                 label="Program*"
                 value={values.grade_id}
-                options={state.grades.map(g => ({ value: g.grade_id, name: g.name }))}
+                options={hookOptions.programs}
                 placeholder="Select Program"
                 required
                 onChangeCallback={(val) => {
@@ -988,7 +970,7 @@ const AddInternalAssessment = ({ grade, nba, currentUser, showSuccessModal, show
                 fieldName="subject_id"
                 label={userRole?.userRole === 'ADMIN' ? 'Paper*' : 'Subject*'}
                 value={values.subject_id}
-                options={state.subjects.map(s => ({ subject_id: s.subject_id, name: s.name }))}
+                options={hookOptions.subjects}
                 placeholder={userRole?.userRole === 'ADMIN' ? 'Select Paper' : 'Select Subject'}
                 required
                 onChangeCallback={(val) => {

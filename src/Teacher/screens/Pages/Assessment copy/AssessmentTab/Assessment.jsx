@@ -5,7 +5,6 @@ import {
   ChevronLeft,
   ChevronRight,
   Eye,
-  User,
   Clipboard,
   Video,
   ChevronDown,
@@ -14,23 +13,18 @@ import {
   X,
   Edit,
   Trash2,
-  Calendar as CalendarIcon,
   ClipboardCheck,
-  FileText,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useCallback } from 'react';
 import SweetAlert from 'react-bootstrap-sweetalert';
 import { AssessmentService } from '../Services/assessment.service';
 import { useUserProfile } from '../../../../../contexts/UserProfileContext';
-import { collegeService } from '../../Academics/Services/college.service';
-import { batchService } from '../../Academics/Services/batch.Service';
-import { courseService } from '../../Courses/Services/courses.service';
-import { contentService } from '../../Content/Services/content.service';
+import { useAssessmentFormLogic } from '../../Assessment/hooks/useAssessmentFormLogic';
 
 const Assessment = () => {
   const navigate = useNavigate();
-  const { userID } = useUserProfile();
+  const { getTeacherId } = useUserProfile();
   const activeCollege = JSON.parse(localStorage.getItem("activeCollege")) || {};
   const collegeId = activeCollege?.id || activeCollege?.college_id;
 
@@ -38,12 +32,7 @@ const Assessment = () => {
   const [loading, setLoading] = useState(true);
   const [alert, setAlert] = useState(null);
 
-  const [selectedGrade, setSelectedGrade] = useState('');
-  const [selectedClass, setSelectedClass] = useState('');
-  const [selectedDivision, setSelectedDivision] = useState('');
-  const [selectedSubject, setSelectedSubject] = useState('');
-  const [currentMonth, setCurrentMonth] = useState(new Date().getMonth());
-  const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
+
   const [searchTerm, setSearchTerm] = useState('');
 
   const [filters, setFilters] = useState({
@@ -56,13 +45,17 @@ const Assessment = () => {
     status: ''
   });
 
-  const [options, setOptions] = useState({
-    programs: [],
-    batches: [],
-    academicYears: [],
-    semesters: [],
-    subjects: []
-  });
+
+  // Derived formData for hook
+  const formData = useMemo(() => ({
+    selectedProgram: filters.program,
+    selectedAcademicSemester: filters.academicYear && filters.semester ? `${filters.academicYear}-${filters.semester}` : '',
+    selectedBatch: filters.batch,
+    selectedSubject: filters.subjectId
+  }), [filters.program, filters.academicYear, filters.semester, filters.batch, filters.subjectId]);
+
+  const { options } = useAssessmentFormLogic(formData);
+
 
   const isAnyFilterActive = useCallback(() => {
     return !!(filters.program || filters.batch || filters.academicYear ||
@@ -86,7 +79,7 @@ const Assessment = () => {
           status: filters.status || null,
         };
         const cleanPayload = Object.fromEntries(
-          Object.entries(filterPayload).filter(([_, v]) => v != null && v !== '')
+          Object.entries(filterPayload).filter(([, v]) => v != null && v !== '')
         );
         res = await AssessmentService.filterAssessments(cleanPayload);
       } else {
@@ -120,65 +113,7 @@ const Assessment = () => {
     }
   }, [collegeId, filters, isAnyFilterActive]);
 
-  const fetchPrograms = useCallback(async () => {
-    if (!collegeId) return;
-    try {
-      const res = await collegeService.getProgramByCollegeId(collegeId);
-      const programs = Array.isArray(res) ? res : [];
-      setOptions(prev => ({
-        ...prev,
-        programs: programs.map(p => ({
-          program_id: p.program_id,
-          program_name: p.program_name || p.name
-        }))
-      }));
-    } catch (error) {
-      console.error('Fetch programs error:', error);
-    }
-  }, [collegeId]);
 
-  const fetchBatches = async (programId) => {
-    try {
-      const res = await batchService.getBatchByProgramId([programId]);
-      const batches = Array.isArray(res) ? res : [];
-      const extractedAYs = [];
-      const extractedSems = [];
-
-      batches.forEach(batch => {
-        if (batch.academic_years) {
-          batch.academic_years.forEach(ay => {
-            extractedAYs.push({
-              id: ay.academic_year_id,
-              name: ay.name,
-              batchId: batch.batch_id
-            });
-            if (ay.semester_divisions) {
-              ay.semester_divisions.forEach(sem => {
-                extractedSems.push({
-                  id: sem.semester_id,
-                  name: sem.name,
-                  ayId: ay.academic_year_id
-                });
-              });
-            }
-          });
-        }
-      });
-
-      setOptions(prev => ({
-        ...prev,
-        batches: batches.map(b => ({ id: b.batch_id, name: b.batch_name })),
-        academicYears: [...new Map(extractedAYs.map(item => [item.id, item])).values()],
-        semesters: [...new Map(extractedSems.map(item => [item.id, item])).values()],
-      }));
-    } catch (error) {
-      console.error('Fetch batches error:', error);
-    }
-  };
-
-  useEffect(() => {
-    fetchPrograms();
-  }, [fetchPrograms]);
 
   useEffect(() => {
     fetchAssessments();
@@ -194,8 +129,6 @@ const Assessment = () => {
       semester: '',
       subjectId: ''
     }));
-    if (progId) fetchBatches(progId);
-    else setOptions(prev => ({ ...prev, batches: [], academicYears: [], semesters: [], subjects: [] }));
   };
 
   const handleBatchChange = (e) => {
@@ -203,52 +136,29 @@ const Assessment = () => {
     setFilters(prev => ({
       ...prev,
       batch: batchId,
-      academicYear: '',
-      semester: '',
       subjectId: ''
     }));
   };
 
-  const handleAcademicYearChange = (e) => {
-    const ayId = e.target.value;
+
+
+  const handleAcademicSemesterChange = (e) => {
+    const val = e.target.value;
+    if (!val) {
+      setFilters(prev => ({ ...prev, academicYear: '', semester: '', batch: '', subjectId: '' }));
+      return;
+    }
+    const [ayId, semId] = val.split('-');
     setFilters(prev => ({
       ...prev,
       academicYear: ayId,
-      semester: '',
-      subjectId: ''
-    }));
-  };
-
-  const handleSemesterChange = (e) => {
-    const semId = e.target.value;
-    setFilters(prev => ({
-      ...prev,
       semester: semId,
+      batch: '',
       subjectId: ''
     }));
-
-    if (semId) {
-      courseService.getFilteredPapers(
-        filters.program,
-        filters.batch,
-        filters.academicYear,
-        semId,
-        null,
-        null,
-        collegeId
-      ).then(res => {
-        setOptions(prev => ({
-          ...prev,
-          subjects: (res || []).map(s => ({
-            id: s.subject_id,
-            name: s.subject_name || s.name
-          }))
-        }));
-      });
-    } else {
-      setOptions(prev => ({ ...prev, subjects: [] }));
-    }
   };
+
+
 
   const handleSubjectChange = (e) => {
     setFilters(prev => ({ ...prev, subjectId: e.target.value }));
@@ -258,28 +168,9 @@ const Assessment = () => {
     setFilters(prev => ({ ...prev, status: e.target.value }));
   };
 
-  const clearFilters = () => {
-    setFilters({
-      filterOpen: true,
-      program: '',
-      batch: '',
-      academicYear: '',
-      semester: '',
-      subjectId: '',
-      status: ''
-    });
-    setOptions(prev => ({ ...prev, batches: [], academicYears: [], semesters: [], subjects: [] }));
-  };
 
-  const filteredAcademicYears = useMemo(() => {
-    if (!filters.batch) return options.academicYears;
-    return options.academicYears.filter(ay => ay.batchId == filters.batch);
-  }, [options.academicYears, filters.batch]);
 
-  const filteredSemesters = useMemo(() => {
-    if (!filters.academicYear) return [];
-    return options.semesters.filter(sem => sem.ayId == filters.academicYear);
-  }, [options.semesters, filters.academicYear]);
+
 
   const filteredAssessments = useMemo(() => {
     return assessments
@@ -290,6 +181,7 @@ const Assessment = () => {
         const batchMatch = !filters.batch || raw.batch_id == filters.batch;
         const ayMatch = !filters.academicYear || raw.academic_year_id == filters.academicYear;
         const semMatch = !filters.semester || raw.semester_id == filters.semester;
+
         const subjectMatch = !filters.subjectId || raw.subject_id == filters.subjectId;
         const activeSearch = !searchTerm ||
           a.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -498,35 +390,34 @@ const Assessment = () => {
               label="Program"
               value={filters.program}
               onChange={handleProgramChange}
-              options={options.programs.map(p => ({ id: p.program_id, name: p.program_name }))}
+              options={options.programs}
               placeholder="Select Program"
             />
 
+            <CustomSelect
+              label="Academic Year / Semester"
+              value={filters.academicYear && filters.semester ? `${filters.academicYear}-${filters.semester}` : ''}
+              onChange={handleAcademicSemesterChange}
+              options={options.academicSemesters || []}
+              placeholder="Select AY / Semester"
+              disabled={!filters.program}
+            />
             <CustomSelect
               label="Batch"
               value={filters.batch}
               onChange={handleBatchChange}
               options={options.batches}
               placeholder="Select Batch"
-              disabled={!filters.program}
+              disabled={!filters.academicYear || !filters.semester}
             />
 
             <CustomSelect
-              label="Academic Year"
-              value={filters.academicYear}
-              onChange={handleAcademicYearChange}
-              options={filteredAcademicYears}
-              placeholder="Select Year"
-              disabled={!filters.batch}
-            />
-
-            <CustomSelect
-              label="Semester"
-              value={filters.semester}
-              onChange={handleSemesterChange}
-              options={filteredSemesters}
-              placeholder="Select Semester"
-              disabled={!filters.academicYear}
+              label="Academic Year / Semester"
+              value={filters.academicYear && filters.semester ? `${filters.academicYear}-${filters.semester}` : ''}
+              onChange={handleAcademicSemesterChange}
+              options={options.academicSemesters || []}
+              placeholder="Select AY / Semester"
+              disabled={!filters.academicYear || !filters.semester}
             />
 
             <CustomSelect
@@ -535,7 +426,7 @@ const Assessment = () => {
               onChange={handleSubjectChange}
               options={options.subjects}
               placeholder="Select Subject"
-              disabled={!filters.semester}
+              disabled={!filters.academicYear || !filters.semester}
             />
 
             <CustomSelect
