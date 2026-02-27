@@ -446,12 +446,12 @@ const Assessment = () => {
 
                                 <button
                                     onClick={() => navigate(`/my-assessment/assessment/responses/${a.id}`)}
-                                    disabled={a.status !== 'Expired' && a.status !== 'Completed'}
-                                    className={`p-2 rounded-lg transition-colors ${a.status === 'Expired' || a.status === 'Completed'
+                                    disabled={a.status !== 'Expired' && a.status !== 'Completed' && a.status !== 'Attempted'}
+                                    className={`p-2 rounded-lg transition-colors ${a.status === 'Expired' || a.status === 'Completed' || a.status === 'Attempted'
                                         ? 'bg-purple-100 text-purple-600 hover:bg-purple-200'
                                         : 'bg-gray-100 text-gray-400 cursor-not-allowed'
                                         }`}
-                                    title={a.status === 'Expired' || a.status === 'Completed' ? "View Responses" : "Responses available after assessment completion or expiration"}
+                                    title={a.status === 'Expired' || a.status === 'Completed' || a.status === 'Attempted' ? "View Responses" : "Responses available after assessment completion or expiration"}
                                 >
                                     <Eye className="w-4 h-4" />
                                 </button>
@@ -599,12 +599,12 @@ const Assessment = () => {
                                                     {/* View Responses Button */}
                                                     <button
                                                         onClick={() => navigate(`/my-assessment/assessment/responses/${a.id}`)}
-                                                        disabled={a.status !== 'Expired' && a.status !== 'Completed'}
-                                                        className={`p-2 rounded-lg transition-all duration-200 shadow-sm ${a.status === 'Expired' || a.status === 'Completed'
+                                                        disabled={a.status !== 'Expired' && a.status !== 'Completed' && a.status !== 'Attempted'}
+                                                        className={`p-2 rounded-lg transition-all duration-200 shadow-sm ${a.status === 'Expired' || a.status === 'Completed' || a.status === 'Attempted'
                                                             ? 'bg-purple-100 text-purple-600 hover:bg-purple-200 hover:shadow-md'
                                                             : 'bg-gray-100 text-gray-400 cursor-not-allowed'
                                                             }`}
-                                                        title={a.status === 'Expired' || a.status === 'Completed' ? "View Responses" : "Responses available after assessment completion or expiration"}
+                                                        title={a.status === 'Expired' || a.status === 'Completed' || a.status === 'Attempted' ? "View Responses" : "Responses available after assessment completion or expiration"}
                                                     >
                                                         <Eye className="w-5 h-5" />
                                                     </button>

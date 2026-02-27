@@ -46,8 +46,18 @@ const RubricAssessmentView = ({ isOpen, onClose, assessmentData = null }) => {
         }
     };
 
-    // Helper to sort levels if needed (assuming order comes from API, but good to be safe)
+    // Helper to sort all levels if needed (assuming order comes from API, but good to be safe)
     const sortedLevels = [...displayData.performanceLevels].sort((a, b) => a.level_order - b.level_order);
+
+    // Helper to get unique levels based on level_order to prevent duplicates in table columns
+    const uniqueLevelsMap = new Map();
+    [...displayData.performanceLevels].forEach(level => {
+        const key = level.level_order !== null && level.level_order !== undefined ? level.level_order : level.level_name;
+        if (!uniqueLevelsMap.has(key)) {
+            uniqueLevelsMap.set(key, level);
+        }
+    });
+    const uniqueSortedLevels = Array.from(uniqueLevelsMap.values()).sort((a, b) => a.level_order - b.level_order);
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in duration-200">
@@ -205,8 +215,8 @@ const RubricAssessmentView = ({ isOpen, onClose, assessmentData = null }) => {
                                                     <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider w-64 sticky left-0 bg-gray-50 z-10 border-r border-gray-200 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">
                                                         Criteria
                                                     </th>
-                                                    {sortedLevels.length > 0 ? (
-                                                        sortedLevels.map((level) => (
+                                                    {uniqueSortedLevels.length > 0 ? (
+                                                        uniqueSortedLevels.map((level) => (
                                                             <th key={level.level_id} className="px-6 py-4 text-center text-xs font-bold text-slate-500 uppercase tracking-wider min-w-[180px] border-r border-gray-100 last:border-r-0">
                                                                 <div className="flex flex-col items-center">
                                                                     <span className="text-slate-800 text-sm mb-1">{level.level_name}</span>
@@ -237,11 +247,14 @@ const RubricAssessmentView = ({ isOpen, onClose, assessmentData = null }) => {
                                                                 </span>
                                                             )}
                                                         </td>
-                                                        {sortedLevels.length > 0 ? (
-                                                            sortedLevels.map((level) => {
-                                                                const cell = displayData.cells.find(
-                                                                    c => c.criterion_id === criterion.criterion_id && c.level_id === level.level_id
+                                                        {uniqueSortedLevels.length > 0 ? (
+                                                            uniqueSortedLevels.map((level) => {
+                                                                const specificLevel = displayData.performanceLevels.find(
+                                                                    l => l.criterion_id === criterion.criterion_id && (l.level_order === level.level_order || l.level_name === level.level_name)
                                                                 );
+                                                                const cell = specificLevel ? displayData.cells.find(
+                                                                    c => c.criterion_id === criterion.criterion_id && c.level_id === specificLevel.level_id
+                                                                ) : null;
                                                                 return (
                                                                     <td key={level.level_id} className="px-4 py-4 align-top border-r border-gray-50 last:border-r-0">
                                                                         {cell ? (
@@ -367,15 +380,18 @@ const RubricAssessmentView = ({ isOpen, onClose, assessmentData = null }) => {
                                                 <thead className="bg-gray-50">
                                                     <tr>
                                                         <th className="px-6 py-3 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Criterion</th>
-                                                        {sortedLevels.map(l => <th key={l.level_id} className="px-6 py-3 text-center text-xs font-bold text-slate-500 uppercase tracking-wider">{l.level_name}</th>)}
+                                                        {uniqueSortedLevels.map(l => <th key={l.level_id} className="px-6 py-3 text-center text-xs font-bold text-slate-500 uppercase tracking-wider">{l.level_name}</th>)}
                                                     </tr>
                                                 </thead>
                                                 <tbody className="bg-white divide-y divide-gray-200">
                                                     {displayData.criteria.map((c, i) => (
                                                         <tr key={i}>
                                                             <td className="px-6 py-4 text-sm font-bold text-slate-900">{c.criterion_name}</td>
-                                                            {sortedLevels.map(l => {
-                                                                const cell = displayData.cells.find(cell => cell.criterion_id === c.criterion_id && cell.level_id === l.level_id);
+                                                            {uniqueSortedLevels.map(l => {
+                                                                const specificLevel = displayData.performanceLevels.find(
+                                                                    pl => pl.criterion_id === c.criterion_id && (pl.level_order === l.level_order || pl.level_name === l.level_name)
+                                                                );
+                                                                const cell = specificLevel ? displayData.cells.find(cell => cell.criterion_id === c.criterion_id && cell.level_id === specificLevel.level_id) : null;
                                                                 return (
                                                                     <td key={l.level_id} className="px-6 py-4 text-center text-xs text-slate-600">
                                                                         {cell?.cell_description || '-'}
