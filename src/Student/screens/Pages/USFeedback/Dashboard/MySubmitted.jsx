@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { feedbackService } from "@/_services/feedbackService";
 import { StudentService } from "../../Profile/Student.Service";
-import Pagination from "@/components/Pagination";
+import { Eye, Loader2 } from 'lucide-react';
 
 export default function MySubmitted() {
     const navigate = useNavigate();
@@ -40,7 +40,7 @@ export default function MySubmitted() {
                 try {
                     const history = await StudentService.getStudentHistory(studentId);
                     if (history && history.length > 0) {
-                        const activeHistory = history[0]; // Assuming the first one is active as per API path
+                        const activeHistory = history[0];
                         profile = {
                             ...profile,
                             academicYearId: activeHistory.academic_year_id,
@@ -55,7 +55,6 @@ export default function MySubmitted() {
                 }
             }
 
-            // Merge filters from content dashboard if they exist (override history if needed)
             if (contentFilters) {
                 const filters = JSON.parse(contentFilters);
                 profile = {
@@ -78,18 +77,16 @@ export default function MySubmitted() {
         try {
             const response = await feedbackService.getMyFeedbackForms(userProfile, page, pageSize);
 
-            // Handle paginated response
             if (response?.data?.content) {
-                // Filter only submitted forms
                 const submitted = response.data.content.filter(f => f.has_submitted);
                 setSubmittedForms(submitted);
 
-                // Update pagination state
-                setTotalPages(response.data.total_pages || 0);
-                setTotalElements(response.data.total_elements || 0);
+                const submittedCount = submitted.length;
+                setTotalPages(Math.ceil(submittedCount / pageSize));
+                setTotalElements(submittedCount);
                 setCurrentPage(response.data.number || 0);
                 setIsFirst(response.data.first !== undefined ? response.data.first : true);
-                setIsLast(response.data.last !== undefined ? response.data.last : true);
+                setIsLast(submitted.length < pageSize);
             } else {
                 setSubmittedForms([]);
             }
@@ -112,83 +109,168 @@ export default function MySubmitted() {
     if (loading) {
         return (
             <div className="flex items-center justify-center py-12">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
             </div>
         );
     }
+
+    const startIndex = currentPage * pageSize;
+    const endIndex = Math.min(startIndex + pageSize, submittedForms.length);
 
     return (
         <div className="space-y-4">
             <div className="flex justify-between items-center mb-4">
                 <h3 className="text-lg font-semibold text-gray-800">My Submitted Feedback</h3>
-                <span className="text-sm text-gray-500">{totalElements} submission(s)</span>
+                <span className="text-sm text-gray-500">{submittedForms.length} submission(s)</span>
             </div>
 
             {submittedForms.length === 0 ? (
-                <div className="text-center py-12">
-                    <div className="text-gray-400 mb-2">
-                        <svg
-                            className="mx-auto h-12 w-12"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            stroke="currentColor"
-                        >
-                            <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                            />
-                        </svg>
+                <div className="bg-white rounded-xl shadow-md p-8 text-center border border-gray-200">
+                    <div className="text-gray-500">
+                        <p className="text-lg font-medium mb-2">No submitted feedback yet</p>
+                        <p className="text-sm">Complete pending forms to see them here</p>
                     </div>
-                    <p className="text-gray-500 text-sm">No submitted feedback yet</p>
-                    <p className="text-gray-400 text-xs mt-1">Complete pending forms to see them here</p>
                 </div>
             ) : (
                 <>
-                    <div className="grid gap-4">
+                    {/* Desktop Table */}
+                    <div className="hidden lg:block bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+                        <div className="overflow-x-auto">
+                            <table className="w-full">
+                                <thead className="bg-primary-600">
+                                    <tr>
+                                        <th className="px-6 py-3 text-center text-xs font-medium text-gray-50 tracking-wider">Form Name</th>
+                                        <th className="px-6 py-3 text-center text-xs font-medium text-gray-50 tracking-wider">Code</th>
+                                        <th className="px-6 py-3 text-center text-xs font-medium text-gray-50 tracking-wider">Status</th>
+                                        <th className="px-6 py-3 text-center text-xs font-medium text-gray-50 tracking-wider">Submitted On</th>
+                                        <th className="px-6 py-3 text-center text-xs font-medium text-gray-50 tracking-wider">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="bg-white divide-y divide-gray-200">
+                                    {submittedForms.map((form) => (
+                                        <tr key={form.feedback_form_id} className="hover:bg-gray-50">
+                                            <td className="px-6 py-4 text-sm text-gray-900">{form.form_name}</td>
+                                            <td className="px-6 py-4 text-sm text-gray-500">{form.code || 'N/A'}</td>
+                                            <td className="px-6 py-4 text-sm">
+                                                <span className="px-2 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800">
+                                                    Submitted
+                                                </span>
+                                            </td>
+                                            <td className="px-6 py-4 text-sm text-gray-500">
+                                                {form.submitted_at ? new Date(form.submitted_at).toLocaleString() : 'N/A'}
+                                            </td>
+                                            <td className="px-6 py-4 text-center">
+                                                <button
+                                                    onClick={() => handleViewSubmission(form.response_id)}
+                                                    className="p-1.5 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition"
+                                                >
+                                                    <Eye className="w-4 h-4" />
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        {/* Desktop Pagination */}
+                        {submittedForms.length > 0 && (
+                            <div className="flex justify-between items-center px-6 py-4 border-t border-gray-200 text-sm text-gray-600">
+                                <button
+                                    onClick={() => handlePageChange(currentPage - 1)}
+                                    disabled={isFirst}
+                                    className={`px-4 py-2 rounded-md ${
+                                        isFirst
+                                            ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                                            : 'bg-blue-600 hover:bg-blue-700 text-white'
+                                    }`}
+                                >
+                                    Previous
+                                </button>
+                                <span className="text-gray-700 font-medium">
+                                    Showing {startIndex + 1}–{endIndex} of {submittedForms.length} entries
+                                </span>
+                                <button
+                                    onClick={() => handlePageChange(currentPage + 1)}
+                                    disabled={isLast}
+                                    className={`px-4 py-2 rounded-md ${
+                                        isLast
+                                            ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                                            : 'bg-blue-600 hover:bg-blue-700 text-white'
+                                    }`}
+                                >
+                                    Next
+                                </button>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Mobile Cards */}
+                    <div className="lg:hidden space-y-4">
                         {submittedForms.map((form) => (
                             <div
                                 key={form.feedback_form_id}
-                                className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow"
+                                className="bg-white rounded-xl shadow-md border border-gray-200 p-5 hover:shadow-lg transition-all"
                             >
-                                <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
-                                    <div className="flex-1">
-                                        <div className="flex items-center gap-2 mb-1">
-                                            <h4 className="font-medium text-gray-900">{form.form_name}</h4>
-                                            <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-green-100 text-green-800">
-                                                Submitted
-                                            </span>
-                                        </div>
-                                        <p className="text-sm text-gray-500 mt-1">Code: {form.code || 'N/A'}</p>
-                                        <div className="flex items-center gap-4 mt-3">
-                                            <span className="text-xs text-gray-400">
-                                                <i className="bi bi-check-circle mr-1"></i>
-                                                Submitted on: {form.submitted_at ? new Date(form.submitted_at).toLocaleString() : 'N/A'}
-                                            </span>
-                                        </div>
+                                <div className="flex justify-between items-start mb-3">
+                                    <div>
+                                        <p className="font-semibold text-gray-900">{form.form_name}</p>
+                                        <p className="text-sm text-gray-500">Code: {form.code || 'N/A'}</p>
                                     </div>
+                                    <span className="px-2 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800">
+                                        Submitted
+                                    </span>
+                                </div>
+
+                                <div className="space-y-2 text-sm text-gray-700 mb-4">
+                                    <div>
+                                        <span className="font-medium">Submitted on:</span>{' '}
+                                        {form.submitted_at ? new Date(form.submitted_at).toLocaleString() : 'N/A'}
+                                    </div>
+                                </div>
+
+                                <div className="flex justify-end items-center">
                                     <button
                                         onClick={() => handleViewSubmission(form.response_id)}
-                                        className="px-4 py-2 bg-gray-600 text-white text-sm rounded-md hover:bg-gray-700 transition-colors whitespace-nowrap self-start sm:self-auto flex items-center gap-2"
+                                        className="p-1.5 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition"
                                     >
-                                        <i className="bi bi-eye"></i>
-                                        View
+                                        <Eye className="w-4 h-4" />
                                     </button>
                                 </div>
                             </div>
                         ))}
-                    </div>
 
-                    {/* Pagination Component */}
-                    <Pagination
-                        currentPage={currentPage}
-                        totalPages={totalPages}
-                        totalElements={totalElements}
-                        onPageChange={handlePageChange}
-                        isFirst={isFirst}
-                        isLast={isLast}
-                    />
+                        {/* Mobile Pagination */}
+                        {submittedForms.length > 0 && (
+                            <div className="flex justify-between items-center px-4 py-4 bg-white rounded-lg shadow-sm border border-gray-200 text-sm text-gray-600">
+                                <button
+                                    onClick={() => handlePageChange(currentPage - 1)}
+                                    disabled={isFirst}
+                                    className={`px-4 py-2 rounded-md ${
+                                        isFirst
+                                            ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                                            : 'bg-blue-600 hover:bg-blue-700 text-white'
+                                    }`}
+                                >
+                                    Previous
+                                </button>
+                                <span className="text-gray-700 font-medium text-xs">
+                                    {startIndex + 1}–{endIndex} of {submittedForms.length}
+                                </span>
+                                <button
+                                    onClick={() => handlePageChange(currentPage + 1)}
+                                    disabled={isLast}
+                                    className={`px-4 py-2 rounded-md ${
+                                        isLast
+                                            ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                                            : 'bg-blue-600 hover:bg-blue-700 text-white'
+                                    }`}
+                                >
+                                    Next
+                                </button>
+                            </div>
+                        )}
+                    </div>
                 </>
             )}
         </div>
