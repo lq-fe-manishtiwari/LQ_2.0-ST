@@ -16,6 +16,7 @@ const TakeAssessment = () => {
 
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [answers, setAnswers] = useState({});
+  const answersRef = useRef({});
   const [timeLeft, setTimeLeft] = useState(0);
   const [alert, setAlert] = useState(null);
   const [flagged, setFlagged] = useState(new Set());
@@ -26,7 +27,9 @@ const TakeAssessment = () => {
 
   // Assessment attempt tracking
   const [attemptId, setAttemptId] = useState(null);
+  const attemptIdRef = useRef(null);
   const [unsavedResponses, setUnsavedResponses] = useState({});
+  const unsavedResponsesRef = useRef({});
   const [questionStartTimes, setQuestionStartTimes] = useState({});
   const autoSaveIntervalRef = useRef(null);
 
@@ -49,6 +52,7 @@ const TakeAssessment = () => {
 
       if (attemptResponse?.attempt_id) {
         setAttemptId(attemptResponse.attempt_id);
+        attemptIdRef.current = attemptResponse.attempt_id;
         console.log('Assessment attempt started:', attemptResponse.attempt_id);
 
         // Load questions after attempt is started
@@ -89,10 +93,21 @@ const TakeAssessment = () => {
           testEndDatetime: response.test_end_datetime
         });
 
-        // Set timer based on time_limit_minutes from response
-        if (response.time_limit_minutes) {
-          setTimeLeft(response.time_limit_minutes * 60);
+        // Set timer based on time_limit_minutes and test_end_datetime
+        let initialTimeLeft = response.time_limit_minutes ? response.time_limit_minutes * 60 : 0;
+
+        if (response.test_end_datetime) {
+          const now = new Date();
+          const endTime = new Date(response.test_end_datetime);
+          if (endTime > now) {
+            const timeUntilEnd = Math.floor((endTime - now) / 1000);
+            initialTimeLeft = initialTimeLeft > 0 ? Math.min(initialTimeLeft, timeUntilEnd) : timeUntilEnd;
+          } else {
+            initialTimeLeft = 0;
+          }
         }
+
+        setTimeLeft(initialTimeLeft);
 
         // Map backend questions to UI format
         const mappedQuestions = response.questions.map((q, index) => ({
@@ -153,22 +168,26 @@ const TakeAssessment = () => {
   };
 
   const saveUnsavedResponses = async () => {
-    if (!attemptId || Object.keys(unsavedResponses).length === 0) {
+    const currentAttemptId = attemptIdRef.current;
+    const currentUnsaved = unsavedResponsesRef.current;
+
+    if (!currentAttemptId || Object.keys(currentUnsaved).length === 0) {
       return;
     }
 
     try {
-      const responses = Object.entries(unsavedResponses).map(([questionId, data]) => ({
+      const responses = Object.entries(currentUnsaved).map(([questionId, data]) => ({
         question_id: parseInt(questionId),
         selected_option_id: data.selected_option_id || null,
         text_response: data.text_response || null,
         time_spent_seconds: data.time_spent_seconds || 0
       }));
 
-      await assessmentService.recordBatchResponses(attemptId, { responses });
+      await assessmentService.recordBatchResponses(currentAttemptId, { responses });
       console.log('Auto-saved responses:', responses.length);
 
       // Clear unsaved responses after successful save
+      unsavedResponsesRef.current = {};
       setUnsavedResponses({});
     } catch (error) {
       console.error('Error auto-saving responses:', error);
@@ -185,20 +204,50 @@ const TakeAssessment = () => {
     };
   }, []);
 
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const hasSubmittedRef = useRef(false);
+
   useEffect(() => {
     const timer = setInterval(() => {
+      if (hasSubmittedRef.current) return;
+
       setTimeLeft(prev => {
-        if (prev === 0) return 0; // Don't start until initialized
-        if (prev <= 1) {
-          submitAssessment(true); // Auto-submit on timeout
-          return 0;
-        }
+        // Decrease timer strictly by 1 unless already exhausted
+        if (prev <= 0) return 0;
         return prev - 1;
       });
     }, 1000);
 
     return () => clearInterval(timer);
   }, []);
+
+  // Separate useEffect to handle auto-submit when timeLeft becomes 0
+  useEffect(() => {
+    // Only auto-submit if there is a real time limit enforced
+    const hasTimeLimit = assessmentMetadata?.timeLimitMinutes > 0 || assessmentMetadata?.testEndDatetime;
+    if (hasTimeLimit && timeLeft <= 0 && !loading && questions.length > 0 && !hasSubmittedRef.current) {
+      console.log("Timer reached 0. Auto-submitting...");
+      submitAssessment(true);
+    }
+  }, [timeLeft, loading, questions.length, assessmentMetadata]);
+
+  // Separate useEffect to check absolute end time
+  useEffect(() => {
+    if (!assessmentMetadata?.testEndDatetime) return;
+
+    const endTimer = setInterval(() => {
+      if (hasSubmittedRef.current) return;
+      const now = new Date();
+      const endTime = new Date(assessmentMetadata.testEndDatetime);
+      if (now >= endTime) {
+        console.log("Absolute end time reached. Auto-submitting...");
+        setTimeLeft(0);
+        submitAssessment(true);
+      }
+    }, 1000);
+
+    return () => clearInterval(endTimer);
+  }, [assessmentMetadata]);
 
   const formatTime = (seconds) => {
     const hours = Math.floor(seconds / 3600);
@@ -216,10 +265,12 @@ const TakeAssessment = () => {
       }));
     }
 
-    setAnswers(prev => ({
-      ...prev,
+    const newAnswers = {
+      ...answersRef.current,
       [questionId]: answer
-    }));
+    };
+    answersRef.current = newAnswers;
+    setAnswers(newAnswers);
 
     // Calculate time spent on this question
     const timeSpent = questionStartTimes[questionId]
@@ -227,14 +278,16 @@ const TakeAssessment = () => {
       : 0;
 
     // Mark response as unsaved
-    setUnsavedResponses(prev => ({
-      ...prev,
+    const newUnsaved = {
+      ...unsavedResponsesRef.current,
       [questionId]: {
         selected_option_id: typeof answer === 'number' ? answer : null,
         text_response: typeof answer === 'string' ? answer : null,
         time_spent_seconds: timeSpent
       }
-    }));
+    };
+    unsavedResponsesRef.current = newUnsaved;
+    setUnsavedResponses(newUnsaved);
   };
 
   const handleFlagQuestion = (questionId) => {
@@ -267,6 +320,11 @@ const TakeAssessment = () => {
   };
 
   const submitAssessment = async (isAutoSubmit = false) => {
+    // Prevent multiple submissions
+    if (hasSubmittedRef.current) return;
+    hasSubmittedRef.current = true;
+    setIsSubmitting(true);
+
     setAlert(
       <SweetAlert
         loading
@@ -281,9 +339,27 @@ const TakeAssessment = () => {
       // Save any remaining unsaved responses first
       await saveUnsavedResponses();
 
+      const currentAttemptId = attemptIdRef.current;
+
+      // Force save ALL answers one last time to guarantee nothing is dropped
+      const finalAnswers = answersRef.current;
+      if (currentAttemptId && Object.keys(finalAnswers).length > 0) {
+        const fullResponses = Object.entries(finalAnswers).map(([qId, ans]) => ({
+          question_id: parseInt(qId),
+          selected_option_id: typeof ans === 'number' ? ans : null,
+          text_response: typeof ans === 'string' ? ans : null,
+          time_spent_seconds: questionStartTimes[qId] ? Math.floor((Date.now() - questionStartTimes[qId]) / 1000) : 0
+        }));
+        try {
+          await assessmentService.recordBatchResponses(currentAttemptId, { responses: fullResponses });
+        } catch (err) {
+          console.error('Final sync of all answers failed, ignoring...', err);
+        }
+      }
+
       // Submit the assessment
-      if (attemptId) {
-        await assessmentService.submitAssessmentAttempt(attemptId);
+      if (currentAttemptId) {
+        await assessmentService.submitAssessmentAttempt(currentAttemptId);
         console.log('Assessment submitted successfully');
 
         // Clear auto-save interval
@@ -295,12 +371,16 @@ const TakeAssessment = () => {
           <SweetAlert
             success
             title="Assessment Submitted!"
+            confirmBtnText="OK"
+            confirmBtnCssClass="btn-confirm"
             onConfirm={() => navigate('/my-assessment/assessment')}
           >
             Your assessment has been successfully submitted.
           </SweetAlert>
         );
       } else {
+        hasSubmittedRef.current = false; // Reset if no attempt ID
+        setIsSubmitting(false);
         setAlert(
           <SweetAlert
             danger
@@ -313,6 +393,8 @@ const TakeAssessment = () => {
       }
     } catch (error) {
       console.error('Error submitting assessment:', error);
+      hasSubmittedRef.current = false; // Allow retry on failure
+      setIsSubmitting(false);
       setAlert(
         <SweetAlert
           danger

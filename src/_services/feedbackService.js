@@ -39,8 +39,10 @@ export const feedbackService = {
     getMyFeedbackForms,
     getFeedbackFormById,
     submitFeedbackResponse,
+    submitFeedbackResponseBulk,
     checkSubmissionStatus,
     getMySubmission,
+    getStudentTeacherMappings,
 
     // Public access
     getPublicFeedback,
@@ -81,7 +83,7 @@ async function getMyFeedbackForms(userProfile, page = 0, size = 10) {
             if (userProfile.divisionId) params.append('divisionId', userProfile.divisionId);
         }
 
-        const url = `${AcademicAPI}/admin/academic/feedback/my-forms?${params.toString()}`;
+        const url = `${AcademicAPI}/feedback/my-forms?${params.toString()}`;
         const response = await fetch(url, requestOptions);
         return handleResponse(response);
     } catch (error) {
@@ -99,7 +101,7 @@ async function getFeedbackFormById(id) {
         validateParams({ id }, 'Get Feedback Form By ID');
 
         const requestOptions = { method: 'GET', headers: authHeader() };
-        const response = await fetch(`${AcademicAPI}/admin/academic/feedback/forms/${id}`, requestOptions);
+        const response = await fetch(`${AcademicAPI}/feedback/forms/${id}`, requestOptions);
         return handleResponse(response);
     } catch (error) {
         handleApiError(error, 'Get Feedback Form By ID');
@@ -132,8 +134,31 @@ async function submitFeedbackResponse(submissionData) {
             body: JSON.stringify(payload),
         };
 
-        const response = await fetch(`${AcademicAPI}/admin/academic/feedback/submit`, requestOptions);
+        const response = await fetch(`${AcademicAPI}/feedback/submit`, requestOptions);
         return handleResponse(response);
+    } catch (error) {
+        handleApiError(error, 'Submit Feedback Response');
+    }
+}
+
+
+async function submitFeedbackResponseBulk(submissionData) {
+    try {
+        console.log('Submitting feedback:', submissionData);
+
+        const requestOptions = {
+            method: 'POST',
+            headers: authHeaderToPost(),
+            body: JSON.stringify(submissionData), // ✅ send array directly
+        };
+
+        const response = await fetch(
+            `${AcademicAPI}/feedback/submit-bulk`,
+            requestOptions
+        );
+
+        return handleResponse(response);
+
     } catch (error) {
         handleApiError(error, 'Submit Feedback Response');
     }
@@ -151,7 +176,7 @@ async function checkSubmissionStatus(formId, userId) {
 
         const requestOptions = { method: 'GET', headers: authHeader() };
         const response = await fetch(
-            `${AcademicAPI}/admin/academic/feedback/forms/${formId}/check-submission?userId=${userId}`,
+            `${AcademicAPI}/feedback/forms/${formId}/check-submission?userId=${userId}`,
             requestOptions
         );
         return handleResponse(response);
@@ -170,7 +195,7 @@ async function getMySubmission(responseId) {
         validateParams({ responseId }, 'Get My Submission');
 
         const requestOptions = { method: 'GET', headers: authHeader() };
-        const response = await fetch(`${AcademicAPI}/admin/academic/feedback/responses/${responseId}`, requestOptions);
+        const response = await fetch(`${AcademicAPI}/feedback/responses/${responseId}`, requestOptions);
         return handleResponse(response);
     } catch (error) {
         handleApiError(error, 'Get My Submission');
@@ -188,7 +213,7 @@ async function getPublicFeedback(code, feedbackFormId = null) {
         validateParams({ code }, 'Get Public Feedback');
 
         // Build URL with optional feedbackFormId query parameter
-        let url = `${AcademicAPI}/admin/academic/public/feedback/forms/${code}`;
+        let url = `${AcademicAPI}/feedback/public/feedback/forms/${code}`;
         if (feedbackFormId) {
             url += `?feedbackFormId=${feedbackFormId}`;
         }
@@ -203,5 +228,34 @@ async function getPublicFeedback(code, feedbackFormId = null) {
         return response.json();
     } catch (error) {
         handleApiError(error, 'Get Public Feedback');
+    }
+}
+
+/**
+ * Get student's teacher-subject mappings
+ * @param {number} studentId - Student ID
+ * @param {number} academicYearId - Academic Year ID
+ * @param {number} semesterId - Semester ID
+ * @param {number} divisionId - Division ID
+ * @returns {Promise<Array>} Teacher-subject mappings
+ */
+async function getStudentTeacherMappings(studentId, academicYearId, semesterId, divisionId) {
+    try {
+        validateParams({ studentId, academicYearId, semesterId, divisionId }, 'Get Student Teacher Mappings');
+
+        const params = new URLSearchParams({
+            academicYearId: academicYearId.toString(),
+            semesterId: semesterId.toString(),
+            divisionId: divisionId.toString()
+        });
+
+        const requestOptions = { method: 'GET', headers: authHeader() };
+        const response = await fetch(
+            `${AcademicAPI}/subjects/student/${studentId}/teacher-mappings?${params.toString()}`,
+            requestOptions
+        );
+        return handleResponse(response);
+    } catch (error) {
+        handleApiError(error, 'Get Student Teacher Mappings');
     }
 }

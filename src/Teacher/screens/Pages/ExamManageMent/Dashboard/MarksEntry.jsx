@@ -30,7 +30,7 @@ const MarksEntry = () => {
      Handle Exam Schedule Change
   ==========================*/
   const handleExamScheduleChange = (e) => {
-    const scheduleId = e.target.value;
+    const scheduleId = Number(e.target.value);
 
     setSelectedExamScheduleId(scheduleId);
     setSelectedSubjectId("");
@@ -40,7 +40,7 @@ const MarksEntry = () => {
     if (!scheduleId) return;
 
     const selectedSchedule = examSchedules.find(
-      (ex) => ex.exam_schedule_id === Number(scheduleId)
+      (ex) => Number(ex.exam_schedule_id) === scheduleId
     );
 
     setSubjects(selectedSchedule?.teacher_subject_duties || []);
@@ -50,7 +50,7 @@ const MarksEntry = () => {
      Fetch Marks by Subject
   ==========================*/
   const handleSubjectChange = async (e) => {
-    const subjectId = e.target.value;
+    const subjectId = Number(e.target.value);
     setSelectedSubjectId(subjectId);
 
     if (!subjectId || !selectedExamScheduleId) return;
@@ -62,14 +62,15 @@ const MarksEntry = () => {
         subjectId
       );
 
-      const filtered = (response?.data || []).filter(
-        (item) =>
-          item.subject_marks &&
-          item.subject_marks.length > 0 &&
-          item.subject_marks[0].marks_obtained !== null
+      const studentsList = response?.data || [];
+
+      // Sort by roll number
+      studentsList.sort(
+        (a, b) =>
+          parseInt(a.roll_number || 0) - parseInt(b.roll_number || 0)
       );
 
-      setMarksData(filtered);
+      setMarksData(studentsList);
     } catch (err) {
       console.error(err);
       setMarksData([]);
@@ -82,9 +83,7 @@ const MarksEntry = () => {
     <div className="p-4 sm:p-6 bg-gray-50 min-h-screen">
       <div className="bg-white rounded-xl shadow overflow-hidden">
 
-        {/* =========================
-            Filters
-        ==========================*/}
+        {/* ========================= Filters ========================== */}
         <div className="flex flex-col sm:flex-row gap-4 p-4 border-b">
           <select
             className="border rounded-lg px-4 py-2 w-full sm:w-80"
@@ -117,22 +116,20 @@ const MarksEntry = () => {
           </select>
         </div>
 
-        {/* =========================
-            TABLE VIEW (Desktop)
-        ==========================*/}
+        {/* ========================= DESKTOP TABLE ========================== */}
         <div className="hidden md:block overflow-x-auto">
           <table className="w-full border-collapse">
-            <thead className="table-header">
+            <thead>
               <tr className="bg-[#2162c1] text-white">
-                <th className="px-4 py-3 bg-[#2162c1] text-white">Student Name</th>
-                <th className="px-4 py-3 bg-[#2162c1] text-white">Roll No</th>
-                <th className="px-4 py-3 bg-[#2162c1] text-white">ERN</th>
-                <th className="px-4 py-3 bg-[#2162c1] text-white">Paper</th>
-                <th className="px-4 py-3 bg-[#2162c1] text-white">Exam Type</th>
-                <th className="px-4 py-3 bg-[#2162c1] text-white">Max Marks</th>
-                <th className="px-4 py-3 bg-[#2162c1] text-white">Marks Obtained</th>
-                <th className="px-4 py-3 bg-[#2162c1] text-white">Min Marks</th>
-                <th className="px-4 py-3 bg-[#2162c1] text-white">Status</th>
+                <th className="px-4 py-3">Student Name</th>
+                <th className="px-4 py-3">Roll No</th>
+                <th className="px-4 py-3">ERN</th>
+                <th className="px-4 py-3">Paper</th>
+                <th className="px-4 py-3">Exam Type</th>
+                <th className="px-4 py-3">Max Marks</th>
+                <th className="px-4 py-3">Marks Obtained</th>
+                <th className="px-4 py-3">Min Marks</th>
+                <th className="px-4 py-3">Status</th>
               </tr>
             </thead>
 
@@ -151,7 +148,12 @@ const MarksEntry = () => {
                 </tr>
               ) : (
                 marksData.map((row, index) => {
-                  const subject = row.subject_marks[0];
+                  const subject =
+                    row.subject_marks?.find(
+                      (sub) =>
+                        Number(sub.subject_id) ===
+                        Number(selectedSubjectId)
+                    ) || {};
 
                   return (
                     <tr key={index} className="border-b hover:bg-gray-50">
@@ -162,16 +164,24 @@ const MarksEntry = () => {
                       <td className="px-4 py-3">
                         {row.permanent_registration_number}
                       </td>
-                      <td className="px-4 py-3">{subject.subject_name}</td>
-                      <td className="px-4 py-3">{subject.exam_type}</td>
-                      <td className="px-4 py-3">{subject.maximum_marks}</td>
-                      <td className="px-4 py-3 font-semibold">
-                        {subject.marks_obtained}
-                      </td>
-                      <td className="px-4 py-3">{subject.minimum_marks}</td>
                       <td className="px-4 py-3">
-                        <span className="px-3 py-1 rounded-full bg-green-100 text-green-800 text-sm">
-                          {subject.attendance_status}
+                        {subject.subject_name || "N/A"}
+                      </td>
+                      <td className="px-4 py-3">
+                        {subject.exam_type || "-"}
+                      </td>
+                      <td className="px-4 py-3">
+                        {subject.maximum_marks ?? "-"}
+                      </td>
+                      <td className="px-4 py-3 font-semibold">
+                        {subject.marks_obtained ?? "Not Entered"}
+                      </td>
+                      <td className="px-4 py-3">
+                        {subject.minimum_marks ?? "-"}
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className="px-3 py-1 rounded-full bg-blue-100 text-blue-800 text-sm">
+                          {subject.attendance_status || "Not Marked"}
                         </span>
                       </td>
                     </tr>
@@ -182,17 +192,22 @@ const MarksEntry = () => {
           </table>
         </div>
 
-        {/* =========================
-            CARD VIEW (Mobile)
-        ==========================*/}
+        {/* ========================= MOBILE VIEW ========================== */}
         <div className="block md:hidden space-y-4 p-4">
           {loading ? (
             <div className="text-center py-10">Loading...</div>
           ) : marksData.length === 0 ? (
-            <div className="text-center text-gray-500">No records found</div>
+            <div className="text-center text-gray-500">
+              No records found
+            </div>
           ) : (
             marksData.map((row, index) => {
-              const subject = row.subject_marks[0];
+              const subject =
+                row.subject_marks?.find(
+                  (sub) =>
+                    Number(sub.subject_id) ===
+                    Number(selectedSubjectId)
+                ) || {};
 
               return (
                 <div
@@ -212,13 +227,30 @@ const MarksEntry = () => {
                   </div>
 
                   <div className="pt-2 border-t text-sm space-y-1">
-                    <div><strong>Subject:</strong> {subject.subject_name}</div>
-                    <div><strong>Exam:</strong> {subject.exam_type}</div>
-                    <div><strong>Max Marks:</strong> {subject.maximum_marks}</div>
-                    <div className="font-semibold">
-                      <strong>Marks Obtained:</strong> {subject.marks_obtained}
+                    <div>
+                      <strong>Subject:</strong>{" "}
+                      {subject.subject_name || "N/A"}
                     </div>
-                    <div><strong>Min Marks:</strong> {subject.minimum_marks}</div>
+                    <div>
+                      <strong>Exam:</strong>{" "}
+                      {subject.exam_type || "-"}
+                    </div>
+                    <div>
+                      <strong>Max Marks:</strong>{" "}
+                      {subject.maximum_marks ?? "-"}
+                    </div>
+                    <div className="font-semibold">
+                      <strong>Marks Obtained:</strong>{" "}
+                      {subject.marks_obtained ?? "Not Entered"}
+                    </div>
+                    <div>
+                      <strong>Min Marks:</strong>{" "}
+                      {subject.minimum_marks ?? "-"}
+                    </div>
+                    <div>
+                      <strong>Status:</strong>{" "}
+                      {subject.attendance_status || "Not Marked"}
+                    </div>
                   </div>
                 </div>
               );
@@ -226,9 +258,7 @@ const MarksEntry = () => {
           )}
         </div>
 
-        {/* =========================
-            Footer
-        ==========================*/}
+        {/* ========================= Footer ========================== */}
         <div className="px-6 py-4 text-gray-500 text-center sm:text-left">
           Showing {marksData.length} entries
         </div>

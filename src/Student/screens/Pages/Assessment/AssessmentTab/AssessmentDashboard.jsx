@@ -45,7 +45,7 @@ const AssessmentDashboard = () => {
                     current: "true"
                 };
 
-                const response = await assessmentService.getStudentAssessments([payload]);
+                const response = await assessmentService.getStudentAssessments([payload], profile.student_id);
 
                 if (response && Array.isArray(response)) {
                     processStats(response);

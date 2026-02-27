@@ -4,7 +4,7 @@ import { Edit } from "lucide-react";
 
 import { COService } from "../Service/co.service";
 import { courseService } from "../../../Content/services/courses.service";
-// import { batchService } from "../../../Academics/Services/batch.Service";
+import { listOfBooksService as batchService } from "../../../AcademicDiary/Services/listOfBooks.service";
 import { collegeService } from "../../../Content/services/college.service";
 import { useUserProfile } from "../../../../../../contexts/UserProfileContext";
 const ListCO = () => {
@@ -148,23 +148,23 @@ const ListCO = () => {
 
   /* ===================== JSX ===================== */
   const handleDeleteCO = async (coId) => {
-  if (!window.confirm("Are you sure you want to delete this CO?")) return;
+    if (!window.confirm("Are you sure you want to delete this CO?")) return;
 
-  try {
-    setLoading(true);
-    await COService.DeleteCourseOutcomeId(coId);
+    try {
+      setLoading(true);
+      await COService.DeleteCourseOutcomeId(coId);
 
-    // Remove deleted CO from the table
-    setCoRows(prev => prev.filter(co => co.co_id !== coId));
+      // Remove deleted CO from the table
+      setCoRows(prev => prev.filter(co => co.co_id !== coId));
 
-    setLoading(false);
-    alert("CO deleted successfully!");
-  } catch (error) {
-    console.error("Error deleting CO:", error);
-    setLoading(false);
-    alert("Failed to delete CO. Please try again.");
-  }
-};
+      setLoading(false);
+      alert("CO deleted successfully!");
+    } catch (error) {
+      console.error("Error deleting CO:", error);
+      setLoading(false);
+      alert("Failed to delete CO. Please try again.");
+    }
+  };
 
   return (
     <div className="p-6">
@@ -256,13 +256,13 @@ const ListCO = () => {
                       <Edit className="w-4 h-4" />
                     </button>
                   </Link>
-                    {/* Delete Button */}
-          <button
-            className="p-2 bg-red-100 rounded hover:bg-red-200"
-            onClick={() => handleDeleteCO(row.co_id)}
-          >
-            Delete
-          </button>
+                  {/* Delete Button */}
+                  <button
+                    className="p-2 bg-red-100 rounded hover:bg-red-200"
+                    onClick={() => handleDeleteCO(row.co_id)}
+                  >
+                    Delete
+                  </button>
                 </td>
               </tr>
             ))

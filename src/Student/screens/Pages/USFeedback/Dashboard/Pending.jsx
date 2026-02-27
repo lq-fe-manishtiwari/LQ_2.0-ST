@@ -175,7 +175,98 @@ export default function Pending() {
                 </div>
             ) : (
                 <>
-                    <div className="grid gap-4">
+                    {/* Desktop Table */}
+                    <div className="hidden lg:block bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+                        <div className="overflow-x-auto">
+                            <table className="w-full">
+                                <thead className="bg-primary-600">
+                                    <tr>
+                                        <th className="px-6 py-3 text-center text-xs font-medium text-gray-50 tracking-wider">Form Name</th>
+                                        <th className="px-6 py-3 text-center text-xs font-medium text-gray-50 tracking-wider">Code</th>
+                                        <th className="px-6 py-3 text-center text-xs font-medium text-gray-50 tracking-wider">Start Date</th>
+                                        <th className="px-6 py-3 text-center text-xs font-medium text-gray-50 tracking-wider">End Date</th>
+                                        <th className="px-6 py-3 text-center text-xs font-medium text-gray-50 tracking-wider">Status</th>
+                                        <th className="px-6 py-3 text-center text-xs font-medium text-gray-50 tracking-wider">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="bg-white divide-y divide-gray-200">
+                                    {pendingForms.map((form) => (
+                                        <tr key={form.feedback_form_id} className="hover:bg-gray-50">
+                                            <td className="px-6 py-4 text-sm text-gray-900">{form.form_name}</td>
+                                            <td className="px-6 py-4 text-sm text-gray-500">{form.code || 'N/A'}</td>
+                                            <td className="px-6 py-4 text-sm text-gray-500">{form.start_date || 'N/A'}</td>
+                                            <td className="px-6 py-4 text-sm text-gray-500">{form.end_date || 'N/A'}</td>
+                                            <td className="px-6 py-4">
+                                                <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+                                                    form.status === 'Active' ? 'bg-green-100 text-green-800' :
+                                                    form.status === 'Scheduled' ? 'bg-blue-100 text-blue-800' :
+                                                    form.status === 'Expired' ? 'bg-red-100 text-red-800' :
+                                                    'bg-gray-100 text-gray-800'
+                                                }`}>
+                                                    {form.status}
+                                                </span>
+                                            </td>
+                                            <td className="px-6 py-4 text-center">
+                                                <button
+                                                    onClick={() => handleFillForm(form.feedback_form_id)}
+                                                    disabled={!form.canFill}
+                                                    className={`px-4 py-2 text-sm rounded-md transition-colors flex items-center gap-2 mx-auto ${
+                                                        form.canFill 
+                                                            ? 'bg-blue-600 text-white hover:bg-blue-700' 
+                                                            : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                                    }`}
+                                                    title={!form.canFill ? 
+                                                        form.status === 'Scheduled' ? 'Form not yet available' :
+                                                        form.status === 'Expired' ? 'Form has expired' :
+                                                        'Form not available' : 'Fill form'
+                                                    }
+                                                >
+                                                    <i className="bi bi-pencil-square"></i>
+                                                    {form.status === 'Scheduled' ? 'Not Available' :
+                                                     form.status === 'Expired' ? 'Expired' :
+                                                     'Fill Form'}
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        {/* Pagination */}
+                        {totalElements > 0 && (
+                            <div className="flex justify-between items-center px-6 py-4 border-t border-gray-200 text-sm text-gray-600">
+                                <button
+                                    onClick={() => handlePageChange(currentPage - 1)}
+                                    disabled={isFirst}
+                                    className={`px-4 py-2 rounded-md ${
+                                        isFirst
+                                            ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                                            : 'bg-blue-600 hover:bg-blue-700 text-white'
+                                    }`}
+                                >
+                                    Previous
+                                </button>
+                                <span className="text-gray-700 font-medium">
+                                    Showing {currentPage * pageSize + 1}–{Math.min((currentPage + 1) * pageSize, totalElements)} of {totalElements} entries
+                                </span>
+                                <button
+                                    onClick={() => handlePageChange(currentPage + 1)}
+                                    disabled={isLast}
+                                    className={`px-4 py-2 rounded-md ${
+                                        isLast
+                                            ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                                            : 'bg-blue-600 hover:bg-blue-700 text-white'
+                                    }`}
+                                >
+                                    Next
+                                </button>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Mobile Cards */}
+                    <div className="lg:hidden space-y-4">
                         {pendingForms.map((form) => (
                             <div
                                 key={form.feedback_form_id}
@@ -228,15 +319,36 @@ export default function Pending() {
                         ))}
                     </div>
 
-                    {/* Pagination Component */}
-                    <Pagination
-                        currentPage={currentPage}
-                        totalPages={totalPages}
-                        totalElements={totalElements}
-                        onPageChange={handlePageChange}
-                        isFirst={isFirst}
-                        isLast={isLast}
-                    />
+                    {/* Mobile Pagination */}
+                    {totalElements > 0 && (
+                        <div className="lg:hidden flex justify-between items-center px-4 py-4 bg-white rounded-lg shadow-sm border border-gray-200 mt-4 text-sm text-gray-600">
+                            <button
+                                onClick={() => handlePageChange(currentPage - 1)}
+                                disabled={isFirst}
+                                className={`px-4 py-2 rounded-md ${
+                                    isFirst
+                                        ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                                        : 'bg-blue-600 hover:bg-blue-700 text-white'
+                                }`}
+                            >
+                                Previous
+                            </button>
+                            <span className="text-gray-700 font-medium text-xs">
+                                {currentPage * pageSize + 1}–{Math.min((currentPage + 1) * pageSize, totalElements)} of {totalElements}
+                            </span>
+                            <button
+                                onClick={() => handlePageChange(currentPage + 1)}
+                                disabled={isLast}
+                                className={`px-4 py-2 rounded-md ${
+                                    isLast
+                                        ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                                        : 'bg-blue-600 hover:bg-blue-700 text-white'
+                                }`}
+                            >
+                                Next
+                            </button>
+                        </div>
+                    )}
                 </>
             )}
         </div>
