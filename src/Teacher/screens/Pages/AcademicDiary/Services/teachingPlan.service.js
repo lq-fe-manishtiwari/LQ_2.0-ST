@@ -11,7 +11,9 @@ export const teachingPlanService = {
     FilterTeachingPlans,
     UpdateTeachingPlan,
     DeleteTeachingPlan,
-    saveObjective // Keeping this for the objective creation step
+    saveObjective, // Keeping this for the objective creation step
+    DownloadTeachingPlanPDF,
+    DownloadTeachingPlanExcel
 };
 
 // 1. POST: Create Teaching Plan
@@ -86,3 +88,32 @@ async function saveObjective(objectiveData) {
     return fetch(`${TP_API}/objective/create`, requestOptions).then(handleResponse);
 }
 
+// 9. DOWNLOAD PDF
+async function DownloadTeachingPlanPDF(collegeId, userId) {
+    const requestOptions = {
+        method: 'GET',
+        headers: authHeader()
+    };
+    return fetch(`${TP_API}/report/pdf?collegeId=${collegeId}&userId=${userId}`, requestOptions)
+        .then(response => {
+            if (!response.ok) {
+                return response.text().then(text => { throw new Error(text) });
+            }
+            return response.blob();
+        });
+}
+
+// 10. DOWNLOAD EXCEL
+async function DownloadTeachingPlanExcel(collegeId, userId) {
+    const requestOptions = {
+        method: 'GET',
+        headers: authHeader()
+    };
+    return fetch(`${TP_API}/report/excel?collegeId=${collegeId}&userId=${userId}`, requestOptions)
+        .then(response => {
+            if (!response.ok) {
+                return response.text().then(text => { throw new Error(text) });
+            }
+            return response.blob();
+        });
+}

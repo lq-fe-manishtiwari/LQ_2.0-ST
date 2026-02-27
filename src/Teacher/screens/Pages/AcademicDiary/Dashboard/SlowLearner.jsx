@@ -11,8 +11,13 @@ import {
   UserX,
   Menu,
   X,
+  Download,
+  ChevronDown
 } from "lucide-react";
 import SweetAlert from "react-bootstrap-sweetalert";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
+import ExcelJS from "exceljs";
 import ExcelUploadModal from "../Component/ExcelUploadModal";
 import { teacherProfileService } from "../Services/academicDiary.service";
 import { useUserProfile } from "../../../../../contexts/UserProfileContext";
@@ -41,6 +46,13 @@ export default function SlowLearner() {
   const [isExcelMode, setIsExcelMode] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [showExportDropdown, setShowExportDropdown] = useState(false);
+  const exportMenuRefs = React.useRef([]);
+
+  // Helper to add ref to the array
+  const setExportRef = (index) => (el) => {
+    exportMenuRefs.current[index] = el;
+  };
 
   /* ================= SUPPORTING DOCS ================= */
   const [supportDocs, setSupportDocs] = useState([]);
@@ -70,7 +82,21 @@ export default function SlowLearner() {
 
     handleResize();
     window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
+
+    return () => {
+      window.removeEventListener("resize", handleResize);
+    };
+  }, []);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      const isClickInside = exportMenuRefs.current.some(ref => ref && ref.contains(event.target));
+      if (!isClickInside) {
+        setShowExportDropdown(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
   /* ================= SHOW ALERT HELPER ================= */
@@ -223,6 +249,238 @@ export default function SlowLearner() {
     { key: "students", label: "No. of Students Present", hasAsterisk: false },
     { key: "hod", label: "Sign of HOD with Date", hasAsterisk: false },
   ];
+
+  /* ================= EXPORT HANDLERS ================= */
+
+  const getCollegeName = () => {
+    try {
+      const activeCollegeStr = localStorage.getItem("activeCollege");
+      if (!activeCollegeStr) return "";
+      const activeCollege = JSON.parse(activeCollegeStr);
+      return activeCollege?.name || activeCollege?.college_name || "";
+    } catch (error) {
+      console.error("Error parsing activeCollege:", error);
+      return "";
+    }
+  };
+
+  const getExportData = () => {
+    return rows.map(row => {
+      const exportRow = {};
+      columns.forEach(col => {
+        exportRow[col.label] = row[col.key] || '-';
+      });
+      return exportRow;
+    });
+  };
+
+  const handleExportPDF = () => {
+    try {
+      console.log("Starting PDF Export for Slow Learners...");
+      if (!rows || rows.length === 0) {
+        showAlert("Warning", "No data to export", "warning");
+        return;
+      }
+      if (!columns || columns.length === 0) {
+        showAlert("Error", "No columns defined for export. Try reloading the page.", "danger");
+        return;
+      }
+
+      const doc = new jsPDF();
+      const collegeName = getCollegeName();
+      const pageWidth = doc.internal.pageSize.width;
+
+      doc.setFontSize(16);
+      doc.text(collegeName, pageWidth / 2, 15, { align: 'center' });
+      doc.setFontSize(14);
+      doc.text('Slow Learners Report', pageWidth / 2, 22, { align: 'center' });
+
+      // Add Supporting Documents Section
+      let currentY = 30;
+      if (supportDocs && supportDocs.length > 0) {
+        doc.setFontSize(12);
+        doc.setFont('helvetica', 'bold');
+        doc.text('Supporting Documents:', 14, currentY);
+        currentY += 7;
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(10);
+
+        supportDocs.forEach((docItem, index) => {
+          const title = docItem.title || 'Untitled';
+          const url = docItem.url || '-';
+          const docText = `${index + 1}. ${title}: ${url}`;
+          const splitText = doc.splitTextToSize(docText, pageWidth - 28);
+          doc.text(splitText, 14, currentY);
+          currentY += (splitText.length * 5);
+        });
+        currentY += 5;
+      }
+
+      const headers = [columns.map(c => c.label)];
+      const body = rows.map(row => columns.map(col => {
+        const val = row[col.key];
+        return (val === null || val === undefined) ? '-' : String(val);
+      }));
+
+      autoTable(doc, {
+        head: headers,
+        body: body,
+        startY: currentY,
+        theme: 'grid',
+        styles: { fontSize: 8, overflow: 'linebreak' },
+        headStyles: { fillColor: [37, 99, 235], textColor: [255, 255, 255] }
+      });
+
+      const fileName = `Slow_Learners_${new Date().toISOString().split('T')[0]}.pdf`;
+      doc.save(fileName);
+      console.log("PDF Export successful:", fileName);
+      setShowExportDropdown(false);
+    } catch (err) {
+      console.error('Export PDF failed:', err);
+      showAlert("Error", "Failed to generate PDF report: " + (err.message || "Unknown error"), "danger");
+    }
+  };
+
+  const handleExportExcel = async () => {
+    try {
+      console.log("Starting Excel Export for Slow Learners...");
+      if (!rows || rows.length === 0) {
+        showAlert("Warning", "No data to export", "warning");
+        return;
+      }
+      if (!columns || columns.length === 0) {
+        showAlert("Error", "No columns defined for export. Try reloading the page.", "danger");
+        return;
+      }
+
+      const workbook = new ExcelJS.Workbook();
+      const worksheet = workbook.addWorksheet('Slow Learners');
+      const collegeName = getCollegeName();
+
+      const titleRow0 = worksheet.addRow([collegeName]);
+      worksheet.mergeCells(1, 1, 1, columns.length > 1 ? columns.length : 2);
+      titleRow0.getCell(1).font = { size: 16, bold: true };
+      titleRow0.getCell(1).alignment = { horizontal: 'center', vertical: 'middle' };
+
+      const titleRow = worksheet.addRow(['Slow Learners Report']);
+      worksheet.mergeCells(2, 1, 2, columns.length > 1 ? columns.length : 2);
+      titleRow.getCell(1).font = { size: 14, bold: true };
+      titleRow.getCell(1).alignment = { horizontal: 'center', vertical: 'middle' };
+      worksheet.addRow([]);
+
+      // Add Supporting Documents Section
+      if (supportDocs && supportDocs.length > 0) {
+        const supportHeaderRow = worksheet.addRow(['Supporting Documents:']);
+        supportHeaderRow.getCell(1).font = { bold: true };
+        supportDocs.forEach((docItem, index) => {
+          const title = docItem.title || 'Untitled';
+          const url = docItem.url || '#';
+          const rowText = `${index + 1}. ${title}`;
+          const row = worksheet.addRow([rowText]);
+          if (url && url !== '#') {
+            row.getCell(1).value = {
+              text: rowText,
+              hyperlink: url,
+              tooltip: url
+            };
+            row.getCell(1).font = { color: { argb: 'FF0000FF' }, underline: true };
+          }
+        });
+        worksheet.addRow([]);
+      }
+
+      const headers = columns.map(c => c.label);
+      const headerRow = worksheet.addRow(headers);
+      headerRow.eachCell(cell => {
+        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF2563EB' } };
+        cell.font = { color: { argb: 'FFFFFFFF' }, bold: true };
+        cell.alignment = { horizontal: 'center', vertical: 'middle' };
+        cell.border = {
+          top: { style: 'thin' },
+          left: { style: 'thin' },
+          bottom: { style: 'thin' },
+          right: { style: 'thin' }
+        };
+      });
+
+      rows.forEach(item => {
+        const rowValues = columns.map(c => {
+          const v = item[c.key];
+          return (v === null || v === undefined) ? '-' : String(v);
+        });
+        worksheet.addRow(rowValues);
+      });
+
+      worksheet.columns.forEach(col => {
+        col.width = 25;
+      });
+
+      const buffer = await workbook.xlsx.writeBuffer();
+      const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      const fileName = `Slow_Learners_${new Date().toISOString().split('T')[0]}.xlsx`;
+      link.download = fileName;
+      link.click();
+      console.log("Excel Export successful:", fileName);
+      setShowExportDropdown(false);
+    } catch (err) {
+      console.error('Export Excel failed:', err);
+      showAlert("Error", "Failed to generate Excel report: " + (err.message || "Unknown error"), "danger");
+    }
+  };
+
+  const handleExportCSV = () => {
+    try {
+      console.log("Starting CSV Export for Slow Learners...");
+      if (!rows || rows.length === 0) {
+        showAlert("Warning", "No data to export", "warning");
+        return;
+      }
+      if (!columns || columns.length === 0) {
+        showAlert("Error", "No columns defined for export. Try reloading the page.", "danger");
+        return;
+      }
+
+      const headers = columns.map(c => c.label);
+      const collegeName = getCollegeName();
+
+      let csvContent = `"${collegeName}"\n`;
+      csvContent += `"Slow Learners Report"\n\n`;
+
+      // Add Supporting Documents Section
+      if (supportDocs && supportDocs.length > 0) {
+        csvContent += `"Supporting Documents:"\n`;
+        supportDocs.forEach((docItem, index) => {
+          const title = docItem.title || 'Untitled';
+          const url = docItem.url || '-';
+          csvContent += `"${index + 1}. ${title}: ${url}"\n`;
+        });
+        csvContent += `\n`;
+      }
+
+      csvContent += headers.map(h => `"${h}"`).join(',') + '\n';
+
+      rows.forEach(item => {
+        csvContent += columns.map(c => {
+          const v = item[c.key];
+          return (v === null || v === undefined) ? '-' : String(v);
+        }).map(val => `"${val}"`).join(',') + '\n';
+      });
+
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      const fileName = `Slow_Learners_${new Date().toISOString().split('T')[0]}.csv`;
+      link.download = fileName;
+      link.click();
+      console.log("CSV Export successful:", fileName);
+      setShowExportDropdown(false);
+    } catch (err) {
+      console.error('Export CSV failed:', err);
+      showAlert("Error", "Failed to generate CSV report: " + (err.message || "Unknown error"), "danger");
+    }
+  };
 
   /* ================= TABLE HANDLERS ================= */
 
@@ -547,6 +805,35 @@ export default function SlowLearner() {
                 Add/Edit Table
               </button>
 
+              {!editMode && rows.length > 0 && (
+                <div className="relative" ref={setExportRef(0)}>
+                  <button
+                    onClick={() => setShowExportDropdown(!showExportDropdown)}
+                    className="w-full px-4 py-2 rounded-md bg-green-600 text-white hover:bg-green-700 flex items-center justify-center gap-2 text-sm"
+                  >
+                    <Download className="w-4 h-4" />
+                    Export
+                    <ChevronDown size={14} className={`transition-transform ${showExportDropdown ? 'rotate-180' : ''}`} />
+                  </button>
+                  {showExportDropdown && (
+                    <div className="absolute left-0 right-0 mt-2 bg-white border border-gray-200 rounded-lg shadow-lg z-50">
+                      <button onClick={handleExportPDF} className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2 rounded-t-lg transition-colors border-b border-gray-100">
+                        <Download size={14} className="text-red-500" />
+                        Export as PDF
+                      </button>
+                      <button onClick={handleExportExcel} className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2 transition-colors border-b border-gray-100">
+                        <Download size={14} className="text-green-600" />
+                        Export as Excel
+                      </button>
+                      <button onClick={handleExportCSV} className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2 rounded-b-lg transition-colors">
+                        <Download size={14} className="text-gray-500" />
+                        Export as CSV
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+
               {currentSlowLearnerId && (
                 <button
                   onClick={handleDeleteRecord}
@@ -601,6 +888,35 @@ export default function SlowLearner() {
               <Edit className="w-4 h-4" />
               Edit Table
             </button>
+
+            {!editMode && rows.length > 0 && (
+              <div className="relative" ref={setExportRef(1)}>
+                <button
+                  onClick={() => setShowExportDropdown(!showExportDropdown)}
+                  className="px-3 py-2 rounded-md bg-green-600 text-white hover:bg-green-700 flex items-center gap-2 text-sm"
+                >
+                  <Download className="w-4 h-4" />
+                  Export
+                  <ChevronDown size={14} className={`transition-transform ${showExportDropdown ? 'rotate-180' : ''}`} />
+                </button>
+                {showExportDropdown && (
+                  <div className="absolute right-0 top-full mt-2 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-50">
+                    <button onClick={handleExportPDF} className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2 rounded-t-lg transition-colors border-b border-gray-100">
+                      <Download size={14} className="text-red-500" />
+                      Export as PDF
+                    </button>
+                    <button onClick={handleExportExcel} className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2 transition-colors border-b border-gray-100">
+                      <Download size={14} className="text-green-600" />
+                      Export as Excel
+                    </button>
+                    <button onClick={handleExportCSV} className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2 rounded-b-lg transition-colors">
+                      <Download size={14} className="text-gray-500" />
+                      Export as CSV
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
 
             {currentSlowLearnerId && (
               <button
@@ -702,6 +1018,35 @@ export default function SlowLearner() {
                     <span className="lg:hidden">Edit</span>
                   </button>
 
+                  {!editMode && rows.length > 0 && (
+                    <div className="relative" ref={setExportRef(2)}>
+                      <button
+                        onClick={() => setShowExportDropdown(!showExportDropdown)}
+                        className="px-3 py-2 lg:px-4 lg:py-2 rounded-md bg-green-600 text-white hover:bg-green-700 flex items-center gap-2 text-sm lg:text-base transition-colors shadow-sm"
+                      >
+                        <Download className="w-4 h-4" />
+                        Export
+                        <ChevronDown size={14} className={`transition-transform ${showExportDropdown ? 'rotate-180' : ''}`} />
+                      </button>
+                      {showExportDropdown && (
+                        <div className="absolute right-0 top-full mt-2 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-50">
+                          <button onClick={handleExportPDF} className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2 rounded-t-lg transition-colors border-b border-gray-100">
+                            <Download size={14} className="text-red-500" />
+                            Export as PDF
+                          </button>
+                          <button onClick={handleExportExcel} className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2 transition-colors border-b border-gray-100">
+                            <Download size={14} className="text-green-600" />
+                            Export as Excel
+                          </button>
+                          <button onClick={handleExportCSV} className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2 rounded-b-lg transition-colors">
+                            <Download size={14} className="text-gray-500" />
+                            Export as CSV
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
                   {/* {currentSlowLearnerId && (
                     <button
                       onClick={handleDeleteRecord}
@@ -727,8 +1072,8 @@ export default function SlowLearner() {
                     key={record.slow_learner_id}
                     onClick={() => handleSelectRecord(record.slow_learner_id)}
                     className={`px-2 py-1 sm:px-3 sm:py-1 rounded text-xs ${currentSlowLearnerId === record.slow_learner_id
-                        ? 'bg-blue-600 text-white'
-                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                       }`}
                   >
                     #{record.slow_learner_id}
@@ -738,6 +1083,7 @@ export default function SlowLearner() {
               </div>
             </div>
           )}
+
 
           {/* ================= TABLE CONTAINER ================= */}
           <div className="border rounded-lg overflow-hidden bg-white">
@@ -831,21 +1177,69 @@ export default function SlowLearner() {
             </div>
           </div>
 
-          {/* ================= ADD ROW BUTTON ================= */}
-          {editMode && columns.length > 0 && (
-            <div className="flex justify-center lg:justify-start">
-              <button
-                onClick={handleAddRow}
-                className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm lg:text-base w-full lg:w-auto justify-center"
-              >
-                <Plus className="w-4 h-4" />
-                Add Row
-              </button>
-            </div>
-          )}
+          {/* ================= SAVE / CANCEL BUTTONS ================= */}
+          {
+            editMode && (
+              <div className="flex flex-col sm:flex-row justify-center gap-3 lg:gap-4 pt-4 border-t">
+                <button
+                  onClick={() => {
+                    setRows(backupRows);
+                    setEditMode(false);
+                  }}
+                  className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center justify-center gap-2 text-sm lg:text-base order-2 sm:order-1"
+                >
+                  <XCircle className="w-4 h-4" /> Cancel
+                </button>
+
+                <button
+                  onClick={handleSaveData}
+                  disabled={isLoading}
+                  className={`px-4 py-2 ${isLoading ? 'bg-gray-400' : 'bg-green-600 hover:bg-green-700'} text-white rounded-lg flex items-center justify-center gap-2 text-sm lg:text-base order-1 sm:order-2`}
+                >
+                  {isLoading ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                      Saving...
+                    </>
+                  ) : (
+                    <>
+                      <Save className="w-4 h-4" /> Save Changes
+                    </>
+                  )}
+                </button>
+              </div>
+            )
+          }
+
+          {/* ================= PAGINATION ================= */}
+          {
+            !editMode && slowLearnerData.length > 0 && (
+              <div className="flex flex-col sm:flex-row justify-between items-center gap-3 pt-4 border-t">
+                <div className="text-xs sm:text-sm text-gray-600">
+                  Showing {page * size + 1} to {Math.min((page + 1) * size, totalItems)} of {totalItems} records
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setPage(prev => Math.max(prev - 1, 0))}
+                    disabled={page === 0}
+                    className="px-3 py-1 border rounded text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Previous
+                  </button>
+                  <button
+                    onClick={() => setPage(prev => (page + 1) * size < totalItems ? prev + 1 : prev)}
+                    disabled={(page + 1) * size >= totalItems}
+                    className="px-3 py-1 border rounded text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Next
+                  </button>
+                </div>
+              </div>
+            )
+          }
 
           {/* ================= SUPPORTING DOCS SECTION ================= */}
-          <div className="border rounded-lg p-3 sm:p-4 lg:p-6 space-y-3 lg:space-y-4 bg-white">
+          <div className="border rounded-lg p-3 sm:p-4 lg:p-6 space-y-3 lg:space-y-4 bg-white mt-6">
             <div className="flex items-center justify-between">
               <h4 className="flex items-center gap-2 font-semibold text-sm sm:text-base lg:text-lg">
                 <FileText className="w-4 h-4 sm:w-5 sm:h-5" />
@@ -876,12 +1270,13 @@ export default function SlowLearner() {
                   <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
                     <input
                       type="file"
+                      id="slow-learner-support-upload-bottom"
                       onChange={handleSupportUpload}
                       disabled={uploading}
                       className="flex-1 border px-3 py-2 rounded cursor-pointer text-sm w-full"
                     />
                     <button
-                      onClick={() => document.querySelector('input[type="file"]').click()}
+                      onClick={() => document.getElementById('slow-learner-support-upload-bottom').click()}
                       disabled={uploading || !docTitle}
                       className={`px-4 py-2 rounded ${uploading || !docTitle ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'} text-white whitespace-nowrap text-sm`}
                     >
@@ -905,8 +1300,8 @@ export default function SlowLearner() {
                       >
                         <FileText className="w-4 h-4 mt-0.5 flex-shrink-0" />
                         <div className="min-w-0 flex-1">
-                          <div className="font-medium text-sm sm:text-base truncate">{d.title}</div>
-                          <div className="text-xs text-gray-500 truncate">{d.fileName}</div>
+                          <div className="font-medium text-sm sm:text-base truncate text-blue-600">{d.title}</div>
+                          <div className="text-xs text-blue-500 truncate">{d.fileName}</div>
                         </div>
                       </a>
                       <div className="text-xs text-gray-500 mt-1 flex flex-col sm:flex-row sm:flex-wrap gap-1 sm:gap-2">
@@ -934,74 +1329,19 @@ export default function SlowLearner() {
             )}
           </div>
 
-          {/* ================= SAVE / CANCEL BUTTONS ================= */}
-          {editMode && (
-            <div className="flex flex-col sm:flex-row justify-center gap-3 lg:gap-4 pt-4 border-t">
-              <button
-                onClick={() => {
-                  setRows(backupRows);
-                  setEditMode(false);
-                }}
-                className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center justify-center gap-2 text-sm lg:text-base order-2 sm:order-1"
-              >
-                <XCircle className="w-4 h-4" /> Cancel
-              </button>
-
-              <button
-                onClick={handleSaveData}
-                disabled={isLoading}
-                className={`px-4 py-2 ${isLoading ? 'bg-gray-400' : 'bg-green-600 hover:bg-green-700'} text-white rounded-lg flex items-center justify-center gap-2 text-sm lg:text-base order-1 sm:order-2`}
-              >
-                {isLoading ? (
-                  <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                    Saving...
-                  </>
-                ) : (
-                  <>
-                    <Save className="w-4 h-4" /> Save Changes
-                  </>
-                )}
-              </button>
-            </div>
-          )}
-
-          {/* ================= PAGINATION ================= */}
-          {!editMode && slowLearnerData.length > 0 && (
-            <div className="flex flex-col sm:flex-row justify-between items-center gap-3 pt-4 border-t">
-              <div className="text-xs sm:text-sm text-gray-600">
-                Showing {page * size + 1} to {Math.min((page + 1) * size, totalItems)} of {totalItems} records
-              </div>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => setPage(prev => Math.max(prev - 1, 0))}
-                  disabled={page === 0}
-                  className="px-3 py-1 border rounded text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  Previous
-                </button>
-                <button
-                  onClick={() => setPage(prev => (page + 1) * size < totalItems ? prev + 1 : prev)}
-                  disabled={(page + 1) * size >= totalItems}
-                  className="px-3 py-1 border rounded text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  Next
-                </button>
-              </div>
-            </div>
-          )}
-
           {/* ================= EXCEL UPLOAD MODAL ================= */}
-          {showUploadModal && (
-            <ExcelUploadModal
-              title="Upload Slow Learners Format"
-              onClose={() => setShowUploadModal(false)}
-              onConfirm={handleExcelConfirm}
-              confirmBtnCssClass="btn-confirm"
-            />
-          )}
-        </div>
-      </div>
+          {
+            showUploadModal && (
+              <ExcelUploadModal
+                title="Upload Slow Learners Format"
+                onClose={() => setShowUploadModal(false)}
+                onConfirm={handleExcelConfirm}
+                confirmBtnCssClass="btn-confirm"
+              />
+            )
+          }
+        </div >
+      </div >
     );
   }
 

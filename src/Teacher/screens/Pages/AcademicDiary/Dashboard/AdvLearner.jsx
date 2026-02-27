@@ -14,8 +14,13 @@ import {
   ChevronRight,
   Menu,
   X,
+  Download,
+  ChevronDown
 } from "lucide-react";
 import SweetAlert from "react-bootstrap-sweetalert";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
+import ExcelJS from "exceljs";
 import ExcelUploadModal from "../Component/ExcelUploadModal";
 import { useUserProfile } from "../../../../../contexts/UserProfileContext";
 import { teacherProfileService } from "../Services/academicDiary.service";
@@ -60,6 +65,13 @@ export default function AdvLearner() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
+  const [showExportDropdown, setShowExportDropdown] = useState(false);
+  const exportMenuRefs = React.useRef([]);
+
+  // Helper to add ref to the array
+  const setExportRef = (index) => (el) => {
+    exportMenuRefs.current[index] = el;
+  };
 
   /* ================= ALERT STATE ================= */
   const [alertConfig, setAlertConfig] = useState(null);
@@ -101,6 +113,18 @@ export default function AdvLearner() {
 
     fetchTeacherIdFromProfile();
   }, [userProfile]);
+
+  // Close export menu on outside click
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      const isClickInside = exportMenuRefs.current.some(ref => ref && ref.contains(event.target));
+      if (!isClickInside) {
+        setShowExportDropdown(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   /* ================= LOAD INITIAL DATA ================= */
   useEffect(() => {
@@ -442,6 +466,212 @@ export default function AdvLearner() {
     });
   };
 
+  /* ================= EXPORT HANDLERS ================= */
+
+  const getCollegeName = () => {
+    try {
+      const activeCollegeStr = localStorage.getItem("activeCollege");
+      if (!activeCollegeStr) return "";
+      const activeCollege = JSON.parse(activeCollegeStr);
+      return activeCollege?.name || activeCollege?.college_name || "";
+    } catch (error) {
+      console.error("Error parsing activeCollege:", error);
+      return "";
+    }
+  };
+
+  const getExportData = () => {
+    return rows.map(row => {
+      const exportRow = {};
+      columns.forEach(col => {
+        exportRow[col.label] = row[col.key] || '-';
+      });
+      return exportRow;
+    });
+  };
+
+  const handleExportPDF = () => {
+    try {
+      const doc = new jsPDF();
+      const collegeName = getCollegeName();
+      const pageWidth = doc.internal.pageSize.width;
+
+      doc.setFontSize(16);
+      doc.text(collegeName, pageWidth / 2, 15, { align: 'center' });
+      doc.setFontSize(14);
+      doc.text('Advance Learners Report', pageWidth / 2, 22, { align: 'center' });
+
+      // Add Supporting Documents Section
+      let currentY = 30;
+      if (supportDocs && supportDocs.length > 0) {
+        doc.setFontSize(12);
+        doc.setFont('helvetica', 'bold');
+        doc.text('Supporting Documents:', 14, currentY);
+        currentY += 7;
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(10);
+
+        supportDocs.forEach((docItem, index) => {
+          const docText = `${index + 1}. ${docItem.title || 'Untitled'}: ${docItem.url || '-'}`;
+          // Split text if it is too long for the page width
+          const splitText = doc.splitTextToSize(docText, pageWidth - 28);
+          doc.text(splitText, 14, currentY);
+          currentY += (splitText.length * 5);
+        });
+        currentY += 5;
+      }
+
+      const data = rows;
+      if (data.length === 0) {
+        showAlert("Warning", "No data to export", "warning");
+        return;
+      }
+
+      if (columns.length === 0) {
+        showAlert("Error", "No columns defined for export", "danger");
+        return;
+      }
+
+      const headers = [columns.map(c => c.label)];
+      const body = data.map(item => columns.map(c => item[c.key] || '-'));
+
+      autoTable(doc, {
+        head: headers,
+        body: body,
+        startY: currentY,
+        theme: 'grid',
+        headStyles: { fillColor: [37, 99, 235] }
+      });
+
+      doc.save(`Advance_Learners_${new Date().toISOString().split('T')[0]}.pdf`);
+      setShowExportDropdown(false);
+    } catch (err) {
+      console.error('Export PDF failed:', err);
+      showAlert("Error", "Failed to generate PDF report", "danger");
+    }
+  };
+
+  const handleExportExcel = async () => {
+    try {
+      if (columns.length === 0) {
+        showAlert("Error", "No columns defined for export", "danger");
+        return;
+      }
+
+      const workbook = new ExcelJS.Workbook();
+      const worksheet = workbook.addWorksheet('Advance Learners');
+      const collegeName = getCollegeName();
+
+      const titleRow0 = worksheet.addRow([collegeName]);
+      worksheet.mergeCells(1, 1, 1, columns.length);
+      titleRow0.getCell(1).font = { size: 16, bold: true };
+      titleRow0.getCell(1).alignment = { horizontal: 'center', vertical: 'middle' };
+
+      const titleRow = worksheet.addRow(['Advance Learners Report']);
+      worksheet.mergeCells(2, 1, 2, columns.length);
+      titleRow.getCell(1).font = { size: 14, bold: true };
+      titleRow.getCell(1).alignment = { horizontal: 'center', vertical: 'middle' };
+      worksheet.addRow([]);
+
+      // Add Supporting Documents Section
+      if (supportDocs && supportDocs.length > 0) {
+        const supportHeaderRow = worksheet.addRow(['Supporting Documents:']);
+        supportHeaderRow.getCell(1).font = { bold: true };
+        supportDocs.forEach((docItem, index) => {
+          const rowText = `${index + 1}. ${docItem.title || 'Untitled'}`;
+          const row = worksheet.addRow([rowText]);
+          if (docItem.url && docItem.url !== '#') {
+            row.getCell(1).value = {
+              text: rowText,
+              hyperlink: docItem.url,
+              tooltip: docItem.url
+            };
+            row.getCell(1).font = { color: { argb: 'FF0000FF' }, underline: true };
+          }
+        });
+        worksheet.addRow([]);
+      }
+
+      const headers = columns.map(c => c.label);
+      const headerRow = worksheet.addRow(headers);
+      headerRow.eachCell(cell => {
+        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF2563EB' } };
+        cell.font = { color: { argb: 'FFFFFFFF' }, bold: true };
+        cell.alignment = { horizontal: 'center', vertical: 'middle' };
+      });
+
+      rows.forEach(item => {
+        const rowValues = columns.map(c => item[c.key] || '-');
+        worksheet.addRow(rowValues);
+      });
+
+      worksheet.columns.forEach(col => { col.width = 25; });
+
+      const buffer = await workbook.xlsx.writeBuffer();
+      const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = `Advance_Learners_${new Date().toISOString().split('T')[0]}.xlsx`;
+      link.click();
+      setShowExportDropdown(false);
+    } catch (err) {
+      console.error('Export Excel failed:', err);
+      showAlert("Error", "Failed to generate Excel report", "danger");
+    }
+  };
+
+  const handleExportCSV = () => {
+    try {
+      console.log("Starting CSV Export for Advance Learners...");
+      if (!rows || rows.length === 0) {
+        showAlert("Warning", "No data to export", "warning");
+        return;
+      }
+      if (!columns || columns.length === 0) {
+        showAlert("Error", "No columns defined for export. Try reloading the page.", "danger");
+        return;
+      }
+
+      const headers = columns.map(c => c.label);
+      const collegeName = getCollegeName();
+
+      let csvContent = `"${collegeName}"\n`;
+      csvContent += `"Advance Learners Report"\n\n`;
+
+      // Add Supporting Documents Section
+      if (supportDocs && supportDocs.length > 0) {
+        csvContent += `"Supporting Documents:"\n`;
+        supportDocs.forEach((docItem, index) => {
+          const title = docItem.title || 'Untitled';
+          const url = docItem.url || '-';
+          csvContent += `"${index + 1}. ${title}: ${url}"\n`;
+        });
+        csvContent += `\n`;
+      }
+
+      csvContent += headers.map(h => `"${h}"`).join(',') + '\n';
+
+      rows.forEach(item => {
+        csvContent += columns.map(c => {
+          const v = item[c.key];
+          return (v === null || v === undefined) ? '-' : String(v);
+        }).map(val => `"${val}"`).join(',') + '\n';
+      });
+
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      const fileName = `Advance_Learners_${new Date().toISOString().split('T')[0]}.csv`;
+      link.download = fileName;
+      link.click();
+      console.log("CSV Export successful:", fileName);
+      setShowExportDropdown(false);
+    } catch (err) {
+      console.error('Export CSV failed:', err);
+      showAlert("Error", "Failed to generate CSV report: " + (err.message || "Unknown error"), "danger");
+    }
+  };
+
   /* ================= PAGINATION ================= */
 
   const totalPages = Math.ceil(rows.length / rowsPerPage);
@@ -702,6 +932,35 @@ export default function AdvLearner() {
                     </button>
                   )}
 
+                  {!editMode && rows.length > 0 && (
+                    <div className="relative" ref={setExportRef(0)}>
+                      <button
+                        onClick={() => setShowExportDropdown(!showExportDropdown)}
+                        className="w-full px-4 py-2 rounded-md bg-green-600 text-white hover:bg-green-700 flex items-center justify-center gap-2 text-sm"
+                      >
+                        <Download className="w-4 h-4" />
+                        Export
+                        <ChevronDown size={14} className={`transition-transform ${showExportDropdown ? 'rotate-180' : ''}`} />
+                      </button>
+                      {showExportDropdown && (
+                        <div className="absolute left-0 right-0 mt-2 bg-white border border-gray-200 rounded-lg shadow-lg z-50">
+                          <button onClick={handleExportPDF} className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2 rounded-t-lg transition-colors border-b border-gray-100">
+                            <Download size={14} className="text-red-500" />
+                            Export as PDF
+                          </button>
+                          <button onClick={handleExportExcel} className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2 transition-colors border-b border-gray-100">
+                            <Download size={14} className="text-green-600" />
+                            Export as Excel
+                          </button>
+                          <button onClick={handleExportCSV} className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2 rounded-b-lg transition-colors">
+                            <Download size={14} className="text-gray-500" />
+                            Export as CSV
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
                   {existingData && !editMode && (
                     <button
                       onClick={handleDeleteRecord}
@@ -778,6 +1037,35 @@ export default function AdvLearner() {
                     </span>
                   </button>
 
+                  {!editMode && rows.length > 0 && (
+                    <div className="relative" ref={setExportRef(1)}>
+                      <button
+                        onClick={() => setShowExportDropdown(!showExportDropdown)}
+                        className="px-4 py-2 rounded-md bg-green-600 text-white hover:bg-green-700 flex items-center gap-2 text-sm shadow-sm transition-colors"
+                      >
+                        <Download className="w-4 h-4" />
+                        Export
+                        <ChevronDown size={14} className={`transition-transform ${showExportDropdown ? 'rotate-180' : ''}`} />
+                      </button>
+                      {showExportDropdown && (
+                        <div className="absolute right-0 top-full mt-2 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-50">
+                          <button onClick={handleExportPDF} className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2 rounded-t-lg transition-colors border-b border-gray-100">
+                            <Download size={14} className="text-red-500" />
+                            Export as PDF
+                          </button>
+                          <button onClick={handleExportExcel} className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2 transition-colors border-b border-gray-100">
+                            <Download size={14} className="text-green-600" />
+                            Export as Excel
+                          </button>
+                          <button onClick={handleExportCSV} className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2 rounded-b-lg transition-colors">
+                            <Download size={14} className="text-gray-500" />
+                            Export as CSV
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
                   {existingData && (
                     <button
                       onClick={handleDeleteRecord}
@@ -793,27 +1081,11 @@ export default function AdvLearner() {
           </div>
 
           {/* ================= EXISTING DATA INDICATOR ================= */}
-          {existingData && !editMode && (
-            <div className="bg-green-50 border border-green-200 rounded-lg p-3 md:p-4">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                <div className="flex items-center gap-2">
-                  <BookOpen className="w-4 h-4 md:w-5 md:h-5 text-green-600" />
-                  <span className="text-green-800 font-medium text-sm md:text-base">
-                    You have saved advance learner data
-                  </span>
-                </div>
-                <span className="text-xs md:text-sm text-green-600">
-                  Record ID: {advanceLearnerId}
-                </span>
-              </div>
-              <div className="mt-2 text-xs text-green-600">
-                Total Rows: {rows.length} • Total Documents: {supportDocs.length}
-              </div>
-            </div>
-          )}
+
+
 
           {/* ================= TABLE SECTION ================= */}
-          <div className="border rounded-lg overflow-hidden">
+          <div className="border rounded-lg overflow-hidden bg-white">
             <div className="overflow-x-auto">
               {/* Desktop Table */}
               <div className="hidden md:block">
@@ -870,109 +1142,6 @@ export default function AdvLearner() {
             </button>
           )}
 
-          {/* ================= SUPPORTING DOCS SECTION ================= */}
-          <div className="border rounded-lg p-3 md:p-4 space-y-3 md:space-y-4">
-            <div className="flex items-center justify-between">
-              <h4 className="flex items-center gap-2 font-semibold text-base md:text-lg">
-                <FileText className="w-4 h-4 md:w-5 md:h-5" />
-                <span className="text-sm md:text-base">Supporting Documents</span>
-              </h4>
-              <span className="text-xs md:text-sm text-gray-500">
-                {supportDocs.length} document(s)
-              </span>
-            </div>
-
-            {editMode && (
-              <div className="flex flex-col gap-4 p-3 md:p-4 bg-gray-50 rounded-lg">
-                {/* Document Title */}
-                <div>
-                  <label className="block text-xs md:text-sm font-medium text-gray-700 mb-1">
-                    Document Title
-                  </label>
-                  <input
-                    value={docTitle}
-                    onChange={(e) => setDocTitle(e.target.value)}
-                    placeholder="Enter document title"
-                    className="border px-3 py-2 rounded w-full focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                  />
-                </div>
-
-                {/* File + Upload button – stack on mobile */}
-                <div>
-                  <label className="block text-xs md:text-sm font-medium text-gray-700 mb-1">
-                    Choose File
-                  </label>
-
-                  <div className="flex flex-col sm:flex-row gap-3">
-                    <input
-                      type="file"
-                      id="support-doc-upload"
-                      onChange={handleSupportUpload}
-                      disabled={uploading}
-                      className="block w-full text-sm text-gray-500
-            file:mr-4 file:py-2 file:px-4
-            file:rounded file:border-0
-            file:text-sm file:font-semibold
-            file:bg-blue-50 file:text-blue-700
-            hover:file:bg-blue-100
-            cursor-pointer"
-                    />
-
-                    <button
-                      onClick={() => document.getElementById('support-doc-upload').click()}
-                      disabled={uploading || !docTitle}
-                      className={`px-5 py-2 rounded text-sm font-medium min-w-[100px] text-center
-            ${uploading || !docTitle
-                          ? 'bg-gray-400 cursor-not-allowed text-white'
-                          : 'bg-blue-600 hover:bg-blue-700 text-white'
-                        }`}
-                    >
-                      {uploading ? 'Uploading...' : 'Upload'}
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {supportDocs.length > 0 ? (
-              <div className="space-y-2">
-                {supportDocs.map((d, i) => (
-                  <div key={i} className="flex flex-col sm:flex-row sm:items-center justify-between p-3 bg-white border rounded hover:bg-gray-50 gap-2">
-                    <div className="flex-1">
-                      <a
-                        href={d.url}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="text-blue-600 hover:text-blue-800 underline flex items-start sm:items-center gap-2 text-sm"
-                      >
-                        <FileText className="w-4 h-4 flex-shrink-0 mt-0.5" />
-                        <span className="break-words">
-                          {d.title} ({d.fileName})
-                        </span>
-                      </a>
-                      <div className="text-xs text-gray-500 mt-1">
-                        Uploaded on {d.uploadDate}
-                        {d.fileSize ? ` • Size: ${Math.round(d.fileSize / 1024)} KB` : ''}
-                      </div>
-                    </div>
-                    {editMode && (
-                      <button
-                        onClick={() => handleDeleteDoc(i)}
-                        className="p-2 text-red-600 hover:bg-red-50 rounded self-end sm:self-center"
-                        title="Delete document"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    )}
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center p-6 md:p-8 text-gray-500 text-sm">
-                No supporting documents uploaded yet.
-              </div>
-            )}
-          </div>
 
           {/* ================= SAVE / CANCEL BUTTONS ================= */}
           {editMode && (
@@ -1008,6 +1177,110 @@ export default function AdvLearner() {
               </button>
             </div>
           )}
+
+          {/* ================= SUPPORTING DOCS SECTION ================= */}
+          <div className="border rounded-lg p-3 md:p-4 space-y-3 md:space-y-4 bg-white mt-6">
+            <div className="flex items-center justify-between">
+              <h4 className="flex items-center gap-2 font-semibold text-base md:text-lg">
+                <FileText className="w-4 h-4 md:w-5 md:h-5" />
+                <span className="text-sm md:text-base">Supporting Documents</span>
+              </h4>
+              <span className="text-xs md:text-sm text-gray-500">
+                {supportDocs.length} document(s)
+              </span>
+            </div>
+
+            {editMode && (
+              <div className="flex flex-col gap-4 p-3 md:p-4 bg-gray-50 rounded-lg">
+                {/* Document Title */}
+                <div>
+                  <label className="block text-xs md:text-sm font-medium text-gray-700 mb-1">
+                    Document Title
+                  </label>
+                  <input
+                    value={docTitle}
+                    onChange={(e) => setDocTitle(e.target.value)}
+                    placeholder="Enter document title"
+                    className="border px-3 py-2 rounded w-full focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                  />
+                </div>
+
+                {/* File + Upload button – stack on mobile */}
+                <div>
+                  <label className="block text-xs md:text-sm font-medium text-gray-700 mb-1">
+                    Choose File
+                  </label>
+
+                  <div className="flex flex-col sm:flex-row gap-3">
+                    <input
+                      type="file"
+                      id="adv-learner-support-doc-upload-bottom"
+                      onChange={handleSupportUpload}
+                      disabled={uploading}
+                      className="block w-full text-sm text-gray-500
+            file:mr-4 file:py-2 file:px-4
+            file:rounded file:border-0
+            file:text-sm file:font-semibold
+            file:bg-blue-50 file:text-blue-700
+            hover:file:bg-blue-100
+            cursor-pointer"
+                    />
+
+                    <button
+                      onClick={() => document.getElementById('adv-learner-support-doc-upload-bottom').click()}
+                      disabled={uploading || !docTitle}
+                      className={`px-5 py-2 rounded text-sm font-medium min-w-[100px] text-center
+            ${uploading || !docTitle
+                          ? 'bg-gray-400 cursor-not-allowed text-white'
+                          : 'bg-blue-600 hover:bg-blue-700 text-white'
+                        }`}
+                    >
+                      {uploading ? 'Uploading...' : 'Upload'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {supportDocs.length > 0 ? (
+              <div className="space-y-2">
+                {supportDocs.map((d, i) => (
+                  <div key={i} className="flex flex-col sm:flex-row sm:items-center justify-between p-3 bg-white border rounded hover:bg-gray-50 gap-2">
+                    <div className="flex-1">
+                      <a
+                        href={d.url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-blue-600 hover:text-blue-800 underline flex items-start sm:items-center gap-2 text-sm font-medium"
+                      >
+                        <FileText className="w-4 h-4 flex-shrink-0 mt-0.5 text-blue-600" />
+                        <span className="break-words text-blue-600">
+                          {d.title} ({d.fileName})
+                        </span>
+                      </a>
+                      <div className="text-xs text-blue-500 mt-1">
+                        Uploaded on {d.uploadDate}
+                        {d.fileSize ? ` • Size: ${Math.round(d.fileSize / 1024)} KB` : ''}
+                      </div>
+                    </div>
+                    {editMode && (
+                      <button
+                        onClick={() => handleDeleteDoc(i)}
+                        className="p-2 text-red-600 hover:bg-red-50 rounded self-end sm:self-center"
+                        title="Delete document"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center p-6 md:p-8 text-gray-500 text-sm">
+                No supporting documents uploaded yet.
+              </div>
+            )}
+          </div>
 
           {/* ================= EXCEL UPLOAD MODAL ================= */}
           {showUploadModal && (

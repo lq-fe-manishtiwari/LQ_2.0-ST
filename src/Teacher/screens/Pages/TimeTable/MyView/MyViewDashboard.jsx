@@ -16,9 +16,12 @@ import {
     Tag,
     Layers,
     AlertCircle,
-        PartyPopper, 
+    PartyPopper,
+    Download,
+    Loader2
 } from "lucide-react";
 import { timetableService } from '../Services/timetable.service';
+import TimetableExport from './TimetableExport';
 
 const MyViewDashboard = () => {
     const navigate = useNavigate();
@@ -45,13 +48,16 @@ const MyViewDashboard = () => {
 
     const [showMonthPopup, setShowMonthPopup] = useState(false);
     const [popupDate, setPopupDate] = useState(null);
+    const [initialLoading, setInitialLoading] = useState(false);
     const [popupData, setPopupData] = useState([]);
+
+    const [isExportingMonth, setIsExportingMonth] = useState(false);
 
     // Check holiday
     const getHolidayInfoForDay = (date) => {
         const dateStr = formatDateToYMD(date);
         const dayData = timetableData.filter(item => item && item.date === dateStr);
-        
+
         if (dayData.length > 0 && dayData[0].is_holiday) {
             return {
                 isHoliday: true,
@@ -681,7 +687,7 @@ const MyViewDashboard = () => {
                     <p className="text-amber-600">
                         No classes scheduled for today. Enjoy your holiday!
                     </p>
-</div>
+                </div>
             </div>
         </div>
     );
@@ -769,20 +775,20 @@ const MyViewDashboard = () => {
                             </div>
 
                             <div className="flex flex-wrap gap-1 sm:gap-2 md:gap-3">
-            <button
-    type="button"
-    onClick={() => navigate('/teacher/timetable/View-Upadate-Timetable', { 
-        state: { 
-            slot,
-            template_slot_id: slot.template_slot_id,
-            exception_id: slot.exception_id,
-            is_exception: slot.is_exception
-        } 
-    })}
-    className="text-[10px] sm:text-xs px-2 sm:px-3 py-1 bg-orange-500 hover:bg-orange-600 text-white rounded-full transition"
->
-    Update
-</button>
+                                <button
+                                    type="button"
+                                    onClick={() => navigate('/teacher/timetable/View-Upadate-Timetable', {
+                                        state: {
+                                            slot,
+                                            template_slot_id: slot.template_slot_id,
+                                            exception_id: slot.exception_id,
+                                            is_exception: slot.is_exception
+                                        }
+                                    })}
+                                    className="text-[10px] sm:text-xs px-2 sm:px-3 py-1 bg-orange-500 hover:bg-orange-600 text-white rounded-full transition"
+                                >
+                                    Update
+                                </button>
                                 <button
                                     type="button"
                                     onClick={() => navigate('/teacher/attendance/tabular-view', {
@@ -864,7 +870,7 @@ const MyViewDashboard = () => {
     // Empty State Components
     const EmptyDayState = () => {
         const holidayInfo = getHolidayInfoForDay(selectedDate);
-        
+
         if (holidayInfo.isHoliday) {
             return <HolidayCard holidayName={holidayInfo.holidayName} date={selectedDate} />;
         }
@@ -1072,7 +1078,7 @@ const MyViewDashboard = () => {
                                                 return false;
                                             }
                                         }) : [];
-                                        
+
                                         const isHoliday = dayData.length > 0 && dayData[0].is_holiday;
                                         const isToday = item.fullDate && isSameDay(item.fullDate, new Date());
 
@@ -1086,7 +1092,7 @@ const MyViewDashboard = () => {
                                                                 ? "bg-primary-600 text-white shadow-lg shadow-primary-200 font-bold"
                                                                 : isToday
                                                                     ? "bg-blue-50 text-blue-600 hover:bg-blue-100"
-                                                                        : "bg-slate-50 text-slate-600 hover:bg-primary-50 hover:text-primary-600"
+                                                                    : "bg-slate-50 text-slate-600 hover:bg-primary-50 hover:text-primary-600"
                                                             }`}
                                                     >
                                                         <span>{item.day}</span>
@@ -1183,6 +1189,11 @@ const MyViewDashboard = () => {
                                             </button>
                                         ))}
                                     </div>
+                                    <TimetableExport
+                                        currentDate={currentDate}
+                                        filters={{ teacher: teacherId }}
+                                        academicInfo={academicInfo}
+                                    />
                                 </div>
                             </div>
                         )}
@@ -1256,10 +1267,10 @@ const MyViewDashboard = () => {
                                                     )}
                                                 </h1>
                                                 <p className="text-sm sm:text-base text-slate-500 font-medium mt-1">
-                                                    {selectedDateHolidayInfo.isHoliday 
+                                                    {selectedDateHolidayInfo.isHoliday
                                                         ? selectedDateHolidayInfo.holidayName
-                                                        : dayScheduleData.length === 0 
-                                                            ? "No classes scheduled" 
+                                                        : dayScheduleData.length === 0
+                                                            ? "No classes scheduled"
                                                             : `${dayScheduleData.length} session${dayScheduleData.length > 1 ? 's' : ''}`}
                                                 </p>
                                             </div>
