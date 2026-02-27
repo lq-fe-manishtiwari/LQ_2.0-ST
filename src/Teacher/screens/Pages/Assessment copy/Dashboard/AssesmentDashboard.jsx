@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   BarChart,
   Bar,
@@ -25,7 +25,8 @@ import {
   Download
 } from 'lucide-react';
 import { AssessmentService } from '../Services/assessment.service';
-import { collegeService } from '../../Academics/Services/college.service';
+import { useAssessmentFormLogic } from '../../Assessment/hooks/useAssessmentFormLogic';
+import { useUserProfile } from '../../../../../contexts/UserProfileContext';
 import DatePicker from 'react-datepicker';
 import "react-datepicker/dist/react-datepicker.css";
 
@@ -37,16 +38,28 @@ const AssessmentDashboard = () => {
   const activeCollege = JSON.parse(localStorage.getItem("activeCollege")) || {};
   const collegeId = activeCollege?.id || activeCollege?.college_id;
 
-  const [programs, setPrograms] = useState([]);
-  const [selectedProgram, setSelectedProgram] = useState('');
+  const { getTeacherId } = useUserProfile();
 
+  const [selectedProgram, setSelectedProgram] = useState('');
   const [selectedDate, setSelectedDate] = useState(new Date());
 
+  // Use teacher-allocated programs via the hook (same as Assessment.jsx / AddCO.jsx)
+  const formData = useMemo(() => ({
+    selectedProgram: selectedProgram,
+    selectedAcademicSemester: '',
+    selectedBatch: '',
+    selectedSubject: ''
+  }), [selectedProgram]);
+
+  const { options } = useAssessmentFormLogic(formData);
+  const programs = options.programs; // [{label, value, full}]
+
+  // Auto-select first program once loaded
   useEffect(() => {
-    if (collegeId) {
-      fetchPrograms();
+    if (programs.length > 0 && !selectedProgram) {
+      setSelectedProgram(programs[0].value);
     }
-  }, [collegeId]);
+  }, [programs]);
 
   useEffect(() => {
     if (collegeId && selectedProgram) {
@@ -54,26 +67,16 @@ const AssessmentDashboard = () => {
     }
   }, [collegeId, selectedProgram, selectedDate]);
 
-  const fetchPrograms = async () => {
-    try {
-      const res = await collegeService.getProgramByCollegeId(collegeId);
-      if (res && Array.isArray(res) && res.length > 0) {
-        setPrograms(res);
-        setSelectedProgram(res[0].program_id);
-      }
-    } catch (error) {
-      console.error("Error fetching programs:", error);
-    }
-  };
-
   const fetchDashboardData = async () => {
     try {
       setLoading(true);
+      const teacherId = getTeacherId();
       const payload = {
         "college_id": Number(collegeId),
         "program_id": Number(selectedProgram),
         "month": selectedDate.getMonth() + 1,
-        "year": selectedDate.getFullYear()
+        "year": selectedDate.getFullYear(),
+        ...(teacherId ? { "subject_teacher_id": Number(teacherId) } : {})
       };
 
       const response = await AssessmentService.getDashboardStats(payload);
@@ -263,8 +266,8 @@ const AssessmentDashboard = () => {
                 className="px-4 py-2 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 max-w-[200px]"
               >
                 {programs.map((prog) => (
-                  <option key={prog.program_id} value={prog.program_id}>
-                    {prog.program_name || prog.name}
+                  <option key={prog.value} value={prog.value}>
+                    {prog.label}
                   </option>
                 ))}
               </select>
