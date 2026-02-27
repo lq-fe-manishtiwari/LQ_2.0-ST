@@ -209,39 +209,39 @@ function getTeacherDailyReport(teacherId, collegeId, date) {
         .then(handleResponse);
 }
 
-// GET /api/other-activities?teacherId={teacherId}&date={date}
+// GET /api/admin/teacher-other-activity/teacher/{teacherId}/date/{date}
 function getOtherActivities(teacherId, date) {
     const requestOptions = { method: 'GET', headers: authHeader() };
-    return fetch(`${PMSAPI}/other-activities?teacherId=${teacherId}&date=${date}`, requestOptions)
+    return fetch(`${PMSAPI}/admin/teacher-other-activity/teacher/${teacherId}/date/${date}`, requestOptions)
         .then(handleResponse);
 }
 
-// POST /api/other-activities
+// POST /api/admin/teacher-other-activity
 function createOtherActivity(values) {
     const requestOptions = {
         method: 'POST',
         headers: authHeaderToPost(),
         body: JSON.stringify(values)
     };
-    return fetch(`${PMSAPI}/other-activities`, requestOptions)
+    return fetch(`${PMSAPI}/admin/teacher-other-activity`, requestOptions)
         .then(handleResponse);
 }
 
-// PUT /api/other-activities/{id}
+// PUT /api/admin/teacher-other-activity/{id}
 function updateOtherActivity(id, values) {
     const requestOptions = {
         method: 'PUT',
         headers: authHeaderToPost(),
         body: JSON.stringify(values)
     };
-    return fetch(`${PMSAPI}/other-activities/${id}`, requestOptions)
+    return fetch(`${PMSAPI}/admin/teacher-other-activity/${id}`, requestOptions)
         .then(handleResponse);
 }
 
-// DELETE /api/other-activities/{id}
+// DELETE /api/admin/teacher-other-activity/{id}
 function deleteOtherActivity(id) {
     const requestOptions = { method: 'DELETE', headers: authHeader() };
-    return fetch(`${PMSAPI}/other-activities/${id}`, requestOptions)
+    return fetch(`${PMSAPI}/admin/teacher-other-activity/${id}`, requestOptions)
         .then(handleResponse);
 }
 

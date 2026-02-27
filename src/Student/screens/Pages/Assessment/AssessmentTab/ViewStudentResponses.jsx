@@ -7,6 +7,18 @@ const ViewStudentResponses = () => {
     const navigate = useNavigate();
     const { id } = useParams();
 
+    const getStudentId = () => {
+        try {
+            const profileStr = localStorage.getItem('userProfile');
+            if (!profileStr) return null;
+            const profile = JSON.parse(profileStr);
+            return profile?.student_id || null;
+        } catch (error) {
+            console.error('Error parsing profile:', error);
+            return null;
+        }
+    };
+
     const [loading, setLoading] = useState(true);
     const [assessmentData, setAssessmentData] = useState(null);
     const [mergedResponses, setMergedResponses] = useState([]);
@@ -24,7 +36,7 @@ const ViewStudentResponses = () => {
             setLoading(true);
             const [questionsData, responsesData] = await Promise.all([
                 assessmentService.getAssessmentQuestions(id).catch(() => null),
-                assessmentService.getAssessmentResponses(id).catch(() => null)
+                assessmentService.getAssessmentResponses(getStudentId(), id).catch(() => null)
             ]);
 
             if (responsesData) {
@@ -157,13 +169,13 @@ const ViewStudentResponses = () => {
                                     Question {currentQuestionIdx + 1}
                                 </h2>
                                 <p className="text-[10px] text-gray-500 uppercase font-black tracking-widest mt-0.5">
-                                    Type: {currentQ.question_category} • Marks: {currentQ.marks || 0}
+                                    Type: {currentQ.question_category} • Marks: {currentQ.max_marks ?? currentQ.marks ?? studentAns.max_marks ?? 0}
                                 </p>
                             </div>
                             <div className="text-right">
                                 <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border 
-                                    ${studentAns.marks_obtained > 0 ? 'bg-green-50 text-green-700 border-green-200' : 'bg-gray-100 text-gray-600 border-gray-200'}`}>
-                                    Score: {studentAns.marks_obtained || 0} / {currentQ.marks || 0}
+                                    ${(currentQ.evaluation?.marks_obtained ?? studentAns.marks_obtained ?? 0) > 0 ? 'bg-green-50 text-green-700 border-green-200' : 'bg-gray-100 text-gray-600 border-gray-200'}`}>
+                                    Score: {currentQ.evaluation?.marks_obtained ?? studentAns.marks_obtained ?? 0} / {currentQ.max_marks ?? currentQ.marks ?? studentAns.max_marks ?? 0}
                                 </span>
                             </div>
                         </div>
@@ -223,7 +235,7 @@ const ViewStudentResponses = () => {
                                                     <Info className="w-4 h-4" />
                                                     Response Details:
                                                 </div>
-                                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                                                     <div className="p-4 bg-white border border-gray-200 rounded-xl">
                                                         <p className="text-[10px] text-gray-400 uppercase font-black mb-1">Answer ID</p>
                                                         <p className="font-mono font-bold text-gray-800">{studentAns.selected_option_id || 'N/A'}</p>
@@ -232,6 +244,12 @@ const ViewStudentResponses = () => {
                                                         <p className="text-[10px] text-gray-400 uppercase font-black mb-1">Accuracy</p>
                                                         <p className={`font-bold ${studentAns.is_correct ? 'text-green-600' : 'text-red-500'}`}>
                                                             {studentAns.is_correct ? 'Correct' : 'Incorrect'}
+                                                        </p>
+                                                    </div>
+                                                    <div className="p-4 bg-white border border-gray-200 rounded-xl">
+                                                        <p className="text-[10px] text-gray-400 uppercase font-black mb-1">Marks Obtained</p>
+                                                        <p className="font-bold text-gray-800">
+                                                            {currentQ.evaluation?.marks_obtained ?? studentAns.marks_obtained ?? 0} <span className="text-gray-400 text-xs font-medium">/ {currentQ.max_marks ?? currentQ.marks ?? studentAns.max_marks ?? 0}</span>
                                                         </p>
                                                     </div>
                                                 </div>
@@ -249,6 +267,15 @@ const ViewStudentResponses = () => {
                                             <div className="text-gray-800 leading-[1.8] font-medium text-lg whitespace-pre-wrap min-h-[150px] font-serif">
                                                 {studentAns.text_response || 'No response recorded by candidate.'}
                                             </div>
+                                            {/* <div className="mt-6 pt-5 border-t border-gray-200/50 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                                                <div className="flex items-center gap-2">
+                                                    <p className="text-xs text-gray-500 font-medium uppercase tracking-wider">Marks Obtained</p>
+                                                </div>
+                                                <span className={`px-4 py-2 rounded-xl text-sm font-black tracking-wide border shadow-sm
+                                                    ${(currentQ.evaluation?.marks_obtained ?? studentAns.marks_obtained ?? 0) > 0 ? 'bg-green-50 text-green-700 border-green-200' : 'bg-red-50 text-red-600 border-red-200'}`}>
+                                                    {currentQ.evaluation?.marks_obtained ?? studentAns.marks_obtained ?? 0} <span className="text-gray-400 text-xs font-medium">/ {currentQ.max_marks ?? currentQ.marks ?? studentAns.max_marks ?? 0}</span>
+                                                </span>
+                                            </div> */}
                                         </div>
 
                                         {/* Evaluator Remarks */}
@@ -319,16 +346,40 @@ const ViewStudentResponses = () => {
                             <div className="grid grid-cols-4 gap-3 mb-8 max-h-[450px] overflow-y-auto blue-scrollbar pr-2">
                                 {mergedResponses.map((res, idx) => {
                                     const isCurrent = currentQuestionIdx === idx;
-                                    const isAnswered = res.student_response?.response_id;
+                                    const sr = res.student_response || {};
+                                    const isAnswered = !!sr.response_id;
+
+                                    // Determine correctness
+                                    let isCorrect = false;
+                                    if (isAnswered) {
+                                        if (res.question_category === 'OBJECTIVE') {
+                                            // Use API flag if available, else check selected option
+                                            if (sr.is_correct !== undefined) {
+                                                isCorrect = sr.is_correct === true || sr.is_correct === 'true';
+                                            } else {
+                                                const correctOpt = (res.options || []).find(o => o.is_correct === true || o.is_answer === true);
+                                                isCorrect = correctOpt && sr.selected_option_id === correctOpt.option_id;
+                                            }
+                                        } else {
+                                            // Subjective: correct if marks obtained > 0
+                                            const marksObtained = res.evaluation?.marks_obtained ?? sr.marks_obtained ?? 0;
+                                            isCorrect = marksObtained > 0;
+                                        }
+                                    }
 
                                     return (
                                         <button
                                             key={idx}
                                             onClick={() => setCurrentQuestionIdx(idx)}
                                             className={`w-12 h-12 rounded-xl text-sm font-bold transition-all border-2
-                                                ${isCurrent ? 'bg-blue-600 text-white border-blue-600 shadow-md transform scale-105' :
-                                                    isAnswered ? 'bg-emerald-50 text-emerald-700 border-emerald-100 hover:bg-emerald-100' :
-                                                        'bg-gray-50 text-gray-400 border-gray-50 hover:border-gray-200 hover:text-gray-600'}`}
+                                                ${isCurrent
+                                                    ? 'bg-blue-600 text-white border-blue-600 shadow-md transform scale-105'
+                                                    : !isAnswered
+                                                        ? 'bg-gray-50 text-gray-400 border-gray-200 hover:border-gray-300 hover:text-gray-600'
+                                                        : isCorrect
+                                                            ? 'bg-emerald-50 text-emerald-700 border-emerald-300 hover:bg-emerald-100'
+                                                            : 'bg-red-50 text-red-600 border-red-300 hover:bg-red-100'
+                                                }`}
                                         >
                                             {idx + 1}
                                         </button>

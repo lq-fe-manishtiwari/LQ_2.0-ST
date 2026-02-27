@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   Users,
   GraduationCap,
@@ -8,10 +8,12 @@ import {
   User,
   Loader2,
   Edit,
+  Download,
 } from "lucide-react";
 import { committeeService } from "../Services/committee.service";
 import CommitteeEditModal from "./CommitteeEditModal";
 import { useUserProfile } from "../../../../../contexts/UserProfileContext";
+import jsPDF from "jspdf";
 
 export default function Committee() {
   const userProfile = useUserProfile();
@@ -133,6 +135,118 @@ export default function Committee() {
     return levels;
   };
 
+
+
+  const getReportMeta = () => {
+    const activeCollege = JSON.parse(localStorage.getItem("activeCollege") || "{}");
+    const collegeName = activeCollege?.college_name || activeCollege?.name || "N/A";
+    const generatedOn = new Date().toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" });
+    const teacherName = userProfile?.teacherName || "N/A";
+    // We don't have programId context in Committee component typically, but we can extract if needed
+    return { collegeName, generatedOn, teacherName };
+  };
+
+  const downloadPDF = () => {
+    if (!committeeData || committeeData.length === 0) return;
+    const { collegeName, generatedOn, teacherName } = getReportMeta();
+    const doc = new jsPDF();
+    const pageW = doc.internal.pageSize.getWidth();
+    const pageH = doc.internal.pageSize.getHeight();
+    const margin = 14;
+    const contentW = pageW - margin * 2;
+
+    // College name (top)
+    doc.setFontSize(13);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(30, 30, 30);
+    doc.text(collegeName, margin, 14);
+
+    // Report title
+    doc.setFontSize(11);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(80, 80, 80);
+    doc.text("Report: Committee Memberships", margin, 21);
+
+    // Separator
+    doc.setDrawColor(200, 200, 200);
+    doc.setLineWidth(0.4);
+    doc.line(margin, 31, pageW - margin, 31);
+
+    let y = 38;
+
+    committeeData.forEach((level) => {
+      const hasData = level.chairperson.length > 0 || level.member.length > 0;
+      if (!hasData) return;
+
+      const titleText = level.level;
+      const titleLines = doc.splitTextToSize(titleText, contentW - 8);
+      const titleBlockH = titleLines.length * 6 + 7;
+
+      // Page break if not enough room
+      if (y + titleBlockH + 14 > pageH - 14) {
+        doc.addPage();
+        y = 20;
+      }
+
+      // Blue header block
+      doc.setFillColor(235, 243, 255);
+      doc.setDrawColor(147, 197, 253);
+      doc.setLineWidth(0.3);
+      doc.roundedRect(margin, y, contentW, titleBlockH, 2, 2, "FD");
+
+      doc.setFontSize(10);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(29, 78, 216);
+      doc.text(titleLines, margin + 5, y + 5.5);
+      y += titleBlockH + 3;
+
+      // Function to render list
+      const renderList = (items, roleName, colorCircle, colorText) => {
+        if (items.length === 0) return;
+
+        // Role Header
+        if (y + 10 > pageH - 14) {
+          doc.addPage();
+          y = 20;
+        }
+        doc.setFontSize(9);
+        doc.setFont("helvetica", "bold");
+        doc.setTextColor(...colorText);
+        doc.text(`As ${roleName}`, margin + 5, y + 3);
+        y += 7;
+
+        // Items
+        items.forEach((item) => {
+          const pointLines = doc.splitTextToSize(item, contentW - 16);
+          const pointH = pointLines.length * 5.5 + 3;
+
+          if (y + pointH > pageH - 14) {
+            doc.addPage();
+            y = 20;
+          }
+
+          // Bullet dot
+          doc.setFillColor(...colorCircle);
+          doc.circle(margin + 5, y + 2.2, 1, "F");
+
+          doc.setFontSize(9);
+          doc.setFont("helvetica", "normal");
+          doc.setTextColor(75, 85, 99);
+          doc.text(pointLines, margin + 10, y + 2);
+          y += pointH;
+        });
+      };
+
+      renderList(level.chairperson, "Chairperson", [156, 163, 175], [0, 0, 0]);
+      y += 2;
+      renderList(level.member, "Member", [156, 163, 175], [0, 0, 0]);
+
+      y += 5; // gap between levels
+    });
+
+    doc.save(`Committee_Memberships_${new Date().toISOString().split("T")[0]}.pdf`);
+  };
+
   const handleEdit = (committee) => {
     setEditingCommittee(committee);
     setShowEditModal(true);
@@ -217,11 +331,26 @@ export default function Committee() {
   return (
     <div className="mx-auto">
       {/* Header */}
-      <div className="flex items-center gap-3 mb-6">
-        <Users className="w-8 h-8 text-primary-600" />
-        <h2 className="text-2xl font-bold text-gray-800">
-          Committee Memberships
-        </h2>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+        <div className="flex items-center gap-3">
+          <Users className="w-8 h-8 text-primary-600" />
+          <h2 className="text-2xl font-bold text-gray-800">
+            Committee Memberships
+          </h2>
+        </div>
+
+        {/* Export Button */}
+        <div className="relative w-full sm:w-auto">
+          <button
+            onClick={downloadPDF}
+            disabled={!committeeData.length || loading}
+            className={`w-full flex items-center justify-center gap-2 px-6 py-2.5 text-sm font-semibold bg-green-600 border border-green-700 rounded-xl text-white hover:bg-green-700 shadow-md transition-all active:scale-95 ${!committeeData.length || loading ? "opacity-50 cursor-not-allowed" : ""
+              }`}
+          >
+            <Download className="w-4 h-4" />
+            <span>Download PDF</span>
+          </button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
@@ -267,9 +396,9 @@ export default function Committee() {
                     {/* Chairperson */}
                     {level.chairperson.length > 0 && (
                       <div className="space-y-3">
-                        <div className="flex items-center gap-2 px-3 py-1.5 bg-primary-50 rounded-lg w-fit">
-                          <Crown className="w-4 h-4 text-primary-600" />
-                          <p className="font-bold text-[11px] text-primary-700 uppercase tracking-widest leading-none mt-0.5">
+                        <div className="flex items-center gap-2 px-3 py-1.5 bg-gray-50 rounded-lg w-fit">
+                          <Crown className="w-4 h-4 text-gray-500" />
+                          <p className="font-bold text-[11px] text-gray-600 uppercase tracking-widest leading-none mt-0.5">
                             As Chairperson
                           </p>
                         </div>
@@ -277,7 +406,7 @@ export default function Committee() {
                         <ul className="space-y-2">
                           {level.chairperson.map((item, i) => (
                             <li key={i} className="flex items-start gap-3">
-                              <span className="w-1.5 h-1.5 rounded-full bg-primary-400 mt-2 shrink-0"></span>
+                              <span className="w-1.5 h-1.5 rounded-full bg-gray-300 mt-2 shrink-0"></span>
                               <span className="text-sm text-gray-600 leading-relaxed">{item}</span>
                             </li>
                           ))}

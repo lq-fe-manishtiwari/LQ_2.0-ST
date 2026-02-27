@@ -1,8 +1,11 @@
-import React, { useEffect, useState } from "react";
-import { Plus, Trash2 } from "lucide-react";
+import React, { useEffect, useState, useRef } from "react";
+import { Plus, Trash2, Download, ChevronDown, UserX } from "lucide-react";
 import { listOfBooksService } from "../Services/listOfBooks.service";
 import { useUserProfile } from "../../../../../contexts/UserProfileContext";
 import Swal from 'sweetalert2';
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
+import ExcelJS from "exceljs";
 
 /* ----------------------------------
    Input Field Component
@@ -153,6 +156,131 @@ const ListOfBooks = () => {
   const collegeId = userProfile.getCollegeId();
   const departmentId = userProfile.getDepartmentId();
 
+  const [showExportDropdown, setShowExportDropdown] = useState(false);
+  const exportMenuRef = useRef(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (exportMenuRef.current && !exportMenuRef.current.contains(event.target)) {
+        setShowExportDropdown(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const getCollegeName = () => {
+    try {
+      const activeCollegeStr = localStorage.getItem("activeCollege");
+      if (!activeCollegeStr) return "";
+      const activeCollege = JSON.parse(activeCollegeStr);
+      return activeCollege?.name || activeCollege?.college_name || "";
+    } catch (error) {
+      console.error("Error parsing activeCollege:", error);
+      return "";
+    }
+  };
+  const collegeName = getCollegeName();
+
+  const getExportData = () => {
+    return books.flatMap(book =>
+      (book.list_of_books_table || []).map(row => ({
+        date: row.date || '-',
+        name_of_book: row.name_of_book || '-',
+        article: row.article || '-',
+        author: row.author || '-'
+      }))
+    );
+  };
+
+  const handleExportPDF = () => {
+    const doc = new jsPDF();
+    const pageWidth = doc.internal.pageSize.width;
+    doc.setFontSize(16);
+    doc.text(collegeName, pageWidth / 2, 15, { align: 'center' });
+    doc.setFontSize(14);
+    doc.text('List of Books / Journals Referred Report', pageWidth / 2, 22, { align: 'center' });
+
+    const data = getExportData();
+    const headers = [['Date', 'Book Name', 'Article', 'Author']];
+    const rows = data.map(item => [item.date, item.name_of_book, item.article, item.author]);
+
+    autoTable(doc, {
+      head: headers,
+      body: rows,
+      startY: 30,
+      theme: 'grid',
+      headStyles: { fillColor: [37, 99, 235] }
+    });
+
+    doc.save(`List_of_Books_${new Date().toISOString().split('T')[0]}.pdf`);
+    setShowExportDropdown(false);
+  };
+
+  const handleExportExcel = async () => {
+    try {
+      const workbook = new ExcelJS.Workbook();
+      const worksheet = workbook.addWorksheet('Books Reference');
+
+      const titleRow0 = worksheet.addRow([collegeName]);
+      worksheet.mergeCells(`A1:D1`);
+      titleRow0.getCell(1).font = { size: 16, bold: true };
+      titleRow0.getCell(1).alignment = { horizontal: 'center', vertical: 'middle' };
+
+      const titleRow = worksheet.addRow(['List of Books / Journals Referred Report']);
+      worksheet.mergeCells(`A2:D2`);
+      titleRow.getCell(1).font = { size: 14, bold: true };
+      titleRow.getCell(1).alignment = { horizontal: 'center', vertical: 'middle' };
+      worksheet.addRow([]);
+
+      const headers = ['Date', 'Book Name', 'Article', 'Author'];
+      const headerRow = worksheet.addRow(headers);
+      headerRow.eachCell(cell => {
+        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF2563EB' } };
+        cell.font = { color: { argb: 'FFFFFFFF' }, bold: true };
+        cell.alignment = { horizontal: 'center', vertical: 'middle' };
+      });
+
+      const data = getExportData();
+      data.forEach(item => {
+        worksheet.addRow([item.date, item.name_of_book, item.article, item.author]);
+      });
+
+      worksheet.columns.forEach(col => { col.width = 25; });
+
+      const buffer = await workbook.xlsx.writeBuffer();
+      const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = `List_of_Books_${new Date().toISOString().split('T')[0]}.xlsx`;
+      link.click();
+      setShowExportDropdown(false);
+    } catch (err) {
+      console.error('Export Excel failed:', err);
+    }
+  };
+
+  const handleExportCSV = () => {
+    const data = getExportData();
+    const headers = ['Date', 'Book Name', 'Article', 'Author'];
+    let csvContent = `"${collegeName}"\n`;
+    csvContent += `"List of Books / Journals Referred Report"\n\n`;
+    csvContent += headers.map(h => `"${h}"`).join(',') + '\n';
+
+    data.forEach(item => {
+      csvContent += [item.date, item.name_of_book, item.article, item.author]
+        .map(val => `"${val}"`)
+        .join(',') + '\n';
+    });
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `List_of_Books_${new Date().toISOString().split('T')[0]}.csv`;
+    link.click();
+    setShowExportDropdown(false);
+  };
+
   const fetchBooks = async () => {
     if (!userId) {
       console.log("No user ID available");
@@ -256,6 +384,48 @@ const ListOfBooks = () => {
         <h2 className="text-lg font-semibold">
           List of Books / Journals Referred
         </h2>
+
+        <div className="flex gap-2 items-center">
+          <button
+            onClick={() => setShowForm(true)}
+            disabled={!userId}
+            className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm transition-colors shadow-sm ${!userId
+              ? 'bg-gray-400 text-gray-700 cursor-not-allowed'
+              : 'bg-blue-600 text-white hover:bg-blue-700'
+              }`}
+          >
+            <Plus size={16} /> Add Book
+          </button>
+
+          {books.length > 0 && (
+            <div className="relative" ref={exportMenuRef}>
+              <button
+                onClick={() => setShowExportDropdown(!showExportDropdown)}
+                className="inline-flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg text-sm transition-colors shadow-sm"
+              >
+                <Download size={16} />
+                Export
+                <ChevronDown size={14} className={`transition-transform ${showExportDropdown ? 'rotate-180' : ''}`} />
+              </button>
+              {showExportDropdown && (
+                <div className="absolute right-0 top-full mt-2 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-50">
+                  <button onClick={handleExportPDF} className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2 rounded-t-lg transition-colors border-b border-gray-100">
+                    <Download size={14} className="text-red-500" />
+                    Export as PDF
+                  </button>
+                  <button onClick={handleExportExcel} className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2 transition-colors border-b border-gray-100">
+                    <Download size={14} className="text-green-600" />
+                    Export as Excel
+                  </button>
+                  <button onClick={handleExportCSV} className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2 rounded-b-lg transition-colors">
+                    <Download size={14} className="text-gray-500" />
+                    Export as CSV
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
       </div>
 
       {loading ? (
@@ -263,10 +433,7 @@ const ListOfBooks = () => {
       ) : books.length === 0 ? (
         <div>
           <p className="text-sm text-gray-500 italic mb-2">
-            No records available for User ID: {userId}
-          </p>
-          <p className="text-xs text-gray-400">
-            College: {collegeId} | Department: {departmentId}
+            No records available
           </p>
         </div>
       ) : (
@@ -323,16 +490,7 @@ const ListOfBooks = () => {
         </div>
       )}
 
-      <button
-        onClick={() => setShowForm(true)}
-        disabled={!userId}
-        className={`mt-4 inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm transition-colors ${!userId
-            ? 'bg-gray-400 text-gray-700 cursor-not-allowed'
-            : 'bg-blue-600 text-white hover:bg-blue-700'
-          }`}
-      >
-        <Plus size={16} /> Add Book
-      </button>
+
 
       {!userId && (
         <p className="text-xs text-red-500 mt-2">

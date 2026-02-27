@@ -11,13 +11,22 @@ export const assessmentService = {
 };
 
 // Fetch student responses for an assessment
-async function getAssessmentResponses(assessmentId) {
+// async function getAssessmentResponses(assessmentId) {
+//     const requestOptions = {
+//         method: 'GET',
+//         headers: authHeaderToPost(),
+//     };
+
+//     return fetch(`${ContentAPI}/student/assessment/attempt/${assessmentId}/responses`, requestOptions)
+//         .then(handleResponse);
+// }
+async function getAssessmentResponses(studentId, assessmentId) {
     const requestOptions = {
         method: 'GET',
         headers: authHeaderToPost(),
     };
 
-    return fetch(`${ContentAPI}/student/assessment/attempt/${assessmentId}/responses`, requestOptions)
+    return fetch(`${ContentAPI}/student/assessment/attempt/student/${studentId}/assessment/${assessmentId}`, requestOptions)
         .then(handleResponse);
 }
 

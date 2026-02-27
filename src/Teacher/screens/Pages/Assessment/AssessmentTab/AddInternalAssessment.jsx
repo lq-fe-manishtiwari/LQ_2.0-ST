@@ -10,11 +10,9 @@ import assesment_logo from '@/_assets/images_new_design/Assessment_logo.svg';
 import SearchImg from '@/_assets/images/Search.svg';
 
 
-// Mock services (replace with actual imports)
-import { collegeService } from '../../Content/services/college.service';
 import { contentService } from '../../Content/services/content.service';
-// import { fetchClassesByprogram } from '../../Student/Services/student.service'; // Removed in favor of Batch flow
-import { listOfBooksService as batchService } from '../../AcademicDiary/Services/listOfBooks.service'; // Replaced missing batchService
+import { contentService as addContentService } from '../../Content/services/AddContent.service.js';
+import { getTeacherAllocatedPrograms } from '../../../../../_services/api.js';
 import { useUserProfile } from '../../../../../contexts/UserProfileContext';
 import { useAssessmentFormLogic } from '../hooks/useAssessmentFormLogic';
 import { AssessmentService } from '../Services/assessment.service';
@@ -67,7 +65,7 @@ const AddInternalAssessment = ({ grade, nba, currentUser, showSuccessModal, show
     rubrics: [], // Added for real rubrics
   });
 
-  // Hook integration
+  // Hook integration (for programs, academicSemesters, batches, subjects only)
   const formData = {
     selectedProgram: state.selectedGrade,
     selectedAcademicSemester: state.selectedAcademicYear && state.selectedSemester ? `${state.selectedAcademicYear}-${state.selectedSemester}` : '',
@@ -75,14 +73,50 @@ const AddInternalAssessment = ({ grade, nba, currentUser, showSuccessModal, show
     selectedSubject: state.selectedSubject
   };
 
-  const { options, loading: hookLoading, loadDivisionsForBatch, updateUnitsForModule } = useAssessmentFormLogic(formData);
+  const { options, loading: hookLoading } = useAssessmentFormLogic(formData);
 
-  // dropdown control for custom dropdowns (matches ObjectiveQuestion)
+  // ── Local states (ObjectiveQuestion.jsx approach) ──
+  const [allocationData, setAllocationData] = useState(null);
+  const [localDivisions, setLocalDivisions] = useState([]);
+  const [localModules, setLocalModules] = useState([]);
+  const [localUnits, setLocalUnits] = useState([]);
+
+  // dropdown control
   const [openDropdown, setOpenDropdown] = useState(null);
   const dropdownRefs = useRef({});
   const [hoveredType, setHoveredType] = useState(null);
   const [assessmentOpen, setAssessmentOpen] = useState(false);
   const [hoveredParent, setHoveredParent] = useState(null);
+
+  // ── ObjectiveQuestion-style: load allocationData once ──
+  useEffect(() => {
+    const teacherId = getTeacherId();
+    if (!teacherId) return;
+    getTeacherAllocatedPrograms(teacherId).then(res => {
+      if (res.success && res.data) setAllocationData(res.data);
+    }).catch(console.error);
+  }, []);
+
+  // ── Divisions from allocationData (exact ObjectiveQuestion logic) ──
+  useEffect(() => {
+    if (!state.selectedGrade || !state.selectedBatch || !state.selectedSemester || !allocationData) {
+      setLocalDivisions([]);
+      return;
+    }
+    const progId = parseInt(state.selectedGrade);
+    const batchId = parseInt(state.selectedBatch);
+    const semId = parseInt(state.selectedSemester);
+    const all = [...(allocationData.class_teacher_allocation || []), ...(allocationData.normal_allocation || [])];
+    const map = new Map();
+    all.filter(a =>
+      (a.program?.program_id || a.program_id) === progId &&
+      (a.batch?.batch_id || a.batch_id) === batchId &&
+      (a.semester?.semester_id || a.semester_id) === semId
+    ).forEach(a => {
+      if (a.division) map.set(a.division.division_id, { id: String(a.division.division_id), name: a.division.division_name });
+    });
+    setLocalDivisions(Array.from(map.values()));
+  }, [state.selectedGrade, state.selectedBatch, state.selectedSemester, allocationData]);
 
   // Fetch Programs (Grades) & Initialize Edit Mode
   useEffect(() => {
@@ -299,26 +333,57 @@ const AddInternalAssessment = ({ grade, nba, currentUser, showSuccessModal, show
   };
 
   const handleSubjectChange = (subjectId, setFieldValue) => {
-    setState(prev => ({ ...prev, selectedSubject: subjectId, selectedChapter: '', selectedTopic: '' }));
+    const subjectObj = options.subjects.find(s => String(s.value) === String(subjectId));
+    setState(prev => ({
+      ...prev,
+      selectedSubject: subjectId,
+      selectedSubjectName: subjectObj?.label || '',
+      selectedChapter: '', selectedChapterName: '',
+      selectedTopic: '', selectedTopicName: ''
+    }));
     setFieldValue('subject_id', subjectId);
     setFieldValue('chapter_id', '');
     setFieldValue('topic_id', '');
+    setLocalModules([]); setLocalUnits([]);
+    // Load modules using same API as ObjectiveQuestion
+    if (subjectId) {
+      addContentService.getModulesAndUnits(subjectId)
+        .then(res => {
+          const modules = (res?.modules || []).map(m => ({
+            id: String(m.module_id || m.id),
+            name: m.module_name || m.name,
+            units: m.units || []
+          }));
+          setLocalModules(modules);
+        })
+        .catch(console.error);
+    }
   };
 
   const handleChapterChange = (chapterId, setFieldValue) => {
-    setState(prev => ({ ...prev, selectedChapter: chapterId, selectedTopic: '' }));
+    const moduleObj = localModules.find(m => String(m.id) === String(chapterId));
+    setState(prev => ({
+      ...prev,
+      selectedChapter: chapterId,
+      selectedChapterName: moduleObj?.name || '',
+      selectedTopic: '', selectedTopicName: ''
+    }));
     setFieldValue('chapter_id', chapterId);
     setFieldValue('topic_id', '');
-    updateUnitsForModule(chapterId);
-
-    // Pass the new chapterId directly to loadQuestions to avoid stale state
+    // Units from module.units — same as ObjectiveQuestion
+    const units = (moduleObj?.units || []).map(u => ({ id: String(u.unit_id || u.id), name: u.unit_name || u.name }));
+    setLocalUnits(units);
     loadQuestions(setFieldValue, { selectedChapter: chapterId, selectedTopic: '' });
   };
 
   const handleTopicChange = (topicId, setFieldValue) => {
-    setState(prev => ({ ...prev, selectedTopic: topicId }));
+    const unitObj = localUnits.find(u => String(u.id) === String(topicId));
+    setState(prev => ({
+      ...prev,
+      selectedTopic: topicId,
+      selectedTopicName: unitObj?.name || ''
+    }));
     setFieldValue('topic_id', topicId);
-    // Pass the new topicId directly
     loadQuestions(setFieldValue, { selectedTopic: topicId });
   };
 
@@ -527,22 +592,17 @@ const AddInternalAssessment = ({ grade, nba, currentUser, showSuccessModal, show
         try {
           setSubmitting(true);
 
-          // Helper to get selected names - use == for robust string/number comparison
-          const selectedSubjectObj = state.subjects.find(s => s.subject_id == values.subject_id);
-          const selectedModuleObj = state.chapters.find(c => c.chapter_id == values.chapter_id);
-          const selectedTopicObj = state.topics.find(t => t.topic_id == values.topic_id);
+          const selectedSubjectObj = options.subjects.find(s => String(s.value) === String(values.subject_id));
+          const selectedModuleObj = localModules.find(m => String(m.id) === String(values.chapter_id));
+          const selectedTopicObj = localUnits.find(u => String(u.id) === String(values.topic_id));
 
           const selectedQuestions = state.filteredQuestions.filter(q => q.isChecked);
           const totalMarks = selectedQuestions.reduce((acc, q) => acc + (parseFloat(q.default_weight_age) || 1), 0);
 
+          // grade_division is now a plain ID string (not JSON)
           let divisionId = null;
           if (values.grade_division && values.grade_division !== 'All') {
-            try {
-              const parsed = typeof values.grade_division === 'string' ? JSON.parse(values.grade_division) : values.grade_division;
-              divisionId = parsed?.grade_division_id || parsed?.id || null;
-            } catch (e) {
-              divisionId = values.grade_division;
-            }
+            divisionId = values.grade_division; // already plain ID
           }
 
           const payload = {
@@ -555,13 +615,13 @@ const AddInternalAssessment = ({ grade, nba, currentUser, showSuccessModal, show
             division_id: divisionId ? parseInt(divisionId) : null,
 
             subject_id: parseInt(values.subject_id),
-            subject_name: selectedSubjectObj?.name || '',
+            subject_name: selectedSubjectObj?.label || state.selectedSubjectName || '',
 
             module_id: values.chapter_id ? parseInt(values.chapter_id) : null,
-            module_name: selectedModuleObj?.label || '',
+            module_name: selectedModuleObj?.name || state.selectedChapterName || '',
 
             unit_id: values.topic_id ? parseInt(values.topic_id) : null,
-            unit_name: selectedTopicObj?.label || '',
+            unit_name: selectedTopicObj?.name || state.selectedTopicName || '',
 
             title: values.title,
             type: (() => {
@@ -789,11 +849,12 @@ const AddInternalAssessment = ({ grade, nba, currentUser, showSuccessModal, show
                 fieldName="grade_division"
                 label="Division"
                 value={values.grade_division}
-                // Adapt divisions to CustomDropdown options (hook gives array of {label, value, full...})
-                options={['All', ...options.divisions.map(d => ({ value: d.value, name: d.label, grade_division_obj_str: JSON.stringify({ grade_division_id: d.value, grade_id: values.grade_id }) }))]}
+                options={[
+                  { value: 'All', name: 'All Divisions' },
+                  ...localDivisions.map(d => ({ value: d.id, name: d.name }))
+                ]}
                 placeholder="Select Division"
                 onChangeCallback={(val) => {
-                  // handleDivisionChange just sets value mostly
                   setFieldValue('grade_division', val);
                   setState(prev => ({ ...prev, selectedDivision: val }));
                 }}
@@ -823,9 +884,9 @@ const AddInternalAssessment = ({ grade, nba, currentUser, showSuccessModal, show
             <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
               <CustomDropdown
                 fieldName="chapter_id"
-                label="Module*"
+                label="Module"
                 value={values.chapter_id}
-                options={options.modules.map(c => ({ value: c.value, name: c.label }))}
+                options={localModules.map(m => ({ value: m.id, name: m.name }))}
                 placeholder="Select Module"
                 onChangeCallback={(val) => {
                   handleChapterChange(val, setFieldValue);
@@ -839,7 +900,7 @@ const AddInternalAssessment = ({ grade, nba, currentUser, showSuccessModal, show
                 fieldName="topic_id"
                 label="Unit"
                 value={values.topic_id}
-                options={options.units.map(t => ({ value: t.value, name: t.label }))}
+                options={localUnits.map(u => ({ value: u.id, name: u.name }))}
                 placeholder="Select Unit"
                 onChangeCallback={(val) => {
                   handleTopicChange(val, setFieldValue);
