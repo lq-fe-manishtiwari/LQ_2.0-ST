@@ -1,13 +1,13 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { ChevronDown, Upload, Plus, Trash2 } from 'lucide-react';
-import { collegeService } from '../../Academics/Services/college.service';
 import { batchService } from '../../Academics/Services/batch.Service';
-import { courseService } from '../../Courses/Services/courses.service';
-import { contentService } from '../../Content/Services/content.service.js';
+import { contentService } from '../../Content/services/content.service.js';
+import { contentService as academicsContentService } from '../../Academics/Services/content.service';
 // import { fetchClassesByprogram } from '../../Student/Services/student.service.js';
 import { useUserProfile } from '../../../../../contexts/UserProfileContext';
 import { COService } from "../Settings/Service/co.service.js"
 import { QuestionsService } from '../Services/questions.service.js';
+import { useAssessmentFormLogic } from '../../Assessment/hooks/useAssessmentFormLogic';
 
 const ObjectiveQuestion = ({
   formData,
@@ -18,10 +18,25 @@ const ObjectiveQuestion = ({
   const { userID, userRole } = useUserProfile();
   const activeCollege = JSON.parse(localStorage.getItem("activeCollege")) || {};
   const collegeId = activeCollege?.id;
+
+  // Must be declared before hookFormData useMemo
+  const [selectedProgramId, setSelectedProgramId] = useState(null);
+  const [selectedSubjectId, setSelectedSubjectId] = useState(null);
+  const [selectedModuleId, setSelectedModuleId] = useState(null);
+  const [selectedUnitId, setSelectedUnitId] = useState(null);
+
+  // Use the same hook as AddInternalAssessment for teacher-allocated programs
+  const hookFormData = useMemo(() => ({
+    selectedProgram: String(selectedProgramId || ''),
+    selectedAcademicSemester: '',
+    selectedBatch: '',
+    selectedSubject: '',
+  }), [selectedProgramId]);
+  const { options: hookOptions } = useAssessmentFormLogic(hookFormData);
+
   const [questionLevels, setQuestionLevels] = useState([]);
   const [loadingQuestionLevels, setLoadingQuestionLevels] = useState(false);
   // ==== Dropdown States ====
-  const [programOptions, setProgramOptions] = useState([]);
   const [batches, setBatches] = useState([]);
   const [academicYears, setAcademicYears] = useState([]);
   const [semesters, setSemesters] = useState([]);
@@ -29,12 +44,6 @@ const ObjectiveQuestion = ({
   const [chapterOptions, setChapterOptions] = useState([]);
   const [topicOptions, setTopicOptions] = useState([]);
   const [loadingBatches, setLoadingBatches] = useState(false);
-
-  const [selectedProgramId, setSelectedProgramId] = useState(null);
-  const [selectedClass, setSelectedClass] = useState(null);
-  const [selectedSubjectId, setSelectedSubjectId] = useState(null);
-  const [selectedModuleId, setSelectedModuleId] = useState(null);
-  const [selectedUnitId, setSelectedUnitId] = useState(null);
 
   // ==== UI States ====
   const [openDropdown, setOpenDropdown] = useState(null);
@@ -112,47 +121,39 @@ const ObjectiveQuestion = ({
   }, [collegeId]);
 
 
-  // Fetch Programs (Updated to use getProgramByCollegeId for consistency)
-  useEffect(() => {
-    const fetchPrograms = async () => {
-      if (!collegeId) return;
-      try {
-        const programsData = await collegeService.getProgramByCollegeId(collegeId);
-        setProgramOptions(programsData.map(p => ({
-          id: p.program_id,
-          name: p.program_name || p.name
-        })));
-      } catch (err) {
-        console.error('Failed to fetch programs:', err);
-      }
-    };
-    fetchPrograms();
-  }, [collegeId]);
-
-  // Fetch Batches when program changes
+  // Fetch Batches + Subjects when program changes
   useEffect(() => {
     if (!selectedProgramId) {
       setBatches([]);
       setAcademicYears([]);
       setSemesters([]);
+      setSubjectOptions([]);
       setFieldValue('common.batch', '');
       setFieldValue('common.academicYear', '');
       setFieldValue('common.semester', '');
+      setFieldValue('common.paper', '');
+      setFieldValue('common.paperId', '');
       return;
     }
 
     setLoadingBatches(true);
-    const fetchBatches = async () => {
+    const fetchBatchesAndSubjects = async () => {
       try {
-        const res = await batchService.getBatchByProgramId(selectedProgramId);
-        setBatches(res || []);
+        const [batchRes, subjectRes] = await Promise.all([
+          batchService.getBatchByProgramId(selectedProgramId),
+          contentService.getSubjectbyProgramId(selectedProgramId),
+        ]);
+        setBatches(batchRes || []);
+        const subjects = (subjectRes || []).filter(s => !s.is_deleted)
+          .map(s => ({ id: s.subject_id, name: s.subject_name || s.name }));
+        setSubjectOptions(subjects);
       } catch (err) {
-        console.error('Failed to fetch batches:', err);
+        console.error('Failed to fetch batches/subjects:', err);
       } finally {
         setLoadingBatches(false);
       }
     };
-    fetchBatches();
+    fetchBatchesAndSubjects();
   }, [selectedProgramId]);
 
   // Extract Academic Years when batch changes
@@ -192,35 +193,7 @@ const ObjectiveQuestion = ({
     setFieldValue('common.semester', '');
   }, [common.academicYearId, academicYears]);
 
-  // Fetch Subjects when semester changes
-  useEffect(() => {
-    const semId = common.semesterId;
-    if (!semId) {
-      setSubjectOptions([]);
-      return;
-    }
-    const fetchSubjects = async () => {
-      setLoadingSubjects(true);
-      try {
-        const response = await courseService.getFilteredPapers(
-          common.programId,
-          common.batchId,
-          common.academicYearId,
-          semId,
-          null,
-          null,
-          collegeId
-        );
-        setSubjectOptions(response.map(s => ({ id: s.subject_id, name: s.subject_name || s.name })));
-      } catch (err) {
-        console.error('Failed to fetch subjects:', err);
-        setSubjectOptions([]);
-      } finally {
-        setLoadingSubjects(false);
-      }
-    };
-    fetchSubjects();
-  }, [common.semesterId, collegeId]);
+
 
 
   // Fetch Modules
@@ -229,8 +202,8 @@ const ObjectiveQuestion = ({
       if (!selectedSubjectId) return;
       setLoadingModules(true);
       try {
-        const res = await contentService.getModulesbySubject(selectedSubjectId);
-        const modules = (res?.modules || res || []);
+        const res = await academicsContentService.getModulesbySubject(selectedSubjectId);
+        const modules = Array.isArray(res) ? res : (res?.modules || []);
         setChapterOptions(modules.map(m => ({
           module_id: m.module_id,
           module_name: m.module_name || m.label,
@@ -270,10 +243,11 @@ const ObjectiveQuestion = ({
 
   const handleCommonSelect = (fieldName, value) => {
     if (fieldName === 'program') {
-      const selected = programOptions.find(p => p.name === value);
-      setSelectedProgramId(selected?.id || null);
+      const selected = hookOptions.programs.find(p => p.label === value);
+      const programId = selected?.value ? parseInt(selected.value) : null;
+      setSelectedProgramId(programId);
       setFieldValue('common.program', value);
-      setFieldValue('common.programId', selected?.id || null);
+      setFieldValue('common.programId', programId);
 
       // Reset dependent fields
       setFieldValue('common.batch', '');
@@ -477,7 +451,7 @@ const ObjectiveQuestion = ({
           id="program-dropdown"
           label="Program"
           value={common.program || ''}
-          options={programOptions.map(p => p.name)}
+          options={hookOptions.programs.map(p => p.label)}
           placeholder="Select Program"
           required
           onSelect={val => handleCommonSelect('program', val)}
@@ -524,7 +498,7 @@ const ObjectiveQuestion = ({
           options={subjectOptions.map(s => s.name)}
           placeholder="Select Paper"
           required
-          disabled={!common.semesterId}
+          disabled={!common.programId}
           loading={loadingSubjects}
           onSelect={val => handleCommonSelect('subject', val)}
         />

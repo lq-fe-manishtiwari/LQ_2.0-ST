@@ -8,12 +8,11 @@ import { QuestionsService } from '../Services/questions.service';
 import { collegeService } from '../../Academics/Services/college.service';
 import { batchService } from '../../Academics/Services/batch.Service';
 import { courseService } from '../../Courses/Services/courses.service';
-import { contentService } from '../../Content/Services/content.service';
-
-
+import { useUserProfile } from '../../../../../contexts/UserProfileContext';
 
 const Questions = () => {
   const navigate = useNavigate();
+  const { userID, userRole } = useUserProfile();
   const [loading, setLoading] = useState(false);
   const [questions, setQuestions] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
@@ -112,7 +111,14 @@ const Questions = () => {
   const fetchPrograms = async () => {
     try {
       if (!collegeId) return;
-      const programsData = await collegeService.getProgramByCollegeId(collegeId);
+      let programsData = [];
+      if (userRole === 'SUPERADMIN') {
+        programsData = await collegeService.getAllProgramByCollegeId(collegeId);
+      } else if (userID) {
+        programsData = await collegeService.getProgrambyUserIdandCollegeId(userID, collegeId);
+      } else {
+        programsData = await collegeService.getAllProgramByCollegeId(collegeId);
+      }
       setOptions(prev => ({ ...prev, programs: Array.isArray(programsData) ? programsData : [] }));
     } catch (error) {
       console.error('Fetch programs error:', error);
