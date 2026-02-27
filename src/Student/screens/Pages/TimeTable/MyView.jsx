@@ -237,7 +237,7 @@ const MyView = () => {
                     end_time: record.end_time,
                     subject_name: record.subject_name,
                     teacher_name: record.firstname
-                        ? `${record.firstname} ${record.lastname}`
+                        ? `${record.firstname}`
                         : `Teacher ${record.teacher_id}`,
                     classroom_name: record.classroom_name,
                     entry_type: record.entry_type,
