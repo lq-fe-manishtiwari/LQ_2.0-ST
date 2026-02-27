@@ -9,8 +9,12 @@ import AddNewAssessment from "../AssessmentTab/AddNewAssessment";
 import EditAssessment from "../AssessmentTab/EditAssessment";
 import ViewAssessment from "../AssessmentTab/ViewAssessment";
 import AddNewQuestion from "../AddQuestions/AddNewQuestions";
+import EditQuestion from "../AddQuestions/EditQuestion";
+import ViewQuestion from "../AddQuestions/ViewQuestion";
 import CheckPapers from "../AssessmentTab/CheckPapers";
+import RubricCheckPapers from "../AssessmentTab/RubricCheckPapers";
 import StudentResults from "../AssessmentTab/StudentResults";
+import Report from "../Reports/Report";
 
 import QuestionLevel from "../QuestionLevelSetting/QuestionLevel";
 import SettingsLayout from "../Settings/SettingsLayout";
@@ -31,14 +35,18 @@ export default function AssessmentRoutes() {
         <Route path="assessment" element={<Assessment />} />
         <Route path="questions" element={<Questions />} />
         <Route path="dashboard" element={<Dashboard />} />
+        <Route path="report" element={<Report />} />
 
         {/* Assessment actions */}
         <Route path="assessment/view/:id" element={<ViewAssessment />} />
         <Route path="assessment/edit/:id" element={<EditAssessment />} />
         <Route path="add-question" element={<AddNewQuestion />} />
+        <Route path="edit-question/:id" element={<EditQuestion />} />
+        <Route path="view-question/:id" element={<ViewQuestion />} />
 
         {/* Extra routes */}
         <Route path="check-papers/:id" element={<CheckPapers />} />
+        <Route path="rubric-check-papers/:id" element={<RubricCheckPapers />} />
         <Route
           path="student-results/:studentId/:assessmentId"
           element={<StudentResults />}

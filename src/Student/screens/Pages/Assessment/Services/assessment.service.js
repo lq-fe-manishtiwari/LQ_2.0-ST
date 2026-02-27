@@ -21,14 +21,14 @@ async function getAssessmentResponses(assessmentId) {
         .then(handleResponse);
 }
 
-async function getStudentAssessments(data) {
+async function getStudentAssessments(data, studentId) {
     const requestOptions = {
         method: 'POST',
         headers: authHeaderToPost(),
         body: JSON.stringify(data)
     };
 
-    return fetch(`${ContentAPI}/admin/assessment/students/assessments`, requestOptions)
+    return fetch(`${ContentAPI}/admin/assessment/students/assessments?studentId=${studentId}`, requestOptions)
         .then(handleResponse);
 }
 

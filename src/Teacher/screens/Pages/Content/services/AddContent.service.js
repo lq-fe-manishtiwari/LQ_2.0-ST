@@ -15,9 +15,24 @@ export const contentService = {
 
     getContentLevel,
     getTeacherSubjectsAllocated,
+    getModulesAndUnits
 };
 
 const BaseUrl = `${ContentAPI}/api/admin/content`
+
+function getModulesAndUnits(subjectId) {
+    const requestOptions = {
+        method: 'GET',
+        headers: authHeader()
+    };
+
+    return fetch(
+        `${AcademicAPI}/api/subjects/${subjectId}/modules-units`,
+        requestOptions
+    )
+        .then(handleResponse)
+        .then(data => data);
+}
 
 function AddContent(values) {
     const requestOptions = {

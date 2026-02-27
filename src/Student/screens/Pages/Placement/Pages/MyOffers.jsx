@@ -123,7 +123,7 @@ export default function MyOffers() {
       }
     };
 
-    const cfg = config[status];
+    const cfg = config[status] || config.pending;
     const Icon = cfg.icon;
 
     return (
@@ -196,90 +196,195 @@ export default function MyOffers() {
         />
       </div>
 
-      {/* TABLE */}
-      <div className="bg-white border rounded-lg overflow-x-auto">
-        <table className="w-full border-collapse">
-          <thead className="table-header">
-            <tr>
-              <th className="px-4 py-3 text-left text-sm">Placement ID</th>
-              <th className="px-4 py-3 text-left text-sm">Company</th>
-              <th className="px-4 py-3 text-left text-sm">Role</th>
-              <th className="px-4 py-3 text-left text-sm">CTC</th>
-              <th className="px-4 py-3 text-left text-sm">Offer Date</th>
-              <th className="px-4 py-3 text-left text-sm">Location</th>
-              <th className="px-4 py-3 text-left text-sm">Status</th>
-              <th className="px-4 py-3 text-center text-sm">Actions</th>
-            </tr>
-          </thead>
-
-          <tbody className="divide-y">
-            {currentEntries.length === 0 ? (
+      {/* DESKTOP TABLE */}
+      <div className="hidden lg:block bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead className="bg-primary-600">
               <tr>
-                <td colSpan="8" className="px-6 py-8 text-center text-gray-500">
-                  No offers found
-                </td>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-50 tracking-wider">Placement ID</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-50 tracking-wider">Company</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-50 tracking-wider">Role</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-50 tracking-wider">CTC</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-50 tracking-wider">Offer Date</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-50 tracking-wider">Location</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-50 tracking-wider">Status</th>
+                <th className="px-6 py-3 text-center text-xs font-medium text-gray-50 tracking-wider">Actions</th>
               </tr>
-            ) : (
-              currentEntries.map((item) => (
-                <tr key={item.placement_id} className="hover:bg-gray-50">
-                  <td className="px-4 py-3 text-sm">{item.placement_id}</td>
-                  <td className="px-4 py-3 text-sm">{item.organisation}</td>
-                  <td className="px-4 py-3 text-sm">{item.job_role}</td>
-                  <td className="px-4 py-3 text-sm font-semibold text-green-600">{item.ctc}</td>
-                  <td className="px-4 py-3 text-sm">{item.offer_date}</td>
-                  <td className="px-4 py-3 text-sm">{item.location}</td>
-                  <td className="px-4 py-3 text-sm">{getStatusBadge(item.status)}</td>
-                  <td className="px-4 py-3 text-center">
-                    <div className="flex justify-center gap-2">
-                      <button
-                        onClick={() => window.open(item.offer_letter_url, '_blank')}
-                        className="p-2 bg-blue-50 text-blue-600 rounded hover:bg-blue-100"
-                      >
-                        <Download className="w-4 h-4" />
-                      </button>
+            </thead>
 
-                      {item.status === 'pending' && (
-                        <>
-                          <button
-                            onClick={() => updateOfferStatus(item.placement_id, 'accepted')}
-                            className="px-3 py-1 bg-green-600 text-white rounded text-xs"
-                          >
-                            Accept
-                          </button>
-                          <button
-                            onClick={() => updateOfferStatus(item.placement_id, 'rejected')}
-                            className="px-3 py-1 bg-red-600 text-white rounded text-xs"
-                          >
-                            Decline
-                          </button>
-                        </>
-                      )}
-                    </div>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {currentEntries.length === 0 ? (
+                <tr>
+                  <td colSpan="8" className="px-6 py-8 text-center text-gray-500">
+                    No offers found
                   </td>
                 </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+              ) : (
+                currentEntries.map((item) => (
+                  <tr key={item.placement_id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 text-sm text-left text-gray-900">{item.placement_id}</td>
+                    <td className="px-6 py-4 text-sm text-left text-gray-500 truncate max-w-[100px]" title={item.organisation}>{item.organisation}</td>
+                    <td className="px-6 py-4 text-sm text-left text-gray-500 truncate max-w-[120px]" title={item.job_role}>{item.job_role}</td>
+                    <td className="px-6 py-4 text-sm text-left font-semibold text-green-600">{item.ctc}</td>
+                    <td className="px-6 py-4 text-sm text-left text-gray-500">{item.offer_date}</td>
+                    <td className="px-6 py-4 text-sm text-left text-gray-500">{item.location}</td>
+                    <td className="px-6 py-4 text-sm text-left">{getStatusBadge(item.status)}</td>
+                    <td className="px-6 py-4 text-center">
+                      <div className="flex justify-center gap-2">
+                        <button
+                          onClick={() => window.open(item.offer_letter_url, '_blank')}
+                          className="p-2 bg-blue-50 text-blue-600 rounded hover:bg-blue-100"
+                        >
+                          <Download className="w-4 h-4" />
+                        </button>
+
+                        {item.status === 'pending' && (
+                          <>
+                            <button
+                              onClick={() => updateOfferStatus(item.placement_id, 'accepted')}
+                              className="px-3 py-1 bg-green-600 text-white rounded text-xs"
+                            >
+                              Accept
+                            </button>
+                            <button
+                              onClick={() => updateOfferStatus(item.placement_id, 'rejected')}
+                              className="px-3 py-1 bg-red-600 text-white rounded text-xs"
+                            >
+                              Decline
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        {/* PAGINATION */}
+        {totalEntries > 0 && (
+          <div className="flex justify-between items-center px-6 py-4 border-t border-gray-200 text-sm text-gray-600">
+            <button
+              disabled={currentPage === 1}
+              onClick={() => setCurrentPage((p) => p - 1)}
+              className={`px-4 py-2 rounded-md ${
+                currentPage === 1
+                  ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                  : 'bg-blue-600 hover:bg-blue-700 text-white'
+              }`}
+            >
+              Previous
+            </button>
+            <span className="text-gray-700 font-medium">
+              Showing {start + 1}–{Math.min(start + entriesPerPage, totalEntries)} of {totalEntries} entries
+            </span>
+            <button
+              disabled={currentPage === totalPages}
+              onClick={() => setCurrentPage((p) => p + 1)}
+              className={`px-4 py-2 rounded-md ${
+                currentPage === totalPages
+                  ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                  : 'bg-blue-600 hover:bg-blue-700 text-white'
+              }`}
+            >
+              Next
+            </button>
+          </div>
+        )}
       </div>
 
-      {/* PAGINATION */}
+      {/* MOBILE CARDS */}
+      <div className="lg:hidden space-y-4">
+        {currentEntries.length === 0 ? (
+          <div className="bg-white rounded-xl shadow-md p-8 text-center border border-gray-200">
+            <div className="text-gray-500">
+              <p className="text-lg font-medium mb-2">No offers found</p>
+              <p className="text-sm">
+                {searchTerm ? 'No offers found matching your search' : 'No offers available at the moment'}
+              </p>
+            </div>
+          </div>
+        ) : (
+          currentEntries.map((item) => (
+            <div
+              key={item.placement_id}
+              className="bg-white rounded-xl shadow-md border border-gray-200 p-5 hover:shadow-lg transition-all"
+            >
+              <div className="flex justify-between items-start mb-3">
+                <div>
+                  <p className="font-semibold text-gray-900">{item.organisation}</p>
+                  <p className="text-sm text-gray-500">{item.job_role}</p>
+                </div>
+                {getStatusBadge(item.status)}
+              </div>
+
+              <div className="space-y-2 text-sm text-gray-700 mb-4">
+                <div className="grid grid-cols-2 gap-2">
+                  <div><span className="font-medium">Placement ID:</span> {item.placement_id}</div>
+                  <div><span className="font-medium">CTC:</span> {item.ctc}</div>
+                  <div><span className="font-medium">Offer Date:</span> {item.offer_date}</div>
+                  <div><span className="font-medium">Location:</span> {item.location}</div>
+                </div>
+              </div>
+
+              <div className="flex gap-2">
+                <button
+                  onClick={() => window.open(item.offer_letter_url, '_blank')}
+                  className="flex-1 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center justify-center gap-2"
+                >
+                  <Download className="w-4 h-4" />
+                  Download
+                </button>
+                {item.status === 'pending' && (
+                  <>
+                    <button
+                      onClick={() => updateOfferStatus(item.placement_id, 'accepted')}
+                      className="flex-1 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+                    >
+                      Accept
+                    </button>
+                    <button
+                      onClick={() => updateOfferStatus(item.placement_id, 'rejected')}
+                      className="flex-1 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+                    >
+                      Decline
+                    </button>
+                  </>
+                )}
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+
+      {/* MOBILE PAGINATION */}
       {totalEntries > 0 && (
-        <div className="flex justify-between items-center mt-4">
+        <div className="lg:hidden flex justify-between items-center px-4 py-4 bg-white rounded-lg shadow-sm border border-gray-200 mt-4 text-sm text-gray-600">
           <button
             disabled={currentPage === 1}
             onClick={() => setCurrentPage((p) => p - 1)}
-            className="px-4 py-2 bg-blue-600 text-white rounded disabled:opacity-50"
+            className={`px-4 py-2 rounded-md ${
+              currentPage === 1
+                ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                : 'bg-blue-600 hover:bg-blue-700 text-white'
+            }`}
           >
             Previous
           </button>
-          <span className="text-sm text-gray-600">
-            Showing {start + 1} – {Math.min(start + entriesPerPage, totalEntries)} of {totalEntries}
+          <span className="text-gray-700 font-medium text-xs">
+            {start + 1}–{Math.min(start + entriesPerPage, totalEntries)} of {totalEntries}
           </span>
           <button
             disabled={currentPage === totalPages}
             onClick={() => setCurrentPage((p) => p + 1)}
-            className="px-4 py-2 bg-blue-600 text-white rounded disabled:opacity-50"
+            className={`px-4 py-2 rounded-md ${
+              currentPage === totalPages
+                ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                : 'bg-blue-600 hover:bg-blue-700 text-white'
+            }`}
           >
             Next
           </button>

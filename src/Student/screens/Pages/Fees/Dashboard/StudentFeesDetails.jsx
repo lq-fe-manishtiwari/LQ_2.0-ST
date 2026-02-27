@@ -12,6 +12,17 @@ const StudentFeesDetails = () => {
     const [errorAlert, setErrorAlert] = useState(null);
     const [warningAlert, setWarningAlert] = useState(null);
     const [installmentActiveStatus, setInstallmentActiveStatus] = useState({});
+    const [razorpayLoaded, setRazorpayLoaded] = useState(false);
+    const [processingPayment, setProcessingPayment] = useState(false);
+    const [paymentModes, setPaymentModes] = useState([]);
+    const [processingMessage, setProcessingMessage] = useState(null);
+
+    // Razorpay keys
+    // For development/testing, use test keys (rzp_test_...) to avoid website mismatch errors
+    // For production, use live keys (rzp_live_...)
+    // Get test keys from: https://dashboard.razorpay.com/app/website-app-settings/api-keys
+    const RAZORPAY_KEY_ID = 'rzp_live_e1RWThJDwXuKic';
+    const RAZORPAY_KEY_SECRET = 'hV8WqaXrBlQ9sbhhaWLFErJO';
 
     const getStudentId = () => {
         try {
@@ -45,7 +56,17 @@ const StudentFeesDetails = () => {
             }
         };
 
+        const fetchPaymentModes = async () => {
+            try {
+                const modes = await studentFeesService.getActivePaymentModes();
+                setPaymentModes(modes || []);
+            } catch (err) {
+                console.error('Error fetching payment modes:', err);
+            }
+        };
+
         fetchFees();
+        fetchPaymentModes();
         setSelectedInstallments({});
     }, []);
 
@@ -70,6 +91,39 @@ const StudentFeesDetails = () => {
         fetchStatuses();
     }, [allocations]);
 
+    // Load Razorpay script dynamically
+    useEffect(() => {
+        if (window.Razorpay) {
+            setRazorpayLoaded(true);
+            return;
+        }
+        const script = document.createElement('script');
+        script.id = 'razorpay-checkout-js';
+        script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+        script.async = true;
+
+        script.onload = () => {
+            console.log('Razorpay SDK loaded successfully');
+            setRazorpayLoaded(true);
+        };
+
+        script.onerror = () => {
+            console.error('Razorpay SDK failed to load. Please check your internet connection or ad-blockers.');
+            setRazorpayLoaded(false);
+        };
+
+        document.body.appendChild(script);
+
+        return () => {
+            const existingScript = document.getElementById('razorpay-checkout-js');
+            if (existingScript && document.body.contains(existingScript)) {
+                // Keep it loaded to avoid multiple re-loads if component re-renders
+                // Or remove if you want strict cleanup
+                // document.body.removeChild(existingScript);
+            }
+        };
+    }, []);
+
     const getOverdueStatus = (dueDate) => {
         if (!dueDate) return false;
         // Get current date in IST for accurate overdue comparison
@@ -78,6 +132,284 @@ const StudentFeesDetails = () => {
         const due = new Date(dueDate);
         due.setHours(0, 0, 0, 0);
         return due < currentISTDate;
+    };
+
+    const handlePayment = async (allocation, installmentIds = null, isOverduePayment = false) => {
+        if (processingPayment) return;
+
+        try {
+            setProcessingPayment(true);
+            const studentId = getStudentId();
+
+            if (!studentId) {
+                setErrorAlert({ title: 'Error', message: 'Student ID not found' });
+                return;
+            }
+
+            // Calculate amount and prepare fee line payments
+            let totalAmount = 0;
+            let feeLinePayments = [];
+
+            if (allocation.is_in_installment && installmentIds) {
+                // Installment-based payment
+                const selectedInsts = allocation.installments.filter(inst =>
+                    installmentIds.includes(inst.installment_id)
+                );
+                totalAmount = selectedInsts.reduce((sum, inst) => sum + inst.balance, 0);
+
+                // Map installments to fee lines
+                selectedInsts.forEach(inst => {
+                    feeLinePayments.push({
+                        fee_line_id: inst.fee_line_id || allocation.fee_lines[0]?.fee_line_id,
+                        amount: inst.balance
+                    });
+                });
+            } else {
+                // Full balance payment
+                totalAmount = allocation.pending_amount;
+                if (allocation.fee_lines && allocation.fee_lines.length > 0) {
+                    feeLinePayments = allocation.fee_lines
+                        .filter(fl => fl.balance > 0)
+                        .map(fl => ({
+                            fee_line_id: fl.fee_line_id,
+                            amount: fl.balance
+                        }));
+                } else {
+                    feeLinePayments = [{
+                        fee_line_id: allocation.fee_allocation_id,
+                        amount: totalAmount
+                    }];
+                }
+            }
+
+            if (totalAmount <= 0) {
+                setWarningAlert({ title: 'Invalid Amount', message: 'No pending amount to pay' });
+                return;
+            }
+
+            // Get dynamic payment mode ID for ONLINE(APP)
+            const onlineAppMode = paymentModes.find(m => m.payment_mode_code === "ONLINE_APP");
+            const dynamicPaymentModeId = onlineAppMode ? onlineAppMode.payment_mode_id : 4; // Default to 4 if not found
+
+            // Step 1: Initialize Payment
+            const initPayload = {
+                student_id: studentId,
+                allocation_id: allocation.fee_allocation_id,
+                amount: totalAmount,
+                payment_mode_id: dynamicPaymentModeId
+            };
+
+            const initResponse = await studentFeesService.initializeStudentPayment(initPayload);
+            console.log('Init Response:', initResponse);
+
+            // Check for both camelCase and snake_case as backend might vary
+            const initializationId = initResponse?.initializationId || initResponse?.initialization_id;
+
+            if (!initializationId) {
+                setErrorAlert({ title: 'Error', message: 'Failed to initialize payment tracking' });
+                return;
+            }
+
+            // Step 2: Create Razorpay Order
+            const orderPayload = {
+                amount: totalAmount, // Backend usually performs * 100 internally for student fees if following PublicForm pattern
+                currency: 'INR',
+                student_id: studentId,
+                allocation_id: allocation.fee_allocation_id,
+                gateway_key_id: RAZORPAY_KEY_ID,
+                gateway_secret_key: RAZORPAY_KEY_SECRET
+            };
+
+            const orderResponse = await studentFeesService.createRazorpayOrder(orderPayload);
+            console.log('Order Response:', orderResponse);
+
+            if (!orderResponse || !orderResponse.order || !orderResponse.order.id) {
+                setErrorAlert({ title: 'Error', message: 'Failed to create payment order' });
+                return;
+            }
+
+            // Step 3: Open Razorpay Checkout
+            // Passing the full order object to ensure exact match with backend
+            openRazorpay(
+                orderResponse.order,
+                initializationId,
+                allocation,
+                feeLinePayments,
+                dynamicPaymentModeId
+            );
+
+        } catch (err) {
+            console.error('Payment error:', err);
+            setErrorAlert({
+                title: 'Payment Failed',
+                message: err.message || 'Something went wrong. Please try again.'
+            });
+        } finally {
+            setProcessingPayment(false);
+        }
+    };
+
+    const openRazorpay = async (order, initializationId, allocation, feeLinePayments, paymentModeId) => {
+        console.log('Opening Razorpay with order:', order);
+
+        if (!window.Razorpay) {
+            console.log('Razorpay not found, waiting 500ms...');
+            await new Promise(resolve => setTimeout(resolve, 500));
+        }
+
+        if (!window.Razorpay) {
+            console.error('Razorpay SDK not available');
+            setErrorAlert({
+                title: 'Payment System Error',
+                message: 'Payment system not loaded. Please refresh the page.'
+            });
+            return;
+        }
+
+        const profileStr = localStorage.getItem('userProfile');
+        const profile = profileStr ? JSON.parse(profileStr) : {};
+
+        const options = {
+            key: RAZORPAY_KEY_ID,
+            amount: order.amount, // Already in paise from backend
+            currency: order.currency || 'INR',
+            name: 'Western College of Commerce & Business Management',
+            description: `Fee for ${allocation.class_year_name || 'Current Year'}`,
+            order_id: order.id,
+            prefill: {
+                name: profile.full_name || '',
+                email: profile.email || '',
+                contact: profile.mobile || ''
+            },
+            handler: async (response) => {
+                console.log('Payment Success:', response);
+                await handlePaymentSuccess(
+                    response,
+                    initializationId,
+                    allocation,
+                    order.amount / 100, // Convert back to rupees
+                    feeLinePayments,
+                    paymentModeId
+                );
+            },
+            modal: {
+                ondismiss: async () => {
+                    console.log('Payment cancelled by user');
+                    await handlePaymentFailure(initializationId);
+                }
+            }
+        };
+
+        console.log('Razorpay options:', options);
+
+        try {
+            const rzp = new window.Razorpay(options);
+            console.log('Razorpay instance created, opening modal...');
+            rzp.open();
+        } catch (err) {
+            console.error('Razorpay open error:', err);
+            setErrorAlert({ title: 'Error', message: 'Unable to open payment gateway: ' + err.message });
+        }
+    };
+
+    const handlePaymentSuccess = async (razorpayResponse, initializationId, allocation, amount, feeLinePayments, paymentModeId) => {
+        try {
+            // Show processing warning
+            setProcessingMessage({
+                title: 'Processing Payment',
+                message: 'Please wait while we process your transaction. Do not close this window or click anywhere.'
+            });
+
+            // Step 1: Collect Fee First
+            const collectPayload = {
+                initialization_id: initializationId,
+                student_fee_allocation_id: allocation.fee_allocation_id,
+                payment_mode_id: paymentModeId,
+                total_amount_paid: amount,
+                payment_date: new Date().toISOString().split('T')[0],
+                transaction_reference: razorpayResponse.razorpay_payment_id,
+                remarks: `Online payment via Razorpay - Order: ${razorpayResponse.razorpay_order_id}`,
+                fee_line_payments: feeLinePayments
+            };
+
+            let collectResponse = null;
+            let collectSuccess = false;
+
+            try {
+                collectResponse = await studentFeesService.collectStudentFee(collectPayload);
+                collectSuccess = true;
+            } catch (collectError) {
+                console.error('Collect fee failed:', collectError);
+                collectSuccess = false;
+            }
+
+            // Step 2: Finalize Payment (PUT call)
+            if (collectSuccess) {
+                // If collect succeeded, finalize with payment ID
+                await studentFeesService.finalizeStudentPayment(
+                    initializationId,
+                    razorpayResponse.razorpay_payment_id
+                );
+
+                // Clear processing message
+                setProcessingMessage(null);
+
+                // Show final success alert
+                setSuccessAlert({
+                    title: 'Payment Successful!',
+                    message: `Payment of ₹${amount.toLocaleString('en-IN')} completed successfully. ${collectResponse?.receipt_number ? `Receipt No: ${collectResponse.receipt_number}` : ''}`
+                });
+
+                // Clear selections
+                setSelectedInstallments({});
+
+                // Refresh component data without full page reload
+                const studentId = getStudentId();
+                if (studentId) {
+                    const data = await studentFeesService.getStudentFeeAllocations(studentId);
+                    setAllocations(data || []);
+                }
+
+            } else {
+                // If collect failed, update PUT with error status
+                await studentFeesService.finalizeStudentPayment(
+                    initializationId,
+                    'FAILED'
+                );
+
+                // Clear processing message
+                setProcessingMessage(null);
+
+                // Show error
+                setErrorAlert({
+                    title: 'Processing Error',
+                    message: 'Payment was received but there was an error processing it. Please contact administration.'
+                });
+            }
+
+        } catch (err) {
+            console.error('Error processing payment:', err);
+
+            // Clear processing message
+            setProcessingMessage(null);
+
+            setErrorAlert({
+                title: 'Processing Error',
+                message: 'Payment was received but there was an error processing it. Please contact administration.'
+            });
+        }
+    };
+
+    const handlePaymentFailure = async (initializationId) => {
+        try {
+            await studentFeesService.finalizeStudentPayment(initializationId, 'CANCELLED');
+            setWarningAlert({
+                title: 'Payment Cancelled',
+                message: 'You have cancelled the payment.'
+            });
+        } catch (err) {
+            console.error('Error handling payment cancellation:', err);
+        }
     };
 
     if (loading) {
@@ -117,6 +449,19 @@ const StudentFeesDetails = () => {
 
     return (
         <>
+            {processingMessage && (
+                <SweetAlert
+                    warning
+                    title={processingMessage.title}
+                    showConfirm={false}
+                    customClass="processing-alert"
+                >
+                    <div className="flex flex-col items-center">
+                        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4"></div>
+                        <p>{processingMessage.message}</p>
+                    </div>
+                </SweetAlert>
+            )}
             {successAlert && (
                 <SweetAlert
                     success
@@ -266,11 +611,10 @@ const StudentFeesDetails = () => {
                                                     <button
                                                         className="w-full sm:w-auto bg-red-600 hover:bg-red-700 text-white text-sm font-bold px-6 py-2.5 rounded-lg shadow-md transition-all active:scale-95 flex items-center justify-center gap-2"
                                                         onClick={() => {
-                                                            setSuccessAlert({
-                                                                title: 'Payment Initiated',
-                                                                message: `Proceeding to payment gateway for ${overdueInstallments.length} overdue installment(s). Total Amount: ₹${totalOverdue.toLocaleString('en-IN')}`
-                                                            });
+                                                            const overdueInstIds = overdueInstallments.map(inst => inst.installment_id);
+                                                            handlePayment(allocation, overdueInstIds, true);
                                                         }}
+                                                        disabled={processingPayment}
                                                     >
                                                         <AlertCircle size={16} />
                                                         Pay All Overdue
@@ -492,12 +836,9 @@ const StudentFeesDetails = () => {
                                                 <button
                                                     className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold px-6 py-2.5 rounded-lg shadow-sm transition-all active:scale-95 flex items-center justify-center gap-2"
                                                     onClick={() => {
-                                                        const total = allocation.installments.filter(i => selectedInstallments[allocation.fee_allocation_id]?.includes(i.installment_id)).reduce((sum, i) => sum + i.balance, 0);
-                                                        setSuccessAlert({
-                                                            title: 'Payment Initiated',
-                                                            message: `Proceeding to payment gateway for ${selectedInstallments[allocation.fee_allocation_id].length} installment(s). Total Amount: ₹${total.toLocaleString('en-IN')}`
-                                                        });
+                                                        handlePayment(allocation, selectedInstallments[allocation.fee_allocation_id], false);
                                                     }}
+                                                    disabled={processingPayment}
                                                 >
                                                     <CreditCard size={16} />
                                                     Pay Selected
@@ -551,17 +892,85 @@ const StudentFeesDetails = () => {
                                         <button
                                             className="w-full sm:w-auto bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-6 sm:px-8 py-3 rounded-xl shadow-lg shadow-indigo-200 transition-all active:scale-95 flex items-center justify-center gap-2"
                                             onClick={() => {
-                                                setSuccessAlert({
-                                                    title: 'Payment Initiated',
-                                                    message: `Proceeding to payment gateway. Total Amount: ₹${allocation.pending_amount.toLocaleString('en-IN')}`
-                                                });
+                                                handlePayment(allocation, null, false);
                                             }}
+                                            disabled={processingPayment}
                                         >
                                             <CreditCard size={18} />
                                             <span className="text-sm sm:text-base">Pay  Balance (₹{allocation.pending_amount.toLocaleString('en-IN')})</span>
                                         </button>
                                     </div>
                                 )
+                            )}
+
+                            {/* Payment History Section */}
+                            {console.log("allocation for payment history", allocation)}
+                            {allocation.payment_details.payments && allocation.payment_details.payments.length > 0 && (
+                                <div className="mt-6 space-y-4">
+                                    <h3 className="text-[10px] sm:text-sm font-black text-gray-400 uppercase tracking-widest flex items-center gap-2 border-b pb-2">
+                                        <FileText className="w-4 h-4" />
+                                        Payment History
+                                    </h3>
+                                    <div className="space-y-3">
+                                        {allocation.payment_details.payments.map((payment) => (
+                                            <div
+                                                key={payment.payment_id}
+                                                className="bg-green-50 border border-green-200 rounded-xl p-4 hover:shadow-md transition-shadow"
+                                            >
+                                                <div className="flex flex-col sm:flex-row justify-between gap-3">
+                                                    <div className="flex-1">
+                                                        <div className="flex items-center gap-2 mb-2">
+                                                            <CheckCircle className="w-5 h-5 text-green-600" />
+                                                            <span className="text-sm font-bold text-green-800">
+                                                                Receipt: {payment.receipt_number}
+                                                            </span>
+                                                        </div>
+                                                        <div className="grid grid-cols-2 gap-2 text-xs">
+                                                            <div>
+                                                                <span className="text-gray-500">Payment Mode:</span>
+                                                                <p className="font-semibold text-gray-700">{payment.payment_mode_name}</p>
+                                                            </div>
+                                                            <div>
+                                                                <span className="text-gray-500">Payment Date:</span>
+                                                                <p className="font-semibold text-gray-700">
+                                                                    {new Date(payment.payment_date).toLocaleDateString('en-IN', {
+                                                                        day: '2-digit',
+                                                                        month: 'short',
+                                                                        year: 'numeric'
+                                                                    })}
+                                                                </p>
+                                                            </div>
+                                                            {payment.transaction_reference && (
+                                                                <div className="col-span-2">
+                                                                    <span className="text-gray-500">Transaction Ref:</span>
+                                                                    <p className="font-semibold text-gray-700 text-xs break-all">
+                                                                        {payment.transaction_reference}
+                                                                    </p>
+                                                                </div>
+                                                            )}
+                                                            {payment.collected_by_name && (
+                                                                <div className="col-span-2">
+                                                                    <span className="text-gray-500">Collected By:</span>
+                                                                    <p className="font-semibold text-gray-700">
+                                                                        {payment.collected_by_name}
+                                                                    </p>
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                    <div className="flex items-center justify-center sm:justify-end">
+                                                        <div className="bg-green-100 rounded-lg px-4 py-2 text-center">
+                                                            <p className="text-xs text-green-600 font-medium mb-1">Amount Paid</p>
+                                                            <p className="text-lg font-black text-green-700">
+                                                                ₹{payment.total_amount_paid.toLocaleString('en-IN')}
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
                             )}
                         </div>
                     </div>
