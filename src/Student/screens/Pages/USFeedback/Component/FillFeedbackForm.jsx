@@ -454,120 +454,137 @@ export default function FillFeedbackForm() {
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-8">
-                {/* General sections – once only */}
+
+                {/* Sort sections by section_order */}
                 {form.sections
-                    ?.filter(s => s.is_general === true || s.is_general === 1)
-                    .map((section, idx) => (
-                        <div
-                            key={`gen-${section.feedback_section_id}`}
-                            className="bg-white rounded-xl shadow border border-gray-200 p-6"
-                        >
-                            <h2 className="text-xl font-semibold text-gray-800 mb-5 pb-2 border-b">
-                                {idx + 1}. {section.title || "General Feedback"}
-                            </h2>
-                            <div className="space-y-7">
-                                {section.questions?.map((q, qIdx) => (
-                                    <div key={q.feedback_question_id} className="pb-6 border-b last:border-0 last:pb-0">
-                                        <label className="block mb-3">
-                                            <span className="text-gray-800 font-medium">
-                                                {qIdx + 1}. {q.label}
-                                                {q.required && <span className="text-red-500 ml-1.5">*</span>}
-                                            </span>
-                                            {q.description && (
-                                                <p className="text-sm text-gray-500 mt-1.5">{q.description}</p>
-                                            )}
-                                        </label>
-                                        {renderQuestion(q, q.feedback_question_id)}
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    ))}
+                    ?.slice()                             // create copy to avoid mutating original
+                    .sort((a, b) => a.section_order - b.section_order)
+                    .map((section) => {
 
-                {/* Teacher-Subject blocks */}
-                {teacherSubjectPairs.length > 0 ? (
-                    mappingsLoading ? (
-                        <div className="bg-white rounded-xl shadow border border-gray-200 p-8 text-center">
-                            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600 mx-auto mb-4"></div>
-                            <p className="text-gray-600">Loading your assigned teachers and subjects...</p>
-                        </div>
-                    ) : (
-                        teacherSubjectPairs.map((pair) => (
-                            <div key={`${pair.teacher_id}-${pair.subject_id}`} className="space-y-6 mb-10">
-                                {/* Teacher-Subject Header */}
-                                <div className="bg-blue-50 border-l-4 border-blue-600 p-5 rounded-r-xl shadow-sm">
-                                    <div className="flex items-center gap-4">
-                                        <div className="bg-blue-100 text-blue-700 p-3.5 rounded-full">
-                                            <i className="bi bi-person-badge-fill text-2xl"></i>
-                                        </div>
-                                        <div>
-                                            <h3 className="text-xl font-bold text-gray-900">{pair.teacher_name}</h3>
-                                            <p className="text-gray-700 mt-1">{pair.subject_name}</p>
+                        const isGeneral = section.is_general === true || section.is_general === 1;
+
+                        return (
+                            <React.Fragment key={section.feedback_section_id}>
+
+                                {/* ─── General sections ── shown once ──────────────────────── */}
+                                {isGeneral && (
+                                    <div className="bg-white rounded-xl shadow border border-gray-200 p-6">
+                                        <h2 className="text-xl font-semibold text-gray-800 mb-5 pb-2 border-b">
+                                            {section.section_order}. {section.title || "General Section"}
+                                        </h2>
+
+                                        <div className="space-y-7">
+                                            {section.questions
+                                                ?.sort((a, b) => a.question_order - b.question_order)
+                                                .map((q, qIdx) => (
+                                                    <div
+                                                        key={q.feedback_question_id}
+                                                        className="pb-6 border-b last:border-0 last:pb-0"
+                                                    >
+                                                        <label className="block mb-3">
+                                                            <span className="text-gray-800 font-medium">
+                                                                {qIdx + 1}. {q.label}
+                                                                {q.required && <span className="text-red-500 ml-1.5">*</span>}
+                                                            </span>
+                                                            {q.description && (
+                                                                <p className="text-sm text-gray-500 mt-1.5">{q.description}</p>
+                                                            )}
+                                                        </label>
+                                                        {renderQuestion(q, q.feedback_question_id)}
+                                                    </div>
+                                                ))}
                                         </div>
                                     </div>
-                                </div>
+                                )}
 
-                                {/* Sections for this pair */}
-                                {form.sections
-                                    ?.filter(s => !(s.is_general === true || s.is_general === 1))
-                                    .map((section) => (
-                                        <div
-                                            key={`sec-${pair.teacher_id}-${pair.subject_id}-${section.feedback_section_id}`}
-                                            className="bg-white rounded-xl shadow border border-gray-200 p-6"
-                                        >
-                                            <h3 className="text-lg font-semibold text-gray-800 mb-5">
-                                                {section.title || "Feedback for this subject"}
-                                            </h3>
-
-                                            <div className="space-y-7">
-                                                {section.questions?.map((q, qIdx) => {
-                                                    const uid = `${pair.teacher_id}_${pair.subject_id}_${q.feedback_question_id}`;
-                                                    return (
-                                                        <div key={uid} className="pb-6 border-b last:border-0 last:pb-0">
-                                                            <label className="block mb-3">
-                                                                <span className="text-gray-800 font-medium">
-                                                                    {qIdx + 1}. {q.label}
-                                                                    {q.required && <span className="text-red-500 ml-1.5">*</span>}
-                                                                </span>
-                                                            </label>
-                                                            {renderQuestion(q, uid, pair.teacher_id, pair.subject_id)}
+                                {/* ─── Subject-specific sections ── repeated per teacher/subject ── */}
+                                {!isGeneral && teacherSubjectPairs.length > 0 && (
+                                    <>
+                                        {teacherSubjectPairs.map((pair) => (
+                                            <div
+                                                key={`${pair.teacher_id}-${pair.subject_id}-${section.feedback_section_id}`}
+                                                className="space-y-6 mb-10"
+                                            >
+                                                {/* Teacher + Subject header */}
+                                                <div className="bg-blue-50 border-l-4 border-blue-600 p-5 rounded-r-xl shadow-sm">
+                                                    <div className="flex items-center gap-4">
+                                                        <div className="bg-blue-100 text-blue-700 p-3.5 rounded-full">
+                                                            <i className="bi bi-person-badge-fill text-2xl"></i>
                                                         </div>
-                                                    );
-                                                })}
-                                            </div>
-                                        </div>
-                                    ))}
-                            </div>
-                        ))
-                    )
-                ) : (
-                    // No teacher-subject pairs → show all sections as normal
-                    form.sections?.map((section, idx) => (
-                        <div
-                            key={`fallback-${section.feedback_section_id}`}
-                            className="bg-white rounded-xl shadow border border-gray-200 p-6"
-                        >
-                            <h2 className="text-xl font-semibold text-gray-800 mb-5 pb-2 border-b">
-                                {idx + 1}. {section.title || "Feedback"}
-                            </h2>
-                            <div className="space-y-7">
-                                {section.questions?.map((q, qIdx) => (
-                                    <div key={q.feedback_question_id} className="pb-6 border-b last:border-0 last:pb-0">
-                                        <label className="block mb-3">
-                                            <span className="text-gray-800 font-medium">
-                                                {qIdx + 1}. {q.label}
-                                                {q.required && <span className="text-red-500 ml-1.5">*</span>}
-                                            </span>
-                                        </label>
-                                        {renderQuestion(q, q.feedback_question_id)}
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    ))
-                )}
+                                                        <div>
+                                                            <h3 className="text-xl font-bold text-gray-900">
+                                                                {pair.teacher_name}
+                                                            </h3>
+                                                            <p className="text-gray-700 mt-1">{pair.subject_name}</p>
+                                                        </div>
+                                                    </div>
+                                                </div>
 
-                {/* Action Buttons */}
+                                                {/* Section content for this teacher-subject */}
+                                                <div className="bg-white rounded-xl shadow border border-gray-200 p-6">
+                                                    <h3 className="text-lg font-semibold text-gray-800 mb-5 pb-2 border-b">
+                                                        {section.title || "Feedback for this subject"}
+                                                    </h3>
+
+                                                    <div className="space-y-7">
+                                                        {section.questions
+                                                            ?.sort((a, b) => a.question_order - b.question_order)
+                                                            .map((q, qIdx) => {
+                                                                const uid = `${pair.teacher_id}_${pair.subject_id}_${q.feedback_question_id}`;
+                                                                return (
+                                                                    <div
+                                                                        key={uid}
+                                                                        className="pb-6 border-b last:border-0 last:pb-0"
+                                                                    >
+                                                                        <label className="block mb-3">
+                                                                            <span className="text-gray-800 font-medium">
+                                                                                {qIdx + 1}. {q.label}
+                                                                                {q.required && <span className="text-red-500 ml-1.5">*</span>}
+                                                                            </span>
+                                                                        </label>
+                                                                        {renderQuestion(q, uid, pair.teacher_id, pair.subject_id)}
+                                                                    </div>
+                                                                );
+                                                            })}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </>
+                                )}
+
+                                {/* Fallback: non-general section but no teacher pairs → show once */}
+                                {!isGeneral && teacherSubjectPairs.length === 0 && (
+                                    <div className="bg-white rounded-xl shadow border border-gray-200 p-6">
+                                        <h2 className="text-xl font-semibold text-gray-800 mb-5 pb-2 border-b">
+                                            {section.section_order}. {section.title || "Feedback"}
+                                        </h2>
+                                        <div className="space-y-7">
+                                            {section.questions
+                                                ?.sort((a, b) => a.question_order - b.question_order)
+                                                .map((q, qIdx) => (
+                                                    <div
+                                                        key={q.feedback_question_id}
+                                                        className="pb-6 border-b last:border-0 last:pb-0"
+                                                    >
+                                                        <label className="block mb-3">
+                                                            <span className="text-gray-800 font-medium">
+                                                                {qIdx + 1}. {q.label}
+                                                                {q.required && <span className="text-red-500 ml-1.5">*</span>}
+                                                            </span>
+                                                        </label>
+                                                        {renderQuestion(q, q.feedback_question_id)}
+                                                    </div>
+                                                ))}
+                                        </div>
+                                    </div>
+                                )}
+
+                            </React.Fragment>
+                        );
+                    })}
+
+                {/* Submit / Cancel buttons */}
                 <div className="flex flex-col sm:flex-row gap-4 justify-end mt-12 pt-6 border-t border-gray-200">
                     <button
                         type="button"
