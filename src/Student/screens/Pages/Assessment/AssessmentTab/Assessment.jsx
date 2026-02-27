@@ -140,6 +140,7 @@ const Assessment = () => {
                         rubricType: item.rubric ? item.rubric.rubric_type : null,
                         duration: item.time_limit_minutes || 0,
                         questionCount: 0,
+                        isExpired: item.test_end_datetime ? new Date() > new Date(item.test_end_datetime) : false,
                         originalData: item
                     })).sort((a, b) => b.id - a.id);
                     setAssessments(mappedData);
@@ -446,12 +447,13 @@ const Assessment = () => {
 
                                 <button
                                     onClick={() => navigate(`/my-assessment/assessment/responses/${a.id}`)}
-                                    disabled={a.status !== 'Expired' && a.status !== 'Completed' && a.status !== 'Attempted'}
-                                    className={`p-2 rounded-lg transition-colors ${a.status === 'Expired' || a.status === 'Completed' || a.status === 'Attempted'
+                                    // Enable if it's explicitly Completed OR if it's Expired
+                                    disabled={!(a.status === 'Completed' || a.isExpired)}
+                                    className={`p-2 rounded-lg transition-colors ${a.status === 'Completed' || a.isExpired
                                         ? 'bg-purple-100 text-purple-600 hover:bg-purple-200'
                                         : 'bg-gray-100 text-gray-400 cursor-not-allowed'
                                         }`}
-                                    title={a.status === 'Expired' || a.status === 'Completed' || a.status === 'Attempted' ? "View Responses" : "Responses available after assessment completion or expiration"}
+                                    title={a.status === 'Completed' || a.isExpired ? "View Responses" : "Responses available only after assessment expiration"}
                                 >
                                     <Eye className="w-4 h-4" />
                                 </button>
@@ -599,12 +601,12 @@ const Assessment = () => {
                                                     {/* View Responses Button */}
                                                     <button
                                                         onClick={() => navigate(`/my-assessment/assessment/responses/${a.id}`)}
-                                                        disabled={a.status !== 'Expired' && a.status !== 'Completed' && a.status !== 'Attempted'}
-                                                        className={`p-2 rounded-lg transition-all duration-200 shadow-sm ${a.status === 'Expired' || a.status === 'Completed' || a.status === 'Attempted'
+                                                        disabled={!(a.status === 'Completed' || a.isExpired)}
+                                                        className={`p-2 rounded-lg transition-all duration-200 shadow-sm ${a.status === 'Completed' || a.isExpired
                                                             ? 'bg-purple-100 text-purple-600 hover:bg-purple-200 hover:shadow-md'
                                                             : 'bg-gray-100 text-gray-400 cursor-not-allowed'
                                                             }`}
-                                                        title={a.status === 'Expired' || a.status === 'Completed' || a.status === 'Attempted' ? "View Responses" : "Responses available after assessment completion or expiration"}
+                                                        title={a.status === 'Completed' || a.isExpired ? "View Responses" : "Responses available only after assessment expiration"}
                                                     >
                                                         <Eye className="w-5 h-5" />
                                                     </button>
