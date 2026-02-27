@@ -1,23 +1,23 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { Edit, Trash2 } from "lucide-react";
 import SweetAlert from "react-bootstrap-sweetalert";
 
 import { COService } from "../Service/co.service";
-import { courseService } from "../../../Courses/Services/courses.service";
 import { batchService } from "../../../Academics/Services/batch.Service";
-import { collegeService } from "../../../Content/services/college.service";
 import { useUserProfile } from '../../../../../../contexts/UserProfileContext';
+import { useAssessmentFormLogic } from '../../../Assessment/hooks/useAssessmentFormLogic';
+
 const ListCO = () => {
   const { userID } = useUserProfile();
   const [alert, setAlert] = useState(null);
 
   /* ===================== STATES ===================== */
-  const [programs, setPrograms] = useState([]);
   const [batches, setBatches] = useState([]);
-  const [academicYears, setAcademicYears] = useState([]);
-  const [semesters, setSemesters] = useState([]);
-  const [papers, setPapers] = useState([]);
+
+  const allBatchesRef = useRef([]);
+  const allAcademicYearsRef = useRef([]);
+  const allSemestersRef = useRef([]);
 
   const [selectedProgram, setSelectedProgram] = useState("");
   const [selectedBatch, setSelectedBatch] = useState("");
@@ -41,45 +41,64 @@ const ListCO = () => {
   };
   const collegeId = getActiveCollegeId();
 
-  /* ===================== PROGRAM ===================== */
-  useEffect(() => {
-    if (!collegeId || !userID) return;
+  /* ===================== useAssessmentFormLogic hook ===================== */
+  const hookFormData = useMemo(() => ({
+    selectedProgram: String(selectedProgram || ''),
+    selectedAcademicSemester: selectedAcademicYear && selectedSemester
+      ? `${selectedAcademicYear}-${selectedSemester}`
+      : '',
+    selectedBatch: String(selectedBatch || ''),
+    selectedSubject: String(selectedCourse || ''),
+  }), [selectedProgram, selectedAcademicYear, selectedSemester, selectedBatch, selectedCourse]);
 
-    collegeService
-      .getProgramByCollegeId(collegeId)
-      .then(res => setPrograms(res || []));
-  }, [collegeId, userID]);
+  const { options: hookOptions } = useAssessmentFormLogic(hookFormData);
 
-  /* ===================== PROGRAM → BATCH → AY → SEM ===================== */
+  /* ===================== PROGRAM → BATCH → AY → SEMESTER ===================== */
   useEffect(() => {
-    if (!selectedProgram) return;
+    if (!selectedProgram) {
+      setBatches([]);
+      allBatchesRef.current = [];
+      allAcademicYearsRef.current = [];
+      allSemestersRef.current = [];
+      setSelectedBatch("");
+      setSelectedAcademicYear("");
+      setSelectedSemester("");
+      setSelectedCourse("");
+      return;
+    }
 
     batchService.getBatchByProgramId([selectedProgram]).then(res => {
-      setBatches(res || []);
+      if (!Array.isArray(res)) { setBatches([]); return; }
 
-      const ay = [];
-      const sem = [];
+      const extractedAYs = [];
+      const extractedSems = [];
 
       res.forEach(batch => {
-        batch.academic_years?.forEach(a => {
-          ay.push({
-            academic_year_id: a.academic_year_id,
-            name: a.name,
-            batchId: batch.batch_id
+        batch.academic_years?.forEach(ay => {
+          extractedAYs.push({
+            academic_year_id: ay.academic_year_id,
+            name: ay.name,
+            batchId: batch.batch_id,
           });
-
-          a.semester_divisions?.forEach(s => {
-            sem.push({
-              semester_id: s.semester_id,
-              semester_name: s.name,
-              academicYearId: a.academic_year_id
+          ay.semester_divisions?.forEach(sem => {
+            extractedSems.push({
+              semester_id: sem.semester_id,
+              semester_name: sem.name || sem.semester_name,
+              academicYearId: ay.academic_year_id,
+              batch_id: batch.batch_id,
             });
           });
         });
       });
 
-      setAcademicYears(ay);
-      setSemesters(sem);
+      allBatchesRef.current = res;
+      allAcademicYearsRef.current = extractedAYs;
+      allSemestersRef.current = extractedSems;
+
+      setBatches(res.map(b => ({ value: b.batch_id, label: b.batch_name || `Batch ${b.batch_id}` })));
+    }).catch(err => {
+      console.error("Failed to load batches:", err);
+      setBatches([]);
     });
 
     setSelectedBatch("");
@@ -89,28 +108,25 @@ const ListCO = () => {
     setPapers([]);
   }, [selectedProgram]);
 
-  /* ===================== SEMESTER → SUBJECT ===================== */
-  useEffect(() => {
-    if (!collegeId || !selectedSemester) return;
+  /* ===================== Derived Academic Years ===================== */
+  const academicYears = useMemo(() => {
+    if (!selectedBatch) return [];
+    const filtered = allAcademicYearsRef.current.filter(ay => String(ay.batchId) === String(selectedBatch));
+    const unique = filtered.filter((ay, i, self) => i === self.findIndex(a => a.academic_year_id === ay.academic_year_id));
+    return unique.map(ay => ({ value: ay.academic_year_id, label: ay.name }));
+  }, [selectedBatch, batches]);
 
-    Promise.all([
-      courseService.getSubjectsByCollegeId(collegeId),
-      courseService.getGlobalSubjectsByCollegeId(collegeId)
-    ]).then(([collegeSubjects, globalSubjects]) => {
-      const all = [...(collegeSubjects || []), ...(globalSubjects || [])];
+  /* ===================== Derived Semesters ===================== */
+  const semesters = useMemo(() => {
+    if (!selectedBatch || !selectedAcademicYear) return [];
+    const filtered = allSemestersRef.current.filter(
+      s => String(s.batch_id) === String(selectedBatch) && String(s.academicYearId) === String(selectedAcademicYear)
+    );
+    const unique = filtered.filter((s, i, self) => i === self.findIndex(x => x.semester_id === s.semester_id));
+    return unique.map(s => ({ value: s.semester_id, label: s.semester_name }));
+  }, [selectedBatch, selectedAcademicYear, batches]);
 
-      const semesterWise = all.filter(
-        s => String(s.semester_id) === String(selectedSemester)
-      );
-
-      const unique = semesterWise.filter(
-        (s, i, self) =>
-          i === self.findIndex(x => x.subject_id === s.subject_id)
-      );
-
-      setPapers(unique);
-    });
-  }, [collegeId, selectedSemester]);
+  // Papers come from hookOptions.subjects (teacher-allocated subjects via API)
 
   /* ===================== GET CO LIST ===================== */
   useEffect(() => {
@@ -129,27 +145,25 @@ const ListCO = () => {
 
       setCoRows(mapped);
       setLoading(false);
-    });
+    }).catch(() => setLoading(false));
   }, [collegeId]);
 
-  /* ===================== FINAL FILTER (SAME AS SAVE) ===================== */
+  /* ===================== FINAL FILTER ===================== */
   const filteredRows = useMemo(() => {
     return coRows.filter(row => {
-      if (selectedCourse && row.subject_id != selectedCourse) return false;
+      if (selectedSemester && String(row.semester_id) !== String(selectedSemester)) return false;
+      if (selectedCourse && String(row.subject_id) !== String(selectedCourse)) return false;
       return true;
     });
-  }, [coRows, selectedCourse]);
+  }, [coRows, selectedSemester, selectedCourse]);
 
   /* ===================== PAGINATION ===================== */
   const indexOfLastItem = currentPage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-  const currentItems = filteredRows.slice(
-    indexOfFirstItem,
-    indexOfLastItem
-  );
+  const currentItems = filteredRows.slice(indexOfFirstItem, indexOfLastItem);
   const totalPages = Math.ceil(filteredRows.length / itemsPerPage);
 
-  /* ===================== JSX ===================== */
+  /* ===================== DELETE ===================== */
   const handleDeleteCO = (coId) => {
     setAlert(
       <SweetAlert
@@ -173,17 +187,10 @@ const ListCO = () => {
       setAlert(null);
       setLoading(true);
       await COService.DeleteCourseOutcomeId(coId);
-
-      // Remove deleted CO from the table
-      setCoRows((prev) => prev.filter((co) => co.co_id !== coId));
-
+      setCoRows(prev => prev.filter(co => co.co_id !== coId));
       setLoading(false);
       setAlert(
-        <SweetAlert
-          success
-          title="Deleted!"
-          onConfirm={() => setAlert(null)}
-        >
+        <SweetAlert success title="Deleted!" onConfirm={() => setAlert(null)}>
           CO deleted successfully!
         </SweetAlert>
       );
@@ -191,11 +198,7 @@ const ListCO = () => {
       console.error("Error deleting CO:", error);
       setLoading(false);
       setAlert(
-        <SweetAlert
-          danger
-          title="Error!"
-          onConfirm={() => setAlert(null)}
-        >
+        <SweetAlert danger title="Error!" onConfirm={() => setAlert(null)}>
           Failed to delete CO. Please try again.
         </SweetAlert>
       );
@@ -218,52 +221,79 @@ const ListCO = () => {
       {/* ===================== FILTERS ===================== */}
       <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
 
-        <select value={selectedProgram} onChange={e => setSelectedProgram(e.target.value)} className="border p-2 rounded">
+        {/* Program – from teacher allocation */}
+        <select
+          value={selectedProgram}
+          onChange={e => setSelectedProgram(e.target.value)}
+          className="border p-2 rounded"
+        >
           <option value="">Program</option>
-          {programs.map(p => (
-            <option key={p.program_id} value={p.program_id}>
-              {p.program_name}
-            </option>
+          {hookOptions.programs.map(p => (
+            <option key={p.value} value={p.value}>{p.label}</option>
           ))}
         </select>
 
-        <select value={selectedBatch} onChange={e => setSelectedBatch(e.target.value)} disabled={!selectedProgram} className="border p-2 rounded">
+        {/* Batch */}
+        <select
+          value={selectedBatch}
+          onChange={e => {
+            setSelectedBatch(e.target.value);
+            setSelectedAcademicYear("");
+            setSelectedSemester("");
+            setSelectedCourse("");
+          }}
+          disabled={!selectedProgram}
+          className="border p-2 rounded"
+        >
           <option value="">Batch</option>
           {batches.map(b => (
-            <option key={b.batch_id} value={b.batch_id}>
-              {b.batch_name}
-            </option>
+            <option key={b.value} value={b.value}>{b.label}</option>
           ))}
         </select>
 
-        <select value={selectedAcademicYear} onChange={e => setSelectedAcademicYear(e.target.value)} disabled={!selectedBatch} className="border p-2 rounded">
+        {/* Academic Year */}
+        <select
+          value={selectedAcademicYear}
+          onChange={e => {
+            setSelectedAcademicYear(e.target.value);
+            setSelectedSemester("");
+            setSelectedCourse("");
+          }}
+          disabled={!selectedBatch}
+          className="border p-2 rounded"
+        >
           <option value="">Academic Year</option>
-          {academicYears
-            .filter(a => a.batchId == selectedBatch)
-            .map(a => (
-              <option key={a.academic_year_id} value={a.academic_year_id}>
-                {a.name}
-              </option>
-            ))}
+          {academicYears.map(ay => (
+            <option key={ay.value} value={ay.value}>{ay.label}</option>
+          ))}
         </select>
 
-        <select value={selectedSemester} onChange={e => setSelectedSemester(e.target.value)} disabled={!selectedAcademicYear} className="border p-2 rounded">
+        {/* Semester */}
+        <select
+          value={selectedSemester}
+          onChange={e => {
+            setSelectedSemester(e.target.value);
+            setSelectedCourse("");
+          }}
+          disabled={!selectedAcademicYear}
+          className="border p-2 rounded"
+        >
           <option value="">Semester</option>
-          {semesters
-            .filter(s => s.academicYearId == selectedAcademicYear)
-            .map(s => (
-              <option key={s.semester_id} value={s.semester_id}>
-                {s.semester_name}
-              </option>
-            ))}
+          {semesters.map(s => (
+            <option key={s.value} value={s.value}>{s.label}</option>
+          ))}
         </select>
 
-        <select value={selectedCourse} onChange={e => setSelectedCourse(e.target.value)} disabled={!selectedSemester} className="border p-2 rounded">
+        {/* Paper */}
+        <select
+          value={selectedCourse}
+          onChange={e => setSelectedCourse(e.target.value)}
+          disabled={!selectedSemester}
+          className="border p-2 rounded"
+        >
           <option value="">Paper</option>
-          {papers.map(p => (
-            <option key={p.subject_id} value={p.subject_id}>
-              {p.subject_name || p.name}
-            </option>
+          {hookOptions.subjects.map(s => (
+            <option key={s.value} value={s.value}>{s.label}</option>
           ))}
         </select>
       </div>
@@ -293,9 +323,8 @@ const ListCO = () => {
                       <Edit className="w-4 h-4" />
                     </button>
                   </Link>
-                  {/* Delete Button */}
                   <button
-                    className="p-2 bg-red-100 rounded hover:bg-red-200"
+                    className="p-2 bg-red-100 rounded hover:bg-red-200 ml-1"
                     onClick={() => handleDeleteCO(row.co_id)}
                   >
                     <Trash2 className="w-4 h-4 text-red-600" />
