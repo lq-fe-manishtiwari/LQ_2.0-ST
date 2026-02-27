@@ -788,14 +788,12 @@ const MyView = () => {
         };
     }, [timetableData]);
 
-    // Loading state
     if (loading) {
         return (
             <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
                 <div className="text-center">
                     <div className="w-12 h-12 md:w-16 md:h-16 border-4 border-primary-600 border-t-transparent rounded-full animate-spin mx-auto"></div>
                     <p className="mt-4 text-slate-600 font-bold text-sm md:text-base">Loading attendance timetable...</p>
-                    <p className="mt-2 text-slate-400 text-xs">Student ID: {studentId || "Loading..."}</p>
                 </div>
             </div>
         );
@@ -817,19 +815,6 @@ const MyView = () => {
                             <h1 className="text-base md:text-lg font-bold text-slate-800 line-clamp-2 leading-tight">
                                 Attendance Timetable
                             </h1>
-                            <div className="flex items-center gap-1 mt-0.5 flex-wrap">
-                                <span className="text-xs font-medium text-slate-400">
-                                    Student ID: {studentId || "N/A"}
-                                </span>
-                                {timetableData?.period_info?.template_used && (
-                                    <>
-                                        <span className="text-slate-300 text-xs">/</span>
-                                        <span className="text-xs font-medium text-slate-500">
-                                            Template: {timetableData.period_info.template_used.template_name}
-                                        </span>
-                                    </>
-                                )}
-                            </div>
                         </div>
                     </div>
 
@@ -1295,22 +1280,19 @@ const MyView = () => {
 
                                             return (
                                                 <div key={slot.id} className="group relative">
-                                                    <div className={`bg-white rounded-xl md:rounded-2xl lg:rounded-3xl p-4 md:p-6 border transition-all duration-300 flex flex-col md:flex-row items-stretch gap-4 md:gap-6 relative z-10
-                                                    ${isSessionActive(slot.time, slot) ? 'border-primary-500 shadow-lg shadow-primary-100 bg-primary-50/10' :
-                                                            slot.is_exception || slot.is_cancelled ? 'border-red-200 bg-red-50/10' :
-                                                                'border-transparent shadow-sm hover:shadow-lg hover:border-slate-200'}`}>
+                                                    <div className={`bg-white rounded-xl md:rounded-2xl lg:rounded-3xl p-4 md:p-6 border transition-all duration-300 flex flex-col md:flex-row items-stretch gap-4 md:gap-6 relative z-10`}>
 
-                                                        {isSessionActive(slot.time, slot) && (
+                                                        {/* {isSessionActive(slot.time, slot) && (
                                                             <div className="absolute -top-2 left-4 md:left-6 px-3 py-1 bg-primary-600 text-white text-xs font-bold rounded-full shadow-lg z-20">
                                                                 Live Now
                                                             </div>
-                                                        )}
+                                                        )} */}
 
-                                                        {(slot.is_exception || slot.is_cancelled) && (
+                                                        {/* {(slot.is_exception || slot.is_cancelled) && (
                                                             <div className="absolute -top-2 left-4 md:left-6 px-3 py-1 bg-red-600 text-white text-xs font-bold rounded-full shadow-lg z-20">
                                                                 {slot.exception_type || slot.cancellation_reason || "Exception"}
                                                             </div>
-                                                        )}
+                                                        )} */}
 
                                                         {/* Time Badge */}
                                                         <div className="w-full md:w-32 flex flex-row md:flex-col items-center justify-start md:justify-center gap-3 border-b md:border-b-0 md:border-r border-slate-100 pb-4 md:pb-0 pr-0 md:pr-6 shrink-0">
