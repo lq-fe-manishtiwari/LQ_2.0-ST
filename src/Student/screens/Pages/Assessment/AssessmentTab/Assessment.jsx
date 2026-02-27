@@ -479,24 +479,35 @@ const Assessment = () => {
             <div className="hidden lg:block w-full bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
                 <div className="w-full overflow-x-auto blue-scrollbar border-b border-gray-100">
                     <div className="max-h-[550px] overflow-y-auto blue-scrollbar">
-                        <table className="w-full min-w-[1000px] divide-y divide-gray-200">
+                        <table className="w-full table-fixed divide-y divide-gray-200">
+                            <colgroup>
+                                <col className="w-[22%]" />
+                                <col className="w-[12%]" />
+                                <col className="w-[7%]" />
+                                <col className="w-[9%]" />
+                                <col className="w-[10%]" />
+                                <col className="w-[13%]" />
+                                <col className="w-[13%]" />
+                                <col className="w-[12%]" />
+                                <col className="w-[12%]" />
+                            </colgroup>
                             <thead className="table-header">
                                 <tr>
-                                    <th className="table-th whitespace-nowrap">Assessment</th>
-                                    <th className="table-th whitespace-nowrap">Subject</th>
-                                    <th className="table-th whitespace-nowrap">Duration</th>
-                                    <th className="table-th whitespace-nowrap">Category</th>
-                                    <th className="table-th whitespace-nowrap text-center">Rubric Type</th>
-                                    <th className="table-th whitespace-nowrap">Start Time</th>
-                                    <th className="table-th whitespace-nowrap">Due Date</th>
-                                    <th className="table-th whitespace-nowrap">Status</th>
-                                    <th className="table-th whitespace-nowrap text-center">Action</th>
+                                    <th className="table-th">Assessment</th>
+                                    <th className="table-th">Subject</th>
+                                    <th className="table-th">Duration</th>
+                                    <th className="table-th">Category</th>
+                                    <th className="table-th text-center">Rubric Type</th>
+                                    <th className="table-th">Start Time</th>
+                                    <th className="table-th">Due Date</th>
+                                    <th className="table-th">Status</th>
+                                    <th className="table-th text-center">Action</th>
                                 </tr>
                             </thead>
                             <tbody className="bg-white divide-y divide-gray-200">
                                 {loading ? (
                                     <tr>
-                                        <td colSpan="8" className="px-6 py-12 text-center text-gray-500">
+                                        <td colSpan="9" className="px-6 py-12 text-center text-gray-500">
                                             <div className="flex flex-col items-center justify-center">
                                                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mb-2"></div>
                                                 <p>Loading assessments...</p>
@@ -506,29 +517,29 @@ const Assessment = () => {
                                 ) : filteredAssessments.length > 0 ? (
                                     filteredAssessments.map((a) => (
                                         <tr key={a.id} className="hover:bg-gray-50">
-                                            <td className="table-td whitespace-nowrap py-1">
-                                                <div className="flex items-center gap-3">
-                                                    <div className="w-8 h-8 rounded-full flex items-center justify-center text-white"
+                                            <td className="table-td py-1">
+                                                <div className="flex items-center gap-2">
+                                                    <div className="w-8 h-8 rounded-full flex items-center justify-center text-white flex-shrink-0"
                                                         style={{ backgroundColor: a.subject.color }}>
                                                         {a.proctoring ? <Video className="w-4 h-4" /> : <Clipboard className="w-4 h-4" />}
                                                     </div>
-                                                    <div>
-                                                        <div className="text-sm font-semibold text-gray-900 whitespace-nowrap">{a.title}</div>
-                                                        <div className="text-[10px] text-gray-500 whitespace-nowrap">{a.type} Assessment</div>
+                                                    <div className="min-w-0">
+                                                        <div className="text-sm font-semibold text-gray-900 truncate">{a.title}</div>
+                                                        <div className="text-[10px] text-gray-500">{a.type} Assessment</div>
                                                     </div>
                                                 </div>
                                             </td>
-                                            <td className="table-td text-sm text-gray-500">{a.subject.name}</td>
+                                            <td className="table-td text-sm text-gray-500 truncate">{a.subject.name}</td>
                                             <td className="table-td text-sm text-gray-500">{a.duration} mins</td>
 
-                                            <td className="table-td text-sm text-gray-500 whitespace-nowrap py-1">
+                                            <td className="table-td py-1">
                                                 <span className={`inline-flex px-2 py-0.5 rounded border text-[10px] font-bold uppercase tracking-wide
                             ${a.category?.includes('Rubric') ? 'bg-purple-50 text-purple-700 border-purple-100' : 'bg-gray-50 text-gray-600 border-gray-100'}`}>
                                                     {a.category || 'General'}
                                                 </span>
                                             </td>
 
-                                            <td className="table-td text-sm text-gray-500 whitespace-nowrap py-1">
+                                            <td className="table-td py-1 text-center">
                                                 {a.rubricType ? (
                                                     <span className={`inline-flex px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide border
                                 ${a.rubricType.includes('ANALYTIC') ? 'bg-indigo-50 text-indigo-700 border-indigo-100' :
@@ -541,9 +552,9 @@ const Assessment = () => {
                                                 )}
                                             </td>
 
-                                            <td className="table-td whitespace-nowrap py-1 text-sm text-gray-500">{a.startDate}</td>
-                                            <td className="table-td whitespace-nowrap py-1 text-sm text-gray-500">{a.endDate}</td>
-                                            <td className="table-td whitespace-nowrap py-1">
+                                            <td className="table-td py-1 text-sm text-gray-500 text-xs">{a.startDate}</td>
+                                            <td className="table-td py-1 text-sm text-gray-500 text-xs">{a.endDate}</td>
+                                            <td className="table-td py-1">
                                                 <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${a.status === 'Attempted' || a.status === 'Completed' ? 'bg-green-100 text-green-700' :
                                                     a.status === 'In Progress' ? 'bg-blue-100 text-blue-700' :
                                                         a.status === 'Upcoming' ? 'bg-purple-100 text-purple-700' :
@@ -554,7 +565,7 @@ const Assessment = () => {
                                                 </span>
                                             </td>
                                             <td className="table-td text-center">
-                                                <div className="flex justify-center gap-2">
+                                                <div className="flex justify-center gap-1.5">
                                                     {a.status === 'Not Attempted' ? (
                                                         <button
                                                             onClick={() => navigate(`/my-assessment/assessment/start/${a.id}`, {
@@ -565,34 +576,34 @@ const Assessment = () => {
                                                                     category: a.category
                                                                 }
                                                             })}
-                                                            className="p-2 bg-blue-100 text-blue-600 rounded-lg hover:bg-blue-200 transition-all duration-200 shadow-sm hover:shadow-md group relative"
+                                                            className="p-1.5 bg-blue-100 text-blue-600 rounded-lg hover:bg-blue-200 transition-all duration-200 shadow-sm hover:shadow-md"
                                                             title="Start Assessment"
                                                         >
-                                                            <Clipboard className="w-5 h-5" />
+                                                            <Clipboard className="w-4 h-4" />
                                                         </button>
                                                     ) : a.status === 'In Progress' ? (
                                                         <button
                                                             onClick={() => navigate(`/my-assessment/assessment/take/${a.id}`)}
-                                                            className="p-2 bg-orange-100 text-orange-600 rounded-lg hover:bg-orange-200 transition-all duration-200 shadow-sm hover:shadow-md group relative"
+                                                            className="p-1.5 bg-orange-100 text-orange-600 rounded-lg hover:bg-orange-200 transition-all duration-200 shadow-sm hover:shadow-md"
                                                             title="Continue Assessment"
                                                         >
-                                                            <Edit className="w-5 h-5" />
+                                                            <Edit className="w-4 h-4" />
                                                         </button>
                                                     ) : a.status === 'Upcoming' ? (
                                                         <button
                                                             disabled
-                                                            className="p-2 bg-gray-100 text-gray-400 rounded-lg cursor-not-allowed transition-all duration-200 shadow-sm"
+                                                            className="p-1.5 bg-gray-100 text-gray-400 rounded-lg cursor-not-allowed"
                                                             title="Assessment not yet started"
                                                         >
-                                                            <Clipboard className="w-5 h-5" />
+                                                            <Clipboard className="w-4 h-4" />
                                                         </button>
                                                     ) : a.status === 'Expired' ? (
                                                         <button
                                                             disabled
-                                                            className="p-2 bg-gray-100 text-gray-400 rounded-lg cursor-not-allowed transition-all duration-200 shadow-sm"
+                                                            className="p-1.5 bg-gray-100 text-gray-400 rounded-lg cursor-not-allowed"
                                                             title="Assessment has expired"
                                                         >
-                                                            <Clipboard className="w-5 h-5" />
+                                                            <Clipboard className="w-4 h-4" />
                                                         </button>
                                                     ) : null}
 
@@ -600,22 +611,22 @@ const Assessment = () => {
                                                     <button
                                                         onClick={() => navigate(`/my-assessment/assessment/responses/${a.id}`)}
                                                         disabled={a.status !== 'Expired' && a.status !== 'Completed' && a.status !== 'Attempted'}
-                                                        className={`p-2 rounded-lg transition-all duration-200 shadow-sm ${a.status === 'Expired' || a.status === 'Completed' || a.status === 'Attempted'
+                                                        className={`p-1.5 rounded-lg transition-all duration-200 shadow-sm ${a.status === 'Expired' || a.status === 'Completed' || a.status === 'Attempted'
                                                             ? 'bg-purple-100 text-purple-600 hover:bg-purple-200 hover:shadow-md'
                                                             : 'bg-gray-100 text-gray-400 cursor-not-allowed'
                                                             }`}
                                                         title={a.status === 'Expired' || a.status === 'Completed' || a.status === 'Attempted' ? "View Responses" : "Responses available after assessment completion or expiration"}
                                                     >
-                                                        <Eye className="w-5 h-5" />
+                                                        <Eye className="w-4 h-4" />
                                                     </button>
 
                                                     {a.category?.includes('Rubric') && a.originalData && (
                                                         <button
                                                             onClick={() => handleOpenRubric(a.originalData)}
-                                                            className="p-2 rounded-lg bg-purple-50 text-purple-600 hover:bg-purple-100 hover:text-purple-700 transition-all font-medium text-xs flex items-center gap-1 border border-purple-100 transform hover:scale-105"
+                                                            className="p-1.5 rounded-lg bg-purple-50 text-purple-600 hover:bg-purple-100 hover:text-purple-700 transition-all border border-purple-100"
                                                             title="View Rubric details"
                                                         >
-                                                            <BookOpen className="w-5 h-5" />
+                                                            <BookOpen className="w-4 h-4" />
                                                         </button>
                                                     )}
                                                 </div>
@@ -624,7 +635,7 @@ const Assessment = () => {
                                     ))
                                 ) : (
                                     <tr>
-                                        <td colSpan="8" className="px-6 py-8 text-center text-gray-500">
+                                        <td colSpan="9" className="px-6 py-8 text-center text-gray-500">
                                             No assessments found
                                         </td>
                                     </tr>

@@ -7,6 +7,18 @@ const ViewStudentResponses = () => {
     const navigate = useNavigate();
     const { id } = useParams();
 
+    const getStudentId = () => {
+        try {
+            const profileStr = localStorage.getItem('userProfile');
+            if (!profileStr) return null;
+            const profile = JSON.parse(profileStr);
+            return profile?.student_id || null;
+        } catch (error) {
+            console.error('Error parsing profile:', error);
+            return null;
+        }
+    };
+
     const [loading, setLoading] = useState(true);
     const [assessmentData, setAssessmentData] = useState(null);
     const [mergedResponses, setMergedResponses] = useState([]);
@@ -24,7 +36,7 @@ const ViewStudentResponses = () => {
             setLoading(true);
             const [questionsData, responsesData] = await Promise.all([
                 assessmentService.getAssessmentQuestions(id).catch(() => null),
-                assessmentService.getAssessmentResponses(id).catch(() => null)
+                assessmentService.getAssessmentResponses(getStudentId(), id).catch(() => null)
             ]);
 
             if (responsesData) {
@@ -334,16 +346,40 @@ const ViewStudentResponses = () => {
                             <div className="grid grid-cols-4 gap-3 mb-8 max-h-[450px] overflow-y-auto blue-scrollbar pr-2">
                                 {mergedResponses.map((res, idx) => {
                                     const isCurrent = currentQuestionIdx === idx;
-                                    const isAnswered = res.student_response?.response_id;
+                                    const sr = res.student_response || {};
+                                    const isAnswered = !!sr.response_id;
+
+                                    // Determine correctness
+                                    let isCorrect = false;
+                                    if (isAnswered) {
+                                        if (res.question_category === 'OBJECTIVE') {
+                                            // Use API flag if available, else check selected option
+                                            if (sr.is_correct !== undefined) {
+                                                isCorrect = sr.is_correct === true || sr.is_correct === 'true';
+                                            } else {
+                                                const correctOpt = (res.options || []).find(o => o.is_correct === true || o.is_answer === true);
+                                                isCorrect = correctOpt && sr.selected_option_id === correctOpt.option_id;
+                                            }
+                                        } else {
+                                            // Subjective: correct if marks obtained > 0
+                                            const marksObtained = res.evaluation?.marks_obtained ?? sr.marks_obtained ?? 0;
+                                            isCorrect = marksObtained > 0;
+                                        }
+                                    }
 
                                     return (
                                         <button
                                             key={idx}
                                             onClick={() => setCurrentQuestionIdx(idx)}
                                             className={`w-12 h-12 rounded-xl text-sm font-bold transition-all border-2
-                                                ${isCurrent ? 'bg-blue-600 text-white border-blue-600 shadow-md transform scale-105' :
-                                                    isAnswered ? 'bg-emerald-50 text-emerald-700 border-emerald-100 hover:bg-emerald-100' :
-                                                        'bg-gray-50 text-gray-400 border-gray-50 hover:border-gray-200 hover:text-gray-600'}`}
+                                                ${isCurrent
+                                                    ? 'bg-blue-600 text-white border-blue-600 shadow-md transform scale-105'
+                                                    : !isAnswered
+                                                        ? 'bg-gray-50 text-gray-400 border-gray-200 hover:border-gray-300 hover:text-gray-600'
+                                                        : isCorrect
+                                                            ? 'bg-emerald-50 text-emerald-700 border-emerald-300 hover:bg-emerald-100'
+                                                            : 'bg-red-50 text-red-600 border-red-300 hover:bg-red-100'
+                                                }`}
                                         >
                                             {idx + 1}
                                         </button>
