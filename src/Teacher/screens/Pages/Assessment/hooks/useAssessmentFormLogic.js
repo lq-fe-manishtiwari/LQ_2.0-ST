@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { contentService } from '../../Content/services/content.service';
+import { ContentService } from '../../../../../Student/screens/Pages/Content/Service/Content.service';
 import { getTeacherAllocatedPrograms } from '../../../../../_services/api';
 import { useUserProfile } from '../../../../../contexts/UserProfileContext';
 
@@ -265,13 +266,17 @@ export const useAssessmentFormLogic = (formData) => {
         if (!formData.selectedSubject) return;
         try {
             setLoading(prev => ({ ...prev, modules: true, units: true }));
-            const res = await contentService.getModulesAndUnitsBySubjectId(formData.selectedSubject);
+            const res = await ContentService.getModulesAndUnits(formData.selectedSubject);
 
-            const modules = res?.modules ? res.modules.map(m => ({
-                label: m.name || m.module_name,
+            const rawModules = Array.isArray(res?.data)
+                ? res.data
+                : (res?.data?.modules || res?.modules || []);
+
+            const modules = rawModules.map(m => ({
+                label: m.module_name || m.name,
                 value: String(m.module_id || m.id),
                 units: m.units || []
-            })) : [];
+            }));
 
             setOptions(prev => ({ ...prev, modules, units: [] }));
         } catch (err) {
