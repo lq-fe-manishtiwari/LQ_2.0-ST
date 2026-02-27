@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { Eye } from 'lucide-react';
 import { feedbackService } from "@/_services/feedbackService";
 import { StudentService } from "../../Profile/Student.Service";
 import Pagination from "@/components/Pagination";
@@ -84,9 +85,10 @@ export default function MySubmitted() {
                 const submitted = response.data.content.filter(f => f.has_submitted);
                 setSubmittedForms(submitted);
 
-                // Update pagination state
-                setTotalPages(response.data.total_pages || 0);
-                setTotalElements(response.data.total_elements || 0);
+                // Update pagination state with submitted count
+                const submittedCount = submitted.length;
+                setTotalPages(Math.ceil(submittedCount / pageSize));
+                setTotalElements(submittedCount);
                 setCurrentPage(response.data.number || 0);
                 setIsFirst(response.data.first !== undefined ? response.data.first : true);
                 setIsLast(response.data.last !== undefined ? response.data.last : true);
@@ -125,7 +127,7 @@ export default function MySubmitted() {
             </div>
 
             {submittedForms.length === 0 ? (
-                <div className="text-center py-12">
+                <div className="bg-white rounded-xl shadow-md p-8 text-center border border-gray-200">
                     <div className="text-gray-400 mb-2">
                         <svg
                             className="mx-auto h-12 w-12"
@@ -146,49 +148,146 @@ export default function MySubmitted() {
                 </div>
             ) : (
                 <>
-                    <div className="grid gap-4">
+                    {/* Desktop Table */}
+                    <div className="hidden lg:block bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+                        <div className="overflow-x-auto">
+                            <table className="w-full">
+                                <thead className="bg-primary-600">
+                                    <tr>
+                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-50 tracking-wider">Form Name</th>
+                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-50 tracking-wider">Code</th>
+                                        <th className="px-6 py-3 text-center text-xs font-medium text-gray-50 tracking-wider">Status</th>
+                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-50 tracking-wider">Submitted On</th>
+                                        <th className="px-6 py-3 text-center text-xs font-medium text-gray-50 tracking-wider">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="bg-white divide-y divide-gray-200">
+                                    {submittedForms.map((form) => (
+                                        <tr key={form.feedback_form_id} className="hover:bg-gray-50">
+                                            <td className="px-6 py-4 text-sm text-left text-gray-500">{form.form_name}</td>
+                                            <td className="px-6 py-4 text-sm text-left text-gray-500">{form.code || 'N/A'}</td>
+                                            <td className="px-6 py-4 text-center">
+                                                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                                    Submitted
+                                                </span>
+                                            </td>
+                                            <td className="px-6 py-4 text-sm text-left text-gray-500">
+                                                {form.submitted_at ? new Date(form.submitted_at).toLocaleString() : 'N/A'}
+                                            </td>
+                                            <td className="px-6 py-4 text-center">
+                                                <button
+                                                    onClick={() => handleViewSubmission(form.response_id)}
+                                                    className="p-1.5 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition"
+                                                >
+                                                    <Eye className="w-4 h-4" />
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        {/* Pagination */}
+                        {totalElements > 0 && (
+                            <div className="flex justify-between items-center px-6 py-4 border-t border-gray-200 text-sm text-gray-600">
+                                <button
+                                    onClick={() => handlePageChange(currentPage - 1)}
+                                    disabled={isFirst}
+                                    className={`px-4 py-2 rounded-md ${
+                                        isFirst
+                                            ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                                            : 'bg-blue-600 hover:bg-blue-700 text-white'
+                                    }`}
+                                >
+                                    Previous
+                                </button>
+                                <span className="text-gray-700 font-medium">
+                                    Showing {currentPage * pageSize + 1}–{Math.min((currentPage + 1) * pageSize, totalElements)} of {totalElements} entries
+                                </span>
+                                <button
+                                    onClick={() => handlePageChange(currentPage + 1)}
+                                    disabled={isLast}
+                                    className={`px-4 py-2 rounded-md ${
+                                        isLast
+                                            ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                                            : 'bg-blue-600 hover:bg-blue-700 text-white'
+                                    }`}
+                                >
+                                    Next
+                                </button>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Mobile Cards */}
+                    <div className="lg:hidden space-y-4">
                         {submittedForms.map((form) => (
                             <div
                                 key={form.feedback_form_id}
-                                className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow"
+                                className="bg-white rounded-xl shadow-md border border-gray-200 p-5 hover:shadow-lg transition-all"
                             >
-                                <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
-                                    <div className="flex-1">
-                                        <div className="flex items-center gap-2 mb-1">
-                                            <h4 className="font-medium text-gray-900">{form.form_name}</h4>
-                                            <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-green-100 text-green-800">
-                                                Submitted
-                                            </span>
-                                        </div>
-                                        <p className="text-sm text-gray-500 mt-1">Code: {form.code || 'N/A'}</p>
-                                        <div className="flex items-center gap-4 mt-3">
-                                            <span className="text-xs text-gray-400">
-                                                <i className="bi bi-check-circle mr-1"></i>
-                                                Submitted on: {form.submitted_at ? new Date(form.submitted_at).toLocaleString() : 'N/A'}
-                                            </span>
+                                <div className="flex justify-between items-start mb-3">
+                                    <div>
+                                        <p className="font-semibold text-gray-900">{form.form_name}</p>
+                                        <p className="text-sm text-gray-500">Code: {form.code || 'N/A'}</p>
+                                    </div>
+                                    <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-green-100 text-green-800">
+                                        Submitted
+                                    </span>
+                                </div>
+
+                                <div className="space-y-2 text-sm text-gray-700 mb-4">
+                                    <div className="grid grid-cols-1 gap-2">
+                                        <div>
+                                            <span className="font-medium">Submitted on:</span>{' '}
+                                            {form.submitted_at ? new Date(form.submitted_at).toLocaleString() : 'N/A'}
                                         </div>
                                     </div>
+                                </div>
+
+                                <div className="flex justify-end items-center">
                                     <button
                                         onClick={() => handleViewSubmission(form.response_id)}
-                                        className="px-4 py-2 bg-gray-600 text-white text-sm rounded-md hover:bg-gray-700 transition-colors whitespace-nowrap self-start sm:self-auto flex items-center gap-2"
+                                        className="p-2.5 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition"
                                     >
-                                        <i className="bi bi-eye"></i>
-                                        View
+                                        <Eye className="w-4 h-4" />
                                     </button>
                                 </div>
                             </div>
                         ))}
                     </div>
 
-                    {/* Pagination Component */}
-                    <Pagination
-                        currentPage={currentPage}
-                        totalPages={totalPages}
-                        totalElements={totalElements}
-                        onPageChange={handlePageChange}
-                        isFirst={isFirst}
-                        isLast={isLast}
-                    />
+                    {/* Mobile Pagination */}
+                    {totalElements > 0 && (
+                        <div className="lg:hidden flex justify-between items-center px-4 py-4 bg-white rounded-lg shadow-sm border border-gray-200 mt-4 text-sm text-gray-600">
+                            <button
+                                onClick={() => handlePageChange(currentPage - 1)}
+                                disabled={isFirst}
+                                className={`px-4 py-2 rounded-md ${
+                                    isFirst
+                                        ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                                        : 'bg-blue-600 hover:bg-blue-700 text-white'
+                                }`}
+                            >
+                                Previous
+                            </button>
+                            <span className="text-gray-700 font-medium text-xs">
+                                {currentPage * pageSize + 1}–{Math.min((currentPage + 1) * pageSize, totalElements)} of {totalElements}
+                            </span>
+                            <button
+                                onClick={() => handlePageChange(currentPage + 1)}
+                                disabled={isLast}
+                                className={`px-4 py-2 rounded-md ${
+                                    isLast
+                                        ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                                        : 'bg-blue-600 hover:bg-blue-700 text-white'
+                                }`}
+                            >
+                                Next
+                            </button>
+                        </div>
+                    )}
                 </>
             )}
         </div>

@@ -29,6 +29,7 @@ export default function ViewSubmission() {
 
     const renderAnswer = (answer) => {
         const questionType = answer.question_type;
+        const config = answer.question_config || {};
 
         if (questionType === 'text') {
             return (
@@ -37,12 +38,27 @@ export default function ViewSubmission() {
                 </div>
             );
         } else if (questionType === 'rating') {
-            return (
-                <div className="flex items-center gap-2">
-                    <span className="text-2xl font-bold text-blue-600">{answer.answer_value}</span>
-                    <span className="text-gray-400 text-sm">Rating</span>
-                </div>
-            );
+            const maxRating = config.maxRating || 5;
+            const ratingMode = config.ratingMode || 'numeric';
+
+            if (ratingMode === 'stars') {
+                return (
+                    <div className="flex gap-2">
+                        {[...Array(maxRating)].map((_, index) => (
+                            <span key={index} className="text-3xl">
+                                {answer.answer_value > index ? '⭐' : '☆'}
+                            </span>
+                        ))}
+                    </div>
+                );
+            } else {
+                return (
+                    <div className="flex items-center gap-2">
+                        <span className="text-2xl font-bold text-blue-600">{answer.answer_value}</span>
+                        <span className="text-gray-400 text-sm">/ {maxRating}</span>
+                    </div>
+                );
+            }
         } else if (questionType === 'radio') {
             return (
                 <div className="bg-blue-50 rounded-md p-3 border border-blue-200">
@@ -64,6 +80,32 @@ export default function ViewSubmission() {
         }
 
         return <p className="text-gray-500">No answer</p>;
+    };
+
+    // Group answers by teacher
+    const groupAnswersByTeacher = () => {
+        if (!response?.answers) return [];
+
+        const grouped = {};
+        response.answers.forEach(answer => {
+            const teacherId = answer.teacher_id || 'general';
+            const teacherName = answer.teacher_name || 'General Questions';
+            const subjectName = answer.subject_name || '';
+
+            const key = `${teacherId}_${answer.subject_id || 'general'}`;
+
+            if (!grouped[key]) {
+                grouped[key] = {
+                    teacherId,
+                    teacherName,
+                    subjectName,
+                    answers: []
+                };
+            }
+            grouped[key].answers.push(answer);
+        });
+
+        return Object.values(grouped);
     };
 
     if (loading) {
@@ -106,20 +148,36 @@ export default function ViewSubmission() {
                 </div>
             </div>
 
-            {/* Answers */}
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                <h2 className="text-xl font-semibold text-gray-800 mb-6">Your Responses</h2>
-
-                <div className="space-y-6">
-                    {response.answers?.map((answer, index) => (
-                        <div key={answer.answer_id} className="border-b border-gray-100 pb-6 last:border-0">
-                            <h3 className="text-gray-800 font-medium mb-3">
-                                {index + 1}. {answer.question_label}
-                            </h3>
-                            {renderAnswer(answer)}
+            {/* Answers - Grouped by Teacher */}
+            <div className="space-y-4">
+                {groupAnswersByTeacher().map((group, groupIndex) => (
+                    <div key={groupIndex} className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                        {/* Teacher/Subject Header */}
+                        <div className="mb-6 pb-4 border-b border-gray-200">
+                            <h2 className="text-xl font-semibold text-gray-800">
+                                {group.teacherName}
+                            </h2>
+                            {group.subjectName && (
+                                <p className="text-sm text-gray-600 mt-1">
+                                    <i className="bi bi-book mr-1"></i>
+                                    {group.subjectName}
+                                </p>
+                            )}
                         </div>
-                    ))}
-                </div>
+
+                        {/* Questions for this teacher */}
+                        <div className="space-y-6">
+                            {group.answers.map((answer, index) => (
+                                <div key={answer.answer_id} className="border-b border-gray-100 pb-6 last:border-0">
+                                    <h3 className="text-gray-800 font-medium mb-3">
+                                        {index + 1}. {answer.question_label}
+                                    </h3>
+                                    {renderAnswer(answer)}
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                ))}
             </div>
 
             {/* Back Button */}

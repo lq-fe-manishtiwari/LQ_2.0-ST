@@ -113,9 +113,10 @@ export default function Pending() {
                 });
                 setPendingForms(pending);
 
-                // Update pagination state
-                setTotalPages(response.data.total_pages || 0);
-                setTotalElements(response.data.total_elements || 0);
+                // Update pagination state with pending count
+                const pendingCount = pending.length;
+                setTotalPages(Math.ceil(pendingCount / pageSize));
+                setTotalElements(pendingCount);
                 setCurrentPage(response.data.number || 0);
                 setIsFirst(response.data.first !== undefined ? response.data.first : true);
                 setIsLast(response.data.last !== undefined ? response.data.last : true);
@@ -181,11 +182,11 @@ export default function Pending() {
                             <table className="w-full">
                                 <thead className="bg-primary-600">
                                     <tr>
-                                        <th className="px-6 py-3 text-center text-xs font-medium text-gray-50 tracking-wider">Form Name</th>
-                                        <th className="px-6 py-3 text-center text-xs font-medium text-gray-50 tracking-wider">Code</th>
-                                        <th className="px-6 py-3 text-center text-xs font-medium text-gray-50 tracking-wider">Start Date</th>
-                                        <th className="px-6 py-3 text-center text-xs font-medium text-gray-50 tracking-wider">End Date</th>
-                                        <th className="px-6 py-3 text-center text-xs font-medium text-gray-50 tracking-wider">Status</th>
+                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-50 tracking-wider">Form Name</th>
+                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-50 tracking-wider">Code</th>
+                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-50 tracking-wider">Start Date</th>
+                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-50 tracking-wider">End Date</th>
+                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-50 tracking-wider">Status</th>
                                         <th className="px-6 py-3 text-center text-xs font-medium text-gray-50 tracking-wider">Actions</th>
                                     </tr>
                                 </thead>
